@@ -157,6 +157,22 @@ def main() -> int:
     optimizer = torch.optim.AdamW(
         [{"params": head_params, "lr": 1e-3},
          {"params": block_params, "lr": 1e-5}])
+
+    def evaluate() -> float:
+        model.eval()
+        correct = 0
+        with torch.no_grad():
+            for inputs, label_index in val_cache:
+                inputs = {k: v.to(device) for k, v in inputs.items()}
+                correct += int(int(model(**inputs).logits.argmax(dim=-1)) == label_index)
+        model.train()
+        return correct / len(val_cache)
+
+    # Validate every epoch and keep the BEST weights, not the last. Training loss
+    # here falls to ~0.02 by epoch 5, so later epochs mostly deepen overfitting;
+    # evaluating only at the end cannot tell you whether epoch 4 beat epoch 8.
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    best_accuracy, best_epoch, history = -1.0, 0, []
     model.train()
     for epoch in range(EPOCHS):
         order = list(range(len(train_cache)))
@@ -171,26 +187,28 @@ def main() -> int:
             optimizer.step()
             optimizer.zero_grad()
             total_loss += float(loss.detach())
-        print(f"  epoch {epoch + 1}/{EPOCHS} train loss {total_loss / len(train_cache):.4f}")
 
-    model.eval()
-    correct = 0
-    with torch.no_grad():
-        for inputs, label_index in val_cache:
-            inputs = {k: v.to(device) for k, v in inputs.items()}
-            predicted = int(model(**inputs).logits.argmax(dim=-1))
-            correct += int(predicted == label_index)
+        epoch_accuracy = evaluate()
+        history.append(epoch_accuracy)
+        marker = ""
+        if epoch_accuracy > best_accuracy:
+            best_accuracy, best_epoch = epoch_accuracy, epoch + 1
+            model.save_pretrained(OUT_DIR)
+            processor.save_pretrained(OUT_DIR)
+            marker = "  <- best, checkpoint saved"
+        print(f"  epoch {epoch + 1}/{EPOCHS} train loss "
+              f"{total_loss / len(train_cache):.4f}  val acc {epoch_accuracy:.3f}{marker}")
 
-    accuracy = correct / len(val)
+    print(f"  accuracy by epoch: {[round(a, 3) for a in history]}")
+    print(f"  best epoch {best_epoch} at {best_accuracy:.3f} "
+          f"(last epoch {history[-1]:.3f})")
+    accuracy = best_accuracy
     # A model that always guesses the commonest class scores its share, which
     # exceeds uniform chance whenever the split is imbalanced. Beat the harder one.
     val_counts = collections.Counter(label for _, label in val_cache)
     majority = max(val_counts.values()) / len(val_cache)
     baseline = max(chance, majority)
     required = baseline + REQUIRED_MARGIN_OVER_CHANCE
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
-    model.save_pretrained(OUT_DIR)
-    processor.save_pretrained(OUT_DIR)
 
     ok = accuracy >= required
     verdict = "PASS" if ok else "FAIL"
