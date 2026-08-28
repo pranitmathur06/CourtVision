@@ -1,13 +1,19 @@
 """V6 — Possession heuristic sanity check (spec §6).
 
 Scores the heuristic against a hand-built answer key of known "who has the ball"
-moments. Create outputs/v6_answer_key.json first by watching the annotated V4
-video and recording 10 timestamps with the track ID that visibly has the ball:
+moments, recorded as IMAGE POSITIONS rather than track IDs:
 
-    [{"time_s": 1.4, "track_id": 3}, {"time_s": 2.8, "track_id": 7}, ...]
+    [{"time_s": 1.1, "x": 895, "y": 420, "note": "..."},
+     {"time_s": 7.1, "x": null, "y": null, "note": "ball in flight"}]
 
-The key is judged against the SAME track IDs the tracker produced, so build it
-from outputs/v4_tracking.mp4, not from jersey numbers.
+Positions, not IDs, because a track ID is an artefact of one particular detector
+and tracker run. An earlier version of this key stored IDs; retraining the
+detector silently invalidated every entry, and the gate went on reporting a
+number as if it still meant something. A point on the ball-handler's body is a
+fact about the footage and survives any model change.
+
+`x`/`y` null means nobody is in possession (ball in flight, loose ball).
+Build the key by eye from outputs/v4_tracking.mp4 or the raw clip.
 """
 
 from __future__ import annotations
@@ -64,11 +70,28 @@ def main() -> int:
         # Nearest sampled frame to the annotated moment.
         frame = min(frames, key=lambda f: abs(f.time_s - entry["time_s"]))
         predicted = timeline[frame.index]
-        if predicted == entry["track_id"]:
+
+        # Resolve the annotated point to whichever track covers it now.
+        x, y = entry.get("x"), entry.get("y")
+        if x is None or y is None:
+            expected = None
+        else:
+            expected = None
+            for track in frame.players():
+                if (track.box.x1 <= x <= track.box.x2
+                        and track.box.y1 <= y <= track.box.y2):
+                    expected = track.track_id
+                    break
+            if expected is None:
+                misses.append({"time_s": entry["time_s"], "want": "no track at "
+                               f"({x},{y})", "got": predicted})
+                continue
+
+        if predicted == expected:
             correct += 1
         else:
             misses.append(
-                {"time_s": entry["time_s"], "want": entry["track_id"], "got": predicted}
+                {"time_s": entry["time_s"], "want": expected, "got": predicted}
             )
 
     import math

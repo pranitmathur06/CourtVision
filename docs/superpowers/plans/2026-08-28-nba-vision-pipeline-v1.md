@@ -14,53 +14,63 @@
 
 ## Execution status (2026-08-28)
 
-**Tasks 1–11 complete. 80 tests passing. V1–V5 PASS on real NBA footage.**
+**V1–V5 PASS on real NBA footage. V6 blocked by a measured ceiling. V7 retraining.**
 
 | Gate | Status |
 |---|---|
-| V1 extraction | **PASS** — 60fps × 9.45s → 94 frames at 10fps |
-| V2 stock detector | **PASS** — 12–16 players/frame, boxes verified by eye |
-| V3 detector fine-tune | **PASS** — mAP50-95 **0.465 → 0.659** on SportsMOT val |
-| V4 tracking | **PASS** — 92.8% of detections on tracks lasting ≥10 frames |
-| V5 team assignment | **PASS** — clean split, DET dark vs BKN white, verified by eye |
-| V6 possession | **FAIL ×2 — stopped and flagged per spec §9.6** (see below) |
-| V7 action classifier | running (2nd attempt, supervised backbone) |
+| V1 extraction | **PASS** |
+| V2 stock detector | **PASS** — 12–16 players/frame |
+| V3 detector fine-tune | **PASS** — mAP50-95 **0.125 → 0.508**, player/ball/rim |
+| V4 tracking | **PASS** — 96.0% of detections on tracks lasting ≥10 frames |
+| V5 team assignment | **PASS** — verified visually |
+| V6 possession | **FAIL — measured ceiling, flagged per §9.6** |
+| V7 action classifier | retraining on SpaceJam (dribble/pass/shot/other) |
 | V8 commentary | **BLOCKED** — no `ANTHROPIC_API_KEY` |
 | V9 end-to-end | blocked on V6, V7, V8 |
 
-### V6 is blocked on ball detection, and spec §9.6 says stop
+### Data sources (all free, all licensed)
 
-Possession is 2/5 against a hand-built answer key. The cause is **not** the
-possession logic — instrumenting the failures showed `raw_holder` returns the
-correct player whenever the ball is actually detected. The cause is the ball
-detector:
+| Use | Source | Licence |
+|---|---|---|
+| Clips (sample/holdout) | BARD, NBA broadcast | CC BY 4.0 |
+| Detector (player/ball/rim) | Roboflow `basketball-player-detection-3` v18 | CC BY 4.0 |
+| Actions (dribble/pass/shot/other) | SpaceJam, Kaggle mirror | MIT |
 
-* COCO `sports ball` via **yolo11n** found the ball in **0 of 104 frames** at
-  conf 0.25 (peak confidence 0.116). Swapping to **yolo11x** fixed that — peak
-  0.652 — and it is now the ball backbone.
-* Even so, coverage is only **67%** at conf 0.05. Dropping to conf 0.02 raises
-  coverage to 92%, but inspection showed those extra detections sit on court
-  markings and limbs, not the ball. They convert a correct "nobody has it" into
-  a confident wrong holder, so the threshold was returned to 0.05.
+### V6: proximity possession has a measured ceiling on broadcast footage
 
-One genuine fix did land on the way: the possession smoother required
-`min_hold_frames` **consecutive** frames to switch holder, which never happens
-when a third of frames have no ball, so possession stuck on stale holders. It now
-counts the next `min_hold_frames` frames in which the ball was actually *seen*,
-skipping gaps — a gap is missing data, not evidence against a candidate.
+Not a tuning problem. Measured over the sample clip, on frames where the ball is
+detected and ≥2 players are present:
 
-**The real fix is a purpose-trained ball detector.** No ball-annotated basketball
-dataset was found on Hugging Face; Roboflow Universe has several but needs an
-account. Per spec §9.6 this is flagged rather than worked around — the remaining
-levers (lower thresholds, looser distance gates) buy metrics, not correctness.
+* median separation between the nearest player and the runner-up is **0.21**
+  body-heights, and in **61% of frames the runner-up is within 0.3** — a
+  defender is about as close to the ball as the ball-handler is.
+* box-**edge** distance is *worse* than centre distance (69% ambiguous), and box
+  containment picks out exactly one player in only **25 of 67** frames.
+
+So no distance metric fixes it: on dense NBA broadcast, proximity alone is
+under-determined. This is spec §10's warning ("a proximity heuristic, not ground
+truth") quantified. Flagged rather than tuned, per §9.6.
+
+**The principled fix — and the data already exists.** The Roboflow detector
+dataset carries a `player-in-possession` class (162 instances) that this project
+currently discards in `prepare_detector_dataset.py`. Learning possession
+directly sidesteps the geometry entirely. Two other v2-grade options:
+ball-motion correlation (the ball moves with its holder; a defender does not
+move in lockstep) and pose estimation (spec §7.3 already defers pose to v2).
+
+Two real fixes did land on the way, both kept:
+1. The smoother required `min_hold_frames` **consecutive** frames to switch
+   holder, which never happens when a third of frames have no ball. It now
+   counts frames where the ball was actually *seen*, skipping gaps.
+2. The V6 answer key stored **track IDs**, which are artefacts of one detector
+   run — retraining the detector silently invalidated every entry while the gate
+   kept reporting a number. It now stores **image positions**, which are facts
+   about the footage and survive any model change.
 
 ### Still needed from the user
 
-- A **ball-annotated dataset** (or a decision to accept degraded possession).
+- A decision on V6: train `player-in-possession`, or accept the ceiling and document it.
 - `ANTHROPIC_API_KEY`, or `ant auth login`, for V8.
-
-`scripts/run_pipeline.py` and `scripts/validate_v9.py` remain unwritten: spec
-§9.3 gates them on V1–V8 passing individually.
 
 ---
 
