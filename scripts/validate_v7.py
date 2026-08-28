@@ -23,8 +23,12 @@ N_FRAMES = 16
 FRAME_SIZE = 224
 EPOCHS = 8
 VAL_FRACTION = 0.2
-CHANCE = 1.0 / len(ACTIONS)
-REQUIRED_ACCURACY = 0.40
+# The bar is set from the classes that actually have data, not from len(ACTIONS).
+# BARD labels no `dribble` or `pass`, so training on the spec's five classes with
+# three populated would make a "20% chance" baseline a fiction — real chance
+# would be 1/3. Margin is how far above chance we require, so the result means
+# "the model learned something", not "the model guessed the majority class".
+REQUIRED_MARGIN_OVER_CHANCE = 0.15
 
 
 def load_clip(path: Path) -> np.ndarray:
@@ -55,14 +59,30 @@ def main() -> int:
         print(f"V7 FAIL — no labeled clips at {DATA_DIR}/<action>/*.mp4")
         return 1
 
+    # Only classes with actual clips take part; see REQUIRED_MARGIN_OVER_CHANCE.
+    populated = [a for a in ACTIONS if list((DATA_DIR / a).glob("*.mp4"))]
+    missing = [a for a in ACTIONS if a not in populated]
+    if len(populated) < 2:
+        print(f"V7 FAIL — only {len(populated)} populated class(es) in {DATA_DIR}")
+        return 1
+    if missing:
+        print(f"V7 note — no training clips for {missing}; training on {populated}. "
+              "The classifier cannot predict a class it never saw.")
+
     samples: list[tuple[Path, int]] = []
-    for label_index, action in enumerate(ACTIONS):
-        for clip_path in sorted((DATA_DIR / action).glob("*.mp4")):
-            samples.append((clip_path, label_index))
+    counts = {}
+    for label_index, action in enumerate(populated):
+        clips = sorted((DATA_DIR / action).glob("*.mp4"))
+        counts[action] = len(clips)
+        samples.extend((clip_path, label_index) for clip_path in clips)
+    print(f"V7 clips per class: {counts}")
 
     if len(samples) < 20:
         print(f"V7 FAIL — only {len(samples)} labeled clips; need at least 20")
         return 1
+
+    chance = 1.0 / len(populated)
+    required = chance + REQUIRED_MARGIN_OVER_CHANCE
 
     random.Random(0).shuffle(samples)
     split = int(len(samples) * (1 - VAL_FRACTION))
@@ -72,9 +92,9 @@ def main() -> int:
     processor = VideoMAEImageProcessor.from_pretrained(BASE_MODEL)
     model = VideoMAEForVideoClassification.from_pretrained(
         BASE_MODEL,
-        num_labels=len(ACTIONS),
-        id2label={i: a for i, a in enumerate(ACTIONS)},
-        label2id={a: i for i, a in enumerate(ACTIONS)},
+        num_labels=len(populated),
+        id2label={i: a for i, a in enumerate(populated)},
+        label2id={a: i for i, a in enumerate(populated)},
         ignore_mismatched_sizes=True,
     ).to(device)
 
@@ -108,11 +128,12 @@ def main() -> int:
     model.save_pretrained(OUT_DIR)
     processor.save_pretrained(OUT_DIR)
 
-    ok = accuracy >= REQUIRED_ACCURACY
+    ok = accuracy >= required
     verdict = "PASS" if ok else "FAIL"
     print(
         f"V7 {verdict} — held-out accuracy {accuracy:.3f} on {len(val)} clips "
-        f"(chance {CHANCE:.3f}, required {REQUIRED_ACCURACY:.2f}); saved to {OUT_DIR}"
+        f"across {len(populated)} classes {populated} "
+        f"(chance {chance:.3f}, required {required:.3f}); saved to {OUT_DIR}"
     )
     return 0 if ok else 1
 
