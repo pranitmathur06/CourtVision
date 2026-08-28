@@ -163,3 +163,11 @@ Worth knowing going in, so a rough patch doesn't read as "I did something wrong"
 - **Jersey-number OCR (deferred to v2) is a genuinely hard, actively-researched problem** — small text, motion blur, partial occlusion. Don't be surprised if it needs its own tuning pass later.
 - **Action classification accuracy will likely plateau below what you'd want** on a small fine-tuning set — this is a real signal about dataset size, not necessarily a modeling bug. If it plateaus, more labeled data usually helps more than a fancier model.
 - **Commentary quality depends entirely on event-structuring quality** — if Stage 7's events are noisy, Stage 8 will confidently narrate the noise. When commentary looks wrong, check the structured events first, not the LLM prompt.
+---
+
+## Data attribution
+
+This project uses the **BARD** dataset (Basketball Action Recognition Dataset),
+Gabriele Giudici, 2025 — <https://github.com/GabrieleGiudic/BARD> — licensed
+**CC BY 4.0**. Clips are sourced from NBA broadcast footage; the CC BY licence
+covers the annotations. Fetch a subset with `scripts/fetch_bard_subset.py`.
