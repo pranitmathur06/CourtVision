@@ -32,7 +32,22 @@ def normalized_distance(player: Track, ball: Track) -> float:
 
 
 def raw_holder(frame: Frame, max_norm_dist: float) -> int | None:
-    """Nearest player to the ball, if close enough. No temporal context."""
+    """Who holds the ball this frame, with no temporal context.
+
+    Prefers the detector's own `handler` prediction, because proximity is
+    under-determined on broadcast footage: measured on real NBA video, a
+    defender sits within 0.21 body-heights of the ball-handler in the median
+    frame, and in 61% of frames the runner-up is within 0.3. No distance metric
+    resolves that — box-edge distance is worse still. A learned handler answers
+    the question directly.
+
+    Falls back to nearest-player when the detector marks no handler, since the
+    handler class is trained on few examples and will not fire every frame.
+    """
+    handler = frame.handler()
+    if handler is not None:
+        return handler.track_id
+
     ball = frame.ball()
     players = frame.players()
     if ball is None or not players:

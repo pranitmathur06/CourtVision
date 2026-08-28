@@ -7,7 +7,10 @@ from dataclasses import dataclass
 PLAYER = "player"
 BALL = "ball"
 RIM = "rim"
-CLASSES = (PLAYER, BALL, RIM)
+# A player the detector judges to be controlling the ball. Distinct from PLAYER
+# so stage 5 can use a learned signal instead of a pure distance heuristic.
+HANDLER = "handler"
+CLASSES = (PLAYER, BALL, RIM, HANDLER)
 
 ACTIONS = ("dribble", "pass", "shot", "rebound", "other")
 TEAMS = ("A", "B")
@@ -63,7 +66,15 @@ class Frame:
     tracks: tuple[Track, ...]
 
     def players(self) -> tuple[Track, ...]:
-        return tuple(t for t in self.tracks if t.label == PLAYER)
+        """Every person on court, whether or not they hold the ball."""
+        return tuple(t for t in self.tracks if t.label in (PLAYER, HANDLER))
+
+    def handler(self) -> Track | None:
+        """The tracked player the detector marked as controlling the ball."""
+        handlers = [t for t in self.tracks if t.label == HANDLER]
+        if not handlers:
+            return None
+        return max(handlers, key=lambda t: t.conf)
 
     def ball(self) -> Track | None:
         balls = [t for t in self.tracks if t.label == BALL]

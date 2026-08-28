@@ -10,7 +10,7 @@ from typing import Protocol
 
 import numpy as np
 
-from courtvision.types import BALL, PLAYER, RIM, Box, Detection
+from courtvision.types import BALL, HANDLER, PLAYER, RIM, Box, Detection
 
 # Stock COCO ids we care about. There is no COCO class for a basketball rim,
 # which is exactly why V3 fine-tuning exists.
@@ -18,7 +18,7 @@ COCO_CLASS_MAP: dict[int, str] = {0: PLAYER, 32: BALL}
 
 # After fine-tuning we own the class order, so it is dense and starts at zero.
 # Must match scripts/prepare_detector_dataset.py.
-FINETUNED_CLASS_MAP: dict[int, str] = {0: PLAYER, 1: BALL, 2: RIM}
+FINETUNED_CLASS_MAP: dict[int, str] = {0: PLAYER, 1: BALL, 2: RIM, 3: HANDLER}
 
 
 class Detector(Protocol):

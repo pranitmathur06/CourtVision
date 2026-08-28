@@ -121,3 +121,31 @@ def test_possession_timeline_matches_synthetic_truth(synthetic):
     matches = sum(1 for got, want in zip(timeline, expected) if got == want)
     accuracy = matches / len(expected)
     assert accuracy >= 0.9, f"possession accuracy {accuracy:.2f} on synthetic truth"
+
+
+def handler(track_id: int, x: float, y: float, height: float = 80.0) -> Track:
+    from courtvision.types import HANDLER
+    return Track(track_id, Box(x, y, x + 30.0, y + height), HANDLER, 0.9)
+
+
+def test_raw_holder_prefers_the_detected_handler_over_proximity():
+    """The handler wins even when another player is nearer the ball."""
+    near_player = player(1, 100, 100)
+    marked = handler(2, 400, 100)
+    cx, cy = near_player.box.center
+    frame = Frame(0, 0.0, (near_player, marked, ball(cx, cy)))
+    assert raw_holder(frame, max_norm_dist=0.8) == 2
+
+
+def test_raw_holder_falls_back_to_proximity_without_a_handler():
+    near, far = player(1, 100, 100), player(2, 400, 100)
+    cx, cy = near.box.center
+    frame = Frame(0, 0.0, (near, far, ball(cx, cy)))
+    assert raw_holder(frame, max_norm_dist=0.8) == 1
+
+
+def test_handler_counts_as_a_player_for_geometry():
+    marked = handler(5, 100, 100)
+    frame = Frame(0, 0.0, (marked,))
+    assert frame.players() == (marked,)
+    assert frame.handler() is marked

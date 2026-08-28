@@ -16,7 +16,7 @@ from collections.abc import Sequence
 import numpy as np
 import supervision as sv
 
-from courtvision.types import PLAYER, Box, Detection, Frame, Track
+from courtvision.types import HANDLER, PLAYER, Box, Detection, Frame, Track
 
 UNTRACKED = -1
 
@@ -28,8 +28,11 @@ class PlayerTracker:
         self._tracker = sv.ByteTrack()
 
     def update(self, detections: list[Detection]) -> list[Track]:
-        players = [d for d in detections if d.label == PLAYER]
-        others = [d for d in detections if d.label != PLAYER]
+        # Handlers are people too: they must be tracked so their identity
+        # persists, but their label has to survive tracking. supervision keeps
+        # class_id through ByteTrack, so it carries the distinction.
+        players = [d for d in detections if d.label in (PLAYER, HANDLER)]
+        others = [d for d in detections if d.label not in (PLAYER, HANDLER)]
 
         tracks: list[Track] = [
             Track(UNTRACKED, d.box, d.label, d.conf) for d in others
@@ -42,15 +45,18 @@ class PlayerTracker:
                     dtype=np.float32,
                 ),
                 confidence=np.array([d.conf for d in players], dtype=np.float32),
-                class_id=np.zeros(len(players), dtype=int),
+                class_id=np.array(
+                    [1 if d.label == HANDLER else 0 for d in players], dtype=int
+                ),
             )
             tracked = self._tracker.update_with_detections(sv_detections)
-            for xyxy, conf, track_id in zip(
-                tracked.xyxy, tracked.confidence, tracked.tracker_id
+            for xyxy, conf, track_id, class_id in zip(
+                tracked.xyxy, tracked.confidence, tracked.tracker_id, tracked.class_id
             ):
                 x1, y1, x2, y2 = (float(v) for v in xyxy)
+                label = HANDLER if int(class_id) == 1 else PLAYER
                 tracks.append(
-                    Track(int(track_id), Box(x1, y1, x2, y2), PLAYER, float(conf))
+                    Track(int(track_id), Box(x1, y1, x2, y2), label, float(conf))
                 )
 
         return tracks

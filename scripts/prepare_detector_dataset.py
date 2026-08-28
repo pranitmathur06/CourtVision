@@ -28,21 +28,29 @@ SOURCE = Path("data/labeled/roboflow/bpd18")
 ROOT = Path("data/labeled/detector")
 
 # Our dense class order; must match courtvision.detection.FINETUNED_CLASS_MAP.
-PLAYER, BALL, RIM = 0, 1, 2
-OUT_NAMES = ["player", "ball", "rim"]
+PLAYER, BALL, RIM, HANDLER = 0, 1, 2, 3
+OUT_NAMES = ["player", "ball", "rim", "handler"]
 
 # Roboflow class index -> ours. Anything absent is dropped.
 REMAP = {
-    0: BALL,    # ball
-    1: BALL,    # ball-in-basket — still a ball
+    0: BALL,     # ball
+    1: BALL,     # ball-in-basket — still a ball
     # 2: number — jersey digits, that is v2 OCR territory
-    3: PLAYER,  # player
-    4: PLAYER,  # player-in-possession
-    5: PLAYER,  # player-jump-shot
-    6: PLAYER,  # player-layup-dunk
-    7: PLAYER,  # player-shot-block
+    3: PLAYER,   # player
+    # The three classes below all mark the player CONTROLLING the ball, in
+    # different states. Merged into one `handler` class they give 191 training
+    # instances instead of 86, and they answer stage 5's question directly:
+    # possession by proximity is under-determined on broadcast footage (a
+    # defender sits within 0.21 body-heights of the handler in the median frame),
+    # so a learned handler beats any distance rule.
+    4: HANDLER,  # player-in-possession
+    5: HANDLER,  # player-jump-shot
+    6: HANDLER,  # player-layup-dunk
+    # 7: player-shot-block is the DEFENDER contesting a shot, not the handler,
+    # so it stays a plain player.
+    7: PLAYER,
     # 8: referee — deliberately dropped, see module docstring
-    9: RIM,     # rim
+    9: RIM,      # rim
 }
 
 
@@ -54,7 +62,7 @@ def convert(split_in: str, split_out: str) -> tuple[int, dict[int, int]]:
     for d in (dst_images, dst_labels):
         d.mkdir(parents=True, exist_ok=True)
 
-    counts: dict[int, int] = {PLAYER: 0, BALL: 0, RIM: 0}
+    counts: dict[int, int] = {PLAYER: 0, BALL: 0, RIM: 0, HANDLER: 0}
     n = 0
     for image_path in sorted(src_images.glob("*.jpg")):
         label_path = src_labels / (image_path.stem + ".txt")
@@ -86,7 +94,7 @@ def main() -> int:
     if ROOT.exists():
         shutil.rmtree(ROOT)
 
-    totals: dict[int, int] = {PLAYER: 0, BALL: 0, RIM: 0}
+    totals: dict[int, int] = {PLAYER: 0, BALL: 0, RIM: 0, HANDLER: 0}
     images = 0
     for split_in, split_out in (("train", "train"), ("valid", "val")):
         n, counts = convert(split_in, split_out)
