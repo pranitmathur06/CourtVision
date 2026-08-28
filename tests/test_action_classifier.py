@@ -39,3 +39,78 @@ def test_classify_windows_produces_labelled_windows():
     assert windows[0].end_index == 15
     assert windows[0].start_time_s == 0.0
     assert windows[1].start_time_s > windows[0].start_time_s
+
+
+def test_crop_player_stays_inside_the_image():
+    from courtvision.action_classifier import FRAME_SIZE, crop_player
+    from courtvision.types import Box
+
+    image = np.zeros((200, 300, 3), dtype=np.uint8)
+    # A box hard against the top-left corner: padding must clamp, not go negative.
+    crop = crop_player(image, Box(0, 0, 30, 60))
+    assert crop.shape == (FRAME_SIZE, FRAME_SIZE, 3)
+
+
+def test_crop_player_selects_the_box_region():
+    from courtvision.action_classifier import crop_player
+    from courtvision.types import Box
+
+    image = np.zeros((200, 300, 3), dtype=np.uint8)
+    image[100:150, 100:130] = 255  # a bright patch where the player is
+    crop = crop_player(image, Box(100, 100, 130, 150), margin=0.0)
+    assert crop.mean() > 200  # the crop is dominated by the patch
+
+
+def test_classify_windows_labels_other_when_nobody_has_the_ball():
+    from courtvision.action_classifier import classify_windows
+
+    config = Config()
+    n = 32
+    images = [np.zeros((64, 64, 3), dtype=np.uint8) for _ in range(n)]
+    frames = [Frame(i, i / config.target_fps, ()) for i in range(n)]
+
+    class ExplodingClassifier:
+        def classify(self, clip):
+            raise AssertionError("must not run the model when there is no holder")
+
+    windows = classify_windows(
+        images, frames, ExplodingClassifier(), config, holders=[None] * n
+    )
+    assert len(windows) == 3
+    assert all(w.label == "other" and w.conf == 0.0 for w in windows)
+
+
+def test_classify_windows_crops_to_the_holder():
+    from courtvision.action_classifier import FRAME_SIZE, classify_windows
+    from courtvision.types import PLAYER, Box, Track
+
+    config = Config()
+    n = 32
+    images = [np.zeros((200, 200, 3), dtype=np.uint8) for _ in range(n)]
+    for img in images:
+        img[20:80, 20:50] = 255  # holder 7 is the bright region
+    frames = [
+        Frame(i, i / config.target_fps,
+              (Track(7, Box(20, 20, 50, 80), PLAYER, 0.9),
+               Track(9, Box(150, 20, 180, 80), PLAYER, 0.9)))
+        for i in range(n)
+    ]
+
+    seen = {}
+
+    class RecordingClassifier:
+        def classify(self, clip):
+            seen["shape"] = clip.shape
+            seen["mean"] = float(clip.mean())
+            return "dribble", 0.9
+
+    windows = classify_windows(
+        images, frames, RecordingClassifier(), config, holders=[7] * n
+    )
+    assert seen["shape"] == (16, FRAME_SIZE, FRAME_SIZE, 3)
+    # The point of cropping is that the holder fills the frame. Compare against
+    # the whole-frame mean: the patch is 4.5% of the image but ~33% of the crop
+    # (30x60 box padded 25% on each side), so the crop is several times brighter.
+    whole_frame_mean = float(images[0].mean())
+    assert seen["mean"] > 4 * whole_frame_mean
+    assert all(w.label == "dribble" for w in windows)

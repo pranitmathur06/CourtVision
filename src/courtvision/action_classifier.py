@@ -1,12 +1,26 @@
-"""Stage 6 — classify short windows of play into the five spec actions.
+"""Stage 6 — classify short windows of play into the spec's actions.
 
 Windowing is pure and tested. The model is a fine-tuned VideoMAE, which expects
 exactly 16 frames at 224x224 — hence `Config.action_window_frames = 16`.
 Per spec §4, nothing here is trained from scratch.
+
+**Each window is cropped to the ball-handler, not passed whole.** Two reasons,
+and they agree:
+
+1. The training data (SpaceJam) is clips cropped to a single player. Feeding
+   whole 1280x720 broadcast frames at inference would be a domain mismatch
+   severe enough to make the classifier useless.
+2. It is the right question anyway. "Dribble or pass?" is a property of one
+   player; ten players are on court doing different things, so asking it of a
+   whole frame is ill-posed.
+
+A window with no possession holder is labelled `other` without invoking the
+model — no ball-handler means no ball-handler action to recognise.
 """
 
 from __future__ import annotations
 
+from collections import Counter
 from collections.abc import Sequence
 from typing import Protocol
 
@@ -16,6 +30,9 @@ from courtvision.config import Config
 from courtvision.types import ACTIONS, ActionWindow, Frame
 
 FRAME_SIZE = 224
+# Fraction of the player box height added as padding around the crop, so the
+# ball and the player's arms stay in frame the way SpaceJam's crops do.
+CROP_MARGIN = 0.25
 
 
 def plan_windows(n_frames: int, size: int, stride: int) -> list[tuple[int, int]]:
@@ -61,30 +78,74 @@ class VideoMaeClassifier:
         return self._model.config.id2label[index], float(probabilities[index])
 
 
+def crop_player(image: np.ndarray, box, margin: float = CROP_MARGIN) -> np.ndarray:
+    """Crop around a player box with padding, clamped to the image."""
+    import cv2
+
+    height, width = image.shape[:2]
+    pad = box.height * margin
+    x1 = int(max(0, box.x1 - pad))
+    y1 = int(max(0, box.y1 - pad))
+    x2 = int(min(width, box.x2 + pad))
+    y2 = int(min(height, box.y2 + pad))
+    if x2 <= x1 or y2 <= y1:
+        return cv2.resize(image, (FRAME_SIZE, FRAME_SIZE))
+    return cv2.resize(image[y1:y2, x1:x2], (FRAME_SIZE, FRAME_SIZE))
+
+
+def _holder_box(frame: Frame, track_id: int):
+    for track in frame.players():
+        if track.track_id == track_id:
+            return track.box
+    return None
+
+
 def classify_windows(
     images: Sequence[np.ndarray],
     frames: Sequence[Frame],
     classifier: ActionClassifier,
     config: Config,
+    holders: Sequence[int | None] | None = None,
 ) -> list[ActionWindow]:
-    """Slide a window over the clip and classify each one."""
+    """Slide a window over the clip and classify the ball-handler in each one.
+
+    `holders` is the per-frame possession timeline from stage 5. Without it every
+    window falls back to the whole frame, which is only appropriate for a
+    classifier trained on whole frames.
+    """
     import cv2
 
     windows: list[ActionWindow] = []
     for start, end in plan_windows(
         len(images), config.action_window_frames, config.action_stride_frames
     ):
-        clip = np.stack(
-            [
-                cv2.cvtColor(
-                    cv2.resize(images[i], (FRAME_SIZE, FRAME_SIZE)), cv2.COLOR_BGR2RGB
+        holder = None
+        if holders is not None:
+            seen = [h for h in holders[start : end + 1] if h is not None]
+            if seen:
+                holder = Counter(seen).most_common(1)[0][0]
+
+        if holders is not None and holder is None:
+            # Nobody has the ball across this window; there is no ball-handler
+            # action to classify, so do not spend a forward pass guessing.
+            label, conf = "other", 0.0
+        else:
+            crops = []
+            last_box = None
+            for i in range(start, end + 1):
+                box = _holder_box(frames[i], holder) if holder is not None else None
+                box = box or last_box
+                last_box = box or last_box
+                crop = (
+                    crop_player(images[i], box)
+                    if box is not None
+                    else cv2.resize(images[i], (FRAME_SIZE, FRAME_SIZE))
                 )
-                for i in range(start, end + 1)
-            ]
-        )
-        label, conf = classifier.classify(clip)
-        if label not in ACTIONS:
-            label = "other"
+                crops.append(cv2.cvtColor(crop, cv2.COLOR_BGR2RGB))
+            label, conf = classifier.classify(np.stack(crops))
+            if label not in ACTIONS:
+                label = "other"
+
         windows.append(
             ActionWindow(
                 start_index=start,
