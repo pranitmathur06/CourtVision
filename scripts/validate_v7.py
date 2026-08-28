@@ -7,6 +7,7 @@ barely above it, so the bar here is 40%.
 
 from __future__ import annotations
 
+import collections
 import random
 import sys
 from pathlib import Path
@@ -18,7 +19,12 @@ from courtvision.types import ACTIONS
 
 DATA_DIR = Path("data/labeled/actions")
 OUT_DIR = Path("checkpoints/action_classifier")
-BASE_MODEL = "MCG-NJU/videomae-base"
+# The supervised Kinetics-400 checkpoint, NOT the plain `videomae-base`.
+# `videomae-base` is the self-supervised MAE checkpoint: masked-autoencoder
+# features are strong under full fine-tuning but weak under linear probing, and
+# freezing it produced BELOW-chance accuracy (0.208 vs 0.333) while train loss
+# fell steadily — the signature of a head learning non-transferable features.
+BASE_MODEL = "MCG-NJU/videomae-base-finetuned-kinetics"
 N_FRAMES = 16
 FRAME_SIZE = 224
 EPOCHS = 8
@@ -98,7 +104,6 @@ def main() -> int:
         return 1
 
     chance = 1.0 / len(populated)
-    required = chance + REQUIRED_MARGIN_OVER_CHANCE
 
     random.Random(0).shuffle(samples)
     split = int(len(samples) * (1 - VAL_FRACTION))
@@ -125,16 +130,28 @@ def main() -> int:
 
     train_cache, val_cache = prepare(train), prepare(val)
 
-    # With only ~100 clips, fine-tuning all 86M backbone parameters overfits
-    # immediately. Freeze the encoder and train the classifier head — the
-    # standard linear-probe approach for a dataset this small, and much faster.
+    # Train the head plus the last two encoder blocks. Full fine-tuning of 86M
+    # parameters overfits a few hundred clips; a frozen backbone alone was not
+    # adaptable enough. Unfreezing the top blocks is the middle ground, with a
+    # much lower learning rate there than on the freshly-initialised head.
+    ADAPT = ("encoder.layer.10.", "encoder.layer.11.", "fc_norm")
+    head_params, block_params = [], []
     for name, param in model.named_parameters():
-        param.requires_grad = name.startswith("classifier")
-    trainable = [p for p in model.parameters() if p.requires_grad]
-    print(f"  training {sum(p.numel() for p in trainable):,} of "
-          f"{sum(p.numel() for p in model.parameters()):,} parameters (head only)")
+        if name.startswith("classifier"):
+            param.requires_grad = True
+            head_params.append(param)
+        elif any(tag in name for tag in ADAPT):
+            param.requires_grad = True
+            block_params.append(param)
+        else:
+            param.requires_grad = False
+    print(f"  training {sum(p.numel() for p in head_params + block_params):,} of "
+          f"{sum(p.numel() for p in model.parameters()):,} parameters "
+          f"(head + last 2 blocks)")
 
-    optimizer = torch.optim.AdamW(trainable, lr=1e-3)
+    optimizer = torch.optim.AdamW(
+        [{"params": head_params, "lr": 1e-3},
+         {"params": block_params, "lr": 1e-5}])
     model.train()
     for epoch in range(EPOCHS):
         order = list(range(len(train_cache)))
@@ -160,6 +177,12 @@ def main() -> int:
             correct += int(predicted == label_index)
 
     accuracy = correct / len(val)
+    # A model that always guesses the commonest class scores its share, which
+    # exceeds uniform chance whenever the split is imbalanced. Beat the harder one.
+    val_counts = collections.Counter(label for _, label in val_cache)
+    majority = max(val_counts.values()) / len(val_cache)
+    baseline = max(chance, majority)
+    required = baseline + REQUIRED_MARGIN_OVER_CHANCE
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     model.save_pretrained(OUT_DIR)
     processor.save_pretrained(OUT_DIR)
@@ -169,7 +192,8 @@ def main() -> int:
     print(
         f"V7 {verdict} — held-out accuracy {accuracy:.3f} on {len(val)} clips "
         f"across {len(populated)} classes {populated} "
-        f"(chance {chance:.3f}, required {required:.3f}); saved to {OUT_DIR}"
+        f"(uniform chance {chance:.3f}, majority-class {majority:.3f}, "
+        f"required {required:.3f}); saved to {OUT_DIR}"
     )
     return 0 if ok else 1
 
