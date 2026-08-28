@@ -10,14 +10,18 @@ from typing import Protocol
 
 import numpy as np
 
-from courtvision.types import BALL, PLAYER, RIM, Box, Detection
+from courtvision.types import BALL, PLAYER, Box, Detection
 
 # Stock COCO ids we care about. There is no COCO class for a basketball rim,
 # which is exactly why V3 fine-tuning exists.
 COCO_CLASS_MAP: dict[int, str] = {0: PLAYER, 32: BALL}
 
 # After fine-tuning we own the class order, so it is dense and starts at zero.
-FINETUNED_CLASS_MAP: dict[int, str] = {0: PLAYER, 1: BALL, 2: RIM}
+# Player only: the fine-tuning source (SportsMOT) labels players and nothing else.
+# `ball` is supplied at inference by stock COCO via CompositeDetector, and `rim`
+# is not modelled at all because no downstream stage reads it — possession,
+# team assignment, tracking and render all use .players() and .ball() only.
+FINETUNED_CLASS_MAP: dict[int, str] = {0: PLAYER}
 
 
 class Detector(Protocol):
@@ -68,6 +72,38 @@ class YoloDetector:
         return boxes_from_result(results[0], self._class_map, self._conf)
 
 
+class CompositeDetector:
+    """Fine-tuned player detector + stock COCO for the ball.
+
+    Our fine-tuning data labels players only, but stage 5 (possession) needs the
+    ball. COCO's `sports ball` class detects basketballs adequately, so the two
+    are combined behind the one `Detector` interface every other stage codes to.
+
+    Cost is a second forward pass per frame. Detection is ~15% of pipeline time
+    (see docs/profile-v1.md), so this is affordable; it is also the obvious thing
+    to collapse once a single detector is trained on both classes.
+    """
+
+    def __init__(self, player_detector: Detector, ball_detector: Detector) -> None:
+        self._player = player_detector
+        self._ball = ball_detector
+
+    def detect(self, image: np.ndarray) -> list[Detection]:
+        players = [d for d in self._player.detect(image) if d.label == PLAYER]
+        balls = [d for d in self._ball.detect(image) if d.label == BALL]
+        return players + balls
+
+
 def load_finetuned(weights_path: str, device: str, conf: float) -> YoloDetector:
-    """Load our fine-tuned player/ball/rim detector."""
+    """Load the fine-tuned player detector on its own (players only, no ball)."""
     return YoloDetector(weights_path, device, conf, FINETUNED_CLASS_MAP)
+
+
+def load_pipeline_detector(
+    weights_path: str, device: str, conf: float
+) -> CompositeDetector:
+    """The detector the pipeline actually runs: fine-tuned players + COCO ball."""
+    return CompositeDetector(
+        YoloDetector(weights_path, device, conf, FINETUNED_CLASS_MAP),
+        YoloDetector("yolo11n.pt", device, conf, {32: BALL}),
+    )
