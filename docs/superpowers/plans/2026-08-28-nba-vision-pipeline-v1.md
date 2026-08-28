@@ -14,25 +14,48 @@
 
 ## Execution status (2026-08-28)
 
-**Tasks 1–11 complete. 79 tests passing. Task 12 blocked, correctly, on spec §9.3.**
+**Tasks 1–11 complete. 79 tests passing. V1 and V2 PASS on real footage.**
 
-Every stage is built, unit-tested against the synthetic clip, and committed on
-branch `feat/v1-pipeline`. All nine `validate_vN.py` scripts are written and run
-end-to-end; each currently reports FAIL for one reason only — a missing external
-input, not a code defect.
+Branch `feat/v1-pipeline`. Data now sourced from **BARD** (CC BY 4.0) — a
+balanced 120-clip subset plus wide-angle sample/holdout clips, fetched
+reproducibly by `scripts/fetch_bard_subset.py` and `scripts/select_clip.py`.
 
-| Needed | Blocks | Who |
-|---|---|---|
-| A basketball clip at `data/raw_clips/sample.mp4` (10–60s, single angle) | V1, V2, V4, V5, V6 | user |
-| A labeled detector subset (50–200 frames, player/ball/rim) at `data/labeled/detector/` | V3 → then V4, V5, V6 | user (licence call) |
-| Labeled action clips at `data/labeled/actions/<action>/*.mp4` (≥20) | V7 | user (licence call) |
-| `ANTHROPIC_API_KEY`, or `ant auth login` | V8 | user |
-| A held-out clip at `data/raw_clips/holdout.mp4` | V9 | user |
+| Gate | Status |
+|---|---|
+| V1 extraction | **PASS** — 60fps × 9.45s → 94 frames at 10fps |
+| V2 stock detector | **PASS** — 12–16 players/frame, boxes verified by eye |
+| V3 detector fine-tune | **BLOCKED** — BARD has no bounding boxes |
+| V4 tracking | blocked on V3's checkpoint |
+| V5 team assignment | blocked on V3's checkpoint |
+| V6 possession | blocked on V3 + a hand-built answer key |
+| V7 action classifier | running — 3 classes, see below |
+| V8 commentary | **BLOCKED** — no `ANTHROPIC_API_KEY` |
+| V9 end-to-end | blocked on the above |
 
-`scripts/run_pipeline.py` and `scripts/validate_v9.py` are deliberately **not
-written yet**: spec §9.3 forbids the end-to-end script until V1–V8 pass
-individually, and Task 12's own first step enforces that. Resume at Task 12 once
-the inputs above land.
+### Two findings that change scope
+
+**1. BARD labels no `dribble` or `pass`.** Its nine labels (2PT/3PT Shot, Free
+Throw, Rebound, Foul, Turnover, Steal, Block, Violation) map onto only three of
+the spec's five ACTIONS: `shot`, `rebound`, `other`. V7 now derives its pass bar
+from populated classes rather than `len(ACTIONS)`, since a "20% chance" baseline
+would be fiction at three classes. Restoring the full five needs another source.
+
+**2. BARD has no bounding boxes, so V3 has no data.** Candidates checked:
+SpaceJam's dataset link is **dead (404)**; the Roboflow YOLO dataset on HF is
+*court keypoints* (`nc: 1, names: ['court']`), not players. The one real
+candidate found is `sumeetn/sportsmot-basketball-detection` — 863 images with
+player boxes in `[x,y,w,h]` — but its HF mirror **declares no licence**, and it
+covers `player` only, not `ball` or `rim`. That is a user decision, and it forces
+an architecture question: possession (stage 5) needs ball detections, so a
+player-only detector would have to be paired with stock COCO `sports ball`.
+
+### Still needed from the user
+
+- A licence call on a bounding-box source for V3 (or hand-labelling 50–200 frames).
+- `ANTHROPIC_API_KEY`, or `ant auth login`, for V8.
+
+`scripts/run_pipeline.py` and `scripts/validate_v9.py` remain unwritten by
+design: spec §9.3 gates them on V1–V8 passing individually.
 
 ---
 
