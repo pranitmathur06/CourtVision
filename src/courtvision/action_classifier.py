@@ -37,11 +37,16 @@ class VideoMaeClassifier:
 
     def __init__(self, weights_dir: str, device: str) -> None:
         import torch
-        from transformers import VideoMAEForVideoClassification, VideoMAEImageProcessor
+        from transformers import VideoMAEImageProcessor
+
+        from courtvision.videomae import load_videomae_classifier
 
         self._torch = torch
         self._processor = VideoMAEImageProcessor.from_pretrained(weights_dir)
-        self._model = VideoMAEForVideoClassification.from_pretrained(weights_dir)
+        # Our own fine-tuned checkpoints already use the current parameter names,
+        # so this restores nothing for them — but it keeps the loading path
+        # identical whether we point at a local checkpoint or a hub model.
+        self._model, _ = load_videomae_classifier(weights_dir)
         self._model.to(device).eval()
         self._device = device
 

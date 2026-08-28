@@ -75,7 +75,9 @@ def load_clip(path: Path) -> np.ndarray:
 
 def main() -> int:
     import torch
-    from transformers import VideoMAEForVideoClassification, VideoMAEImageProcessor
+    from transformers import VideoMAEImageProcessor
+
+    from courtvision.videomae import load_videomae_classifier
 
     if not DATA_DIR.is_dir():
         print(f"V7 FAIL — no labeled clips at {DATA_DIR}/<action>/*.mp4")
@@ -111,13 +113,16 @@ def main() -> int:
 
     device = resolve_device()
     processor = VideoMAEImageProcessor.from_pretrained(BASE_MODEL)
-    model = VideoMAEForVideoClassification.from_pretrained(
+    model, restored = load_videomae_classifier(
         BASE_MODEL,
         num_labels=len(populated),
         id2label={i: a for i, a in enumerate(populated)},
         label2id={a: i for i, a in enumerate(populated)},
         ignore_mismatched_sizes=True,
-    ).to(device)
+    )
+    model = model.to(device)
+    print(f"  restored {restored} attention bias tensors that transformers "
+          f"would otherwise have left at zero")
 
     # Decode and preprocess every clip once, not once per epoch.
     print(f"  decoding {len(train)} train + {len(val)} val clips (once)...")
