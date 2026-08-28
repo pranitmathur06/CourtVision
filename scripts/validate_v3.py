@@ -1,0 +1,69 @@
+"""V3 — Fine-tuning loop sanity check (spec §6).
+
+Fine-tunes YOLO on the small labeled subset and compares mAP50-95 on the held-out
+val split against the stock COCO baseline. Passing proves the training loop and
+data pipeline work; it does not prove the detector is good enough for production.
+"""
+
+from __future__ import annotations
+
+import shutil
+import sys
+from pathlib import Path
+
+from ultralytics import YOLO
+
+from courtvision.device import resolve_device
+
+DATA_YAML = Path("data/labeled/detector/data.yaml")
+CHECKPOINT = Path("checkpoints/detector.pt")
+EPOCHS = 25
+IMG_SIZE = 640
+BATCH = 4  # small — 16 GB unified memory is shared with the OS
+
+
+def main() -> int:
+    if not DATA_YAML.exists():
+        print(f"V3 FAIL — no dataset at {DATA_YAML}; run scripts/prepare_dataset.py")
+        return 1
+
+    device = resolve_device()
+
+    # Baseline: stock COCO weights evaluated on our val split. It knows nothing
+    # about "rim", so this number is expected to be low - that is the point.
+    baseline = YOLO("yolo11n.pt").val(
+        data=str(DATA_YAML), device=device, imgsz=IMG_SIZE, verbose=False
+    )
+    baseline_map = float(baseline.box.map)
+
+    model = YOLO("yolo11n.pt")
+    model.train(
+        data=str(DATA_YAML),
+        epochs=EPOCHS,
+        imgsz=IMG_SIZE,
+        batch=BATCH,
+        device=device,
+        project="outputs/train",
+        name="detector",
+        exist_ok=True,
+        verbose=False,
+    )
+    tuned = model.val(data=str(DATA_YAML), device=device, imgsz=IMG_SIZE, verbose=False)
+    tuned_map = float(tuned.box.map)
+
+    CHECKPOINT.parent.mkdir(parents=True, exist_ok=True)
+    best = Path("outputs/train/detector/weights/best.pt")
+    if best.exists():
+        shutil.copy(best, CHECKPOINT)
+
+    ok = tuned_map > baseline_map and CHECKPOINT.exists()
+    verdict = "PASS" if ok else "FAIL"
+    print(
+        f"V3 {verdict} — mAP50-95 baseline {baseline_map:.4f} -> fine-tuned "
+        f"{tuned_map:.4f} on {EPOCHS} epochs; checkpoint {CHECKPOINT}"
+    )
+    return 0 if ok else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
