@@ -27,7 +27,9 @@ from courtvision.types import Frame
 CLIP = Path("data/raw_clips/sample.mp4")
 CHECKPOINT = Path("checkpoints/detector.pt")
 ANSWER_KEY = Path("outputs/v6_answer_key.json")
-REQUIRED_CORRECT = 8
+# The spec asks for 8 of 10; this keeps that 80% ratio for whatever size the
+# answer key actually is.
+REQUIRED_RATIO = 0.8
 
 
 def main() -> int:
@@ -69,9 +71,12 @@ def main() -> int:
                 {"time_s": entry["time_s"], "want": entry["track_id"], "got": predicted}
             )
 
-    ok = correct >= REQUIRED_CORRECT
+    import math
+
+    required = math.ceil(REQUIRED_RATIO * len(key))
+    ok = correct >= required
     verdict = "PASS" if ok else "FAIL"
-    print(f"V6 {verdict} — {correct}/{len(key)} correct (need >={REQUIRED_CORRECT})")
+    print(f"V6 {verdict} — {correct}/{len(key)} correct (need >={required})")
     for miss in misses:
         print(f"  miss at {miss['time_s']:.1f}s: wanted {miss['want']}, got {miss['got']}")
     return 0 if ok else 1

@@ -63,12 +63,20 @@ def smooth_holders(
         else:
             # A different player claims the ball. Require sustained support so a
             # single noisy frame cannot flip possession.
-            window = list(raw[index : index + min_hold_frames])
-            if len(window) == min_hold_frames and all(c == candidate for c in window):
+            #
+            # Support is counted over the next `min_hold_frames` frames in which
+            # the ball was actually SEEN, skipping frames where it was missed.
+            # Requiring strictly consecutive frames looked reasonable but fails
+            # badly in practice: the ball is only detected in about two thirds of
+            # broadcast frames, so a run of three in a row is rare and possession
+            # would stick on a stale holder. A gap is missing data, not evidence
+            # against the candidate.
+            observed = [c for c in raw[index:] if c is not None][:min_hold_frames]
+            if len(observed) == min_hold_frames and all(
+                c == candidate for c in observed
+            ):
                 current = candidate
-                gap = 0
-            else:
-                gap = 0
+            gap = 0
         smoothed.append(current)
 
     return smoothed

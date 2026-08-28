@@ -14,48 +14,53 @@
 
 ## Execution status (2026-08-28)
 
-**Tasks 1–11 complete. 79 tests passing. V1 and V2 PASS on real footage.**
-
-Branch `feat/v1-pipeline`. Data now sourced from **BARD** (CC BY 4.0) — a
-balanced 120-clip subset plus wide-angle sample/holdout clips, fetched
-reproducibly by `scripts/fetch_bard_subset.py` and `scripts/select_clip.py`.
+**Tasks 1–11 complete. 80 tests passing. V1–V5 PASS on real NBA footage.**
 
 | Gate | Status |
 |---|---|
 | V1 extraction | **PASS** — 60fps × 9.45s → 94 frames at 10fps |
 | V2 stock detector | **PASS** — 12–16 players/frame, boxes verified by eye |
-| V3 detector fine-tune | **BLOCKED** — BARD has no bounding boxes |
-| V4 tracking | blocked on V3's checkpoint |
-| V5 team assignment | blocked on V3's checkpoint |
-| V6 possession | blocked on V3 + a hand-built answer key |
-| V7 action classifier | running — 3 classes, see below |
+| V3 detector fine-tune | **PASS** — mAP50-95 **0.465 → 0.659** on SportsMOT val |
+| V4 tracking | **PASS** — 92.8% of detections on tracks lasting ≥10 frames |
+| V5 team assignment | **PASS** — clean split, DET dark vs BKN white, verified by eye |
+| V6 possession | **FAIL ×2 — stopped and flagged per spec §9.6** (see below) |
+| V7 action classifier | running (2nd attempt, supervised backbone) |
 | V8 commentary | **BLOCKED** — no `ANTHROPIC_API_KEY` |
-| V9 end-to-end | blocked on the above |
+| V9 end-to-end | blocked on V6, V7, V8 |
 
-### Two findings that change scope
+### V6 is blocked on ball detection, and spec §9.6 says stop
 
-**1. BARD labels no `dribble` or `pass`.** Its nine labels (2PT/3PT Shot, Free
-Throw, Rebound, Foul, Turnover, Steal, Block, Violation) map onto only three of
-the spec's five ACTIONS: `shot`, `rebound`, `other`. V7 now derives its pass bar
-from populated classes rather than `len(ACTIONS)`, since a "20% chance" baseline
-would be fiction at three classes. Restoring the full five needs another source.
+Possession is 2/5 against a hand-built answer key. The cause is **not** the
+possession logic — instrumenting the failures showed `raw_holder` returns the
+correct player whenever the ball is actually detected. The cause is the ball
+detector:
 
-**2. BARD has no bounding boxes, so V3 has no data.** Candidates checked:
-SpaceJam's dataset link is **dead (404)**; the Roboflow YOLO dataset on HF is
-*court keypoints* (`nc: 1, names: ['court']`), not players. The one real
-candidate found is `sumeetn/sportsmot-basketball-detection` — 863 images with
-player boxes in `[x,y,w,h]` — but its HF mirror **declares no licence**, and it
-covers `player` only, not `ball` or `rim`. That is a user decision, and it forces
-an architecture question: possession (stage 5) needs ball detections, so a
-player-only detector would have to be paired with stock COCO `sports ball`.
+* COCO `sports ball` via **yolo11n** found the ball in **0 of 104 frames** at
+  conf 0.25 (peak confidence 0.116). Swapping to **yolo11x** fixed that — peak
+  0.652 — and it is now the ball backbone.
+* Even so, coverage is only **67%** at conf 0.05. Dropping to conf 0.02 raises
+  coverage to 92%, but inspection showed those extra detections sit on court
+  markings and limbs, not the ball. They convert a correct "nobody has it" into
+  a confident wrong holder, so the threshold was returned to 0.05.
+
+One genuine fix did land on the way: the possession smoother required
+`min_hold_frames` **consecutive** frames to switch holder, which never happens
+when a third of frames have no ball, so possession stuck on stale holders. It now
+counts the next `min_hold_frames` frames in which the ball was actually *seen*,
+skipping gaps — a gap is missing data, not evidence against a candidate.
+
+**The real fix is a purpose-trained ball detector.** No ball-annotated basketball
+dataset was found on Hugging Face; Roboflow Universe has several but needs an
+account. Per spec §9.6 this is flagged rather than worked around — the remaining
+levers (lower thresholds, looser distance gates) buy metrics, not correctness.
 
 ### Still needed from the user
 
-- A licence call on a bounding-box source for V3 (or hand-labelling 50–200 frames).
+- A **ball-annotated dataset** (or a decision to accept degraded possession).
 - `ANTHROPIC_API_KEY`, or `ant auth login`, for V8.
 
-`scripts/run_pipeline.py` and `scripts/validate_v9.py` remain unwritten by
-design: spec §9.3 gates them on V1–V8 passing individually.
+`scripts/run_pipeline.py` and `scripts/validate_v9.py` remain unwritten: spec
+§9.3 gates them on V1–V8 passing individually.
 
 ---
 

@@ -16,6 +16,13 @@ class Config:
     # small, fast and motion-blurred at broadcast distance: yolo11n peaked at
     # 0.116 confidence and found it in 0/104 frames at 0.25, while yolo11x
     # reaches 0.652 and covers most frames at 0.05.
+    # Measured coverage on the sample clip: 0.05 -> 67% of frames, 0.02 -> 92%.
+    # The extra coverage at 0.02 is NOT real: inspected detections at that level
+    # sit on court markings and limbs, not the ball, and they turn a correct
+    # "nobody has it" into a confident wrong holder. Kept at 0.05, which is
+    # honest but still leaves ~a third of frames without a ball. A purpose-trained
+    # ball detector is the real fix -- COCO `sports ball` was never meant for a
+    # small, motion-blurred object at broadcast distance.
     ball_conf: float = 0.05
 
     # Stage 5 — possession.
