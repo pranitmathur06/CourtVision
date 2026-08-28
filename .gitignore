@@ -1,1 +1,9 @@
 .DS_Store
+.venv/
+__pycache__/
+*.pyc
+data/raw_clips/*
+data/labeled/*
+checkpoints/*
+outputs/*
+!**/.gitkeep

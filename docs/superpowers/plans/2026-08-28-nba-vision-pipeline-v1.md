@@ -14,9 +14,9 @@
 
 ## Global Constraints
 
-- **Python 3.11.11** via pyenv. All work happens inside a project venv at `.venv`. Never `pip install` into the pyenv global.
-- **Device is `mps`, not `cuda`.** This machine is an Apple M2 (10-core GPU, 16 GB unified memory). There is no NVIDIA GPU. Every model call resolves its device through `courtvision.device.resolve_device()`. Never hardcode `"cuda"` and never call `.cuda()`.
-- **Disk budget: the machine has ~6.6 GB free (99% full).** Total project footprint — venv + weights + data + outputs — must stay under **4 GB**. Do not download any full dataset. Every dataset step uses a 50–200 item subset. Check free space before any download.
+- **Python 3.13.0**, from `/Library/Frameworks/Python.framework/Versions/3.13`. All work happens inside the project venv at `.venv` — always invoke `./.venv/bin/python`. **Not** the pyenv 3.11.11 that `python3` resolves to by default: that build is missing the `_lzma` C extension, which breaks `import torchvision` and therefore the VideoMAE import Task 8 needs. Rebuilding the user's global pyenv interpreter would affect their other projects, so the venv was rebased onto the framework 3.13 build instead — isolated and reversible. *(Amended during execution; the plan originally specified 3.11.11.)*
+- **Device is `mps`, not `cuda`.** This machine is an Apple M2 (10-core GPU, 16 GB unified memory). There is no NVIDIA GPU. Every model call resolves its device through `courtvision.device.resolve_device()`. Never hardcode `"cuda"` and never call `.cuda()`. This keeps the code portable: it selects `cuda` unmodified on the rented GPU box v2 will need.
+- **Disk is no longer a constraint.** The machine had 6.6 GB free when this plan was written, which drove a 4 GB budget; it now has ~170 GB. Full datasets are viable. The "small subset first" sequencing in Tasks 4 and 8 is still correct — but for the spec's own reason (prove the loop before scaling), not for disk. *(Amended during execution.)*
 - **Model ID is `claude-opus-5`.** Exact string, no date suffix. Do not substitute a cheaper model.
 - **Every `scripts/validate_vN.py` must print a single final line** of the form `V<N> PASS — <metric>` or `V<N> FAIL — <metric>` and exit `0` on pass, `1` on fail. Pass/fail is never a judgment call buried in output.
 - **Every task ends with a commit.** Small, frequent commits.

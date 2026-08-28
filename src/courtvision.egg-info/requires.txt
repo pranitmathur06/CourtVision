@@ -1,0 +1,14 @@
+numpy>=2.0
+opencv-python>=4.10
+torch>=2.4
+torchvision>=0.19
+ultralytics>=8.3
+supervision>=0.25
+scikit-learn>=1.5
+transformers>=4.44
+langgraph>=1.0
+anthropic>=1.0
+pydantic>=2.8
+
+[dev]
+pytest>=8.0
