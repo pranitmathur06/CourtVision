@@ -12,6 +12,11 @@ class Config:
 
     # Stage 2 — detection
     detector_conf: float = 0.25
+    # The ball needs its own, much lower threshold and a bigger backbone. It is
+    # small, fast and motion-blurred at broadcast distance: yolo11n peaked at
+    # 0.116 confidence and found it in 0/104 frames at 0.25, while yolo11x
+    # reaches 0.652 and covers most frames at 0.05.
+    ball_conf: float = 0.05
 
     # Stage 5 — possession.
     # Distance from ball centre to player centre, divided by that player's box

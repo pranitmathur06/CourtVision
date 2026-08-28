@@ -17,7 +17,7 @@ import sys
 from pathlib import Path
 
 from courtvision.config import Config
-from courtvision.detection import load_finetuned
+from courtvision.detection import load_pipeline_detector
 from courtvision.device import resolve_device
 from courtvision.extraction import extract_frames
 from courtvision.possession import possession_timeline
@@ -42,7 +42,11 @@ def main() -> int:
         return 1
 
     config = Config()
-    detector = load_finetuned(str(CHECKPOINT), resolve_device(), config.detector_conf)
+    # Possession needs the ball, so this gate uses the composite detector
+    # (fine-tuned players + large COCO model for the ball), not players alone.
+    detector = load_pipeline_detector(
+        str(CHECKPOINT), resolve_device(), config.detector_conf, config.ball_conf
+    )
     tracker = PlayerTracker()
 
     frames: list[Frame] = []

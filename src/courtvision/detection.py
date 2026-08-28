@@ -99,11 +99,19 @@ def load_finetuned(weights_path: str, device: str, conf: float) -> YoloDetector:
     return YoloDetector(weights_path, device, conf, FINETUNED_CLASS_MAP)
 
 
+# The ball detector is deliberately the LARGE COCO model, not the nano one used
+# elsewhere. Measured on our sample clip: yolo11n found the ball in 0/104 frames
+# at conf 0.25 (peak confidence 0.116), while yolo11x reached 0.652 and covered
+# most frames. A basketball at broadcast distance is small, fast and blurred —
+# exactly where a nano backbone gives up.
+BALL_WEIGHTS = "yolo11x.pt"
+
+
 def load_pipeline_detector(
-    weights_path: str, device: str, conf: float
+    weights_path: str, device: str, conf: float, ball_conf: float
 ) -> CompositeDetector:
     """The detector the pipeline actually runs: fine-tuned players + COCO ball."""
     return CompositeDetector(
         YoloDetector(weights_path, device, conf, FINETUNED_CLASS_MAP),
-        YoloDetector("yolo11n.pt", device, conf, {32: BALL}),
+        YoloDetector(BALL_WEIGHTS, device, ball_conf, {32: BALL}),
     )
