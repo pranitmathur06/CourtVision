@@ -7,3 +7,5 @@ data/labeled/*
 checkpoints/*
 outputs/*
 !**/.gitkeep
+*.pt
+yolo*.pt
