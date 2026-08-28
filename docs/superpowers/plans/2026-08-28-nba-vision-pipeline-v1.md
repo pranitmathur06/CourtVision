@@ -12,6 +12,30 @@
 
 ---
 
+## Execution status (2026-08-28)
+
+**Tasks 1–11 complete. 79 tests passing. Task 12 blocked, correctly, on spec §9.3.**
+
+Every stage is built, unit-tested against the synthetic clip, and committed on
+branch `feat/v1-pipeline`. All nine `validate_vN.py` scripts are written and run
+end-to-end; each currently reports FAIL for one reason only — a missing external
+input, not a code defect.
+
+| Needed | Blocks | Who |
+|---|---|---|
+| A basketball clip at `data/raw_clips/sample.mp4` (10–60s, single angle) | V1, V2, V4, V5, V6 | user |
+| A labeled detector subset (50–200 frames, player/ball/rim) at `data/labeled/detector/` | V3 → then V4, V5, V6 | user (licence call) |
+| Labeled action clips at `data/labeled/actions/<action>/*.mp4` (≥20) | V7 | user (licence call) |
+| `ANTHROPIC_API_KEY`, or `ant auth login` | V8 | user |
+| A held-out clip at `data/raw_clips/holdout.mp4` | V9 | user |
+
+`scripts/run_pipeline.py` and `scripts/validate_v9.py` are deliberately **not
+written yet**: spec §9.3 forbids the end-to-end script until V1–V8 pass
+individually, and Task 12's own first step enforces that. Resume at Task 12 once
+the inputs above land.
+
+---
+
 ## Global Constraints
 
 - **Python 3.13.0**, from `/Library/Frameworks/Python.framework/Versions/3.13`. All work happens inside the project venv at `.venv` — always invoke `./.venv/bin/python`. **Not** the pyenv 3.11.11 that `python3` resolves to by default: that build is missing the `_lzma` C extension, which breaks `import torchvision` and therefore the VideoMAE import Task 8 needs. Rebuilding the user's global pyenv interpreter would affect their other projects, so the venv was rebased onto the framework 3.13 build instead — isolated and reversible. *(Amended during execution; the plan originally specified 3.11.11.)*
