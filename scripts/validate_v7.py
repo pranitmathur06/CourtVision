@@ -32,23 +32,39 @@ REQUIRED_MARGIN_OVER_CHANCE = 0.15
 
 
 def load_clip(path: Path) -> np.ndarray:
+    """Decode exactly N_FRAMES evenly-spaced frames.
+
+    grab() advances the decoder without producing an image; only the frames we
+    actually want are retrieve()d and resized. Decoding every frame of a 720p
+    clip to keep 16 of them made this script ~10x slower than the model itself.
+    """
     import cv2
 
     capture = cv2.VideoCapture(str(path))
-    frames = []
+    total = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
+    if total <= 0:
+        capture.release()
+        raise ValueError(f"no frames in {path}")
+
+    wanted = set(np.linspace(0, total - 1, N_FRAMES).round().astype(int).tolist())
+    frames, index = [], 0
     while True:
-        ok, image = capture.read()
+        ok = capture.grab()
         if not ok:
             break
-        frames.append(
-            cv2.cvtColor(cv2.resize(image, (FRAME_SIZE, FRAME_SIZE)), cv2.COLOR_BGR2RGB)
-        )
+        if index in wanted:
+            ok, image = capture.retrieve()
+            if ok:
+                frames.append(cv2.cvtColor(
+                    cv2.resize(image, (FRAME_SIZE, FRAME_SIZE)), cv2.COLOR_BGR2RGB))
+        index += 1
     capture.release()
+
     if not frames:
         raise ValueError(f"no frames decoded from {path}")
-    # Sample N_FRAMES evenly, repeating the last frame if the clip is short.
-    indices = np.linspace(0, len(frames) - 1, N_FRAMES).round().astype(int)
-    return np.stack([frames[i] for i in indices])
+    while len(frames) < N_FRAMES:      # short clip: repeat the last frame
+        frames.append(frames[-1])
+    return np.stack(frames[:N_FRAMES])
 
 
 def main() -> int:
@@ -98,27 +114,47 @@ def main() -> int:
         ignore_mismatched_sizes=True,
     ).to(device)
 
-    optimizer = torch.optim.AdamW(model.parameters(), lr=5e-5)
+    # Decode and preprocess every clip once, not once per epoch.
+    print(f"  decoding {len(train)} train + {len(val)} val clips (once)...")
+    def prepare(items):
+        out = []
+        for clip_path, label_index in items:
+            tensors = processor(list(load_clip(clip_path)), return_tensors="pt")
+            out.append(({k: v for k, v in tensors.items()}, label_index))
+        return out
+
+    train_cache, val_cache = prepare(train), prepare(val)
+
+    # With only ~100 clips, fine-tuning all 86M backbone parameters overfits
+    # immediately. Freeze the encoder and train the classifier head — the
+    # standard linear-probe approach for a dataset this small, and much faster.
+    for name, param in model.named_parameters():
+        param.requires_grad = name.startswith("classifier")
+    trainable = [p for p in model.parameters() if p.requires_grad]
+    print(f"  training {sum(p.numel() for p in trainable):,} of "
+          f"{sum(p.numel() for p in model.parameters()):,} parameters (head only)")
+
+    optimizer = torch.optim.AdamW(trainable, lr=1e-3)
     model.train()
     for epoch in range(EPOCHS):
-        random.Random(epoch).shuffle(train)
+        order = list(range(len(train_cache)))
+        random.Random(epoch).shuffle(order)
         total_loss = 0.0
-        for clip_path, label_index in train:
-            inputs = processor(list(load_clip(clip_path)), return_tensors="pt")
+        for i in order:
+            inputs, label_index = train_cache[i]
             inputs = {k: v.to(device) for k, v in inputs.items()}
             labels = torch.tensor([label_index], device=device)
             loss = model(**inputs, labels=labels).loss
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
-            total_loss += float(loss)
-        print(f"  epoch {epoch + 1}/{EPOCHS} train loss {total_loss / len(train):.4f}")
+            total_loss += float(loss.detach())
+        print(f"  epoch {epoch + 1}/{EPOCHS} train loss {total_loss / len(train_cache):.4f}")
 
     model.eval()
     correct = 0
     with torch.no_grad():
-        for clip_path, label_index in val:
-            inputs = processor(list(load_clip(clip_path)), return_tensors="pt")
+        for inputs, label_index in val_cache:
             inputs = {k: v.to(device) for k, v in inputs.items()}
             predicted = int(model(**inputs).logits.argmax(dim=-1))
             correct += int(predicted == label_index)
