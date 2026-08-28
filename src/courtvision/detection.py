@@ -10,18 +10,15 @@ from typing import Protocol
 
 import numpy as np
 
-from courtvision.types import BALL, PLAYER, Box, Detection
+from courtvision.types import BALL, PLAYER, RIM, Box, Detection
 
 # Stock COCO ids we care about. There is no COCO class for a basketball rim,
 # which is exactly why V3 fine-tuning exists.
 COCO_CLASS_MAP: dict[int, str] = {0: PLAYER, 32: BALL}
 
 # After fine-tuning we own the class order, so it is dense and starts at zero.
-# Player only: the fine-tuning source (SportsMOT) labels players and nothing else.
-# `ball` is supplied at inference by stock COCO via CompositeDetector, and `rim`
-# is not modelled at all because no downstream stage reads it — possession,
-# team assignment, tracking and render all use .players() and .ball() only.
-FINETUNED_CLASS_MAP: dict[int, str] = {0: PLAYER}
+# Must match scripts/prepare_detector_dataset.py.
+FINETUNED_CLASS_MAP: dict[int, str] = {0: PLAYER, 1: BALL, 2: RIM}
 
 
 class Detector(Protocol):
@@ -55,6 +52,7 @@ class YoloDetector:
         device: str,
         conf: float,
         class_map: dict[int, str],
+        conf_by_label: dict[str, float] | None = None,
     ) -> None:
         from ultralytics import YOLO
 
@@ -62,36 +60,24 @@ class YoloDetector:
         self._device = device
         self._conf = conf
         self._class_map = class_map
+        # The ball is small, fast and motion-blurred, so it scores lower than a
+        # player even when correctly found. One global threshold either loses the
+        # ball or floods the frame with weak player boxes; per-label thresholds
+        # avoid that trade.
+        self._conf_by_label = dict(conf_by_label or {})
+        self._predict_conf = min([conf, *self._conf_by_label.values()])
 
     def detect(self, image: np.ndarray) -> list[Detection]:
         results = self._model.predict(
-            image, device=self._device, conf=self._conf, verbose=False
+            image, device=self._device, conf=self._predict_conf, verbose=False
         )
         if not results:
             return []
-        return boxes_from_result(results[0], self._class_map, self._conf)
-
-
-class CompositeDetector:
-    """Fine-tuned player detector + stock COCO for the ball.
-
-    Our fine-tuning data labels players only, but stage 5 (possession) needs the
-    ball. COCO's `sports ball` class detects basketballs adequately, so the two
-    are combined behind the one `Detector` interface every other stage codes to.
-
-    Cost is a second forward pass per frame. Detection is ~15% of pipeline time
-    (see docs/profile-v1.md), so this is affordable; it is also the obvious thing
-    to collapse once a single detector is trained on both classes.
-    """
-
-    def __init__(self, player_detector: Detector, ball_detector: Detector) -> None:
-        self._player = player_detector
-        self._ball = ball_detector
-
-    def detect(self, image: np.ndarray) -> list[Detection]:
-        players = [d for d in self._player.detect(image) if d.label == PLAYER]
-        balls = [d for d in self._ball.detect(image) if d.label == BALL]
-        return players + balls
+        found = boxes_from_result(results[0], self._class_map, self._predict_conf)
+        return [
+            d for d in found
+            if d.conf >= self._conf_by_label.get(d.label, self._conf)
+        ]
 
 
 def load_finetuned(weights_path: str, device: str, conf: float) -> YoloDetector:
@@ -99,19 +85,16 @@ def load_finetuned(weights_path: str, device: str, conf: float) -> YoloDetector:
     return YoloDetector(weights_path, device, conf, FINETUNED_CLASS_MAP)
 
 
-# The ball detector is deliberately the LARGE COCO model, not the nano one used
-# elsewhere. Measured on our sample clip: yolo11n found the ball in 0/104 frames
-# at conf 0.25 (peak confidence 0.116), while yolo11x reached 0.652 and covered
-# most frames. A basketball at broadcast distance is small, fast and blurred —
-# exactly where a nano backbone gives up.
-BALL_WEIGHTS = "yolo11x.pt"
-
-
 def load_pipeline_detector(
     weights_path: str, device: str, conf: float, ball_conf: float
-) -> CompositeDetector:
-    """The detector the pipeline actually runs: fine-tuned players + COCO ball."""
-    return CompositeDetector(
-        YoloDetector(weights_path, device, conf, FINETUNED_CLASS_MAP),
-        YoloDetector(BALL_WEIGHTS, device, ball_conf, {32: BALL}),
+) -> YoloDetector:
+    """The detector the pipeline runs: one fine-tuned model for player/ball/rim.
+
+    This replaces an earlier two-model composite (fine-tuned players + stock COCO
+    `sports ball`). That workaround existed only because the first detector
+    dataset had no ball labels; COCO's ball never worked well enough for
+    possession anyway.
+    """
+    return YoloDetector(
+        weights_path, device, conf, FINETUNED_CLASS_MAP, {BALL: ball_conf}
     )

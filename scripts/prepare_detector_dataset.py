@@ -1,106 +1,113 @@
-"""Convert SportsMOT basketball detection into a YOLO-format dataset for V3.
+"""Build the V3 YOLO dataset (player / ball / rim) from the Roboflow export.
 
-Source: `sumeetn/sportsmot-basketball-detection` on Hugging Face — 572 train +
-291 val frames of basketball with player bounding boxes. Verified by eye: boxes
-are tight on the ten on-court players and exclude referees and the crowd, which
-is exactly the failure mode stock COCO `person` shows (see outputs/v2_detections).
+Source: `roboflow-jvuqo/basketball-player-detection-3-ycjdo` v18 on Roboflow
+Universe — CC BY 4.0, 654 broadcast basketball frames with ten classes. It is the
+first source found that labels the **ball**, which is what stage 5 (possession)
+needs and what COCO `sports ball` could not deliver: yolo11n found the ball in
+0/104 frames, and yolo11x only reached ~67% coverage with false positives below
+conf 0.05.
 
-Two deliberate scope decisions, both recorded in the plan:
+Its ten classes collapse onto the spec's three. Note `referee` is DROPPED rather
+than mapped to `player` — refs are on court but are not players, and teaching the
+detector to ignore them is exactly the improvement over stock COCO that showed up
+in the V2 overlays (which boxed refs and courtside fans).
 
-* **player only.** SportsMOT has no `ball` or `rim`. The ball is supplied at
-  inference by stock COCO `sports ball` via `CompositeDetector`, so the pipeline
-  still gets everything it consumes.
-* **no rim.** Nothing downstream reads it — possession, team assignment, tracking
-  and render all use `.players()` and `.ball()` only. Training a rim class with
-  no data and no consumer would be pure ceremony.
-
-Domain note: SportsMOT is FIBA footage; our clips are NBA broadcast. Camera
-framing is comparable (wide court) but this is a real domain gap, and V3's mAP is
-measured on SportsMOT's own held-out split, not on NBA frames.
+An earlier version of this script used SportsMOT, which labels players only. That
+is superseded: mixing it in would teach "no ball here" on every SportsMOT frame,
+actively harming the ball class.
 """
 
 from __future__ import annotations
 
 import argparse
+import shutil
 import sys
 from pathlib import Path
 
-import cv2
-import numpy as np
-
+SOURCE = Path("data/labeled/roboflow/bpd18")
 ROOT = Path("data/labeled/detector")
-REPO = "sumeetn/sportsmot-basketball-detection"
-PLAYER_CLASS = 0
+
+# Our dense class order; must match courtvision.detection.FINETUNED_CLASS_MAP.
+PLAYER, BALL, RIM = 0, 1, 2
+OUT_NAMES = ["player", "ball", "rim"]
+
+# Roboflow class index -> ours. Anything absent is dropped.
+REMAP = {
+    0: BALL,    # ball
+    1: BALL,    # ball-in-basket — still a ball
+    # 2: number — jersey digits, that is v2 OCR territory
+    3: PLAYER,  # player
+    4: PLAYER,  # player-in-possession
+    5: PLAYER,  # player-jump-shot
+    6: PLAYER,  # player-layup-dunk
+    7: PLAYER,  # player-shot-block
+    # 8: referee — deliberately dropped, see module docstring
+    9: RIM,     # rim
+}
 
 
-def write_split(rows: list[dict], split: str) -> int:
-    image_dir = ROOT / "images" / split
-    label_dir = ROOT / "labels" / split
-    image_dir.mkdir(parents=True, exist_ok=True)
-    label_dir.mkdir(parents=True, exist_ok=True)
+def convert(split_in: str, split_out: str) -> tuple[int, dict[int, int]]:
+    src_images = SOURCE / split_in / "images"
+    src_labels = SOURCE / split_in / "labels"
+    dst_images = ROOT / "images" / split_out
+    dst_labels = ROOT / "labels" / split_out
+    for d in (dst_images, dst_labels):
+        d.mkdir(parents=True, exist_ok=True)
 
-    written = 0
-    for row in rows:
-        image = cv2.imdecode(
-            np.frombuffer(row["image"]["bytes"], np.uint8), cv2.IMREAD_COLOR
-        )
-        if image is None:
-            continue
-        height, width = image.shape[:2]
-        stem = f"{split}_{row['image_id']:06d}_{written:04d}"
-        cv2.imwrite(str(image_dir / f"{stem}.jpg"), image)
-
+    counts: dict[int, int] = {PLAYER: 0, BALL: 0, RIM: 0}
+    n = 0
+    for image_path in sorted(src_images.glob("*.jpg")):
+        label_path = src_labels / (image_path.stem + ".txt")
         lines = []
-        for x, y, w, h in row["objects"]["bbox"]:
-            # COCO [x,y,w,h] absolute -> YOLO [cx,cy,w,h] normalised 0-1.
-            cx, cy = (x + w / 2.0) / width, (y + h / 2.0) / height
-            nw, nh = w / width, h / height
-            if not (0 < nw <= 1 and 0 < nh <= 1):
-                continue
-            cx, cy = min(max(cx, 0.0), 1.0), min(max(cy, 0.0), 1.0)
-            lines.append(f"{PLAYER_CLASS} {cx:.6f} {cy:.6f} {nw:.6f} {nh:.6f}")
-        (label_dir / f"{stem}.txt").write_text("\n".join(lines) + "\n")
-        written += 1
-    return written
+        if label_path.exists():
+            for line in label_path.read_text().splitlines():
+                parts = line.split()
+                if len(parts) < 5:
+                    continue
+                mapped = REMAP.get(int(parts[0]))
+                if mapped is None:
+                    continue
+                counts[mapped] += 1
+                lines.append(" ".join([str(mapped), *parts[1:5]]))
+        shutil.copy(image_path, dst_images / image_path.name)
+        (dst_labels / (image_path.stem + ".txt")).write_text("\n".join(lines) + "\n")
+        n += 1
+    return n, counts
 
 
 def main() -> int:
-    import pyarrow.parquet as pq
-    from huggingface_hub import hf_hub_download
+    parser = argparse.ArgumentParser(description="Build the V3 dataset")
+    parser.parse_args()
 
-    parser = argparse.ArgumentParser(description="Build the V3 YOLO dataset")
-    parser.add_argument("--train", type=int, default=200,
-                        help="training frames (spec section 5 wants a small subset first)")
-    parser.add_argument("--val", type=int, default=80)
-    args = parser.parse_args()
+    if not SOURCE.is_dir():
+        print(f"FAIL — no Roboflow export at {SOURCE}")
+        return 1
 
-    counts = {}
-    for split, source, limit in (
-        ("train", "data/train-00000-of-00001.parquet", args.train),
-        ("val", "data/validation-00000-of-00001.parquet", args.val),
-    ):
-        path = hf_hub_download(REPO, source, repo_type="dataset")
-        rows = next(pq.ParquetFile(path).iter_batches(batch_size=limit)).to_pylist()
-        counts[split] = write_split(rows, split)
-        print(f"  {split}: {counts[split]} images -> {ROOT}/images/{split}")
+    if ROOT.exists():
+        shutil.rmtree(ROOT)
 
-    yaml_path = ROOT / "data.yaml"
-    yaml_path.write_text(
+    totals: dict[int, int] = {PLAYER: 0, BALL: 0, RIM: 0}
+    images = 0
+    for split_in, split_out in (("train", "train"), ("valid", "val")):
+        n, counts = convert(split_in, split_out)
+        images += n
+        for k, v in counts.items():
+            totals[k] += v
+        print(f"  {split_out}: {n} images, "
+              + ", ".join(f"{OUT_NAMES[k]}={v}" for k, v in sorted(counts.items())))
+
+    (ROOT / "data.yaml").write_text(
         f"path: {ROOT.resolve()}\n"
         "train: images/train\n"
         "val: images/val\n"
-        "nc: 1\n"
-        "names: ['player']\n"
+        f"nc: {len(OUT_NAMES)}\n"
+        f"names: {OUT_NAMES}\n"
     )
-    print(f"\nwrote {yaml_path} (nc=1, names=['player'])")
-    boxes = 0
-    for s in ("train", "val"):
-        for f in (ROOT / "labels" / s).glob("*.txt"):
-            boxes += len([ln for ln in f.read_text().splitlines() if ln.strip()])
-    print(f"{sum(counts.values())} images, {boxes} player boxes total")
-    print("\nSource: sumeetn/sportsmot-basketball-detection (Hugging Face).")
-    print("Ball comes from stock COCO at inference; rim is not modelled "
-          "(no downstream consumer).")
+    print(f"\nwrote {ROOT}/data.yaml (nc={len(OUT_NAMES)}, names={OUT_NAMES})")
+    print(f"{images} images; boxes: "
+          + ", ".join(f"{OUT_NAMES[k]}={v}" for k, v in sorted(totals.items())))
+    print("\nSource: Roboflow Universe roboflow-jvuqo/"
+          "basketball-player-detection-3-ycjdo v18 (CC BY 4.0).")
     return 0
 
 

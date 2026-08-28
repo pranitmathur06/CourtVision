@@ -171,3 +171,7 @@ This project uses the **BARD** dataset (Basketball Action Recognition Dataset),
 Gabriele Giudici, 2025 — <https://github.com/GabrieleGiudic/BARD> — licensed
 **CC BY 4.0**. Clips are sourced from NBA broadcast footage; the CC BY licence
 covers the annotations. Fetch a subset with `scripts/fetch_bard_subset.py`.
+
+The detector is trained on **basketball-player-detection-3** (v18) from Roboflow
+Universe, workspace `roboflow-jvuqo` — licensed **CC BY 4.0**. Rebuild the dataset
+with `scripts/prepare_detector_dataset.py`.

@@ -53,31 +53,3 @@ def test_handles_empty_result():
     result = FakeResult(FakeBoxes(np.empty((0, 4)), [], []))
     assert boxes_from_result(result, COCO_CLASS_MAP, conf=0.25) == []
 
-
-class FakeDetector:
-    def __init__(self, detections):
-        self._detections = detections
-
-    def detect(self, image):
-        return list(self._detections)
-
-
-def test_composite_detector_merges_players_and_ball():
-    from courtvision.detection import CompositeDetector
-    from courtvision.types import Box, Detection
-
-    player_src = FakeDetector([
-        Detection(Box(0, 0, 10, 20), PLAYER, 0.9),
-        # A ball from the player model must be ignored; the ball model owns it.
-        Detection(Box(1, 1, 3, 3), BALL, 0.4),
-    ])
-    ball_src = FakeDetector([
-        Detection(Box(50, 50, 56, 56), BALL, 0.8),
-        # A person from the COCO model must be ignored; it includes refs/crowd.
-        Detection(Box(90, 0, 100, 20), PLAYER, 0.7),
-    ])
-    merged = CompositeDetector(player_src, ball_src).detect(None)
-
-    assert [d.label for d in merged] == [PLAYER, BALL]
-    assert merged[0].box.x1 == 0
-    assert merged[1].box.x1 == 50
