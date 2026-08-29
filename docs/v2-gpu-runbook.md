@@ -95,8 +95,23 @@ This is why you are renting. V7 cannot run on the Mac at all: training needs
 attempts thrashed rather than trained.
 
 ```bash
-./.venv/bin/python -m pytest -q
-./.venv/bin/python -c "from courtvision.device import resolve_device; print(resolve_device())"   # cuda
+./.venv/bin/python -m pytest -q          # expect 132 passed
+bash scripts/run_gpu_suite.sh 2>&1 | tee outputs/suite.log
+```
+
+That one command runs everything in dependency order — corpus audit, V7
+training, the per-class and cross-source report, V9 end-to-end, and the v2
+kernel/disaggregation checks — logging each to `outputs/` and printing a
+PASS/FAIL summary. It deliberately does not abort on a failing stage, because
+a later stage often explains an earlier one and the rental is metered.
+
+It starts with the corpus audit for a reason: if the clips did not all rsync
+across, every number after that is meaningless and you want to know in the
+first thirty seconds, not after the training run.
+
+To run the training step alone instead:
+
+```bash
 ./.venv/bin/python -u scripts/validate_v7.py 2>&1 | tee outputs/v7_run.log
 ```
 
