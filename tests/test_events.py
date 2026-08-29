@@ -47,8 +47,11 @@ def test_build_events_flags_a_change_of_holder():
 
 
 def test_build_events_does_not_flag_a_repeated_holder():
-    windows = [window(0, 1), window(2, 3)]
+    # Different actions so both survive collapsing; the point is that the same
+    # player keeping the ball is not a change of possession.
+    windows = [window(0, 1, "dribble"), window(2, 3, "shot")]
     events = build_events(windows, [5, 5, 5, 5], {5: "A"})
+    assert len(events) == 2
     assert events[1].possession_change is False
 
 
@@ -73,3 +76,31 @@ def test_build_events_returns_events_in_time_order():
 
 def test_build_events_on_empty_input():
     assert build_events([], [], {}) == []
+
+
+def test_build_events_collapses_consecutive_duplicate_windows():
+    """Overlapping windows describing one action produce ONE event."""
+    windows = [window(0, 1, "rebound"), window(2, 3, "rebound"), window(4, 5, "rebound")]
+    events = build_events(windows, [5] * 6, {5: "A"})
+    assert len(events) == 1
+    assert events[0].action == "rebound"
+    assert events[0].time_s == 0.0  # reported at the first window's start
+
+
+def test_build_events_keeps_a_repeated_action_by_a_different_player():
+    windows = [window(0, 1, "rebound"), window(2, 3, "rebound")]
+    events = build_events(windows, [5, 5, 6, 6], {5: "A", 6: "B"})
+    assert len(events) == 2
+    assert [e.track_id for e in events] == [5, 6]
+
+
+def test_build_events_keeps_a_different_action_by_the_same_player():
+    windows = [window(0, 1, "dribble"), window(2, 3, "shot")]
+    events = build_events(windows, [5] * 4, {5: "A"})
+    assert [e.action for e in events] == ["dribble", "shot"]
+
+
+def test_build_events_reports_an_action_again_after_something_else_intervenes():
+    windows = [window(0, 1, "dribble"), window(2, 3, "pass"), window(4, 5, "dribble")]
+    events = build_events(windows, [5] * 6, {5: "A"})
+    assert [e.action for e in events] == ["dribble", "pass", "dribble"]

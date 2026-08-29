@@ -28,9 +28,17 @@ def build_events(
     holders: Sequence[int | None],
     teams: dict[int, str],
 ) -> list[Event]:
-    """Merge action windows, possession and team labels into ordered events."""
+    """Merge action windows, possession and team labels into ordered events.
+
+    Consecutive windows describing the SAME action by the SAME player collapse
+    into one event. Windows overlap by design (size 16, stride 8), so a single
+    real action spans several of them; emitting one event each produced
+    commentary like "Another board credited to Player 12" three times for one
+    rebound. An event is a thing that happened, not a window that was scored.
+    """
     events: list[Event] = []
     previous_holder: int | None = None
+    last_key: tuple[str, int | None] | None = None
 
     for window in sorted(windows, key=lambda w: w.start_time_s):
         holder = dominant_holder(holders, window.start_index, window.end_index)
@@ -41,6 +49,12 @@ def build_events(
             and previous_holder is not None
             and holder != previous_holder
         )
+        key = (window.label, holder)
+        if key == last_key:
+            # Same action, same player, adjacent window: already reported.
+            continue
+        last_key = key
+
         events.append(
             Event(
                 time_s=window.start_time_s,
