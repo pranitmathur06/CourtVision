@@ -83,9 +83,35 @@ def convert(split_in: str, split_out: str) -> tuple[int, dict[int, int]]:
     return n, counts
 
 
+HARVEST = Path("data/labeled/handler_harvest")
+
+
+def merge_harvest() -> int:
+    """Append weakly-supervised handler frames to TRAIN only.
+
+    Validation stays purely human-annotated so mAP keeps measuring against real
+    labels rather than against the geometric rule that produced these.
+    """
+    if not (HARVEST / "images").is_dir():
+        return 0
+    dst_images = ROOT / "images" / "train"
+    dst_labels = ROOT / "labels" / "train"
+    added = 0
+    for image_path in sorted((HARVEST / "images").glob("*.jpg")):
+        label_path = HARVEST / "labels" / (image_path.stem + ".txt")
+        if not label_path.exists():
+            continue
+        shutil.copy(image_path, dst_images / f"harvest_{image_path.name}")
+        shutil.copy(label_path, dst_labels / f"harvest_{label_path.name}")
+        added += 1
+    return added
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Build the V3 dataset")
-    parser.parse_args()
+    parser.add_argument("--no-harvest", action="store_true",
+                        help="skip the weakly-supervised handler frames")
+    args = parser.parse_args()
 
     if not SOURCE.is_dir():
         print(f"FAIL — no Roboflow export at {SOURCE}")
@@ -103,6 +129,11 @@ def main() -> int:
             totals[k] += v
         print(f"  {split_out}: {n} images, "
               + ", ".join(f"{OUT_NAMES[k]}={v}" for k, v in sorted(counts.items())))
+
+    if not args.no_harvest:
+        added = merge_harvest()
+        if added:
+            print(f"  + {added} weakly-supervised handler frames added to train")
 
     (ROOT / "data.yaml").write_text(
         f"path: {ROOT.resolve()}\n"

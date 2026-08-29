@@ -34,20 +34,23 @@ def normalized_distance(player: Track, ball: Track) -> float:
 def raw_holder(frame: Frame, max_norm_dist: float) -> int | None:
     """Who holds the ball this frame, with no temporal context.
 
-    Prefers the detector's own `handler` prediction, because proximity is
-    under-determined on broadcast footage: measured on real NBA video, a
-    defender sits within 0.21 body-heights of the ball-handler in the median
-    frame, and in 61% of frames the runner-up is within 0.3. No distance metric
-    resolves that — box-edge distance is worse still. A learned handler answers
-    the question directly.
+    Uses nearest-player proximity. The detector also predicts a `handler` class,
+    and preferring it was tried and MEASURED TO BE WORSE: it fires in only 24% of
+    frames and is confidently wrong when it does (0.62 confidence on the wrong
+    player in a hand-checked frame), because it has just 191 training instances
+    against 5,282 for `player`. Scored against the answer key, preferring the
+    handler gave 1/4 where plain proximity gives 3/4.
 
-    Falls back to nearest-player when the detector marks no handler, since the
-    handler class is trained on few examples and will not fire every frame.
+    The class is still trained and still exposed as `Frame.handler()` — with more
+    possession annotation it is the right long-term signal, since proximity is
+    genuinely under-determined here (a defender sits within 0.21 body-heights of
+    the handler in the median frame). It is simply not good enough yet to trust.
+
+    Ball-motion correlation was also tried — matching each player's displacement
+    against the ball's — and scored 0/2 on testable moments where instantaneous
+    proximity scored 2/2. The ball is detected in only ~63% of frames, so motion
+    windows are too gappy to be reliable.
     """
-    handler = frame.handler()
-    if handler is not None:
-        return handler.track_id
-
     ball = frame.ball()
     players = frame.players()
     if ball is None or not players:

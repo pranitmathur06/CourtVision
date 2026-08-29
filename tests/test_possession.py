@@ -128,13 +128,17 @@ def handler(track_id: int, x: float, y: float, height: float = 80.0) -> Track:
     return Track(track_id, Box(x, y, x + 30.0, y + height), HANDLER, 0.9)
 
 
-def test_raw_holder_prefers_the_detected_handler_over_proximity():
-    """The handler wins even when another player is nearer the ball."""
+def test_raw_holder_ignores_the_handler_class_and_uses_proximity():
+    """The handler class is trained on too little data to trust (see raw_holder).
+
+    Preferring it scored 1/4 against the answer key where proximity scores 3/4,
+    so the nearer player wins even when another is marked as handler.
+    """
     near_player = player(1, 100, 100)
     marked = handler(2, 400, 100)
     cx, cy = near_player.box.center
     frame = Frame(0, 0.0, (near_player, marked, ball(cx, cy)))
-    assert raw_holder(frame, max_norm_dist=0.8) == 2
+    assert raw_holder(frame, max_norm_dist=0.8) == 1
 
 
 def test_raw_holder_falls_back_to_proximity_without_a_handler():
