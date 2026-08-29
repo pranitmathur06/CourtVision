@@ -31,6 +31,15 @@ CLIPS_DIR = Path("data/raw_clips")
 FRAMES_SCORED = 6
 
 
+def write_source(clip: Path, origin: str) -> None:
+    """Write a sidecar recording the clip's BARD origin."""
+    import json
+
+    clip.with_suffix(".source.json").write_text(
+        json.dumps({"bard_path": origin}, indent=2)
+    )
+
+
 def score_clip(detector: YoloDetector, path: str, target_fps: int) -> float:
     """Median count of detected people across a few evenly-spread frames."""
     counts = []
@@ -74,6 +83,10 @@ def main() -> int:
     CLIPS_DIR.mkdir(parents=True, exist_ok=True)
     best = scored[0]
     shutil.copy(best[2], CLIPS_DIR / "sample.mp4")
+    # Record where the clip came from. Copying to a generic name otherwise
+    # discards the BARD game id, and with it the ability to name real players
+    # from official play-by-play (courtvision.enrichment).
+    write_source(CLIPS_DIR / "sample.mp4", best[1])
     print(f"\nsample.mp4  <- {best[1]}  ({best[0]:.1f} people/frame)")
 
     # Holdout must come from a different game so it is genuinely unseen footage.
@@ -83,6 +96,7 @@ def main() -> int:
         print("WARNING — no candidate from a different game; holdout not written")
         return 1
     shutil.copy(holdout[2], CLIPS_DIR / "holdout.mp4")
+    write_source(CLIPS_DIR / "holdout.mp4", holdout[1])
     print(f"holdout.mp4 <- {holdout[1]}  ({holdout[0]:.1f} people/frame)")
     return 0
 

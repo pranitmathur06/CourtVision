@@ -90,3 +90,39 @@ def test_events_survive_with_no_plays_at_all():
     out = align([event("rebound"), event("shot")], [])
     assert all(e.player_name is None for e in out)
     assert len(out) == 2
+
+
+def test_recovers_the_game_id_from_a_bard_clip_path(tmp_path):
+    """BARD encodes the GameID in the path, so no scoreboard OCR is needed."""
+    from courtvision.enrichment import plays_for_clip
+
+    csv_path = tmp_path / "meta.csv"
+    csv_path.write_text(
+        "urls;actions;numerosity\n"
+        + BARD_URL.replace(";", "%3B") + ";[];1\n"
+    )
+    plays = plays_for_clip("data/raw/bkn-vs-det-0022400861/12.mp4", str(csv_path))
+    assert [p.player for p in plays] == ["K. Johnson"]
+
+
+def test_returns_no_plays_for_an_unknown_clip(tmp_path):
+    from courtvision.enrichment import plays_for_clip
+
+    csv_path = tmp_path / "meta.csv"
+    csv_path.write_text("urls;actions;numerosity\n" + BARD_URL + ";[];1\n")
+    # A clip with no recoverable game id must narrate anonymously, not guess.
+    assert plays_for_clip("some/random/clip.mp4", str(csv_path)) == []
+
+
+def test_returns_no_plays_when_metadata_is_missing():
+    from courtvision.enrichment import plays_for_clip
+
+    assert plays_for_clip("bkn-vs-det-0022400861/1.mp4", "does/not/exist.csv") == []
+
+
+def test_accented_names_survive_intact():
+    """NBA rosters are full of them; truncating one misnames a real person."""
+    assert extract_player("Jokić REBOUND (Off:1 Def:3)") == "Jokić"
+    assert extract_player("Dončić 3PT Shot (12 PTS)") == "Dončić"
+    assert extract_player("Šengün REBOUND (Off:0 Def:5)") == "Šengün"
+    assert extract_player("Porziņģis BLOCK (1 BLK)") == "Porziņģis"

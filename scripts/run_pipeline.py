@@ -16,6 +16,7 @@ from courtvision.commentary import AnthropicNarrator, generate_commentary
 from courtvision.config import Config
 from courtvision.detection import load_pipeline_detector
 from courtvision.device import resolve_device
+from courtvision.enrichment import align, plays_for_clip
 from courtvision.events import build_events
 from courtvision.extraction import extract_frames
 from courtvision.possession import possession_timeline
@@ -26,6 +27,8 @@ from courtvision.types import Frame
 
 DETECTOR = Path("checkpoints/detector.pt")
 ACTION_MODEL = Path("checkpoints/action_classifier")
+# Official play-by-play, used to name real players when the clip's game is known.
+BARD_METADATA = Path("data/labeled/bard_meta/dataset.csv")
 
 
 def run_pipeline(clip_path: str, out_dir: str, config: Config,
@@ -75,6 +78,18 @@ def run_pipeline(clip_path: str, out_dir: str, config: Config,
     events = build_events(windows, holders, teams)
     timings["7 events"] = time.perf_counter() - start
     print(f"  stage 7: {len(events)} events")
+
+    # Stage 7b (v3): name real players from official play-by-play, when the
+    # clip's game is identifiable. align() refuses to guess, so events with no
+    # confident match keep their anonymous track id.
+    plays = plays_for_clip(clip_path, str(BARD_METADATA))
+    if plays:
+        events = align(events, plays)
+        named = sum(1 for e in events if e.player_name)
+        print(f"  stage 7b: {len(plays)} official plays for this game, "
+              f"{named}/{len(events)} events named")
+    else:
+        print("  stage 7b: no play-by-play for this clip; narrating anonymously")
 
     # Stage 8: commentary.
     lines, errors = [], []

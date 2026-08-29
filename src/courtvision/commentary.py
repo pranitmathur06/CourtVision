@@ -137,10 +137,21 @@ def _unexpected_names(text: str, allowed_name: str | None) -> list[str]:
     anything else is not, so substituting one real player for another is caught
     rather than waved through.
     """
+    # Any-script word, then Python's Unicode-aware casing decides. An ASCII class
+    # would miss "Šengün" and truncate "Jokić", so a fabricated accented name
+    # could slip past the guard entirely.
+    pattern = r"[^\W\d_][^\W\d_'\-]*"
+
+    def capitalised(source: str) -> list[str]:
+        return [
+            w for w in re.findall(pattern, source)
+            if w[:1].isupper() and any(c.islower() for c in w)
+        ]
+
     permitted = set(_ALLOWED_CAPS)
     if allowed_name:
-        permitted.update(re.findall(r"\b[A-Z][a-z]+", allowed_name))
-    return [w for w in re.findall(r"\b[A-Z][a-z]+", text) if w not in permitted]
+        permitted.update(capitalised(allowed_name))
+    return [w for w in capitalised(text) if w not in permitted]
 
 
 def _looks_like_a_real_name(text: str) -> bool:

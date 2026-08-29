@@ -140,3 +140,15 @@ def test_validate_accepts_a_partial_match_of_a_two_part_name():
     named = Event(0.0, 7, "A", "rebound", False, player_name="K. Johnson")
     lines = [CommentaryLine(time_s=0.0, text="Johnson hauls in the rebound.")]
     assert validate_commentary([named], lines) == []
+
+
+def test_validate_accepts_an_accented_name_the_event_carries():
+    named = Event(0.0, 7, "B", "pass", False, player_name="Jokić")
+    lines = [CommentaryLine(time_s=0.0, text="Jokić delivers a pass for Team B.")]
+    assert validate_commentary([named], lines) == []
+
+
+def test_validate_rejects_an_accented_name_the_event_does_not_carry():
+    named = Event(0.0, 7, "B", "pass", False, player_name="Randle")
+    lines = [CommentaryLine(time_s=0.0, text="Jokić delivers a pass for Team B.")]
+    assert validate_commentary([named], lines) != []

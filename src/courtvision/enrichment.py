@@ -47,9 +47,23 @@ _EVENT_ID = re.compile(r"GameEventID=(\d+)")
 # A name token must contain a lowercase letter; the action verbs that follow are
 # ALL CAPS (REBOUND, STEAL, BLOCK). Without that distinction the pattern happily
 # swallows the verb and reports the player as "Cunningham REBOUND".
+# Matches a leading name token in any script, then Python's Unicode-aware
+# str methods decide whether it is really a name. Enumerating uppercase ranges in
+# a character class does not work: `[A-Z]` misses "Šengün" entirely (returning no
+# name at all) and `[A-Za-z]` truncates "Jokić" to "Joki". Both misname a real
+# person in published commentary, which is the one thing this must not do.
 _LEADING_NAME = re.compile(
-    r"^((?:[A-Z]\.\s*)*[A-Z][a-z][A-Za-z'\-]*(?:\s+(?:Jr\.|Sr\.|II|III|IV))?)"
+    r"^((?:[^\W\d_]\.\s*)*[^\W\d_][^\W\d_'\-]*(?:\s+(?:Jr\.|Sr\.|II|III|IV))?)"
 )
+
+
+def _is_name_token(token: str) -> bool:
+    """A name starts with a capital and is not an ALL-CAPS action verb."""
+    core = token.replace(".", " ").split()
+    if not core:
+        return False
+    last = core[-1]
+    return last[:1].isupper() and any(c.islower() for c in last)
 
 # Play-by-play verbs mapped onto our action vocabulary.
 _ACTION_WORDS: dict[str, str] = {
@@ -99,7 +113,7 @@ def extract_player(description: str) -> str | None:
         return None
     name = match.group(1).strip()
     # A description that opens with a Title-Case verb names nobody.
-    if name in _ACTION_WORDS:
+    if name in _ACTION_WORDS or not _is_name_token(name):
         return None
     return name or None
 
@@ -148,3 +162,46 @@ def align(
         named.append(replace(event, player_name=play.player))
 
     return named
+
+
+def plays_for_clip(clip_path: str, metadata_csv: str) -> list[PlayByPlayEvent]:
+    """Official plays for the game a clip came from.
+
+    BARD names its clips `<away>-vs-<home>-<GameID>/<n>.mp4`, so the game is
+    recoverable from the path alone — no scoreboard OCR needed. That is what
+    makes BARD the right harness for building this layer before wiring a live
+    feed: the join key is already there.
+
+    Returns [] when the clip is not from a known game, which is the honest
+    answer for arbitrary footage; the pipeline then narrates anonymously.
+    """
+    import csv
+    import re as _re
+    from pathlib import Path as _Path
+
+    # A sidecar written by select_clip.py survives the copy to a generic name.
+    sidecar = _Path(clip_path).with_suffix(".source.json")
+    origin = ""
+    if sidecar.exists():
+        import json
+
+        origin = json.loads(sidecar.read_text()).get("bard_path", "")
+
+    stem = _Path(clip_path).stem
+    parent = _Path(clip_path).parent.name
+    game = None
+    for candidate in (origin, stem, parent):
+        match = _re.search(r"(\d{10})", candidate)
+        if match:
+            game = match.group(1)
+            break
+    if game is None or not _Path(metadata_csv).exists():
+        return []
+
+    plays: list[PlayByPlayEvent] = []
+    with open(metadata_csv) as handle:
+        for row in csv.DictReader(handle, delimiter=";"):
+            play = parse_nba_url(row["urls"])
+            if play and play.game_id == game and play.player and play.action:
+                plays.append(play)
+    return sorted(plays, key=lambda p: p.event_id)
