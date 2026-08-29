@@ -34,7 +34,10 @@ pipeline. Write exactly one line of commentary per event, in the same order.
 Rules, which are absolute:
 - Describe ONLY what is in the events. Never invent a player, team, action, score,
   foul, or game situation that is not present in the input.
-- Refer to a player as "Player <track_id>" using the exact track_id from the event.
+- If an event has a "player_name", refer to that player BY NAME, exactly as
+  spelled in the event. Do not invent a first name, nickname or team role.
+- If an event has no "player_name", refer to the player as "Player <track_id>"
+  using the exact track_id from the event. Never guess at a real name.
 - Refer to a team as "Team A" or "Team B" using the exact team from the event.
 - If an event has a null track_id, do not name any player in that line.
 - Set each line's time_s to exactly the event's time_s.
@@ -81,6 +84,22 @@ def validate_commentary(
                     f"but the event's player is {event.track_id}"
                 )
 
+        # A real name may only appear if the event carries it, AND it must be
+        # that name. A wrong "Player 7" is a glitch; a wrong surname is a false
+        # statement about a real person, so both directions are checked.
+        unexpected = _unexpected_names(line.text, event.player_name)
+        if unexpected:
+            if event.player_name is None:
+                errors.append(
+                    f"line {index}: names {unexpected[0]!r}, but the event has "
+                    f"no player_name"
+                )
+            else:
+                errors.append(
+                    f"line {index}: names {unexpected[0]!r}, but the event's "
+                    f"player is {event.player_name!r}"
+                )
+
         for mentioned in TEAM_MENTION.findall(line.text):
             if event.team is None or mentioned.upper() != event.team:
                 errors.append(
@@ -91,6 +110,44 @@ def validate_commentary(
     return errors
 
 
+# Vocabulary the narrator is allowed to capitalise when no real name is known.
+# Deliberately an ALLOWLIST, not a blocklist: an unrecognised capitalised word is
+# treated as a possible real name and flagged. A false flag costs one retry; a
+# missed fabrication puts a false statement about a real person into the output.
+_ALLOWED_CAPS = {
+    "Player", "Team",
+    # sentence openers and ordinary prose
+    "The", "And", "But", "That", "This", "It", "He", "She", "They", "We",
+    "There", "Here", "Now", "Then", "Again", "Still", "Just", "Finally",
+    "Another", "After", "Before", "With", "Without", "From", "For", "Into",
+    "Over", "Under", "Off", "Back", "Down", "Up", "Out", "In", "On", "At",
+    "No", "Not", "Yes", "Both", "All", "One", "Two", "Three", "Four", "Five",
+    "Meanwhile", "Suddenly", "Quickly", "Good", "Great", "Nice", "Big",
+    "What", "When", "Where", "Who", "How", "Why", "If", "So", "As", "Of",
+    "First", "Second", "Third", "Fourth", "Quarter", "Half", "Free", "Throw",
+}
+
+
+def _unexpected_names(text: str, allowed_name: str | None) -> list[str]:
+    """Capitalised words the line is not entitled to use.
+
+    Every capitalised word is checked, including the first — a real surname at
+    the start of a sentence is the most likely way a fabricated name appears.
+    When the event carries a name, the parts of that name are permitted and
+    anything else is not, so substituting one real player for another is caught
+    rather than waved through.
+    """
+    permitted = set(_ALLOWED_CAPS)
+    if allowed_name:
+        permitted.update(re.findall(r"\b[A-Z][a-z]+", allowed_name))
+    return [w for w in re.findall(r"\b[A-Z][a-z]+", text) if w not in permitted]
+
+
+def _looks_like_a_real_name(text: str) -> bool:
+    """True if the line names anyone at all (used where no name is permitted)."""
+    return bool(_unexpected_names(text, None))
+
+
 def events_to_payload(events: Sequence[Event]) -> str:
     return json.dumps(
         [
@@ -98,6 +155,7 @@ def events_to_payload(events: Sequence[Event]) -> str:
                 "time_s": round(e.time_s, 2),
                 "track_id": e.track_id,
                 "team": e.team,
+                "player_name": e.player_name,
                 "action": e.action,
                 "possession_change": e.possession_change,
             }

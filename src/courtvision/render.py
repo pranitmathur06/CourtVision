@@ -110,6 +110,7 @@ def build_log(
                 "timestamp": format_timestamp(event.time_s),
                 "time_s": round(event.time_s, 2),
                 "track_id": event.track_id,
+                "player_name": event.player_name,
                 "team": event.team,
                 "action": event.action,
                 "possession_change": event.possession_change,

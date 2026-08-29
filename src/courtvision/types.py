@@ -104,10 +104,17 @@ class ActionWindow:
 
 @dataclass(frozen=True)
 class Event:
-    """A discrete play-by-play event; the input to commentary generation."""
+    """A discrete play-by-play event; the input to commentary generation.
+
+    `player_name` is filled in by courtvision.enrichment when official
+    play-by-play data is available and aligns confidently. It stays None
+    otherwise, and commentary then refers to the anonymous `Player <track_id>` —
+    naming a real person on a guess is worse than not naming them.
+    """
 
     time_s: float
     track_id: int | None
     team: str | None
     action: str
     possession_change: bool
+    player_name: str | None = None

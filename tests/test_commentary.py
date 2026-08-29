@@ -107,3 +107,36 @@ def test_generate_on_empty_events_makes_no_call():
     assert lines == []
     assert errors == []
     assert narrator.calls == 0
+
+
+def test_validate_rejects_a_real_name_when_the_event_has_none():
+    """Naming a real person on a guess is the worst failure mode here."""
+    events = [event(track_id=7, team="A")]
+    lines = [CommentaryLine(time_s=0.0, text="Cunningham rises for the jumper.")]
+    assert validate_commentary(events, lines) != []
+
+
+def test_validate_accepts_a_real_name_the_event_carries():
+    named = Event(0.0, 7, "A", "shot", False, player_name="Cunningham")
+    lines = [CommentaryLine(time_s=0.0, text="Cunningham rises for the jumper.")]
+    assert validate_commentary([named], lines) == []
+
+
+def test_validate_still_accepts_anonymous_commentary():
+    events = [event(track_id=7, team="A")]
+    lines = [CommentaryLine(time_s=0.0, text="Player 7 of Team A rises for the shot.")]
+    assert validate_commentary(events, lines) == []
+
+
+def test_validate_rejects_substituting_a_different_real_player():
+    """Naming the wrong real person is as bad as inventing one."""
+    named = Event(0.0, 7, "A", "shot", False, player_name="Cunningham")
+    lines = [CommentaryLine(time_s=0.0, text="Jokic rises for the jumper.")]
+    errors = validate_commentary([named], lines)
+    assert errors and "Jokic" in errors[0]
+
+
+def test_validate_accepts_a_partial_match_of_a_two_part_name():
+    named = Event(0.0, 7, "A", "rebound", False, player_name="K. Johnson")
+    lines = [CommentaryLine(time_s=0.0, text="Johnson hauls in the rebound.")]
+    assert validate_commentary([named], lines) == []

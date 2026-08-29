@@ -1,0 +1,92 @@
+"""v3 — naming real players from official play-by-play."""
+
+from courtvision.enrichment import (
+    PlayByPlayEvent,
+    align,
+    extract_action,
+    extract_player,
+    parse_nba_url,
+)
+from courtvision.types import Event
+
+BARD_URL = (
+    "https://www.nba.com/stats/events/?CFID=&CFPARAMS=&GameEventID=8"
+    "&GameID=0022400861&Season=2024-25&flag=1"
+    "&title=K.%20Johnson%20REBOUND%20(Off:0%20Def:1)"
+)
+
+
+def test_parses_a_bard_url_into_a_play():
+    play = parse_nba_url(BARD_URL)
+    assert play is not None
+    assert play.game_id == "0022400861"
+    assert play.event_id == 8
+    assert play.description == "K. Johnson REBOUND (Off:0 Def:1)"
+    assert play.player == "K. Johnson"
+    assert play.action == "rebound"
+
+
+def test_returns_none_for_a_url_without_the_needed_fields():
+    assert parse_nba_url("https://www.nba.com/stats/events/?flag=1") is None
+
+
+def test_extracts_players_from_real_descriptions():
+    assert extract_player("Cunningham REBOUND (Off:0 Def:1)") == "Cunningham"
+    assert extract_player("Duren 1' Running Layup (2 PTS)") == "Duren"
+    assert extract_player("K. Johnson REBOUND (Off:0 Def:1)") == "K. Johnson"
+
+
+def test_extracts_actions_from_real_descriptions():
+    assert extract_action("Cunningham REBOUND (Off:0 Def:1)") == "rebound"
+    assert extract_action("Williams 2' Running Dunk (2 PTS)") == "shot"
+    assert extract_action("Duren Free Throw 1 of 2 (3 PTS)") == "shot"
+    assert extract_action("Someone STEAL") == "steal"
+    assert extract_action("no recognisable verb here") is None
+
+
+def play(player, action, event_id=1):
+    return PlayByPlayEvent("0022400861", event_id, f"{player} {action}", player, action)
+
+
+def event(action, track_id=7, time_s=0.0):
+    return Event(time_s, track_id, "A", action, False)
+
+
+def test_aligns_a_matching_action_and_attaches_the_name():
+    out = align([event("rebound")], [play("Cunningham", "rebound")])
+    assert out[0].player_name == "Cunningham"
+    assert out[0].track_id == 7  # the track id is kept, not replaced
+
+
+def test_refuses_to_name_when_the_action_disagrees():
+    """A name on the wrong play is a false statement about a real person."""
+    out = align([event("dribble")], [play("Cunningham", "rebound")])
+    assert out[0].player_name is None
+
+
+def test_consumes_each_play_at_most_once():
+    events = [event("rebound"), event("rebound")]
+    plays = [play("Cunningham", "rebound", 1)]
+    out = align(events, plays)
+    assert out[0].player_name == "Cunningham"
+    assert out[1].player_name is None
+
+
+def test_matches_in_order_across_several_plays():
+    events = [event("rebound"), event("shot"), event("steal")]
+    plays = [play("A. One", "rebound", 1), play("B. Two", "shot", 2),
+             play("C. Three", "steal", 3)]
+    out = align(events, plays)
+    assert [e.player_name for e in out] == ["A. One", "B. Two", "C. Three"]
+
+
+def test_skips_plays_that_name_nobody():
+    anonymous = PlayByPlayEvent("g", 1, "REBOUND", None, "rebound")
+    out = align([event("rebound")], [anonymous, play("Cunningham", "rebound", 2)])
+    assert out[0].player_name == "Cunningham"
+
+
+def test_events_survive_with_no_plays_at_all():
+    out = align([event("rebound"), event("shot")], [])
+    assert all(e.player_name is None for e in out)
+    assert len(out) == 2
