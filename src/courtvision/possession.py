@@ -34,23 +34,33 @@ def normalized_distance(player: Track, ball: Track) -> float:
 def raw_holder(frame: Frame, max_norm_dist: float) -> int | None:
     """Who holds the ball this frame, with no temporal context.
 
-    Uses nearest-player proximity. The detector also predicts a `handler` class,
-    and preferring it was tried and MEASURED TO BE WORSE: it fires in only 24% of
-    frames and is confidently wrong when it does (0.62 confidence on the wrong
-    player in a hand-checked frame), because it has just 191 training instances
-    against 5,282 for `player`. Scored against the answer key, preferring the
-    handler gave 1/4 where plain proximity gives 3/4.
+    Prefers the detector's learned `handler` prediction and falls back to
+    nearest-player when it does not fire.
 
-    The class is still trained and still exposed as `Frame.handler()` — with more
-    possession annotation it is the right long-term signal, since proximity is
-    genuinely under-determined here (a defender sits within 0.21 body-heights of
-    the handler in the median frame). It is simply not good enough yet to trust.
+    Proximity alone is genuinely under-determined on broadcast footage: a
+    defender sits within 0.21 body-heights of the ball-handler in the median
+    frame, and no distance metric or smoothing setting scores better than 5/7 on
+    the answer key. The learned handler answers the question directly, using
+    appearance cues — hands on the ball, body squared to it — that geometry
+    cannot see.
 
-    Ball-motion correlation was also tried — matching each player's displacement
-    against the ball's — and scored 0/2 on testable moments where instantaneous
-    proximity scored 2/2. The ball is detected in only ~63% of frames, so motion
-    windows are too gappy to be reliable.
+    Trusting the handler was WRONG at first and is right now, purely because of
+    training data. Weak supervision (scripts/harvest_handler_labels.py) took it
+    from 191 instances to 3,550:
+
+        191 instances -> fires 24% @0.55 conf -> V6 1/4  (worse than proximity)
+        680           -> fires 49% @0.85      -> V6 5/7
+        3,550         -> fires 60% @0.84      -> V6 6/7  (passes)
+
+    Rejected alternatives, with numbers, are in docs/possession-investigation.md:
+    box-edge distance (worse), box containment (resolves 25/67 frames), and
+    ball-motion correlation (0/2 where proximity scored 2/2, because the ball is
+    detected in only ~63% of frames so motion windows are too gappy).
     """
+    handler = frame.handler()
+    if handler is not None:
+        return handler.track_id
+
     ball = frame.ball()
     players = frame.players()
     if ball is None or not players:

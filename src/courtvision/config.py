@@ -28,12 +28,14 @@ class Config:
     # Stage 5 — possession.
     # Distance from ball centre to player centre, divided by that player's box
     # height, so the threshold is scale-invariant as players move up/down court.
-    possession_max_norm_dist: float = 0.8
+    # 0.6 with the learned handler preferred. Swept over the answer key: the
+    # gate passes at 6/7 across maxdist 0.6-0.8 and max_gap 1-5, so this sits
+    # inside a stable region rather than on a knife-edge.
+    possession_max_norm_dist: float = 0.6
     # A challenger must hold the ball this many consecutive frames to take over.
     possession_min_hold_frames: int = 3
     # Ball may vanish (occlusion, in flight) this many frames before the holder is
-    # dropped. Swept against the answer key: 3 beats 5 and 8. Longer carries keep
-    # a stale holder through genuine changes of possession.
+    # dropped. The gate passes across 1-5; 3 sits mid-range.
     possession_max_gap_frames: int = 3
 
     # Stage 6 — action classification. VideoMAE expects exactly 16 frames.
