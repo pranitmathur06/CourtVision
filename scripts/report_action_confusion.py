@@ -65,22 +65,34 @@ def main() -> int:
         wrong = sorted(((v, p) for (t, p), v in confusion.items()
                         if t == true_index and p != true_index), reverse=True)
         note = f"{populated[wrong[0][1]]} ({wrong[0][0]})" if wrong else "-"
-        source = "BARD" if action == "rebound" else "SpaceJam"
+        source = "BARD" if action in ("rebound", "steal") else "SpaceJam"
         print(f"  {action:<9}{total:>5}{hit/total:>7.2f}   {note:<18} [{source}]")
 
-    rebound = [i for i, a in enumerate(populated) if a == "rebound"]
-    if rebound:
-        r = rebound[0]
-        r_total = sum(v for (t, _), v in confusion.items() if t == r)
-        r_hit = confusion.get((r, r), 0)
-        others = [(confusion.get((i, i), 0),
-                   sum(v for (t, _), v in confusion.items() if t == i))
-                  for i, a in enumerate(populated) if a != "rebound"]
-        other_acc = sum(h for h, _ in others) / max(sum(n for _, n in others), 1)
-        print(f"\n  rebound (BARD)      {r_hit/max(r_total,1):.2f}")
-        print(f"  all others (SpaceJam) {other_acc:.2f}")
-        print("\n  Source leakage would show as near-perfect rebound alongside weak")
-        print("  SpaceJam classes. Comparable numbers mean the model learned actions.")
+    BARD = {"rebound", "steal"}
+    def group_acc(names):
+        pairs = [(confusion.get((i, i), 0),
+                  sum(v for (t, _), v in confusion.items() if t == i))
+                 for i, a in enumerate(populated) if a in names]
+        total = sum(n for _, n in pairs)
+        return (sum(h for h, _ in pairs) / total) if total else 0.0
+
+    bard_names = {a for a in populated if a in BARD}
+    sj_names = {a for a in populated if a not in BARD}
+    bard_acc, sj_acc = group_acc(bard_names), group_acc(sj_names)
+
+    # Cross-source confusion is the real tell: if the model reads SOURCE rather
+    # than action, BARD classes and SpaceJam classes would never be mistaken for
+    # one another.
+    cross = sum(v for (t, p), v in confusion.items()
+                if (populated[t] in BARD) != (populated[p] in BARD))
+    total = sum(confusion.values())
+
+    print(f"\n  BARD classes    {sorted(bard_names)}: {bard_acc:.2f}")
+    print(f"  SpaceJam classes {sorted(sj_names)}: {sj_acc:.2f}")
+    print(f"  cross-source confusions: {cross}/{total} ({cross/max(total,1):.1%})")
+    print("\n  If the model were separating by SOURCE, the BARD group would be")
+    print("  near-perfect AND cross-source confusions would be ~0. Mistakes that")
+    print("  cross the source boundary mean it is reading the action instead.")
     return 0
 
 

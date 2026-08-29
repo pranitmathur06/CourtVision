@@ -37,6 +37,39 @@ VAL_FRACTION = 0.2
 REQUIRED_MARGIN_OVER_CHANCE = 0.15
 
 
+def augment(clip: np.ndarray, rng: random.Random) -> np.ndarray:
+    """Randomise the low-level statistics that give the SOURCE away.
+
+    Measured across the training set, BARD-sourced clips (rebound, steal) and
+    SpaceJam-sourced clips (everything else) are trivially separable:
+
+        sharpness  SpaceJam ~1676   BARD ~663    (non-overlapping ranges)
+        contrast   SpaceJam ~78     BARD ~56
+        brightness SpaceJam ~102    BARD ~129
+
+    BARD crops are small player regions from 720p broadcast upscaled to 224x224;
+    SpaceJam clips are natively 128x176. Different resampling, 2.5x the blur.
+
+    A model given that cue will use it: the unaugmented run produced ZERO
+    cross-source confusions in 532 held-out clips while confusing freely WITHIN
+    each source, which is the signature of separating by dataset rather than by
+    action. Randomising blur, brightness and contrast per clip makes those
+    statistics carry no information about which dataset a clip came from, so the
+    only signal left is the action itself.
+    """
+    import cv2
+
+    sigma = rng.uniform(0.0, 2.2)
+    brightness = rng.uniform(-28.0, 28.0)
+    contrast = rng.uniform(0.75, 1.25)
+
+    out = clip.astype(np.float32)
+    if sigma > 0.15:
+        out = np.stack([cv2.GaussianBlur(f, (0, 0), sigma) for f in out])
+    out = (out - 128.0) * contrast + 128.0 + brightness
+    return np.clip(out, 0, 255).astype(np.uint8)
+
+
 def load_clip(path: Path) -> np.ndarray:
     """Decode exactly N_FRAMES evenly-spaced frames.
 
@@ -126,14 +159,20 @@ def main() -> int:
 
     # Decode and preprocess every clip once, not once per epoch.
     print(f"  decoding {len(train)} train + {len(val)} val clips (once)...")
-    def prepare(items):
+    def prepare(items, augment_rng=None):
         out = []
-        for clip_path, label_index in items:
-            tensors = processor(list(load_clip(clip_path)), return_tensors="pt")
+        for index, (clip_path, label_index) in enumerate(items):
+            frames = load_clip(clip_path)
+            if augment_rng is not None:
+                frames = augment(frames, random.Random(augment_rng + index))
+            tensors = processor(list(frames), return_tensors="pt")
             out.append(({k: v for k, v in tensors.items()}, label_index))
         return out
 
-    train_cache, val_cache = prepare(train), prepare(val)
+    # Training clips are augmented so the source cue cannot be learned.
+    # Validation is left UNTOUCHED: it must measure what the model does on real
+    # data, not on data we have already normalised in its favour.
+    train_cache, val_cache = prepare(train, augment_rng=1234), prepare(val)
 
     # Train the head plus the last two encoder blocks. Full fine-tuning of 86M
     # parameters overfits a few hundred clips; a frozen backbone alone was not
