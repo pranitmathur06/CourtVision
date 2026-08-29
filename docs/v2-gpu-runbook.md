@@ -42,15 +42,23 @@ python3 -m venv .venv && ./.venv/bin/python -m pip install -e ".[dev]"
 `resolve_device()` picks `cuda` with no code change — that was the point of
 routing every device decision through it from Task 1.
 
-## 3. Verify the kernel BEFORE trusting it
+## 3. Verify everything, in one command
 
 ```bash
-./.venv/bin/python -c "from courtvision.kernels.torso_color import verify_fused_kernel; verify_fused_kernel()"
+./.venv/bin/python -m scripts.verify_v2_gpu
 ```
 
-This compiles `torso_color.cu` and checks it against the OpenCV oracle. It has
-never been compiled — expect to fix build errors. Do not wire it into the
-pipeline until this prints PASS.
+Runs the whole sequence with a PASS/FAIL per step:
+
+1. CUDA present, and whether there are two devices for §7.2
+2. `torso_color.cu` compiles — it never has, so expect build errors first time
+3. The kernel matches the OpenCV oracle numerically
+4. It is actually **faster** than the reference (a correct-but-slower kernel is
+   not worth the risk of using)
+5. The disaggregated pipeline runs, with per-stage wait times
+
+Do not wire the kernel into `team_assignment` until step 3 passes. A subtly wrong
+kernel shifts team assignments silently, which is worse than no kernel.
 
 ## 4. Re-profile on real hardware
 
