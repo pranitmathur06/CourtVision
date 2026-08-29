@@ -19,7 +19,7 @@ from pathlib import Path
 import numpy as np
 
 from courtvision.device import resolve_device
-from courtvision.types import ACTIONS
+from courtvision.types import ACTIONS, balanced_subset
 
 DATA_DIR = Path("data/labeled/actions")
 # Overridable so a smoke run can exercise the whole path — decode, train,
@@ -139,8 +139,7 @@ def main() -> int:
     counts = {}
     for label_index, action in enumerate(populated):
         clips = sorted((DATA_DIR / action).glob("*.mp4"))
-        if MAX_PER_CLASS:
-            clips = clips[:MAX_PER_CLASS]
+        clips = balanced_subset(clips, MAX_PER_CLASS)
         counts[action] = len(clips)
         samples.extend((clip_path, label_index) for clip_path in clips)
     print(f"V7 clips per class: {counts}")

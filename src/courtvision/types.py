@@ -134,3 +134,29 @@ def clip_source(path) -> str:
     """
     stem = getattr(path, "stem", None) or str(path).rsplit("/", 1)[-1].split(".")[0]
     return "SpaceJam" if stem.removesuffix("_flipped").isdigit() else "BARD"
+
+
+def balanced_subset(clips, limit: int) -> list:
+    """The first `limit` clips, drawn evenly from each corpus.
+
+    Plain truncation is corpus-ordered: SpaceJam names are zero-padded digits
+    and sort before BARD's game-derived names, so `clips[:limit]` on a class
+    populated from both corpora returns SpaceJam only. That silently empties
+    the cross-source comparison the subset exists to make, while still printing
+    a confident per-class accuracy.
+    """
+    clips = sorted(clips)
+    if not limit or limit >= len(clips):
+        return clips
+    groups: dict[str, list] = {}
+    for clip in clips:
+        groups.setdefault(clip_source(clip), []).append(clip)
+    ordered = [groups[key] for key in sorted(groups)]
+    picked: list = []
+    for index in range(max((len(g) for g in ordered), default=0)):
+        for group in ordered:
+            if index < len(group) and len(picked) < limit:
+                picked.append(group[index])
+        if len(picked) >= limit:
+            break
+    return sorted(picked)

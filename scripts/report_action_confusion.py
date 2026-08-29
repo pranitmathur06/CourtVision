@@ -18,7 +18,7 @@ import sys
 from pathlib import Path
 
 from courtvision.device import resolve_device
-from courtvision.types import ACTIONS, clip_source
+from courtvision.types import ACTIONS, balanced_subset, clip_source
 
 DATA_DIR = Path("data/labeled/actions")
 # Same overrides as validate_v7, so a smoke run can exercise this report
@@ -43,8 +43,7 @@ def main() -> int:
     samples: list[tuple[Path, int]] = []
     for index, action in enumerate(populated):
         clips = sorted((DATA_DIR / action).glob("*.mp4"))
-        if MAX_PER_CLASS:
-            clips = clips[:MAX_PER_CLASS]
+        clips = balanced_subset(clips, MAX_PER_CLASS)
         samples.extend((p, index) for p in clips)
     random.Random(0).shuffle(samples)
     val = samples[int(len(samples) * (1 - VAL_FRACTION)):]
