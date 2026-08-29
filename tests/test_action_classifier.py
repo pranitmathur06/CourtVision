@@ -114,3 +114,91 @@ def test_classify_windows_crops_to_the_holder():
     whole_frame_mean = float(images[0].mean())
     assert seen["mean"] > 4 * whole_frame_mean
     assert all(w.label == "dribble" for w in windows)
+
+
+def test_classify_windows_uses_one_batched_call():
+    """All windows go to the model together, not one at a time."""
+    from courtvision.action_classifier import classify_windows
+    from courtvision.types import PLAYER, Box, Track
+
+    config = Config()
+    n = 40
+    images = [np.zeros((120, 120, 3), dtype=np.uint8) for _ in range(n)]
+    frames = [
+        Frame(i, i / config.target_fps, (Track(7, Box(10, 10, 40, 90), PLAYER, 0.9),))
+        for i in range(n)
+    ]
+
+    calls = {"batch": 0, "single": 0, "sizes": []}
+
+    class BatchingClassifier:
+        def classify(self, clip):
+            calls["single"] += 1
+            return "shot", 0.5
+
+        def classify_batch(self, clips):
+            calls["batch"] += 1
+            calls["sizes"].append(len(clips))
+            return [("dribble", 0.8)] * len(clips)
+
+    windows = classify_windows(
+        images, frames, BatchingClassifier(), config, holders=[7] * n
+    )
+
+    assert calls["batch"] == 1, "expected exactly one batched call"
+    assert calls["single"] == 0, "must not fall back to per-clip classification"
+    assert calls["sizes"] == [len(windows)]
+    assert all(w.label == "dribble" and w.conf == 0.8 for w in windows)
+
+
+def test_classify_windows_falls_back_when_only_classify_exists():
+    """A classifier with no classify_batch still works, one clip at a time."""
+    from courtvision.action_classifier import classify_windows
+    from courtvision.types import PLAYER, Box, Track
+
+    config = Config()
+    n = 40
+    images = [np.zeros((120, 120, 3), dtype=np.uint8) for _ in range(n)]
+    frames = [
+        Frame(i, i / config.target_fps, (Track(7, Box(10, 10, 40, 90), PLAYER, 0.9),))
+        for i in range(n)
+    ]
+
+    class SingleOnly:
+        calls = 0
+
+        def classify(self, clip):
+            SingleOnly.calls += 1
+            return "pass", 0.7
+
+    windows = classify_windows(images, frames, SingleOnly(), config, holders=[7] * n)
+    assert SingleOnly.calls == len(windows)
+    assert all(w.label == "pass" for w in windows)
+
+
+def test_classify_windows_mixes_batched_and_no_holder_windows():
+    """Windows with no holder are labelled `other` and never reach the model."""
+    from courtvision.action_classifier import classify_windows
+    from courtvision.types import PLAYER, Box, Track
+
+    config = Config()
+    n = 40
+    images = [np.zeros((120, 120, 3), dtype=np.uint8) for _ in range(n)]
+    frames = [
+        Frame(i, i / config.target_fps, (Track(7, Box(10, 10, 40, 90), PLAYER, 0.9),))
+        for i in range(n)
+    ]
+    holders = [7] * 16 + [None] * (n - 16)   # first window held, later ones not
+
+    seen = {"n": 0}
+
+    class Counting:
+        def classify_batch(self, clips):
+            seen["n"] = len(clips)
+            return [("shot", 0.9)] * len(clips)
+
+    windows = classify_windows(images, frames, Counting(), config, holders=holders)
+    held = [w for w in windows if w.label == "shot"]
+    unheld = [w for w in windows if w.label == "other"]
+    assert seen["n"] == len(held) < len(windows)
+    assert unheld and all(w.conf == 0.0 for w in unheld)

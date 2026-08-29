@@ -154,18 +154,22 @@ def main() -> int:
                 model(**{k: v.to(device) for k, v in
                          processor(list(first), return_tensors="pt").items()})
 
+        # Batched, matching what the pipeline now does. Stage 6 was 76.8% of
+        # runtime when each window ran on its own.
         with stage("6 action classification"):
-            for start, end in plans:
-                clip = np.stack([
-                    cv2.cvtColor(cv2.resize(images[i], (FRAME_SIZE, FRAME_SIZE)),
-                                 cv2.COLOR_BGR2RGB)
-                    for i in range(start, end + 1)])
-                inputs = processor(list(clip), return_tensors="pt")
+            clips = [np.stack([
+                cv2.cvtColor(cv2.resize(images[i], (FRAME_SIZE, FRAME_SIZE)),
+                             cv2.COLOR_BGR2RGB)
+                for i in range(start, end + 1)]) for start, end in plans]
+            for chunk_start in range(0, len(clips), 8):
+                chunk = clips[chunk_start:chunk_start + 8]
+                inputs = processor([list(c) for c in chunk], return_tensors="pt")
                 with torch.no_grad():
                     logits = model(**{k: v.to(device) for k, v in inputs.items()}).logits
-                idx = int(logits.softmax(dim=-1)[0].argmax())
-                windows.append(ActionWindow(start, end, times[start], times[end],
-                                            ACTIONS[idx], 1.0))
+                for offset, row in enumerate(logits.softmax(dim=-1)):
+                    start, end = plans[chunk_start + offset]
+                    windows.append(ActionWindow(start, end, times[start], times[end],
+                                                ACTIONS[int(row.argmax())], 1.0))
 
     # --- stage 7: event structuring -----------------------------------------
     with stage("7 events"):

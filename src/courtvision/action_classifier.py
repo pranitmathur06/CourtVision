@@ -21,6 +21,7 @@ model — no ball-handler means no ball-handler action to recognise.
 from __future__ import annotations
 
 from collections import Counter
+from dataclasses import replace
 from collections.abc import Sequence
 from typing import Protocol
 
@@ -48,11 +49,25 @@ def plan_windows(n_frames: int, size: int, stride: int) -> list[tuple[int, int]]
 class ActionClassifier(Protocol):
     def classify(self, clip: np.ndarray) -> tuple[str, float]: ...
 
+    def classify_batch(
+        self, clips: Sequence[np.ndarray]
+    ) -> list[tuple[str, float]]: ...
+
+
+def _classify_batch_fallback(
+    classifier: "ActionClassifier", clips: Sequence[np.ndarray]
+) -> list[tuple[str, float]]:
+    """One-at-a-time fallback for classifiers that implement only `classify`."""
+    batch = getattr(classifier, "classify_batch", None)
+    if callable(batch):
+        return list(batch(clips))
+    return [classifier.classify(clip) for clip in clips]
+
 
 class VideoMaeClassifier:
     """Fine-tuned VideoMAE behind the `ActionClassifier` protocol."""
 
-    def __init__(self, weights_dir: str, device: str) -> None:
+    def __init__(self, weights_dir: str, device: str, batch_size: int = 8) -> None:
         import torch
         from transformers import VideoMAEImageProcessor
 
@@ -66,16 +81,36 @@ class VideoMaeClassifier:
         self._model, _ = load_videomae_classifier(weights_dir)
         self._model.to(device).eval()
         self._device = device
+        self._batch_size = batch_size
 
     def classify(self, clip: np.ndarray) -> tuple[str, float]:
         """clip: (n_frames, height, width, 3) uint8 RGB."""
-        inputs = self._processor(list(clip), return_tensors="pt")
-        inputs = {k: v.to(self._device) for k, v in inputs.items()}
-        with self._torch.no_grad():
-            logits = self._model(**inputs).logits
-        probabilities = logits.softmax(dim=-1)[0]
-        index = int(probabilities.argmax())
-        return self._model.config.id2label[index], float(probabilities[index])
+        return self.classify_batch([clip])[0]
+
+    def classify_batch(
+        self, clips: Sequence[np.ndarray]
+    ) -> list[tuple[str, float]]:
+        """Classify several windows in one forward pass.
+
+        Stage 6 is 76.8% of pipeline runtime (docs/profile-v1.md) and the windows
+        are independent, so running them one at a time wastes most of the device.
+        Batching is the single largest speed win available and costs no accuracy.
+        """
+        if not clips:
+            return []
+        results: list[tuple[str, float]] = []
+        for start in range(0, len(clips), self._batch_size):
+            chunk = clips[start : start + self._batch_size]
+            inputs = self._processor([list(c) for c in chunk], return_tensors="pt")
+            inputs = {k: v.to(self._device) for k, v in inputs.items()}
+            with self._torch.no_grad():
+                logits = self._model(**inputs).logits
+            for row in logits.softmax(dim=-1):
+                index = int(row.argmax())
+                results.append(
+                    (self._model.config.id2label[index], float(row[index]))
+                )
+        return results
 
 
 def crop_player(image: np.ndarray, box, margin: float = CROP_MARGIN) -> np.ndarray:
@@ -116,6 +151,7 @@ def classify_windows(
     import cv2
 
     windows: list[ActionWindow] = []
+    pending: list[tuple[int, np.ndarray]] = []
     for start, end in plan_windows(
         len(images), config.action_window_frames, config.action_stride_frames
     ):
@@ -142,9 +178,8 @@ def classify_windows(
                     else cv2.resize(images[i], (FRAME_SIZE, FRAME_SIZE))
                 )
                 crops.append(cv2.cvtColor(crop, cv2.COLOR_BGR2RGB))
-            label, conf = classifier.classify(np.stack(crops))
-            if label not in ACTIONS:
-                label = "other"
+            label, conf = None, None  # filled in by the batched pass below
+            pending.append((len(windows), np.stack(crops)))
 
         windows.append(
             ActionWindow(
@@ -152,8 +187,16 @@ def classify_windows(
                 end_index=end,
                 start_time_s=frames[start].time_s,
                 end_time_s=frames[end].time_s,
-                label=label,
-                conf=conf,
+                label=label if label is not None else "other",
+                conf=conf if conf is not None else 0.0,
             )
         )
+
+    # One batched forward for every window that needs the model.
+    if pending:
+        outputs = _classify_batch_fallback(classifier, [clip for _, clip in pending])
+        for (index, _), (label, conf) in zip(pending, outputs):
+            if label not in ACTIONS:
+                label = "other"
+            windows[index] = replace(windows[index], label=label, conf=conf)
     return windows
