@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import collections
 import random
+import shutil
 import sys
+import tempfile
 from pathlib import Path
 
 import numpy as np
@@ -157,16 +159,31 @@ def main() -> int:
     print(f"  restored {restored} attention bias tensors that transformers "
           f"would otherwise have left at zero")
 
-    # Decode every clip once, not once per epoch.
-    print(f"  decoding {len(train)} train + {len(val)} val clips (once)...")
-    def prepare(items, augment_rng=None):
-        out = []
+    # Decode every clip once, not once per epoch — but hold the decoded frames
+    # in a disk-backed memmap, not in RAM. 2,660 clips of 16x224x224x3 uint8 is
+    # 6.1 GB; on this 16 GB machine, with ~10 GB resident across every other
+    # process, an in-RAM cache pushed the trainer into swap (150 MB resident,
+    # uninterruptible wait, 4.7% CPU, 16.7 GB of swap in use). Backed by a real
+    # file the pages are clean, so the OS can evict and re-read them for the
+    # cost of an SSD read (~2.4 MB per step) instead of paging to swap.
+    CACHE_DIR = Path(tempfile.mkdtemp(prefix="v7-frame-cache-"))
+    print(f"  decoding {len(train)} train + {len(val)} val clips (once) "
+          f"into {CACHE_DIR}...")
+    def prepare(items, name, augment_rng=None):
+        path = CACHE_DIR / f"{name}.npy"
+        store = np.lib.format.open_memmap(
+            path, mode="w+", dtype=np.uint8,
+            shape=(len(items), N_FRAMES, FRAME_SIZE, FRAME_SIZE, 3))
+        labels = []
         for index, (clip_path, label_index) in enumerate(items):
             frames = load_clip(clip_path)
             if augment_rng is not None:
                 frames = augment(frames, random.Random(augment_rng + index))
-            out.append((frames, label_index))
-        return out
+            store[index] = frames
+            labels.append(label_index)
+        store.flush()
+        del store                      # drop the dirty writable mapping
+        return np.load(path, mmap_mode="r"), labels
 
     # Cache uint8 frames (2.4 MB/clip), NOT the processor's normalised float32
     # (9.6 MB/clip). Across 2,660 clips that is 6.4 GB instead of 25.6 GB. The
@@ -180,7 +197,8 @@ def main() -> int:
     # Training clips are augmented so the source cue cannot be learned.
     # Validation is left UNTOUCHED: it must measure what the model does on real
     # data, not on data we have already normalised in its favour.
-    train_cache, val_cache = prepare(train, augment_rng=1234), prepare(val)
+    train_store, train_labels = prepare(train, "train", augment_rng=1234)
+    val_store, val_labels = prepare(val, "val")
 
     # Train the head plus the last two encoder blocks. Full fine-tuning of 86M
     # parameters overfits a few hundred clips; a frozen backbone alone was not
@@ -209,11 +227,12 @@ def main() -> int:
         model.eval()
         correct = 0
         with torch.no_grad():
-            for frames, label_index in val_cache:
-                inputs = {k: v.to(device) for k, v in featurize(frames).items()}
+            for index, label_index in enumerate(val_labels):
+                inputs = {k: v.to(device)
+                          for k, v in featurize(val_store[index]).items()}
                 correct += int(int(model(**inputs).logits.argmax(dim=-1)) == label_index)
         model.train()
-        return correct / len(val_cache)
+        return correct / len(val_labels)
 
     # Validate every epoch and keep the BEST weights, not the last. Training loss
     # here falls to ~0.02 by epoch 5, so later epochs mostly deepen overfitting;
@@ -222,13 +241,13 @@ def main() -> int:
     best_accuracy, best_epoch, history = -1.0, 0, []
     model.train()
     for epoch in range(EPOCHS):
-        order = list(range(len(train_cache)))
+        order = list(range(len(train_labels)))
         random.Random(epoch).shuffle(order)
         total_loss = 0.0
         for i in order:
-            frames, label_index = train_cache[i]
-            inputs = {k: v.to(device) for k, v in featurize(frames).items()}
-            labels = torch.tensor([label_index], device=device)
+            inputs = {k: v.to(device)
+                      for k, v in featurize(train_store[i]).items()}
+            labels = torch.tensor([train_labels[i]], device=device)
             loss = model(**inputs, labels=labels).loss
             loss.backward()
             optimizer.step()
@@ -244,7 +263,7 @@ def main() -> int:
             processor.save_pretrained(OUT_DIR)
             marker = "  <- best, checkpoint saved"
         print(f"  epoch {epoch + 1}/{EPOCHS} train loss "
-              f"{total_loss / len(train_cache):.4f}  val acc {epoch_accuracy:.3f}{marker}")
+              f"{total_loss / len(train_labels):.4f}  val acc {epoch_accuracy:.3f}{marker}")
 
     print(f"  accuracy by epoch: {[round(a, 3) for a in history]}")
     print(f"  best epoch {best_epoch} at {best_accuracy:.3f} "
@@ -252,10 +271,12 @@ def main() -> int:
     accuracy = best_accuracy
     # A model that always guesses the commonest class scores its share, which
     # exceeds uniform chance whenever the split is imbalanced. Beat the harder one.
-    val_counts = collections.Counter(label for _, label in val_cache)
-    majority = max(val_counts.values()) / len(val_cache)
+    val_counts = collections.Counter(val_labels)
+    majority = max(val_counts.values()) / len(val_labels)
     baseline = max(chance, majority)
     required = baseline + REQUIRED_MARGIN_OVER_CHANCE
+
+    shutil.rmtree(CACHE_DIR, ignore_errors=True)
 
     ok = accuracy >= required
     verdict = "PASS" if ok else "FAIL"
