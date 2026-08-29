@@ -1,29 +1,39 @@
-"""Can a trivial classifier still tell BARD from SpaceJam after augmentation?
+"""Does corpus membership predict the LABEL? That is the confound that matters.
 
-V7 scored 0.810 but with 0/532 cross-source confusions: the model could tell the
-two corpora apart, so part of that score was reading dataset identity rather than
-basketball. The fix was blur/brightness/contrast augmentation on training clips.
+V7 scored 0.810 with 0/532 cross-source confusions, so part of that score was
+reading dataset identity rather than basketball. The first attempted fix was
+blur/brightness/contrast augmentation, aimed at making the corpora look alike.
+That was the wrong target, and this script is what showed it:
 
-This checks whether that fix actually works, WITHOUT training anything. If cheap
-image statistics still separate the sources after augmentation, the leak is still
-open and a GPU run would just reproduce it more expensively.
+  raw clips                        0.988 separable
+  after augmentation               0.950
+  greyscale + standardisation      0.981
 
-Verdict is the cross-validated accuracy of a logistic regression on those
-statistics. Chance is 0.5. Near 1.0 means the sources remain trivially separable.
+The corpora stay separable because they ARE different video. That is harmless
+on its own. The damage came from composition — every rebound/steal clip was
+BARD and every other class SpaceJam, so corpus membership PREDICTED the label
+for 660 of 2,660 clips and the model could score on a quarter of the label mass
+without learning an action.
+
+So the headline number here is not "can statistics tell the corpora apart"
+(they always will) but "how much of the label does knowing the corpus buy you".
+That is computed exactly from the class composition, no sampling and no model.
 """
 
 from __future__ import annotations
 
+import collections
 import random
 import sys
 from pathlib import Path
 
 import numpy as np
 
+from courtvision.types import clip_source
+
 DATA_DIR = Path("data/labeled/actions")
-BARD = {"rebound", "steal"}
-PER_SOURCE = 80          # clips sampled from each corpus
-FRAMES_PER_CLIP = 4      # frames averaged per clip
+PER_SOURCE = 80
+FRAMES_PER_CLIP = 4
 
 
 def features(frames: np.ndarray) -> np.ndarray:
@@ -39,11 +49,11 @@ def features(frames: np.ndarray) -> np.ndarray:
         h, w = spectrum.shape
         centre = spectrum[h // 4:3 * h // 4, w // 4:3 * w // 4].sum()
         rows.append([
-            cv2.Laplacian(grey, cv2.CV_64F).var(),   # sharpness
-            float(grey.mean()), float(grey.std()),   # brightness, contrast
-            float(hsv[..., 1].mean()),               # saturation
-            float(edges.mean()),                     # edge density
-            float(centre / max(spectrum.sum(), 1)),  # low-frequency share
+            cv2.Laplacian(grey, cv2.CV_64F).var(),
+            float(grey.mean()), float(grey.std()),
+            float(hsv[..., 1].mean()),
+            float(edges.mean()),
+            float(centre / max(spectrum.sum(), 1)),
             *[float(frame[..., c].mean()) for c in range(3)],
         ])
     return np.asarray(rows).mean(axis=0)
@@ -51,6 +61,39 @@ def features(frames: np.ndarray) -> np.ndarray:
 
 NAMES = ["sharpness", "brightness", "contrast", "saturation",
          "edge_density", "low_freq_share", "mean_R", "mean_G", "mean_B"]
+
+
+def composition() -> dict[str, collections.Counter]:
+    """clips per (class, corpus), attributed per clip rather than per class."""
+    table: dict[str, collections.Counter] = {}
+    for action_dir in sorted(DATA_DIR.iterdir()):
+        if not action_dir.is_dir():
+            continue
+        counts: collections.Counter = collections.Counter()
+        for clip in action_dir.glob("*.mp4"):
+            counts[clip_source(clip)] += 1
+        if counts:
+            table[action_dir.name] = counts
+    return table
+
+
+def confound_gain(table: dict[str, collections.Counter]) -> tuple[float, float, float]:
+    """Best label accuracy from corpus alone, vs from the majority class alone.
+
+    Guessing the commonest class overall needs no corpus knowledge. Guessing the
+    commonest class WITHIN each corpus is the best a pure source-detector can
+    do. The gap is exactly what the confound is worth to a model.
+    """
+    per_source: dict[str, collections.Counter] = collections.defaultdict(collections.Counter)
+    totals: collections.Counter = collections.Counter()
+    for action, counts in table.items():
+        for source, n in counts.items():
+            per_source[source][action] += n
+            totals[action] += n
+    grand = sum(totals.values())
+    majority = max(totals.values()) / grand
+    source_only = sum(max(c.values()) for c in per_source.values()) / grand
+    return source_only, majority, source_only - majority
 
 
 def main() -> int:
@@ -61,64 +104,62 @@ def main() -> int:
 
     from scripts.validate_v7 import augment, load_clip
 
-    rng = random.Random(0)
-    clips: list[tuple[Path, int]] = []
-    for action_dir in sorted(DATA_DIR.iterdir()):
-        if not action_dir.is_dir():
-            continue
-        found = sorted(action_dir.glob("*.mp4"))
-        clips.extend((p, int(action_dir.name in BARD)) for p in found)
-    if not clips:
+    table = composition()
+    if not table:
         print(f"FAIL — no clips under {DATA_DIR}")
         return 1
 
-    by_source: dict[int, list[Path]] = {0: [], 1: []}
-    for path, source in clips:
-        by_source[source].append(path)
+    print(f"  {'class':<9}{'SpaceJam':>10}{'BARD':>7}   drawn from")
+    for action, counts in sorted(table.items()):
+        both = len(counts) > 1
+        print(f"  {action:<9}{counts.get('SpaceJam', 0):>10}{counts.get('BARD', 0):>7}   "
+              f"{'BOTH corpora' if both else next(iter(counts))+' only'}")
+
+    source_only, majority, gain = confound_gain(table)
+    print(f"\n  label accuracy from CORPUS alone:   {source_only:.3f}")
+    print(f"  label accuracy from majority class: {majority:.3f}")
+    print(f"  what knowing the corpus buys:       {gain:+.3f}")
+
+    rng = random.Random(0)
+    by_source: dict[str, list[Path]] = collections.defaultdict(list)
+    for action_dir in sorted(DATA_DIR.iterdir()):
+        if action_dir.is_dir():
+            for clip in sorted(action_dir.glob("*.mp4")):
+                by_source[clip_source(clip)].append(clip)
     sample: list[tuple[Path, int]] = []
     for source, paths in by_source.items():
         rng.shuffle(paths)
-        sample.extend((p, source) for p in paths[:PER_SOURCE])
-    print(f"sampling {sum(1 for _, s in sample if s == 0)} SpaceJam and "
-          f"{sum(1 for _, s in sample if s == 1)} BARD clips\n")
+        sample.extend((p, int(source == "BARD")) for p in paths[:PER_SOURCE])
 
+    picks = np.linspace(0, 15, FRAMES_PER_CLIP).round().astype(int)
     raw_rows, aug_rows, labels = [], [], []
     for index, (path, source) in enumerate(sample):
         frames = load_clip(path)
-        picks = np.linspace(0, len(frames) - 1, FRAMES_PER_CLIP).round().astype(int)
         raw_rows.append(features(frames[picks]))
         aug_rows.append(features(augment(frames, random.Random(1234 + index))[picks]))
         labels.append(source)
-
-    X_raw, X_aug, y = np.array(raw_rows), np.array(aug_rows), np.array(labels)
+    X_raw, X_aug = np.nan_to_num(np.array(raw_rows)), np.nan_to_num(np.array(aug_rows))
+    y = np.array(labels)
 
     def separability(X):
         model = make_pipeline(StandardScaler(), LogisticRegression(max_iter=2000))
         return cross_val_score(model, X, y, cv=5, scoring="accuracy").mean()
 
-    raw_acc, aug_acc = separability(X_raw), separability(X_aug)
+    print(f"\n  corpus separability from image statistics "
+          f"({int((y == 0).sum())} SpaceJam / {int((y == 1).sum())} BARD, chance 0.500)")
+    print(f"    raw:           {separability(X_raw):.3f}")
+    print(f"    after augment: {separability(X_aug):.3f}")
+    print("    Expected to stay high — they are genuinely different video. This is")
+    print("    only harmful when corpus also predicts the label.")
 
-    print(f"  {'feature':<16}{'SpaceJam':>11}{'BARD':>11}   overlap?")
-    for i, name in enumerate(NAMES):
-        a, b = X_aug[y == 0, i], X_aug[y == 1, i]
-        overlap = not (a.max() < b.min() or b.max() < a.min())
-        print(f"  {name:<16}{a.mean():>11.1f}{b.mean():>11.1f}   "
-              f"{'yes' if overlap else 'NO — disjoint ranges'}")
-
-    print(f"\n  source separability (5-fold CV, chance = 0.500)")
-    print(f"    raw clips:       {raw_acc:.3f}")
-    print(f"    after augment:   {aug_acc:.3f}")
-
-    # Augmentation is meant to destroy the source cue, not merely dent it.
-    if aug_acc > 0.75:
-        print(f"\n  LEAK OPEN — statistics alone still identify the corpus at "
-              f"{aug_acc:.1%}.\n  Training on this data will reproduce the "
-              f"dataset-bias result. Fix the\n  augmentation before spending GPU "
-              f"time.")
+    # A pure source-detector should do no better than ignoring the source.
+    if gain > 0.05:
+        print(f"\n  CONFOUND OPEN — corpus membership is worth {gain:+.3f} of label")
+        print( "  accuracy. Populate more classes from both corpora before training.")
         return 1
-    print(f"\n  LEAK CLOSED — {aug_acc:.1%} is near chance, so the cheap cues are "
-          f"gone.\n  A model that still separates sources would have to be using "
-          f"something\n  subtler, which training can legitimately be asked about.")
+    print(f"\n  CONFOUND CLOSED — corpus membership is worth only {gain:+.3f}, so a")
+    print( "  model cannot score by recognising the dataset. Cross-source")
+    print( "  generalisation on shared classes is now a meaningful test.")
     return 0
 
 
