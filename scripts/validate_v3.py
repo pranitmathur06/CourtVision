@@ -18,9 +18,12 @@ from courtvision.device import resolve_device
 
 DATA_YAML = Path("data/labeled/detector/data.yaml")
 CHECKPOINT = Path("checkpoints/detector.pt")
-EPOCHS = 25
+# Weak supervision grew the training set from 464 to 3,823 images, so the epoch
+# count comes down proportionally: 12 epochs here is still ~2x the gradient steps
+# of the original 25 epochs on 464 images, at a fraction of the wall clock.
+EPOCHS = 12
 IMG_SIZE = 640
-BATCH = 4  # small — 16 GB unified memory is shared with the OS
+BATCH = 8  # 16 GB unified memory is shared with the OS, but nano at 640px fits
 
 
 def main() -> int:
