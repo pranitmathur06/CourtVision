@@ -175,7 +175,13 @@ Finally, re-run the end-to-end gate on the retrained 7-class model:
 Runs the whole sequence with a PASS/FAIL per step:
 
 1. CUDA present, and whether there are two devices for §7.2
-2. `torso_color.cu` compiles — it never has, so expect build errors first time
+2. `torso_color.cu` compiles under nvcc. Its arithmetic is already checked:
+   `scripts/verify_kernel_numerics.py` compiles the real source with host CUDA
+   stubs, runs it under 256 real threads with a real barrier, and compares
+   against the OpenCV oracle — clean compile, worst channel error 0.462 against
+   a 1.5 tolerance, and the tree reduction matching the serial path to 0.0003.
+   That runs in CI, so a build failure here is an nvcc or toolchain problem
+   rather than a bug in the kernel body
 3. The kernel matches the OpenCV oracle numerically
 4. It is actually **faster** than the reference (a correct-but-slower kernel is
    not worth the risk of using)
