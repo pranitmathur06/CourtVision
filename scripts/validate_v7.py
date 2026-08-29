@@ -157,7 +157,7 @@ def main() -> int:
     print(f"  restored {restored} attention bias tensors that transformers "
           f"would otherwise have left at zero")
 
-    # Decode and preprocess every clip once, not once per epoch.
+    # Decode every clip once, not once per epoch.
     print(f"  decoding {len(train)} train + {len(val)} val clips (once)...")
     def prepare(items, augment_rng=None):
         out = []
@@ -165,9 +165,17 @@ def main() -> int:
             frames = load_clip(clip_path)
             if augment_rng is not None:
                 frames = augment(frames, random.Random(augment_rng + index))
-            tensors = processor(list(frames), return_tensors="pt")
-            out.append(({k: v for k, v in tensors.items()}, label_index))
+            out.append((frames, label_index))
         return out
+
+    # Cache uint8 frames (2.4 MB/clip), NOT the processor's normalised float32
+    # (9.6 MB/clip). Across 2,660 clips that is 6.4 GB instead of 25.6 GB. The
+    # float32 cache does not fit in 16 GB: the first attempt at this run sat in
+    # uninterruptible wait with 78 MB resident and 23.5 GB of swap in use,
+    # spending its time paging rather than training. Normalising per step costs
+    # a few ms, against a forward+backward that costs hundreds.
+    def featurize(frames):
+        return processor(list(frames), return_tensors="pt")
 
     # Training clips are augmented so the source cue cannot be learned.
     # Validation is left UNTOUCHED: it must measure what the model does on real
@@ -201,8 +209,8 @@ def main() -> int:
         model.eval()
         correct = 0
         with torch.no_grad():
-            for inputs, label_index in val_cache:
-                inputs = {k: v.to(device) for k, v in inputs.items()}
+            for frames, label_index in val_cache:
+                inputs = {k: v.to(device) for k, v in featurize(frames).items()}
                 correct += int(int(model(**inputs).logits.argmax(dim=-1)) == label_index)
         model.train()
         return correct / len(val_cache)
@@ -218,8 +226,8 @@ def main() -> int:
         random.Random(epoch).shuffle(order)
         total_loss = 0.0
         for i in order:
-            inputs, label_index = train_cache[i]
-            inputs = {k: v.to(device) for k, v in inputs.items()}
+            frames, label_index = train_cache[i]
+            inputs = {k: v.to(device) for k, v in featurize(frames).items()}
             labels = torch.tensor([label_index], device=device)
             loss = model(**inputs, labels=labels).loss
             loss.backward()
