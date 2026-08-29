@@ -48,7 +48,7 @@ Order of operations on RunPod:
 3. Template: **PyTorch 2.x / CUDA 12.x**. This matters — a bare Ubuntu image
    means installing the CUDA toolkit yourself, and `torso_color.cu` needs
    `nvcc`, which the PyTorch templates already carry.
-4. Set container disk to **≥40 GB**. The frame cache alone is 6 GB and the
+4. Set container disk to **≥40 GB**. The frame cache alone is ~8 GB and the
    default 10-20 GB will fill.
 5. Deploy, then **Connect → Start Web Terminal**.
 
@@ -100,11 +100,16 @@ attempts thrashed rather than trained.
 ./.venv/bin/python -u scripts/validate_v7.py 2>&1 | tee outputs/v7_run.log
 ```
 
-**Expected wall-clock:** decode is ~2 minutes (measured: 90 s for 2,660 clips,
-and it is CPU-bound so it transfers). Training is 8 epochs over 2,128 clips at
-batch size 1; on a 4090 that should land in **10-25 minutes**, so under half an
-hour end to end. Treat the training half as an estimate — it has never run on
-CUDA. The first epoch line tells you the real per-epoch cost; multiply by 8.
+**Expected wall-clock:** decode is ~2.5 minutes (measured: 90 s for 2,660 clips
+before the corpus rebalance, and it is CPU-bound so it transfers). Training is
+8 epochs over ~2,764 clips at batch size 1; on a 4090 that should land in
+**13-30 minutes**, so under 40 minutes end to end. Treat the training half as an
+estimate — it has never run on CUDA. The epoch line prints its own elapsed
+seconds; multiply the first one by 8.
+
+For reference, the same run on the M2 measured 95 s for 67 training steps, which
+extrapolates to ~6.7 hours. Local was never viable on time, independent of the
+memory ceiling that actually blocked it.
 
 Batch size is deliberately left at 1 so the number stays comparable with the
 0.810 baseline. Raising it would be faster but would change the experiment.
@@ -115,14 +120,30 @@ Then the check that actually matters:
 ./.venv/bin/python -m scripts.report_action_confusion
 ```
 
-Accuracy is **not** the pass criterion here. The previous 0.810 was partly
-measuring dataset identity: SpaceJam clips have sharpness ~1676 and BARD ~663,
-non-overlapping ranges, and the model scored 0/532 cross-source confusions —
-it could tell the two corpora apart. This run adds blur/brightness/contrast
-augmentation to training only. **Success is cross-source confusions becoming
-non-zero.** Expect accuracy to fall from 0.810; a lower honest number beats a
-higher misleading one. If confusions are still 0, the leak is not blur and the
-real cue has not been found yet — do not report a passing number in that case.
+**Accuracy is not the pass criterion.** The earlier 0.810 was partly measuring
+dataset identity. The cause was composition, not appearance: every rebound and
+steal clip came from BARD and every other class from SpaceJam, so corpus
+membership predicted the label for 660 of 2,660 clips. Augmentation cannot fix
+that, and measurably did not — image statistics still separated the corpora 95%
+of the time after blur/brightness/contrast jitter, and 98% before.
+
+The fix was to populate `shot` and `other` from BOTH corpora, using BARD's
+2PT/3PT shot and foul/turnover events:
+
+```
+BEFORE  2,660 clips  corpus-only 0.314  majority 0.163  confound +0.150
+AFTER   3,455 clips  corpus-only 0.241  majority 0.232  confound +0.010
+```
+
+`scripts/audit_source_cue.py` recomputes that on the box if you want to confirm
+it travelled. The pass criterion is now the **cross-source generalisation** block
+in the confusion report: `shot` and `other` are scored separately on their
+SpaceJam and BARD clips. Similar accuracy on both means the model learned the
+action. A gap above ~0.25 means it is still leaning on corpus identity, and the
+headline accuracy should not be trusted.
+
+Expect the accuracy to be lower than 0.810 — that number was inflated. A lower
+honest figure is the point.
 
 Finally, re-run the end-to-end gate on the retrained 7-class model:
 
