@@ -34,6 +34,12 @@ FRAME_SIZE = 224
 # Fraction of the player box height added as padding around the crop, so the
 # ball and the player's arms stay in frame the way SpaceJam's crops do.
 CROP_MARGIN = 0.25
+# SpaceJam clips are 128x176 (portrait). Crops taken at inference are forced to
+# the same aspect so the processor's resize to 224x224 stretches training and
+# inference frames identically. A square crop would distort differently from the
+# training data — a source artifact the model could latch onto instead of the
+# action.
+CROP_ASPECT = 128 / 176
 
 
 def plan_windows(n_frames: int, size: int, stride: int) -> list[tuple[int, int]]:
@@ -114,15 +120,30 @@ class VideoMaeClassifier:
 
 
 def crop_player(image: np.ndarray, box, margin: float = CROP_MARGIN) -> np.ndarray:
-    """Crop around a player box with padding, clamped to the image."""
+    """Crop around a player box with padding, at SpaceJam's aspect ratio.
+
+    The crop is widened or heightened to CROP_ASPECT before resizing, so a player
+    fills the frame the same way here as in the training clips.
+    """
     import cv2
 
     height, width = image.shape[:2]
     pad = box.height * margin
-    x1 = int(max(0, box.x1 - pad))
-    y1 = int(max(0, box.y1 - pad))
-    x2 = int(min(width, box.x2 + pad))
-    y2 = int(min(height, box.y2 + pad))
+    x1, y1 = box.x1 - pad, box.y1 - pad
+    x2, y2 = box.x2 + pad, box.y2 + pad
+
+    # Force the target aspect around the same centre before clamping.
+    cx, cy = (x1 + x2) / 2.0, (y1 + y2) / 2.0
+    w, h = max(x2 - x1, 1.0), max(y2 - y1, 1.0)
+    if w / h > CROP_ASPECT:
+        h = w / CROP_ASPECT
+    else:
+        w = h * CROP_ASPECT
+    x1, x2 = cx - w / 2.0, cx + w / 2.0
+    y1, y2 = cy - h / 2.0, cy + h / 2.0
+
+    x1, y1 = int(max(0, x1)), int(max(0, y1))
+    x2, y2 = int(min(width, x2)), int(min(height, y2))
     if x2 <= x1 or y2 <= y1:
         return cv2.resize(image, (FRAME_SIZE, FRAME_SIZE))
     return cv2.resize(image[y1:y2, x1:x2], (FRAME_SIZE, FRAME_SIZE))

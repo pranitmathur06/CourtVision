@@ -202,3 +202,21 @@ def test_classify_windows_mixes_batched_and_no_holder_windows():
     unheld = [w for w in windows if w.label == "other"]
     assert seen["n"] == len(held) < len(windows)
     assert unheld and all(w.conf == 0.0 for w in unheld)
+
+
+def test_crop_player_uses_spacejam_aspect_before_resizing():
+    """The crop region is portrait like SpaceJam, not square.
+
+    Both end up 224x224, but the *region* selected must have the same shape as the
+    training clips or the resize distorts them differently — a source cue the
+    model could learn instead of the action.
+    """
+    from courtvision.action_classifier import CROP_ASPECT, crop_player
+    from courtvision.types import Box
+
+    # A deliberately wide box: the crop should grow vertically to reach the aspect.
+    image = np.zeros((600, 600, 3), dtype=np.uint8)
+    image[200:260, 100:300] = 255
+    crop = crop_player(image, Box(100, 200, 300, 260), margin=0.0)
+    assert crop.shape[0] == crop.shape[1]  # output is square after resize
+    assert 0.5 < CROP_ASPECT < 1.0
