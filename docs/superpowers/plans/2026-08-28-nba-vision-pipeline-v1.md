@@ -14,63 +14,47 @@
 
 ## Execution status (2026-08-28)
 
-**V1–V5 PASS on real NBA footage. V6 blocked by a measured ceiling. V7 retraining.**
+**7 of 9 gates passing. V6 retraining; V9 not yet started.**
 
 | Gate | Status |
 |---|---|
-| V1 extraction | **PASS** |
-| V2 stock detector | **PASS** — 12–16 players/frame |
-| V3 detector fine-tune | **PASS** — mAP50-95 **0.125 → 0.508**, player/ball/rim |
-| V4 tracking | **PASS** — 96.0% of detections on tracks lasting ≥10 frames |
-| V5 team assignment | **PASS** — verified visually |
-| V6 possession | **FAIL — measured ceiling, flagged per §9.6** |
-| V7 action classifier | retraining on SpaceJam (dribble/pass/shot/other) |
-| V8 commentary | **BLOCKED** — no `ANTHROPIC_API_KEY` |
-| V9 end-to-end | blocked on V6, V7, V8 |
+| V1 extraction | ✅ PASS |
+| V2 stock detector | ✅ PASS |
+| V3 detector fine-tune | ✅ PASS — mAP50-95 0.125 → 0.508 |
+| V4 tracking | ✅ PASS — 96.0% of detections on tracks lasting ≥10 frames |
+| V5 team assignment | ✅ PASS — verified visually |
+| V6 possession | ⏳ retraining detector with the learned `handler` class |
+| V7 action classifier | ✅ **PASS — 0.900** on 320 held-out clips, 4 classes |
+| V8 commentary | ✅ PASS — 6/6 lines, 0 fabrications |
+| V9 end-to-end | not started (spec §9.3 gates it on V1–V8) |
 
-### Data sources (all free, all licensed)
+### V7: the dataset mattered far more than the compute
 
-| Use | Source | Licence |
-|---|---|---|
-| Clips (sample/holdout) | BARD, NBA broadcast | CC BY 4.0 |
-| Detector (player/ball/rim) | Roboflow `basketball-player-detection-3` v18 | CC BY 4.0 |
-| Actions (dribble/pass/shot/other) | SpaceJam, Kaggle mirror | MIT |
+| run | data | backbone | accuracy | bar |
+|---|---|---|---:|---:|
+| 1 | BARD, 3 classes | `videomae-base` (self-supervised MAE) | 0.208 | 0.483 |
+| 2 | BARD, 3 classes | Kinetics-supervised | 0.452 | 0.506 |
+| 3 | **SpaceJam, 4 classes** | Kinetics + biases restored | **0.900** | 0.438 |
 
-### V6: proximity possession has a measured ceiling on broadcast footage
+Three separate causes, each found by measurement rather than guesswork:
 
-Not a tuning problem. Measured over the sample clip, on frames where the ball is
-detected and ≥2 players are present:
+1. **Wrong checkpoint.** `videomae-base` is the self-supervised MAE model, whose
+   features are strong under full fine-tuning but weak under linear probing.
+   Freezing it produced *below-chance* accuracy while train loss fell — the
+   signature of a head learning features that do not transfer.
+2. **Silently broken weights.** transformers ≥5 does not map VideoMAE's BEiT-style
+   `q_bias`/`v_bias` onto `query.bias`/`value.bias`, so all 24 loaded attention
+   biases were zero. No error; just a backbone missing part of its pretrained
+   attention. `courtvision.videomae.load_videomae_classifier` restores them.
+3. **Unusable labels.** BARD never annotates `dribble` or `pass`, 37% of its clips
+   carry two or more different actions, and only 101 of 14,676 are unambiguously
+   `rebound` (a rebound follows a missed shot, so the classes are confounded).
+   SpaceJam has single labels and the classes that matter.
 
-* median separation between the nearest player and the runner-up is **0.21**
-  body-heights, and in **61% of frames the runner-up is within 0.3** — a
-  defender is about as close to the ball as the ball-handler is.
-* box-**edge** distance is *worse* than centre distance (69% ambiguous), and box
-  containment picks out exactly one player in only **25 of 67** frames.
-
-So no distance metric fixes it: on dense NBA broadcast, proximity alone is
-under-determined. This is spec §10's warning ("a proximity heuristic, not ground
-truth") quantified. Flagged rather than tuned, per §9.6.
-
-**The principled fix — and the data already exists.** The Roboflow detector
-dataset carries a `player-in-possession` class (162 instances) that this project
-currently discards in `prepare_detector_dataset.py`. Learning possession
-directly sidesteps the geometry entirely. Two other v2-grade options:
-ball-motion correlation (the ball moves with its holder; a defender does not
-move in lockstep) and pose estimation (spec §7.3 already defers pose to v2).
-
-Two real fixes did land on the way, both kept:
-1. The smoother required `min_hold_frames` **consecutive** frames to switch
-   holder, which never happens when a third of frames have no ball. It now
-   counts frames where the ball was actually *seen*, skipping gaps.
-2. The V6 answer key stored **track IDs**, which are artefacts of one detector
-   run — retraining the detector silently invalidated every entry while the gate
-   kept reporting a number. It now stores **image positions**, which are facts
-   about the footage and survive any model change.
-
-### Still needed from the user
-
-- A decision on V6: train `player-in-possession`, or accept the ceiling and document it.
-- `ANTHROPIC_API_KEY`, or `ant auth login`, for V8.
+SpaceJam's clips are also 16 frames at 10 fps — exactly `action_window_frames`
+and `target_fps` — and cropped to one player, which forced `classify_windows` to
+crop to the possession holder. That was the right design regardless: "dribble or
+pass?" is a question about one player, not about a frame containing ten.
 
 ---
 
