@@ -20,27 +20,115 @@ Two wins landed with no CUDA at all:
 
 Do the free wins before paying for hardware.
 
-## 1. Machine
+## 1. Renting the box
 
-**2× consumer GPUs (RTX 4090 or 3090) on ONE instance.** Not A100/H100 — the
-models are small (YOLO11n is 5 MB, VideoMAE-base 344 MB) and VRAM is not the
-constraint. Two GPUs must share an instance for §7.2; two separate single-GPU
-boxes cannot pipeline.
+### What to rent
 
-RunPod or Vast.ai, per-hour. Destroy when done — idle instances are the only real
-cost risk.
+**2x RTX 4090 (or 3090 / A5000) on ONE instance.** Not A100/H100: YOLO11n is
+5 MB and VideoMAE-base 344 MB, so VRAM is nowhere near the constraint and you
+would be paying 3-5x for headroom you cannot use. The two GPUs must be on the
+same instance — §7.2 pipelines stage output between them, which two separate
+single-GPU boxes cannot do.
 
-## 2. Setup
+V7 training only needs **one** GPU. If you want to train first and do v2 later,
+rent 1x 4090 now and a 2-GPU box when you get to §7.2.
+
+### Where
+
+**RunPod** (runpod.io) is the recommendation: per-second billing, persistent
+volumes, and a browser terminal, so there is no SSH key setup before you can
+run anything. Vast.ai is cheaper per hour but is a marketplace — host quality
+varies, and a machine disappearing mid-run costs more than it saves.
+
+Order of operations on RunPod:
+
+1. Add credit (~$10 covers everything in this document several times over).
+2. **Deploy → Pods → GPU Cloud**, filter to RTX 4090, pick a host with 2x
+   available if you are doing §7.2.
+3. Template: **PyTorch 2.x / CUDA 12.x**. This matters — a bare Ubuntu image
+   means installing the CUDA toolkit yourself, and `torso_color.cu` needs
+   `nvcc`, which the PyTorch templates already carry.
+4. Set container disk to **≥40 GB**. The frame cache alone is 6 GB and the
+   default 10-20 GB will fill.
+5. Deploy, then **Connect → Start Web Terminal**.
+
+> Prices move and mine may be stale — check the live figure before you commit.
+> As a sanity band, a 4090 has been roughly $0.35-0.70/hr and a 2x box roughly
+> $0.70-1.40/hr. Everything in this runbook is a few hours of work, so expect
+> single-digit dollars total.
+
+**The only real cost risk is forgetting to destroy the pod.** Stopping is not
+destroying — a stopped pod still bills for its volume. Destroy it when done.
+
+### Getting the code and data there
+
+The repo has a remote but this branch has never been pushed, and `data/` is
+gitignored, so the clips travel separately. From your Mac:
 
 ```bash
-git clone <repo> && cd CourtVision
-python3 -m venv .venv && ./.venv/bin/python -m pip install -e ".[dev]"
-./.venv/bin/python -m pytest -q          # expect 111 passed
-./.venv/bin/python -c "from courtvision.device import resolve_device; print(resolve_device())"   # cuda
+git push -u origin feat/v1-pipeline
 ```
 
-`resolve_device()` picks `cuda` with no code change — that was the point of
-routing every device decision through it from Task 1.
+Then on the pod:
+
+```bash
+git clone -b feat/v1-pipeline https://github.com/pronton1234/CourtVision.git
+cd CourtVision && python3 -m venv .venv
+./.venv/bin/python -m pip install -e ".[dev]"
+```
+
+And from your Mac, to move the clips (RunPod shows the host/port under
+**Connect → SSH**):
+
+```bash
+rsync -avz -e "ssh -p <PORT>" data/labeled/actions data/raw_clips \
+  root@<HOST>:/workspace/CourtVision/data/
+```
+
+That is ~160 MB, a minute or two. Do **not** send `data/labeled/detector` —
+it is 9.3 GB and nothing here needs it unless you retrain the detector.
+
+## 2. Train V7 first — it is the thing that is blocked
+
+This is why you are renting. V7 cannot run on the Mac at all: training needs
+~2 GB and the machine has ~1.6 GB free with browsers holding 4.1 GB. Three
+attempts thrashed rather than trained.
+
+```bash
+./.venv/bin/python -m pytest -q
+./.venv/bin/python -c "from courtvision.device import resolve_device; print(resolve_device())"   # cuda
+./.venv/bin/python -u scripts/validate_v7.py 2>&1 | tee outputs/v7_run.log
+```
+
+**Expected wall-clock:** decode is ~2 minutes (measured: 90 s for 2,660 clips,
+and it is CPU-bound so it transfers). Training is 8 epochs over 2,128 clips at
+batch size 1; on a 4090 that should land in **10-25 minutes**, so under half an
+hour end to end. Treat the training half as an estimate — it has never run on
+CUDA. The first epoch line tells you the real per-epoch cost; multiply by 8.
+
+Batch size is deliberately left at 1 so the number stays comparable with the
+0.810 baseline. Raising it would be faster but would change the experiment.
+
+Then the check that actually matters:
+
+```bash
+./.venv/bin/python -m scripts.report_action_confusion
+```
+
+Accuracy is **not** the pass criterion here. The previous 0.810 was partly
+measuring dataset identity: SpaceJam clips have sharpness ~1676 and BARD ~663,
+non-overlapping ranges, and the model scored 0/532 cross-source confusions —
+it could tell the two corpora apart. This run adds blur/brightness/contrast
+augmentation to training only. **Success is cross-source confusions becoming
+non-zero.** Expect accuracy to fall from 0.810; a lower honest number beats a
+higher misleading one. If confusions are still 0, the leak is not blur and the
+real cue has not been found yet — do not report a passing number in that case.
+
+Finally, re-run the end-to-end gate on the retrained 7-class model:
+
+```bash
+./.venv/bin/python -m scripts.validate_v9
+```
 
 ## 3. Verify everything, in one command
 
