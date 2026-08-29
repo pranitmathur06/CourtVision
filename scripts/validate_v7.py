@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import collections
 import os
+import time
 import random
 import shutil
 import sys
@@ -21,7 +22,11 @@ from courtvision.device import resolve_device
 from courtvision.types import ACTIONS
 
 DATA_DIR = Path("data/labeled/actions")
-OUT_DIR = Path("checkpoints/action_classifier")
+# Overridable so a smoke run can exercise the whole path — decode, train,
+# evaluate, checkpoint — on a handful of clips without overwriting the real
+# checkpoint or waiting for 8 epochs. Defaults reproduce the graded run exactly.
+OUT_DIR = Path(os.environ.get("V7_OUT_DIR", "checkpoints/action_classifier"))
+MAX_PER_CLASS = int(os.environ.get("V7_MAX_PER_CLASS", "0"))   # 0 = use every clip
 # The supervised Kinetics-400 checkpoint, NOT the plain `videomae-base`.
 # `videomae-base` is the self-supervised MAE checkpoint: masked-autoencoder
 # features are strong under full fine-tuning but weak under linear probing, and
@@ -31,7 +36,7 @@ BASE_MODEL = "MCG-NJU/videomae-base-finetuned-kinetics"
 N_FRAMES = 16
 FRAME_SIZE = 224
 BYTES_PER_CLIP = N_FRAMES * FRAME_SIZE * FRAME_SIZE * 3
-EPOCHS = 8
+EPOCHS = int(os.environ.get("V7_EPOCHS", "8"))
 VAL_FRACTION = 0.2
 # The bar is set from the classes that actually have data, not from len(ACTIONS).
 # BARD labels no `dribble` or `pass`, so training on the spec's five classes with
@@ -134,6 +139,8 @@ def main() -> int:
     counts = {}
     for label_index, action in enumerate(populated):
         clips = sorted((DATA_DIR / action).glob("*.mp4"))
+        if MAX_PER_CLASS:
+            clips = clips[:MAX_PER_CLASS]
         counts[action] = len(clips)
         samples.extend((clip_path, label_index) for clip_path in clips)
     print(f"V7 clips per class: {counts}")
@@ -261,6 +268,7 @@ def main() -> int:
     best_accuracy, best_epoch, history = -1.0, 0, []
     model.train()
     for epoch in range(EPOCHS):
+        started = time.monotonic()
         order = list(range(len(train_labels)))
         random.Random(epoch).shuffle(order)
         total_loss = 0.0
@@ -283,7 +291,8 @@ def main() -> int:
             processor.save_pretrained(OUT_DIR)
             marker = "  <- best, checkpoint saved"
         print(f"  epoch {epoch + 1}/{EPOCHS} train loss "
-              f"{total_loss / len(train_labels):.4f}  val acc {epoch_accuracy:.3f}{marker}")
+              f"{total_loss / len(train_labels):.4f}  val acc {epoch_accuracy:.3f}  "
+              f"[{time.monotonic() - started:.0f}s]{marker}", flush=True)
 
     print(f"  accuracy by epoch: {[round(a, 3) for a in history]}")
     print(f"  best epoch {best_epoch} at {best_accuracy:.3f} "

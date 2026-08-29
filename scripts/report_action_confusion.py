@@ -12,6 +12,7 @@ the ones the model was scored on.
 from __future__ import annotations
 
 import collections
+import os
 import random
 import sys
 from pathlib import Path
@@ -20,7 +21,10 @@ from courtvision.device import resolve_device
 from courtvision.types import ACTIONS
 
 DATA_DIR = Path("data/labeled/actions")
-MODEL_DIR = Path("checkpoints/action_classifier")
+# Same overrides as validate_v7, so a smoke run can exercise this report
+# against a throwaway checkpoint on the same split the model was scored on.
+MODEL_DIR = Path(os.environ.get("V7_OUT_DIR", "checkpoints/action_classifier"))
+MAX_PER_CLASS = int(os.environ.get("V7_MAX_PER_CLASS", "0"))
 VAL_FRACTION = 0.2
 
 
@@ -38,7 +42,10 @@ def main() -> int:
     populated = [a for a in ACTIONS if list((DATA_DIR / a).glob("*.mp4"))]
     samples: list[tuple[Path, int]] = []
     for index, action in enumerate(populated):
-        samples.extend((p, index) for p in sorted((DATA_DIR / action).glob("*.mp4")))
+        clips = sorted((DATA_DIR / action).glob("*.mp4"))
+        if MAX_PER_CLASS:
+            clips = clips[:MAX_PER_CLASS]
+        samples.extend((p, index) for p in clips)
     random.Random(0).shuffle(samples)
     val = samples[int(len(samples) * (1 - VAL_FRACTION)):]
 
