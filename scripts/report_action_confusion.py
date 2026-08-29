@@ -18,7 +18,7 @@ import sys
 from pathlib import Path
 
 from courtvision.device import resolve_device
-from courtvision.types import ACTIONS
+from courtvision.types import ACTIONS, clip_source
 
 DATA_DIR = Path("data/labeled/actions")
 # Same overrides as validate_v7, so a smoke run can exercise this report
@@ -49,6 +49,14 @@ def main() -> int:
     random.Random(0).shuffle(samples)
     val = samples[int(len(samples) * (1 - VAL_FRACTION)):]
 
+    # Which corpus each class actually draws from, measured, not assumed.
+    source_of = []
+    for action in populated:
+        found = {clip_source(p) for p in (DATA_DIR / action).glob("*.mp4")}
+        source_of.append("both" if len(found) > 1 else next(iter(found), "?"))
+    print("class -> corpus: " + ", ".join(
+        f"{a}={s}" for a, s in zip(populated, source_of)) + "\n")
+
     device = resolve_device()
     processor = VideoMAEImageProcessor.from_pretrained(str(MODEL_DIR))
     model, _ = load_videomae_classifier(str(MODEL_DIR))
@@ -60,46 +68,54 @@ def main() -> int:
             inputs = processor(list(load_clip(clip_path)), return_tensors="pt")
             inputs = {k: v.to(device) for k, v in inputs.items()}
             predicted = int(model(**inputs).logits.argmax(dim=-1))
-            confusion[(label_index, predicted)] += 1
+            confusion[(label_index, predicted, clip_source(clip_path))] += 1
 
     print(f"per-class accuracy on {len(val)} held-out clips\n")
-    print(f"  {'class':<9}{'n':>5}{'acc':>7}   most confused with")
+    print(f"  {'class':<9}{'source':<10}{'n':>5}{'acc':>7}   most confused with")
+    shared = []
     for true_index, action in enumerate(populated):
-        total = sum(v for (t, _), v in confusion.items() if t == true_index)
-        hit = confusion.get((true_index, true_index), 0)
-        if not total:
-            continue
-        wrong = sorted(((v, p) for (t, p), v in confusion.items()
-                        if t == true_index and p != true_index), reverse=True)
-        note = f"{populated[wrong[0][1]]} ({wrong[0][0]})" if wrong else "-"
-        source = "BARD" if action in ("rebound", "steal") else "SpaceJam"
-        print(f"  {action:<9}{total:>5}{hit/total:>7.2f}   {note:<18} [{source}]")
+        per_source = {}
+        for source in ("SpaceJam", "BARD"):
+            total = sum(v for (t, _, src), v in confusion.items()
+                        if t == true_index and src == source)
+            if not total:
+                continue
+            hit = confusion.get((true_index, true_index, source), 0)
+            wrong = sorted(((v, p) for (t, p, src), v in confusion.items()
+                            if t == true_index and src == source and p != true_index),
+                           reverse=True)
+            note = f"{populated[wrong[0][1]]} ({wrong[0][0]})" if wrong else "-"
+            per_source[source] = hit / total
+            print(f"  {action:<9}{source:<10}{total:>5}{hit/total:>7.2f}   {note}")
+        if len(per_source) == 2:
+            shared.append((action, per_source))
 
-    BARD = {"rebound", "steal"}
-    def group_acc(names):
-        pairs = [(confusion.get((i, i), 0),
-                  sum(v for (t, _), v in confusion.items() if t == i))
-                 for i, a in enumerate(populated) if a in names]
-        total = sum(n for _, n in pairs)
-        return (sum(h for h, _ in pairs) / total) if total else 0.0
+    # A class drawn from BOTH corpora is the honest test. If the model learned
+    # the action, it scores similarly on that class whichever corpus the clip
+    # came from. A large gap means it is still leaning on corpus identity.
+    if shared:
+        print("\n  cross-source generalisation on classes present in both corpora")
+        worst = 0.0
+        for action, per_source in shared:
+            gap = abs(per_source["SpaceJam"] - per_source["BARD"])
+            worst = max(worst, gap)
+            print(f"    {action:<9} SpaceJam {per_source['SpaceJam']:.2f}  "
+                  f"BARD {per_source['BARD']:.2f}  gap {gap:.2f}")
+        print(f"    worst gap: {worst:.2f}"
+              f"{'  — LARGE, still corpus-dependent' if worst > 0.25 else '  — acceptable'}")
+    else:
+        print("\n  NO class is populated from both corpora, so corpus membership")
+        print("  still predicts the label and no honest cross-source test exists.")
+        print("  Run: scripts/add_bard_action.py --action shot --count 400")
 
-    bard_names = {a for a in populated if a in BARD}
-    sj_names = {a for a in populated if a not in BARD}
-    bard_acc, sj_acc = group_acc(bard_names), group_acc(sj_names)
-
-    # Cross-source confusion is the real tell: if the model reads SOURCE rather
-    # than action, BARD classes and SpaceJam classes would never be mistaken for
-    # one another.
-    cross = sum(v for (t, p), v in confusion.items()
-                if (populated[t] in BARD) != (populated[p] in BARD))
+    cross = sum(v for (t, p, _), v in confusion.items()
+                if t != p and source_of[t] != source_of[p] and
+                source_of[t] != "both" and source_of[p] != "both")
     total = sum(confusion.values())
-
-    print(f"\n  BARD classes    {sorted(bard_names)}: {bard_acc:.2f}")
-    print(f"  SpaceJam classes {sorted(sj_names)}: {sj_acc:.2f}")
-    print(f"  cross-source confusions: {cross}/{total} ({cross/max(total,1):.1%})")
-    print("\n  If the model were separating by SOURCE, the BARD group would be")
-    print("  near-perfect AND cross-source confusions would be ~0. Mistakes that")
-    print("  cross the source boundary mean it is reading the action instead.")
+    print(f"\n  cross-corpus confusions (single-corpus classes only): "
+          f"{cross}/{total} ({cross/max(total,1):.1%})")
+    print("  Zero here means the model never mistakes a BARD-only action for a")
+    print("  SpaceJam-only one, which is what reading the corpus would look like.")
     return 0
 
 

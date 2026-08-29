@@ -54,6 +54,20 @@ SELECTORS: dict[str, tuple[list[set[str]], str]] = {
     "rebound": ([{"Rebound"}], "Rebound"),
     # {Steal, Turnover} is one steal seen from both sides, not two actions.
     "steal": ([{"Steal", "Turnover"}, {"Steal"}], "Steal"),
+    # `shot` and `other` exist in SpaceJam too, and that is the point. While
+    # rebound/steal came only from BARD and every other class only from
+    # SpaceJam, corpus membership PREDICTED the label for 660 of 2,660 clips,
+    # so a model could score on those by recognising the dataset. Augmentation
+    # cannot fix that — a logistic regression on nine cheap image statistics
+    # still told the corpora apart 95% of the time after blur, brightness and
+    # contrast jitter, and 98% before. Populating a class from BOTH corpora
+    # removes the shortcut instead of trying to hide it.
+    #
+    # Free Throws are excluded despite being BARD's second-largest shot pool:
+    # SpaceJam's shoot class is field goals, and a set shot from the line is a
+    # different action wearing the same label.
+    "shot": ([{"2PT Shot"}, {"3PT Shot"}], "2PT Shot"),
+    "other": ([{"Foul"}, {"Turnover"}, {"Violation"}], "Foul"),
 }
 
 

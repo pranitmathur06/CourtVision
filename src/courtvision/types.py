@@ -118,3 +118,19 @@ class Event:
     action: str
     possession_change: bool
     player_name: str | None = None
+
+
+def clip_source(path) -> str:
+    """Which corpus a labeled action clip came from, per CLIP not per class.
+
+    Attribution used to be `action in ("rebound", "steal") -> BARD`, which was
+    correct only while each class drew from exactly one corpus. Once `shot` and
+    `other` are populated from both — the fix for the source/label confound —
+    that rule silently mislabels every BARD shot as SpaceJam and reports zero
+    cross-source confusions no matter what the model does.
+
+    SpaceJam names clips by zero-padded index (`0000053.mp4`, `0000026_flipped`);
+    BARD names them after the game (`bkn-vs-det-0022400861__284.mp4`).
+    """
+    stem = getattr(path, "stem", None) or str(path).rsplit("/", 1)[-1].split(".")[0]
+    return "SpaceJam" if stem.removesuffix("_flipped").isdigit() else "BARD"
