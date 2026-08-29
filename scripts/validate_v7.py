@@ -8,6 +8,7 @@ barely above it, so the bar here is 40%.
 from __future__ import annotations
 
 import collections
+import os
 import random
 import shutil
 import sys
@@ -29,6 +30,7 @@ OUT_DIR = Path("checkpoints/action_classifier")
 BASE_MODEL = "MCG-NJU/videomae-base-finetuned-kinetics"
 N_FRAMES = 16
 FRAME_SIZE = 224
+BYTES_PER_CLIP = N_FRAMES * FRAME_SIZE * FRAME_SIZE * 3
 EPOCHS = 8
 VAL_FRACTION = 0.2
 # The bar is set from the classes that actually have data, not from len(ACTIONS).
@@ -159,31 +161,49 @@ def main() -> int:
     print(f"  restored {restored} attention bias tensors that transformers "
           f"would otherwise have left at zero")
 
-    # Decode every clip once, not once per epoch — but hold the decoded frames
-    # in a disk-backed memmap, not in RAM. 2,660 clips of 16x224x224x3 uint8 is
-    # 6.1 GB; on this 16 GB machine, with ~10 GB resident across every other
-    # process, an in-RAM cache pushed the trainer into swap (150 MB resident,
-    # uninterruptible wait, 4.7% CPU, 16.7 GB of swap in use). Backed by a real
-    # file the pages are clean, so the OS can evict and re-read them for the
-    # cost of an SSD read (~2.4 MB per step) instead of paging to swap.
+    # Decode every clip once, then STREAM it back one clip at a time. Nothing is
+    # held in memory between steps.
+    #
+    # This machine has 16 GB, but with the trainer dead it already carries
+    # ~10.8 GB resident across other processes plus 5.5 GB in the compressor:
+    # roughly 1.5-2 GB is actually free, and VideoMAE training needs most of
+    # that. Every cached-in-RAM design therefore thrashed, whatever its size —
+    # float32 (25.6 GB), uint8 (6.1 GB), and a writable memmap all drove the
+    # process into uninterruptible wait at 3-5% CPU with swap pinned near full.
+    # A writable mmap is no better than RAM here: its dirty pages must live
+    # somewhere until writeback.
+    #
+    # So: buffered sequential writes with a periodic fsync while decoding, then
+    # seek+read of one fixed-size record per step. Peak footprint is the model
+    # plus a single 2.4 MB clip. The page cache may keep copies, but they are
+    # clean and the kernel can drop them for free.
     CACHE_DIR = Path(tempfile.mkdtemp(prefix="v7-frame-cache-"))
     print(f"  decoding {len(train)} train + {len(val)} val clips (once) "
           f"into {CACHE_DIR}...")
     def prepare(items, name, augment_rng=None):
-        path = CACHE_DIR / f"{name}.npy"
-        store = np.lib.format.open_memmap(
-            path, mode="w+", dtype=np.uint8,
-            shape=(len(items), N_FRAMES, FRAME_SIZE, FRAME_SIZE, 3))
+        path = CACHE_DIR / f"{name}.bin"
         labels = []
-        for index, (clip_path, label_index) in enumerate(items):
-            frames = load_clip(clip_path)
-            if augment_rng is not None:
-                frames = augment(frames, random.Random(augment_rng + index))
-            store[index] = frames
-            labels.append(label_index)
-        store.flush()
-        del store                      # drop the dirty writable mapping
-        return np.load(path, mmap_mode="r"), labels
+        with open(path, "wb") as handle:
+            for index, (clip_path, label_index) in enumerate(items):
+                frames = load_clip(clip_path)
+                if augment_rng is not None:
+                    frames = augment(frames, random.Random(augment_rng + index))
+                handle.write(np.ascontiguousarray(frames, dtype=np.uint8).tobytes())
+                labels.append(label_index)
+                if (index + 1) % 250 == 0:
+                    # Force writeback so dirty pages cannot accumulate.
+                    handle.flush()
+                    os.fsync(handle.fileno())
+                    print(f"    {name} {index + 1}/{len(items)} decoded", flush=True)
+        return path, labels
+
+    def read_clip(path, index) -> np.ndarray:
+        """Read one clip's frames straight off disk. Nothing is retained."""
+        with open(path, "rb") as handle:
+            handle.seek(index * BYTES_PER_CLIP)
+            buffer = handle.read(BYTES_PER_CLIP)
+        return np.frombuffer(buffer, dtype=np.uint8).reshape(
+            N_FRAMES, FRAME_SIZE, FRAME_SIZE, 3)
 
     # Cache uint8 frames (2.4 MB/clip), NOT the processor's normalised float32
     # (9.6 MB/clip). Across 2,660 clips that is 6.4 GB instead of 25.6 GB. The
@@ -197,8 +217,8 @@ def main() -> int:
     # Training clips are augmented so the source cue cannot be learned.
     # Validation is left UNTOUCHED: it must measure what the model does on real
     # data, not on data we have already normalised in its favour.
-    train_store, train_labels = prepare(train, "train", augment_rng=1234)
-    val_store, val_labels = prepare(val, "val")
+    train_path, train_labels = prepare(train, "train", augment_rng=1234)
+    val_path, val_labels = prepare(val, "val")
 
     # Train the head plus the last two encoder blocks. Full fine-tuning of 86M
     # parameters overfits a few hundred clips; a frozen backbone alone was not
@@ -229,7 +249,7 @@ def main() -> int:
         with torch.no_grad():
             for index, label_index in enumerate(val_labels):
                 inputs = {k: v.to(device)
-                          for k, v in featurize(val_store[index]).items()}
+                          for k, v in featurize(read_clip(val_path, index)).items()}
                 correct += int(int(model(**inputs).logits.argmax(dim=-1)) == label_index)
         model.train()
         return correct / len(val_labels)
@@ -246,7 +266,7 @@ def main() -> int:
         total_loss = 0.0
         for i in order:
             inputs = {k: v.to(device)
-                      for k, v in featurize(train_store[i]).items()}
+                      for k, v in featurize(read_clip(train_path, i)).items()}
             labels = torch.tensor([train_labels[i]], device=device)
             loss = model(**inputs, labels=labels).loss
             loss.backward()
