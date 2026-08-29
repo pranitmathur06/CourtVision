@@ -1,3 +1,5 @@
+import pytest
+
 from courtvision.commentary import (
     Commentary,
     CommentaryLine,
@@ -152,3 +154,34 @@ def test_validate_rejects_an_accented_name_the_event_does_not_carry():
     named = Event(0.0, 7, "B", "pass", False, player_name="Randle")
     lines = [CommentaryLine(time_s=0.0, text="Jokić delivers a pass for Team B.")]
     assert validate_commentary([named], lines) != []
+
+
+@pytest.mark.parametrize(
+    "text, allowed, expected",
+    [
+        # Sentence-initial ordinary nouns are not names. This exact line failed
+        # V8: the guard flagged "Possession" and reported a fabrication.
+        ("Possession swings to Team B, with Player 11 on the floor.", None, []),
+        ("Rebound secured by Player 3.", None, []),
+        ("Shot goes up from Player 5.", None, []),
+        ("The ball comes off the rim.", None, []),
+        # Accented surnames must survive the word pattern intact.
+        ("Jokić grabs the board.", None, ["Jokić"]),
+        ("Šengün rises up.", None, ["Šengün"]),
+        # A following capital marks a name even at the start of a sentence.
+        ("LeBron James pulls up.", None, ["LeBron", "James"]),
+        # A bare initial has no lowercase and is not a name by itself; the
+        # surname after it still is.
+        ("K. Johnson drives baseline.", None, ["Johnson"]),
+        # Mid-sentence capitals are always suspect.
+        ("Another board credited to Jokic.", None, ["Jokic"]),
+        # The event's own name is permitted; a DIFFERENT name is not.
+        ("Jokić grabs the board.", "Jokić", []),
+        ("Another board credited to Jokic.", "K. Johnson", ["Jokic"]),
+        ("Player 7 of Team A brings it up.", None, []),
+    ],
+)
+def test_unexpected_names(text, allowed, expected):
+    from courtvision.commentary import _unexpected_names
+
+    assert _unexpected_names(text, allowed) == expected

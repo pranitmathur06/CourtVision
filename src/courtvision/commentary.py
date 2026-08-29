@@ -125,6 +125,22 @@ _ALLOWED_CAPS = {
     "Meanwhile", "Suddenly", "Quickly", "Good", "Great", "Nice", "Big",
     "What", "When", "Where", "Who", "How", "Why", "If", "So", "As", "Of",
     "First", "Second", "Third", "Fourth", "Quarter", "Half", "Free", "Throw",
+    # Basketball nouns that open sentences. The guard checks the first word of a
+    # sentence too, deliberately — a fabricated surname there is the likeliest
+    # way a name gets invented — so every ordinary noun that can start a line
+    # has to be listed. V8 failed on "Possession swings to Team B": the guard
+    # called it a fabricated name and rejected honest commentary.
+    #
+    # This stays an allowlist rather than a dictionary lookup. /usr/share/dict
+    # is macOS-only, so the gate would pass here and fail on the Linux box, and
+    # it would not help anyway: `green` and `brown` are both in it and both are
+    # real NBA surnames. An allowlist errs toward false positives, which cost a
+    # re-run; the alternative errs toward naming a player who was never there.
+    "Possession", "Rebound", "Shot", "Pass", "Block", "Steal", "Dribble",
+    "Turnover", "Ball", "Basket", "Hoop", "Board", "Boards", "Bucket",
+    "Jumper", "Layup", "Drive", "Inbound", "Foul", "Whistle", "Clock",
+    "Defense", "Offense", "Play", "Possessions", "Points", "Score", "Time",
+    "Everything", "Nobody", "Someone", "Nothing", "Play-by-play",
 }
 
 

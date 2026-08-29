@@ -21,7 +21,7 @@ import math
 from collections.abc import Sequence
 
 from courtvision.config import Config
-from courtvision.types import Frame, Track
+from courtvision.types import BALL, Frame, Track
 
 
 def normalized_distance(player: Track, ball: Track) -> float:
@@ -73,19 +73,59 @@ def raw_holder(frame: Frame, max_norm_dist: float) -> int | None:
 
 
 def smooth_holders(
-    raw: Sequence[int | None], min_hold_frames: int, max_gap_frames: int
+    raw: Sequence[int | None],
+    min_hold_frames: int,
+    max_gap_frames: int,
+    ball_seen: Sequence[bool] | None = None,
 ) -> list[int | None]:
-    """Apply hysteresis and gap-bridging to a per-frame raw holder sequence."""
+    """Apply hysteresis and gap-bridging to a per-frame raw holder sequence.
+
+    `ball_seen` separates two situations that `raw` alone cannot distinguish,
+    because both arrive as None:
+
+    * the ball was not detected — absent information, so carrying the previous
+      holder across the gap is right;
+    * the ball WAS detected but sat further than the threshold from every
+      player — positive evidence that nobody is holding it, so carrying the
+      previous holder is wrong.
+
+    Collapsing the second case into the first is what made the pipeline credit
+    a player during a pass. In V6 the ball was visible in every frame from
+    5.78s to 6.78s at up to 1.11 body-heights from the nearest player, and
+    possession stayed pinned on track 20 throughout.
+
+    One such observation is enough to release. Releasing only sets the holder to
+    None, which is a claim of ignorance; the failure it replaces is crediting a
+    specific player with a ball that is demonstrably in flight."""
     smoothed: list[int | None] = []
     current: int | None = None
     gap = 0
 
     for index, candidate in enumerate(raw):
         if candidate is None:
-            # Ball missing: carry the current holder for a bounded number of frames.
-            gap += 1
-            if gap > max_gap_frames:
-                current = None
+            unclaimed = (ball_seen is not None and index < len(ball_seen)
+                         and ball_seen[index])
+            if unclaimed and current is not None:
+                # A visible, unclaimed ball usually means possession ended. But a
+                # single frame of it can also be a bad ball box: at 4.08s the ball
+                # was measured 1.41 body-heights away between two frames that put
+                # it at 0.13, which no real ball does. Distance cannot separate
+                # those; the holder's own behaviour can. Keep possession only if
+                # this holder demonstrably has the ball again almost immediately.
+                # At 6.08s track 20 never reclaimed it — the next raw holders were
+                # 3, 23, then nothing — and that is a genuine loose ball.
+                if current in raw[index + 1: index + 1 + max_gap_frames]:
+                    gap = 0
+                else:
+                    current = None
+                    gap = 0
+            elif unclaimed:
+                gap = 0
+            else:
+                # Ball missing: carry the current holder for a bounded number of frames.
+                gap += 1
+                if gap > max_gap_frames:
+                    current = None
         elif candidate == current:
             gap = 0
         else:
@@ -115,8 +155,10 @@ def possession_timeline(
 ) -> list[int | None]:
     """Per-frame holder track_id (or None) for a whole clip."""
     raw = [raw_holder(frame, config.possession_max_norm_dist) for frame in frames]
+    seen = [any(t.label == BALL for t in frame.tracks) for frame in frames]
     return smooth_holders(
         raw,
         min_hold_frames=config.possession_min_hold_frames,
         max_gap_frames=config.possession_max_gap_frames,
+        ball_seen=seen,
     )

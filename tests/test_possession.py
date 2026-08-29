@@ -154,3 +154,39 @@ def test_handler_counts_as_a_player_for_geometry():
     frame = Frame(0, 0.0, (marked,))
     assert frame.players() == (marked,)
     assert frame.handler() is marked
+
+
+def test_visible_unclaimed_ball_releases_possession():
+    """A ball seen far from everyone is evidence, not a gap to bridge."""
+    # Track 1 holds, then the ball goes loose and nobody reclaims it.
+    raw = [1, 1, 1, None, None, None]
+    seen = [True] * 6
+    result = smooth_holders(raw, min_hold_frames=3, max_gap_frames=3, ball_seen=seen)
+    assert result == [1, 1, 1, None, None, None]
+
+
+def test_isolated_unclaimed_frame_is_treated_as_noise():
+    """One bad ball box must not end a possession the holder plainly keeps.
+
+    In V6 the ball was measured 1.41 body-heights from track 6 in a single frame,
+    between two frames that put it at 0.13. Releasing on that frame lost a
+    possession the tracker had right.
+    """
+    raw = [6, 6, 6, None, 6, 6]
+    seen = [True] * 6
+    result = smooth_holders(raw, min_hold_frames=3, max_gap_frames=3, ball_seen=seen)
+    assert result == [6, 6, 6, 6, 6, 6]
+
+
+def test_unseen_ball_still_bridges_the_gap():
+    """Absent information is not evidence; the old bridging behaviour stands."""
+    raw = [1, 1, 1, None, None, 1]
+    seen = [True, True, True, False, False, True]
+    result = smooth_holders(raw, min_hold_frames=3, max_gap_frames=3, ball_seen=seen)
+    assert result == [1, 1, 1, 1, 1, 1]
+
+
+def test_ball_seen_flag_is_optional():
+    """Callers that cannot say whether the ball was seen keep the old behaviour."""
+    raw = [1, 1, 1, None, None, None]
+    assert smooth_holders(raw, min_hold_frames=3, max_gap_frames=3) == [1] * 6
