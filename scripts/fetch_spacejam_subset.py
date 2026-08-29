@@ -16,7 +16,8 @@ Why it is the right source, where BARD was not:
   "what is this player doing", not "what is happening somewhere in this frame".
   `classify_windows` crops to the possession holder to match.
 
-SpaceJam has no `rebound` class, so v1 covers four of the spec's five actions.
+SpaceJam has no `rebound` class — that comes from BARD via add_bard_rebound.py,
+converted to this same crop format so the two sources are visually comparable.
 """
 
 from __future__ import annotations
@@ -39,7 +40,7 @@ REMAP = {
     3: "dribble",
     1: "pass",
     4: "shot",
-    0: "other",   # block
+    0: "block",
     2: "other",   # run
     5: "other",   # ball in hand
     6: "other",   # defense
@@ -90,8 +91,7 @@ def main() -> int:
         print(f"  {label}: {len(chosen)} clips -> {target}")
 
     print(f"\n{written} clips written to {OUT}")
-    print("NOTE — SpaceJam has no `rebound` class, so v1 covers four of the "
-          "spec's five actions: dribble, pass, shot, other.")
+    print("NOTE — SpaceJam has no `rebound` class; run add_bard_rebound.py for it.")
     print("\nSource: SpaceJam (Simone Francia, MIT), Kaggle mirror "
           "antocommii/spacejam-action-recognition.")
     return 0

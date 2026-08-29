@@ -12,7 +12,14 @@ RIM = "rim"
 HANDLER = "handler"
 CLASSES = (PLAYER, BALL, RIM, HANDLER)
 
-ACTIONS = ("dribble", "pass", "shot", "rebound", "other")
+# The spec (§1) names dribble/pass/shot/rebound/other. `block` and `steal` were
+# added on request. Data reality, recorded so nobody re-derives it:
+#   dribble 3,490 | pass 1,070 | block 996 | shot 426 | other plenty  (SpaceJam, clean)
+#   rebound  — SpaceJam has none; BARD has 227 headline clips, cross-domain
+#   steal    — NOT AVAILABLE. BARD has 930 clips containing a steal but ZERO where
+#              it is the only action: it co-occurs with Turnover in 929 of 930,
+#              so it cannot be separated as a single-label class from this source.
+ACTIONS = ("dribble", "pass", "shot", "rebound", "block", "other")
 TEAMS = ("A", "B")
 
 

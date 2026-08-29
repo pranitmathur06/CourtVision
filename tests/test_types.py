@@ -27,5 +27,8 @@ def test_frame_ball_returns_none_when_absent():
     assert frame.ball() is None
 
 
-def test_actions_are_the_five_spec_labels():
-    assert ACTIONS == ("dribble", "pass", "shot", "rebound", "other")
+def test_actions_cover_the_spec_labels_plus_block():
+    # The spec's five, plus `block` which SpaceJam supplies cleanly (996 clips).
+    assert ACTIONS == ("dribble", "pass", "shot", "rebound", "block", "other")
+    for spec_label in ("dribble", "pass", "shot", "rebound", "other"):
+        assert spec_label in ACTIONS
