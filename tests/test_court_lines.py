@@ -143,3 +143,66 @@ def test_search_recovers_a_known_camera():
     want = want[:, :2] / want[:, 2:3]
     assert np.abs(got - want).max() < 3.0, f"recovered court coords off by "\
         f"{np.abs(got - want).max():.1f} ft"
+
+
+def test_project_world_point_matches_the_homography_on_the_ground_plane():
+    """At z=0 the 3D projection and the ground homography must agree exactly."""
+    from courtvision.court_lines import homography_from_camera, project_world_point
+
+    params = np.array([25.0, -35.0, 40.0, 25.0, 20.0, 1400.0])
+    shape = (720, 1280)
+    matrix = homography_from_camera(params, shape)
+    for x, y in [(25.0, 19.0), (3.0, 6.0), (47.0, 30.0)]:
+        v = matrix @ np.array([x, y, 1.0])
+        via_homography = v[:2] / v[2]
+        via_3d = project_world_point(params, (x, y, 0.0), shape)
+        assert np.allclose(via_homography, via_3d, atol=1e-6)
+
+
+def test_height_moves_a_point_up_the_image():
+    """A homography cannot do this, which is why the 3D projection exists."""
+    from courtvision.court_lines import project_world_point
+
+    params = np.array([25.0, -35.0, 40.0, 25.0, 20.0, 1400.0])
+    floor = project_world_point(params, (25.0, 5.25, 0.0), (720, 1280))
+    rim = project_world_point(params, (25.0, 5.25, 10.0), (720, 1280))
+    assert rim[1] < floor[1], "ten feet up must project higher in the image"
+
+
+def test_points_behind_the_camera_are_rejected():
+    """Behind means behind the camera's own forward axis, not behind it in y.
+
+    This camera sits 40 ft up and looks down at the floor, so a point 25 ft
+    back along the baseline is still inside the forward hemisphere. Only
+    something back AND above it is genuinely behind.
+    """
+    from courtvision.court_lines import project_world_point
+
+    params = np.array([25.0, -35.0, 40.0, 25.0, 20.0, 1400.0])
+    assert project_world_point(params, (25.0, -60.0, 0.0), (720, 1280)) is not None
+    assert project_world_point(params, (25.0, -90.0, 80.0), (720, 1280)) is None
+
+
+def test_rim_anchor_pins_absolute_position():
+    """Court lines alone leave the court free to slide; the rim does not.
+
+    On the real broadcast a line-only fit projected the rim 174 px from where
+    the detector found it — about ten feet of court error — while still passing
+    a relative-motion check, because a constant offset moves every player
+    equally.
+    """
+    from courtvision.court_lines import (homography_from_camera,
+                                         project_world_point, search_camera)
+
+    truth = np.array([25.0, -35.0, 40.0, 25.0, 20.0, 1400.0])
+    image = render_court(homography_from_camera(truth, (720, 1280)))
+    rim_px = project_world_point(truth, (25.0, 5.25, 10.0), (720, 1280))
+
+    bounds = [(15.0, 35.0), (-45.0, -25.0), (30.0, 50.0),
+              (20.0, 30.0), (15.0, 25.0), (1100.0, 1700.0)]
+    params, score = search_camera(image, seed=0, max_iterations=60,
+                                  bounds=bounds, rim_px=rim_px)
+    assert params is not None
+    got = project_world_point(params, (25.0, 5.25, 10.0), (720, 1280))
+    error = float(np.hypot(got[0] - rim_px[0], got[1] - rim_px[1]))
+    assert error < 25.0, f"rim landed {error:.0f} px from its known position"

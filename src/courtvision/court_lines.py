@@ -26,6 +26,7 @@ from __future__ import annotations
 import numpy as np
 
 from courtvision.court import (
+    BASKET,
     COURT_WIDTH,
     CORNER_THREE_X,
     FREE_THROW_LINE_Y,
@@ -199,6 +200,44 @@ def homography_from_camera(
     return intrinsics @ extrinsic
 
 
+RIM_HEIGHT_FT = 10.0
+
+
+def project_world_point(
+    params: np.ndarray, point_xyz, image_shape: tuple[int, int]
+) -> tuple[float, float] | None:
+    """Project a 3D world point (court feet, z up) into the image.
+
+    The ground-plane homography cannot do this. A homography maps the FLOOR to
+    the image, so feeding it the rim's floor position returns where the floor
+    point projects, not where the rim appears ten feet above it. The camera
+    parameters carry the full 3D model, so anything off the ground plane has to
+    go through here.
+    """
+    cx, cy, cz, tx, ty, focal = params
+    centre = np.array([cx, cy, cz], dtype=np.float64)
+    forward = np.array([tx, ty, 0.0]) - centre
+    norm = np.linalg.norm(forward)
+    if norm < 1e-6:
+        return None
+    forward /= norm
+    right = np.cross(forward, np.array([0.0, 0.0, 1.0]))
+    norm = np.linalg.norm(right)
+    if norm < 1e-6:
+        return None
+    right /= norm
+    down = np.cross(forward, right)
+    rotation = np.stack([right, down, forward])
+
+    camera_point = rotation @ (np.asarray(point_xyz, dtype=np.float64) - centre)
+    if camera_point[2] <= 1e-6:                    # behind the camera
+        return None
+    height, width = image_shape[:2]
+    x = focal * camera_point[0] / camera_point[2] + width / 2.0
+    y = focal * camera_point[1] / camera_point[2] + height / 2.0
+    return float(x), float(y)
+
+
 def score_homography(
     court_to_image: np.ndarray,
     distance_map: np.ndarray,
@@ -339,6 +378,8 @@ def search_camera(
     seed: int = 0,
     max_iterations: int = 250,
     bounds: list[tuple[float, float]] | None = None,
+    rim_px: tuple[float, float] | None = None,
+    rim_weight: float = 0.5,
 ) -> tuple[np.ndarray | None, float]:
     """As `search_registration`, but returns the 6 CAMERA PARAMETERS.
 
@@ -346,6 +387,16 @@ def search_camera(
     start from tight bounds around this frame's solution, which is far faster
     and more reliable than searching the whole space again. The homography alone
     cannot be decomposed back into them unambiguously.
+
+    `rim_px` anchors the solution in ABSOLUTE position. Court lines alone do not:
+    on a real broadcast the line-only fit projected the rim 174 px from where the
+    detector found it, roughly ten feet of court error, while still passing V11
+    — because V11 measures relative motion and a constant offset moves every
+    player equally. The rim is the one landmark whose 3D position is known
+    exactly (25, 5.25, 10 ft), so pinning it removes that freedom.
+
+    The returned score still reports LINE alignment only, so it stays comparable
+    with runs that had no rim to use.
     """
     from scipy.optimize import differential_evolution
 
@@ -358,18 +409,36 @@ def search_camera(
         return None, 0.0
     shape = image.shape[:2]
 
-    def negative_score(params: np.ndarray) -> float:
+    diagonal = float(np.hypot(*shape))
+
+    def line_score(params: np.ndarray) -> float:
         matrix = homography_from_camera(params, shape)
         if matrix is None:
             return 0.0
-        return -score_homography(matrix, distance_map, points, line_pixels)
+        return score_homography(matrix, distance_map, points, line_pixels)
+
+    def negative_objective(params: np.ndarray) -> float:
+        score = line_score(params)
+        if score <= 0.0 or rim_px is None:
+            return -score
+        projected = project_world_point(
+            params, (BASKET[0], BASKET[1], RIM_HEIGHT_FT), shape)
+        if projected is None:
+            return -score * (1.0 - rim_weight)
+        error = float(np.hypot(projected[0] - rim_px[0], projected[1] - rim_px[1]))
+        # Normalise by the image diagonal so the penalty is resolution-agnostic.
+        agreement = max(0.0, 1.0 - error / (0.15 * diagonal))
+        return -((1.0 - rim_weight) * score + rim_weight * agreement)
 
     result = differential_evolution(
-        negative_score, bounds or DEFAULT_CAMERA_BOUNDS,
+        negative_objective, bounds or DEFAULT_CAMERA_BOUNDS,
         seed=seed, maxiter=max_iterations,
         popsize=25, tol=1e-6, polish=True, init="sobol",
     )
-    score = float(-result.fun)
-    if score <= 0.0 or homography_from_camera(result.x, shape) is None:
+    params = np.asarray(result.x, dtype=float)
+    if homography_from_camera(params, shape) is None:
         return None, 0.0
-    return np.asarray(result.x, dtype=float), score
+    score = line_score(params)          # report LINE alignment, comparably
+    if score <= 0.0:
+        return None, 0.0
+    return params, score

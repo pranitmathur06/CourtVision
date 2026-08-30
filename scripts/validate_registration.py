@@ -27,12 +27,14 @@ import numpy as np
 
 from courtvision.config import Config
 from courtvision.court import COURT_WIDTH, HALF_COURT_LENGTH
-from courtvision.court_lines import homography_from_camera, search_camera
+from courtvision.court_lines import (homography_from_camera,
+                                     project_world_point, search_camera)
 from courtvision.detection import load_pipeline_detector
 from courtvision.device import resolve_device
 from courtvision.extraction import extract_frames
 from courtvision.tracking import PlayerTracker
-from courtvision.types import HANDLER, PLAYER, Frame
+from courtvision.court import BASKET
+from courtvision.types import HANDLER, PLAYER, RIM, Frame
 
 CLIP = Path("data/raw_clips/sample.mp4")
 CHECKPOINT = Path("checkpoints/detector.pt")
@@ -43,6 +45,7 @@ MIN_SCORE = 0.30
 SPRINT_FT_S = 25.0          # an NBA sprint; nobody sustains more
 REQUIRED_UNDER_SPRINT = 0.90
 PLAUSIBLE_MEDIAN = (3.0, 15.0)
+MAX_RIM_ERROR_PX = 40.0
 LOCAL_SPREAD = np.array([6.0, 6.0, 4.0, 5.0, 5.0, 150.0])
 
 
@@ -65,6 +68,7 @@ def main() -> int:
     chosen = list(range(0, len(frames), STRIDE))[:FRAMES]
     series: dict[int, list[tuple[float, float, float]]] = {}
     scores: list[float] = []
+    rim_errors: list[float] = []
     previous: np.ndarray | None = None
 
     for index in chosen:
@@ -72,13 +76,29 @@ def main() -> int:
         if previous is not None:
             bounds = [(float(a), float(b)) for a, b in
                       zip(previous - LOCAL_SPREAD, previous + LOCAL_SPREAD)]
+        # Anchor on the rim when the detector finds it. Court lines alone leave
+        # the court free to slide: a line-only fit here put the rim 174 px from
+        # where it was detected, roughly ten feet, and the speed check below
+        # cannot see that because a constant offset moves every player equally.
+        rims = [t for t in frames[index].tracks if t.label == RIM]
+        rim_px = None
+        if rims:
+            best = max(rims, key=lambda t: t.conf)
+            rim_px = ((best.box.x1 + best.box.x2) / 2,
+                      (best.box.y1 + best.box.y2) / 2)
         params, score = search_camera(images[index], seed=0,
                                       max_iterations=60 if bounds else 250,
-                                      bounds=bounds)
+                                      bounds=bounds, rim_px=rim_px)
         if params is None or score < MIN_SCORE:
             continue
         scores.append(score)
         previous = params
+        if rim_px is not None:
+            projected = project_world_point(
+                params, (BASKET[0], BASKET[1], 10.0), images[index].shape[:2])
+            if projected is not None:
+                rim_errors.append(float(np.hypot(projected[0] - rim_px[0],
+                                                 projected[1] - rim_px[1])))
         matrix = np.linalg.inv(homography_from_camera(params,
                                                       images[index].shape[:2]))
         frame = frames[index]
@@ -124,15 +144,27 @@ def main() -> int:
           f"y {positions[:,1].min():.1f}..{positions[:,1].max():.1f} "
           f"(0..{HALF_COURT_LENGTH:.0f})")
 
-    ok = under >= REQUIRED_UNDER_SPRINT and PLAUSIBLE_MEDIAN[0] <= median <= PLAUSIBLE_MEDIAN[1]
+    if rim_errors:
+        print(f"  rim reprojection error px: median {np.median(rim_errors):.1f}, "
+              f"max {max(rim_errors):.1f} (bar {MAX_RIM_ERROR_PX:.0f})")
+    rim_ok = (not rim_errors) or float(np.median(rim_errors)) <= MAX_RIM_ERROR_PX
+
+    ok = (under >= REQUIRED_UNDER_SPRINT
+          and PLAUSIBLE_MEDIAN[0] <= median <= PLAUSIBLE_MEDIAN[1]
+          and rim_ok)
     if not ok:
-        reason = ("too many impossible steps" if under < REQUIRED_UNDER_SPRINT
-                  else f"median {median:.1f} ft/s outside {PLAUSIBLE_MEDIAN}")
+        if not rim_ok:
+            reason = (f"rim reprojects {np.median(rim_errors):.0f} px from where "
+                      f"it was detected, so the court is absolutely misplaced")
+        else:
+            reason = ("too many impossible steps" if under < REQUIRED_UNDER_SPRINT
+                      else f"median {median:.1f} ft/s outside {PLAUSIBLE_MEDIAN}")
         print(f"V11 FAIL — {reason}; the registration's scale or stability is off")
         return 1
-    print(f"V11 PASS — implied motion is physical, so the registration's scale "
-          f"and\n  frame-to-frame stability are sound. This does NOT verify "
-          f"absolute\n  position: a court offset by a constant would pass.")
+    print(f"V11 PASS — implied motion is physical (scale and stability) and the "
+          f"rim\n  reprojects onto its detection (absolute position). Motion "
+          f"alone could not\n  show the second: a constant offset moves every "
+          f"player equally.")
     return 0
 
 
