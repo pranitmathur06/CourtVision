@@ -140,6 +140,15 @@ memory ceiling that actually blocked it.
 Batch size is deliberately left at 1 so the number stays comparable with the
 0.810 baseline. Raising it would be faster but would change the experiment.
 
+The loss IS class-weighted now, by inverse frequency. The classes are not
+balanced — 188 rebound clips against 649 shot in the training split — and the
+frozen-backbone probe measured what that costs: rebound was the worst class by
+a distance at 0.29, trading errors with steal both ways, while every
+well-represented class sat between 0.62 and 0.88. Unweighted, the cheapest way
+to cut the loss is to concede the rare class. Rebound is weighted 3.5x shot.
+Watch rebound specifically in the per-class report; it is the class this run
+most needs to move.
+
 Then the check that actually matters:
 
 ```bash

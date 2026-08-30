@@ -245,6 +245,21 @@ def main() -> int:
           f"{sum(p.numel() for p in model.parameters()):,} parameters "
           f"(head + last 2 blocks)")
 
+    # Weight the loss by inverse class frequency. The classes are not balanced —
+    # rebound has 226 clips against 800 for shot — and at batch size 1 the model
+    # simply sees shot three and a half times more often. The frozen-backbone
+    # probe measured what that costs: rebound was the worst class by a distance
+    # at 0.29, trading errors with steal in both directions, while every
+    # well-represented class sat between 0.62 and 0.88. Unweighted, the cheapest
+    # way to cut the loss is to under-predict the rare class.
+    counts = collections.Counter(train_labels)
+    weights = torch.tensor(
+        [len(train_labels) / (len(populated) * max(counts[i], 1))
+         for i in range(len(populated))],
+        dtype=torch.float32, device=device)
+    print("  class weights: " + ", ".join(
+        f"{a}={w:.2f}" for a, w in zip(populated, weights.tolist())))
+
     optimizer = torch.optim.AdamW(
         [{"params": head_params, "lr": 1e-3},
          {"params": block_params, "lr": 1e-5}])
@@ -275,7 +290,9 @@ def main() -> int:
             inputs = {k: v.to(device)
                       for k, v in featurize(read_clip(train_path, i)).items()}
             labels = torch.tensor([train_labels[i]], device=device)
-            loss = model(**inputs, labels=labels).loss
+            # Weighted loss, so the rare classes are not simply conceded.
+            logits = model(**inputs).logits
+            loss = torch.nn.functional.cross_entropy(logits, labels, weight=weights)
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
