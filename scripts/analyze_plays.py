@@ -16,6 +16,7 @@ plausible-looking but wrong places and everything downstream inherits that.
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -173,6 +174,17 @@ def main() -> int:
     print(f"\nregistration score: median {np.median(scores):.3f}, "
           f"best {max(scores):.3f}, {sum(s >= MIN_SCORE for s in scores)}"
           f"/{len(scores)} usable")
+
+    # Cache the court positions: registration costs ~8 s a frame, and every
+    # question about thresholds afterwards should be answerable without paying
+    # that again.
+    cache = Path("outputs/play_positions.json")
+    cache.parent.mkdir(parents=True, exist_ok=True)
+    cache.write_text(json.dumps(
+        {"times": times, "handlers": handlers, "shapes": shapes,
+         "positions": [{str(k): v for k, v in f.items()} for f in positions]},
+        indent=1))
+    print(f"\npositions cached to {cache}")
 
     screens = detect_screens(positions, handlers, times)
     off_ball = detect_off_ball_screens(positions, handlers, times)

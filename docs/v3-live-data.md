@@ -136,6 +136,26 @@ frame, a flare is a direction a cutter takes, and the set is their conjunction
 inside a two-second window. Each time the claim was re-examined it turned out
 to be a composition rather than a label.
 
+**Not yet demonstrated on real footage: screens.** The screen detectors are
+tested on synthetic trajectories and have never fired on the sample clip — 0
+on-ball and 0 off-ball across all 26 registered frames. `scripts/
+diagnose_screens.py` says why, from the cached court positions:
+
+    f 4  pair(1,7)   6.8 ft now, 16.1 ft earlier  — separated, 1.8 ft short
+    f11  pair(3,5)   6.5 ft now, 11.3 ft earlier  — separated, 1.5 ft short
+    f12  pair(3,5)   5.5 ft now, 11.3 ft earlier  — separated, 0.5 ft short
+
+The converging-after-separating pattern a screen requires IS present. Those
+pairs stop at 5.5-6.8 ft and the contact threshold is 5 ft. Registration on
+real footage carries a couple of feet of error, and a player's position is the
+bottom-centre of a detection box rather than a point, so a genuine screen can
+easily measure 6-7 ft.
+
+This is a resolution limit, not a bug, and it is deliberately left alone.
+Widening the threshold would manufacture detections nobody can verify — there
+is no ground truth here for "was that a screen". The honest fix is better
+registration, which is the same 0.40-versus-0.89 gap noted above.
+
 **Still not built: names that are calls rather than shapes.** A set call is
 coaching vocabulary — teams differ on it and no camera can see it. That
 genuinely needs labelled play types, which BARD does not carry: its captions
