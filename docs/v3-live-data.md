@@ -110,11 +110,28 @@ pick-and-roll IS a pick-and-roll plus a third player back-screening the roller
 while the roll is still happening — a co-occurrence with a timing and identity
 constraint, needing no labels.
 
-**Still not built: sets whose name is a call rather than a shape.** "Horns
-Flare" and its relatives are coaching vocabulary, teams differ on them, and no
-camera can see the call. Those genuinely need labelled play types, which BARD
-does not carry — its captions are event-level, listing jersey number, colour
-and one of nine action types.
+**Built: off-ball screens named by direction.** I had filed these under
+"needs labels" too, and that was wrong for the same reason. A flare screen is
+not a name someone assigned, it is a direction. The types differ by where the
+cutter ends up relative to two fixed things, the rim and the ball:
+
+| type | cutter goes |
+| --- | --- |
+| back screen | toward the rim |
+| flare | away from the ball, staying on the perimeter |
+| pin down | up toward the ball, away from the rim |
+| cross screen | across the lane without changing depth |
+
+Both distances are court feet, so no labels are needed. A cutter who does not
+commit anywhere is left as a plain `off_ball_screen` rather than assigned a
+direction it did not take.
+
+**Still not built: names that are calls rather than shapes.** A set call is
+coaching vocabulary — teams differ on it and no camera can see it. Those
+genuinely need labelled play types, which BARD does not carry: its captions
+are event-level, listing jersey number, colour and one of nine action types.
+Note the difference from the row above: "flare" describes what a body did,
+while a set call describes what a coach shouted.
 
 BARD does not have them. Its captions were checked directly: they are
 event-level, giving jersey number, jersey colour and one of nine action types

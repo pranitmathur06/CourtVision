@@ -175,10 +175,69 @@ def detect_off_ball_screens(
                     for back in range(1, min(WINDOW_FRAMES, index) + 1)
                 ):
                     claimed.add(pair)
-                    plays.append(Play(
-                        "off_ball_screen", times[index], a, b,
-                        "two players converged away from the ball"))
+                    # b is treated as the cutter and a as the screener; the
+                    # direction b takes afterwards is what names the screen.
+                    name, evidence = classify_off_ball_screen(
+                        positions, handlers, index, cutter=b, screener=a)
+                    plays.append(Play(name, times[index], a, b, evidence))
     return plays
+
+
+
+CUTTER_MOVE_FT = 4.0           # how far a cutter must go for a direction to mean anything
+
+
+def classify_off_ball_screen(
+    positions: list[dict[int, tuple[float, float]]],
+    handlers: list[int | None],
+    index: int,
+    cutter: int,
+    screener: int,
+) -> tuple[str, str]:
+    """Name an off-ball screen by where the cutter goes afterwards.
+
+    I had filed these under "needs labelled play types". That was wrong in the
+    same way as before: a flare screen is not a name someone assigned, it is a
+    direction. The screen types differ by where the cutter ends up relative to
+    two fixed things — the rim, and the ball:
+
+    * **back screen** — cutter goes toward the rim
+    * **flare** — cutter goes away from the ball, staying out on the perimeter
+    * **pin down** — cutter comes up toward the ball, away from the rim
+    * **cross screen** — cutter crosses the lane without much change in either
+
+    Both distances are measurable in court feet, so this needs no labels. What
+    still does is anything named after a CALL rather than a shape.
+    """
+    start = positions[index].get(cutter)
+    handler = handlers[index]
+    ball = positions[index].get(handler) if handler is not None else None
+    if start is None:
+        return "off_ball_screen", "two players converged away from the ball"
+
+    best = None
+    for ahead in range(1, WINDOW_FRAMES + 1):
+        step = index + ahead
+        if step >= len(positions) or cutter not in positions[step]:
+            continue
+        here = positions[step][cutter]
+        travelled = _distance(start, here)
+        if best is None or travelled > best[0]:
+            best = (travelled, here)
+    if best is None or best[0] < CUTTER_MOVE_FT:
+        return "off_ball_screen", "screen set, cutter did not commit anywhere"
+
+    travelled, end = best
+    to_rim = distance_to_basket_ft([start])[0] - distance_to_basket_ft([end])[0]
+    to_ball = (_distance(start, ball) - _distance(end, ball)) if ball else 0.0
+
+    if to_rim >= CUTTER_MOVE_FT:
+        return "back_screen", f"cutter went {to_rim:.0f} ft toward the rim"
+    if ball is not None and to_ball <= -CUTTER_MOVE_FT and to_rim <= 0:
+        return "flare_screen", f"cutter flared {-to_ball:.0f} ft away from the ball"
+    if ball is not None and to_ball >= CUTTER_MOVE_FT and to_rim <= -CUTTER_MOVE_FT / 2:
+        return "pin_down", f"cutter came {to_ball:.0f} ft up toward the ball"
+    return "cross_screen", f"cutter crossed {travelled:.0f} ft without changing depth"
 
 
 SET_WINDOW_S = 2.0             # how long a set's actions may span
