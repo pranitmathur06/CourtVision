@@ -174,9 +174,12 @@ from a tight crop that is genuinely the same picture.
 
 **This lowers what V7 can be expected to do for rebound specifically.**
 Fine-tuning changes the representation; it cannot recover information that was
-cropped away before the model ever saw it. The fix is a wider or
-basket-relative crop for rim-defined actions, which means regenerating those
-clips — not more training.
+cropped away before the model ever saw it. The likely fix is a wider or basket-relative
+crop for rim-defined actions, which means regenerating those clips rather than
+more training — though an attempt to demonstrate that was confounded (it
+changed which player the crop centred on as well as the margin), so it
+remains a reasonable next step rather than a validated one. See
+docs/v7-gpu-results.md.
 
 ## What V7 still has to answer
 

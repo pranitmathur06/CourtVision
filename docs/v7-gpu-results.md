@@ -41,9 +41,33 @@ classes are indistinguishable in the input, the loss-minimising move is to
 concede the rarer one, and a stronger model does that more completely than a
 weak one. Class weighting could not prevent it.
 
-**The fix is not more training.** It is regenerating rebound and steal clips
-with a basket-relative crop. Everything else improved: dribble 0.92, block
-0.90, steal 0.88, shot 0.83/0.78.
+**The fix is not more training.** Everything else improved — dribble 0.92,
+block 0.90, steal 0.88, shot 0.83/0.78 — so the model is learning; it simply
+cannot learn this one.
+
+### The obvious fix is still UNTESTED, and my test of it was broken
+
+A basket-relative crop is the natural remedy, and widening the crop does bring
+the rim back: at margin 1.5 it appears in 5 of 12 clips against 0 of 12 at the
+current 0.25.
+
+I then re-cropped 240 rebound and steal clips from the BARD source at margin
+1.5 and compared, like-for-like, against the same clips' cached features:
+
+    NARROW crop (cached)    acc 0.696   lift +0.196 over baseline
+    WIDE crop (margin 1.5)  acc 0.602   lift +0.098
+
+That reads as the wider crop being clearly worse. **It does not show that**,
+because the experiment changed two things at once. The original clips are
+cropped to the BALL-HANDLER; my wide run cropped to the highest-confidence
+player, which is frequently a different person. A crop centred on the wrong
+player would lose accuracy on its own, so the comparison cannot separate "wider
+is worse" from "centred on the wrong man is worse".
+
+So the crop hypothesis is neither confirmed nor refuted. Testing it properly
+means re-cropping with the same ball-handler selection and only the margin
+changed. Until then, "regenerate the clips with a basket-relative crop" is a
+reasonable next step and not a validated one.
 
 ## Two bugs that only compiling could find
 
