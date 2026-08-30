@@ -167,3 +167,38 @@ def test_normalise_polarity_leaves_a_dark_on_bright_bar_alone():
     bright = np.full((36, 72, 3), 240, np.uint8)
     bright[8:28, 8:18] = 0
     assert np.array_equal(normalise_polarity(bright), bright)
+
+
+def test_period_boundaries_come_from_clock_resets():
+    """A clock only counts down, so a big jump upward is a new period.
+
+    Reading "2ND"/"3RD" text would be a second OCR problem with its own
+    failure modes; the monotonicity the reader already validates itself with is
+    enough to segment periods.
+    """
+    from scripts.label_live_game import PERIOD_SECONDS
+
+    # 12:00 -> 0:10, then reset to 12:00: one boundary, not two periods of noise.
+    readings = [720, 500, 200, 10, 720, 600, 300]
+    period, previous, periods = 1, None, []
+    for seconds in readings:
+        if previous is not None and seconds > previous + 60:
+            period += 1
+        previous = seconds
+        periods.append(period)
+    assert periods == [1, 1, 1, 1, 2, 2, 2]
+    assert PERIOD_SECONDS == 720
+
+
+def test_a_small_upward_jump_is_a_misread_not_a_period():
+    readings = [500, 498, 505, 495]          # 505 is noise
+    period, previous, kept = 1, None, []
+    for seconds in readings:
+        if previous is not None and seconds > previous + 60:
+            period += 1
+        elif previous is not None and seconds > previous + 2:
+            continue
+        previous = seconds
+        kept.append(seconds)
+    assert kept == [500, 498, 495], "a 7-second jump up must be dropped"
+    assert period == 1
