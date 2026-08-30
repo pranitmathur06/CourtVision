@@ -87,3 +87,76 @@ it is a decision about downloading broadcast footage, not a technical step.
 
 What does not stand is any claim that this is accurate over a full game. It is
 not, and the honest reason is that it has never been trained on one.
+
+---
+
+# Round two: continuous footage, and the confound that runs both ways
+
+## The failure is symmetric, and both directions are corpus detection
+
+Trained with background from BARD gaps, the model called **80–92% of a game a
+rebound**. Trained with background from a real 141-minute broadcast, it calls
+**100% of a game background** — from both models, at every threshold:
+
+    crop only        background 100%
+    rim alone        background 100%
+    two-view t=0.5   background 100%
+    two-view t=0.9   background 100%
+
+The rim detector scored **0.992** on its own held-out set, with training loss
+reaching 0.0000 and background 160/160. That is not learning; it is a shortcut.
+Its rebounds came from BARD and its background from the live TNT broadcast, so
+recognising which broadcast it was looking at solved the task perfectly.
+
+The confound audit predicted exactly this before training (+0.107 to +0.187,
+OPEN at every size) because background was the only class drawn from the live
+corpus. Training anyway was deliberate — the empirical answer was worth having —
+and it is unambiguous.
+
+**The rule this establishes:** live footage has to contribute to *every* class,
+not just the negative one. Otherwise "which corpus is this" is always a better
+hypothesis than "what is happening", and at serve time every window is live, so
+the model answers with whatever label the live corpus taught it.
+
+## Removing rebound from the crop model helped everything else
+
+Accidentally, then deliberately. Moving rebound out to the full-frame set left
+the crop model with seven classes it can actually see:
+
+    V7 PASS — 0.879 on 767 held-out clips, 7 classes, no rebound
+    (was 0.813 across 8 classes with rebound, 0.816 across 7 with it)
+
+Dropping the one class the representation cannot express raised held-out
+accuracy by 0.066. That is the two-view split earning its keep on the crop side.
+
+## What was actually unlocked: the join key
+
+A full 141-minute broadcast now exists — 253,516 frames of continuous play with
+the dead time no dataset here had — and the clock reader works on it:
+
+    readable            97/120 sampled frames (81%)
+    counts DOWN         96/96 consecutive reads
+    stoppage            held at 8:25 across six reads, as a real clock does
+
+Two fixes were needed. The module was written for a dark-on-bright scoreboard
+and TNT draws white on black, which returned zero glyphs from a crop where the
+clock is plainly legible — `normalise_polarity` decides by the median and
+`read_clock` applies it. And templates built from one frame covered only
+{1,2,5} and read 1 frame in 60; built from seven frames across the game they
+cover {0,1,2,3,4,5,6,8}.
+
+Video time -> period and game clock -> official play-by-play is the join that
+makes live footage **labelled**. Every attempt before this one lacked it.
+
+## The remaining path, concretely
+
+1. Read the clock across the game, building a video-time to game-clock map.
+2. Fetch the official play-by-play for this game (`nba_feed` already does this).
+3. Label live windows by joining on (period, clock) — giving live-corpus
+   examples of shot, rebound, steal, block, and genuine background.
+4. Retrain both views on live-corpus data, where corpus no longer predicts label.
+5. Score against the official box score, which is exact ground truth.
+
+Accuracy over a continuous game is **not fixed**. What changed is that the
+blocker is no longer missing data or a missing join — both now exist — and the
+remaining work is labelling and retraining rather than searching for a method.
