@@ -257,9 +257,31 @@ on-court player count, and V11.
 
 1. `pip install nba_api`
 2. Fetch play-by-play for the GameID (`playbyplayv3`).
-3. OCR the scoreboard clock — fixed ROI, digits only.
+3. Read the scoreboard clock. **Built** — `courtvision.scoreboard`.
 4. Map video time → game clock → play-by-play window.
 5. Feed the plays to `align` alongside pipeline events.
 
-Steps 1, 2 and 5 are ready. Step 3 is the only new vision work, and it is the
-easy kind.
+**Step 3 is done, with no OCR dependency.** The digits are large, bold and
+near-black on a bright bar, which template matching handles: threshold, take
+connected components, keep the tallest cluster — the clock digits are 22 px
+against the period label's 16, so height separates them without knowing the
+layout — then match each against a template.
+
+Templates are per-broadcast, since every network draws its own scoreboard, and
+`build_templates` makes them from one frame whose value you know. It refuses a
+reading whose digit count does not match what it segmented, because bad
+templates would poison every later read.
+
+The reader validates itself with no labelling at all: a game clock only counts
+DOWN. Built from one frame of the sample clip reading 10:59 — giving templates
+for 0, 1, 5 and 9 only — it read 14 of 21 sampled frames across the clip,
+every value monotonically non-increasing:
+
+    11:09 → 11:01 → 11:00 → 10:59 → 10:55
+
+Every value it read uses only those four digits. It declined the other seven
+frames rather than guessing, which is the required behaviour: an unreadable
+clock is normal (replays, timeouts, graphics over the bar) while a wrong one
+silently mis-joins every play that follows.
+
+Steps 1, 2 and 5 remain ready. Step 4 is arithmetic once the clock is readable.
