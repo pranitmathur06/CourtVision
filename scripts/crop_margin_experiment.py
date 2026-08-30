@@ -55,8 +55,15 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--margins", default="0.25,1.0,2.0")
     parser.add_argument("--per-class", type=int, default=120)
+    # Fraction of the source clip the 16 frames are drawn from, centred on its
+    # middle. 1.0 is what add_bard_action does. BARD clips run 8-10 s, so 16
+    # even samples sit 0.5 s apart and a rebound lasting under a second
+    # contributes one or two frames of sixteen; the rest is unrelated play.
+    parser.add_argument("--windows", default="1.0")
     args = parser.parse_args()
     margins = [float(m) for m in args.margins.split(",")]
+    windows = [float(w) for w in args.windows.split(",")]
+    settings = [(m, w) for m in margins for w in windows]
 
     config = Config()
     device = resolve_device()
@@ -83,7 +90,8 @@ def main() -> int:
 
     # Detect once per frame and reuse across margins: the boxes do not depend on
     # the crop, and detection is the expensive half.
-    results: dict[float, tuple[list, list]] = {m: ([], []) for m in margins}
+    results: dict[tuple[float, float], tuple[list, list]] = {
+        s_: ([], []) for s_ in settings}
     with torch.no_grad():
         for index, (source, label) in enumerate(chosen):
             capture = cv2.VideoCapture(str(source))
@@ -91,32 +99,41 @@ def main() -> int:
             if total <= 0:
                 capture.release()
                 continue
-            wanted = np.linspace(0, total - 1, N_FRAMES).round().astype(int)
-            frames, boxes, last = [], [], None
+            # Union of every window's frame indices, detected once each.
+            index_sets = {}
+            for w in windows:
+                half = max(total * w / 2.0, N_FRAMES / 2.0)
+                lo = max(int(total / 2 - half), 0)
+                hi = min(int(total / 2 + half), total - 1)
+                index_sets[w] = np.linspace(lo, hi, N_FRAMES).round().astype(int)
+            wanted = sorted({int(i) for v in index_sets.values() for i in v})
+            frames, boxes, last = {}, {}, None
             for want in wanted:
                 capture.set(cv2.CAP_PROP_POS_FRAMES, int(want))
                 ok, image = capture.read()
                 if not ok:
-                    break
+                    continue
                 box = handler_box(detector.detect(image), last)
                 last = box or last
                 if box is None:
-                    break
-                frames.append(image)
-                boxes.append(box)
+                    continue
+                frames[want] = image
+                boxes[want] = box
             capture.release()
-            if len(frames) < N_FRAMES:
-                continue
 
-            for margin in margins:
-                crops = [cv2.cvtColor(crop_player(f, b, margin=margin),
+            for margin, window in settings:
+                picks = [int(i) for i in index_sets[window] if int(i) in frames]
+                if len(picks) < N_FRAMES:
+                    continue
+                crops = [cv2.cvtColor(crop_player(frames[i], boxes[i], margin=margin),
                                       cv2.COLOR_BGR2RGB)
-                         for f, b in zip(frames, boxes)]
+                         for i in picks[:N_FRAMES]]
                 inputs = {k: v.to(device) for k, v in
                           processor(crops, return_tensors="pt").items()}
                 pooled = model.videomae(**inputs).last_hidden_state.mean(1)
-                results[margin][0].append(pooled.squeeze(0).float().cpu().numpy())
-                results[margin][1].append(label)
+                results[(margin, window)][0].append(
+                    pooled.squeeze(0).float().cpu().numpy())
+                results[(margin, window)][1].append(label)
             if (index + 1) % 40 == 0:
                 print(f"  {index + 1}/{len(chosen)}", flush=True)
 
@@ -125,20 +142,22 @@ def main() -> int:
     from sklearn.pipeline import make_pipeline
     from sklearn.preprocessing import StandardScaler
 
-    print(f"\n  {'margin':>8}{'n':>6}{'baseline':>10}{'accuracy':>10}{'lift':>8}"
-          f"   rim visible")
-    for margin in margins:
-        X = np.array(results[margin][0])
-        y = np.array(results[margin][1])
+    print(f"\n  {'margin':>8}{'window':>8}{'n':>6}{'baseline':>10}"
+          f"{'accuracy':>10}{'lift':>8}")
+    for setting in settings:
+        margin, window = setting
+        X = np.array(results[setting][0])
+        y = np.array(results[setting][1])
         if len(y) < 30:
-            print(f"  {margin:>8} too few clips")
+            print(f"  {margin:>8}{window:>8} too few clips")
             continue
         base = max((y == 0).mean(), (y == 1).mean())
         model_ = make_pipeline(StandardScaler(),
                                LogisticRegression(max_iter=4000,
                                                   class_weight="balanced"))
         acc = cross_val_score(model_, X, y, cv=5, scoring="accuracy").mean()
-        print(f"  {margin:>8}{len(y):>6}{base:>10.3f}{acc:>10.3f}{acc - base:>+8.3f}")
+        print(f"  {margin:>8}{window:>8}{len(y):>6}{base:>10.3f}"
+              f"{acc:>10.3f}{acc - base:>+8.3f}")
     print("\n  Only the margin differs; the ball-handler selection is identical\n"
           "  to add_bard_action, which is what the earlier attempt got wrong.")
     return 0

@@ -46,6 +46,9 @@ META = Path("data/labeled/bard_meta")
 ACTIONS_DIR = Path("data/labeled/actions")
 N_FRAMES = 16
 OUT_FPS = 10
+# Fraction of the source clip the frames are drawn from, centred. See
+# sample_frames for the measurement behind it.
+WINDOW = 0.2
 
 
 # For each output class: the action sets that count as a clean example, then a
@@ -93,13 +96,31 @@ def select_clips(action: str) -> tuple[list[str], list[str]]:
     return clean, headline
 
 
-def sample_frames(path: str) -> list[np.ndarray]:
+def sample_frames(path: str, window: float = WINDOW) -> list[np.ndarray]:
+    """Sample N_FRAMES from the middle `window` fraction of the clip.
+
+    Sampling across the WHOLE clip was the single biggest defect in this
+    dataset. BARD clips run 8-10 s, so 16 even samples sit half a second apart
+    while the labelled action lasts about one second: fourteen of the sixteen
+    frames showed unrelated play, and a rebound clip and a steal clip were
+    mostly the same footage. Measured on 240 clips, rebound vs steal:
+
+        window 1.0 (whole clip)   0.621   lift +0.121
+        window 0.4               0.675   lift +0.175
+        window 0.2               0.713   lift +0.213
+
+    Nearly double the lift, and it held at two different crop margins. Crop
+    width, by contrast, changed nothing — the problem was never spatial.
+    """
     capture = cv2.VideoCapture(path)
     total = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
     if total <= 0:
         capture.release()
         return []
-    wanted = set(np.linspace(0, total - 1, N_FRAMES).round().astype(int).tolist())
+    half = max(total * window / 2.0, N_FRAMES / 2.0)
+    low = max(int(total / 2 - half), 0)
+    high = min(int(total / 2 + half), total - 1)
+    wanted = set(np.linspace(low, high, N_FRAMES).round().astype(int).tolist())
     frames, index = [], 0
     while True:
         if not capture.grab():
