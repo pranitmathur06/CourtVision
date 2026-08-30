@@ -12,7 +12,7 @@ Same split as V7: seed 0, 20% held out, 2,764 train / 691 val.
 
 | | |
 |---|---|
-| accuracy | **0.708** |
+| accuracy | **0.750** |
 | uniform chance | 0.143 |
 | majority class | 0.234 |
 
@@ -60,6 +60,29 @@ its number means much.
 
 **691 validation clips**, so per-class cells are 38-89 and the per-corpus splits
 are smaller still. Treat single-class figures as indicative.
+
+## A stronger head, and the tension it exposes
+
+The head was switched from logistic regression to a 256-unit MLP on the same
+frozen features:
+
+| | logistic | MLP |
+|---|---:|---:|
+| accuracy | 0.708 | **0.750** |
+| `shot` cross-corpus gap | **0.12** | 0.17 |
+| `other` cross-corpus gap | 0.09 | **0.01** |
+| cross-corpus confusions | **1/378** | 0/378 |
+
+Accuracy is +0.042, and that is the better floor for V7. But the `shot` gap
+widened and cross-corpus confusions fell to zero, and both move in the
+direction of more corpus reliance, not less. A more capable head extracts more
+signal from the same features — including whatever residual corpus signal
+survives.
+
+Both gaps remain inside the 0.25 bar, so the MLP is kept and the headline floor
+is 0.750. The tension is recorded rather than smoothed over: if V7 comes back
+with a widening `shot` gap, this is the reason to suspect first, and the
+logistic numbers above are the comparison point.
 
 ## Why rebound fails, measured
 

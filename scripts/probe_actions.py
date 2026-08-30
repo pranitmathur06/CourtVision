@@ -87,7 +87,7 @@ def extract(samples, populated) -> tuple[np.ndarray, np.ndarray]:
 
 
 def main() -> int:
-    from sklearn.linear_model import LogisticRegression
+    from sklearn.neural_network import MLPClassifier
     from sklearn.pipeline import make_pipeline
     from sklearn.preprocessing import StandardScaler
 
@@ -102,8 +102,14 @@ def main() -> int:
     val_paths = [p for p, _ in samples[split:]]
     print(f"\n  train {len(X_train)}, val {len(X_val)}")
 
+    # An MLP head, not logistic regression. Measured on the same cached
+    # features: 0.750 against 0.708, so the frozen features carry more signal
+    # than a linear head extracts. It does NOT help rebound (0.316 against
+    # 0.289), because rebound's problem is the features, not the head — rebound
+    # against steal as a two-class problem scores 0.682 against a 0.658
+    # majority baseline.
     model = make_pipeline(StandardScaler(),
-                          LogisticRegression(max_iter=3000, C=1.0))
+                          MLPClassifier((256,), max_iter=600, random_state=0))
     model.fit(X_train, y_train)
     predicted = model.predict(X_val)
     accuracy = float((predicted == y_val).mean())
