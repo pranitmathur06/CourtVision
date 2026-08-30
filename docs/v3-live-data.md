@@ -102,10 +102,19 @@ offensive players converge, one holding the ball, and afterwards the screener
 either cuts to the rim (roll), steps out beyond the arc (pop), or takes the
 ball (hand-off). Every term is measurable in court feet.
 
-**Not built: plays that are conventions rather than geometry.** "Spain
-pick-and-roll" is a back-screen on the roller by a third player, and set calls
-like "Horns Flare" are coaching vocabulary invisible to a camera; teams differ
-on the names. Those need labelled play types.
+**Built: named sets that are compositions.** `plays.detect_sets()` reports
+Spain pick-and-roll, double drag and re-screen. Calling all named sets a data
+gap was too quick: some are conventions with no geometric content, but these
+three are definitions built from primitives already detected. A Spain
+pick-and-roll IS a pick-and-roll plus a third player back-screening the roller
+while the roll is still happening — a co-occurrence with a timing and identity
+constraint, needing no labels.
+
+**Still not built: sets whose name is a call rather than a shape.** "Horns
+Flare" and its relatives are coaching vocabulary, teams differ on them, and no
+camera can see the call. Those genuinely need labelled play types, which BARD
+does not carry — its captions are event-level, listing jersey number, colour
+and one of nine action types.
 
 BARD does not have them. Its captions were checked directly: they are
 event-level, giving jersey number, jersey colour and one of nine action types

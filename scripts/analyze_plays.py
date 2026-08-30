@@ -28,7 +28,8 @@ from courtvision.detection import load_pipeline_detector
 from courtvision.device import resolve_device
 from courtvision.extraction import extract_frames
 from courtvision.formation import classify_formation
-from courtvision.plays import detect_off_ball_screens, detect_screens
+from courtvision.plays import (detect_off_ball_screens, detect_screens,
+                               detect_sets)
 from courtvision.tracking import PlayerTracker
 from courtvision.types import HANDLER, PLAYER, Frame
 
@@ -130,6 +131,14 @@ def main() -> int:
         print(f"  {play}")
     if not screens and not off_ball:
         print("  none detected in this window")
+
+    sets = detect_sets(positions, handlers, times)
+    print(f"\nnamed sets: {len(sets)}")
+    for play in sets:
+        print(f"  {play}")
+    if not sets:
+        print("  none — these are compositions of screen actions, so they need "
+              "the\n  primitives above to fire first")
 
     print("\nRead this as a demonstration, not a gate. Formation and play output "
           "are only\nas good as the registration underneath them.")

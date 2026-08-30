@@ -179,3 +179,74 @@ def detect_off_ball_screens(
                         "off_ball_screen", times[index], a, b,
                         "two players converged away from the ball"))
     return plays
+
+
+SET_WINDOW_S = 2.0             # how long a set's actions may span
+RESCREEN_WINDOW_S = 2.5
+
+
+def detect_sets(
+    positions: list[dict[int, tuple[float, float]]],
+    handlers: list[int | None],
+    times: list[float],
+) -> list[Play]:
+    """Named sets that are COMPOSITIONS of screen actions, not new perception.
+
+    I previously called these a data gap. That was too quick. Some named sets
+    are conventions with no geometric content — "Horns Flare" is a call, and
+    teams differ on it — but others are definitions built from actions already
+    detected here:
+
+    * **Spain pick-and-roll**: a pick-and-roll, then a third offensive player
+      back-screens the roller while the roller is still going to the rim.
+    * **Double drag**: two ball screens for the same handler, by different
+      screeners, in quick succession.
+    * **Re-screen**: the same screener screens the same handler twice.
+
+    Each is the co-occurrence of primitives with a timing and identity
+    constraint, so no labelled play types are needed. What still does need
+    labels is any set whose name is a call rather than a shape.
+    """
+    ball_screens = detect_screens(positions, handlers, times)
+    off_ball = detect_off_ball_screens(positions, handlers, times)
+    sets: list[Play] = []
+
+    rolls = [p for p in ball_screens if p.name == "pick_and_roll"]
+    for roll in rolls:
+        # A back-screen on the ROLLER, set by someone else, just after the roll.
+        for screen in off_ball:
+            if not (0.0 <= screen.time_s - roll.time_s <= SET_WINDOW_S):
+                continue
+            participants = {screen.screener_id, screen.handler_id}
+            if roll.screener_id not in participants:
+                continue
+            third = (participants - {roll.screener_id}).pop() \
+                if len(participants - {roll.screener_id}) == 1 else None
+            if third is None or third == roll.handler_id:
+                continue
+            sets.append(Play(
+                "spain_pick_and_roll", roll.time_s, roll.screener_id,
+                roll.handler_id,
+                f"{third} back-screens the roller {roll.screener_id} "
+                f"{screen.time_s - roll.time_s:.1f}s after the ball screen"))
+            break
+
+    by_handler: dict[int, list[Play]] = {}
+    for play in ball_screens:
+        by_handler.setdefault(play.handler_id, []).append(play)
+    for handler, plays in by_handler.items():
+        ordered = sorted(plays, key=lambda p: p.time_s)
+        for first, second in zip(ordered, ordered[1:]):
+            gap = second.time_s - first.time_s
+            if gap > RESCREEN_WINDOW_S:
+                continue
+            if first.screener_id == second.screener_id:
+                sets.append(Play(
+                    "re_screen", second.time_s, second.screener_id, handler,
+                    f"{second.screener_id} screens again {gap:.1f}s later"))
+            else:
+                sets.append(Play(
+                    "double_drag", second.time_s, second.screener_id, handler,
+                    f"second screener {second.screener_id} {gap:.1f}s after "
+                    f"{first.screener_id}"))
+    return sorted(sets, key=lambda p: p.time_s)

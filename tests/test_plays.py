@@ -118,3 +118,85 @@ def test_play_str_is_readable():
                 (25, 17), (25, 13), (25, 10), (25, 8), (25, 7)]
     play = detect_screens(*sequence(handler, screener))[0]
     assert "2 screens for 1" in str(play)
+
+
+def _frames(paths: dict[int, list], handler_by_frame):
+    n = len(next(iter(paths.values())))
+    positions = [{tid: tuple(path[i]) for tid, path in paths.items()
+                  if path[i] is not None} for i in range(n)]
+    return positions, handler_by_frame, [i * 0.1 for i in range(n)]
+
+
+def test_spain_pick_and_roll():
+    """Pick-and-roll, then a third player back-screens the roller."""
+    from courtvision.plays import detect_sets
+
+    # 1 handles, 2 screens then rolls to the rim, 3 back-screens 2 mid-roll.
+    handler = [(25, 30), (25, 28), (25, 26), (25, 25), (24, 24),
+               (22, 23), (20, 22), (18, 21), (17, 20), (16, 19)]
+    screener = [(25, 18), (25, 20), (25, 22), (25, 24), (25, 21),
+                (25, 17), (25, 13), (25, 10), (25, 8), (25, 7)]
+    third = [(40, 8), (40, 9), (39, 10), (38, 11), (36, 12),
+             (33, 13), (29, 13), (26, 12), (25, 11), (25, 9)]
+    positions, handlers, times = _frames(
+        {1: handler, 2: screener, 3: third}, [1] * 10)
+
+    sets = detect_sets(positions, handlers, times)
+    names = [p.name for p in sets]
+    assert "spain_pick_and_roll" in names
+    spain = next(p for p in sets if p.name == "spain_pick_and_roll")
+    assert spain.screener_id == 2 and spain.handler_id == 1
+    assert "back-screens the roller" in spain.evidence
+
+
+def test_plain_pick_and_roll_is_not_called_spain():
+    """Without a third player screening the roller it is just a pick-and-roll."""
+    from courtvision.plays import detect_sets
+
+    handler = [(25, 30), (25, 28), (25, 26), (25, 25), (24, 24),
+               (22, 23), (20, 22), (18, 21), (17, 20), (16, 19)]
+    screener = [(25, 18), (25, 20), (25, 22), (25, 24), (25, 21),
+                (25, 17), (25, 13), (25, 10), (25, 8), (25, 7)]
+    far = [(45, 5)] * 10
+    positions, handlers, times = _frames({1: handler, 2: screener, 3: far}, [1] * 10)
+
+    assert not [p for p in detect_sets(positions, handlers, times)
+                if p.name == "spain_pick_and_roll"]
+
+
+def test_double_drag_two_screeners_for_one_handler():
+    from courtvision.plays import detect_sets
+
+    handler = [(25, 34), (25, 32), (25, 30), (25, 29), (25, 28),
+               (25, 27), (25, 26), (25, 25), (25, 24), (25, 23)]
+    first = [(25, 20), (25, 24), (25, 29), (25, 28), (25, 18),
+             (25, 14), (25, 11), (25, 9), (25, 8), (25, 8)]
+    second = [(38, 20), (36, 21), (33, 23), (30, 24), (28, 25),
+              (25, 26), (25, 24), (25, 18), (25, 13), (25, 9)]
+    positions, handlers, times = _frames(
+        {1: handler, 2: first, 3: second}, [1] * 10)
+
+    names = [p.name for p in detect_sets(positions, handlers, times)]
+    assert "double_drag" in names or "re_screen" in names
+
+
+def test_sets_are_ordered_in_time():
+    from courtvision.plays import detect_sets
+
+    handler = [(25, 34), (25, 32), (25, 30), (25, 29), (25, 28),
+               (25, 27), (25, 26), (25, 25), (25, 24), (25, 23)]
+    first = [(25, 20), (25, 24), (25, 29), (25, 28), (25, 18),
+             (25, 14), (25, 11), (25, 9), (25, 8), (25, 8)]
+    second = [(38, 20), (36, 21), (33, 23), (30, 24), (28, 25),
+              (25, 26), (25, 24), (25, 18), (25, 13), (25, 9)]
+    positions, handlers, times = _frames(
+        {1: handler, 2: first, 3: second}, [1] * 10)
+    sets = detect_sets(positions, handlers, times)
+    assert [p.time_s for p in sets] == sorted(p.time_s for p in sets)
+
+
+def test_no_screens_means_no_sets():
+    from courtvision.plays import detect_sets
+
+    positions = [{1: (25, 30), 2: (5, 5), 3: (45, 5)} for _ in range(10)]
+    assert detect_sets(positions, [1] * 10, [i * 0.1 for i in range(10)]) == []
