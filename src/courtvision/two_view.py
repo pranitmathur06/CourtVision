@@ -32,6 +32,9 @@ class TwoViewClassifier:
     a silence. The default leans against fabricating.
     """
 
+    # classify_windows checks this before handing over full frames.
+    wants_full_frames = True
+
     def __init__(self, crop_classifier, rim_classifier,
                  rim_threshold: float = 0.5) -> None:
         self._crop = crop_classifier

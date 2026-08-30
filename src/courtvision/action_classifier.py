@@ -218,7 +218,16 @@ def classify_windows(
                 )
                 crops.append(cv2.cvtColor(crop, cv2.COLOR_BGR2RGB))
             label, conf = None, None  # filled in by the batched pass below
-            pending.append((len(windows), np.stack(crops)))
+            # The full frame is the only view a rebound is visible in: a crop
+            # centred on the ball-handler cuts the rim and the converging
+            # players out. Kept alongside the crop so a second model can decide
+            # rebounds without disturbing the ball-proximate classes.
+            full = np.stack([
+                cv2.cvtColor(cv2.resize(images[i], (FRAME_SIZE, FRAME_SIZE)),
+                             cv2.COLOR_BGR2RGB)
+                for i in range(start, end + 1)
+            ])
+            pending.append((len(windows), np.stack(crops), full))
 
         windows.append(
             ActionWindow(
@@ -233,8 +242,14 @@ def classify_windows(
 
     # One batched forward for every window that needs the model.
     if pending:
-        outputs = _classify_batch_fallback(classifier, [clip for _, clip in pending])
-        for (index, _), (label, conf) in zip(pending, outputs):
+        crops_batch = [clip for _, clip, _ in pending]
+        full_batch = [full for _, _, full in pending]
+        if hasattr(classifier, "classify_batch") and getattr(
+                classifier, "wants_full_frames", False):
+            outputs = classifier.classify_batch(crops_batch, full_batch)
+        else:
+            outputs = _classify_batch_fallback(classifier, crops_batch)
+        for (index, _, _), (label, conf) in zip(pending, outputs):
             if label not in ACTIONS:
                 label = "other"
             windows[index] = replace(windows[index], label=label, conf=conf)

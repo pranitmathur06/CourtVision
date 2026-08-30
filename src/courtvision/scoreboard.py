@@ -47,6 +47,23 @@ class Glyph:
     image: np.ndarray           # binary, digit white on black
 
 
+def normalise_polarity(roi: np.ndarray) -> np.ndarray:
+    """Return the crop with dark digits on a bright ground, whichever it began as.
+
+    This module was written against a scoreboard drawn dark-on-bright. TNT draws
+    the opposite — white digits on a black bar — and against that the segmenter
+    returned zero glyphs from a crop where the clock is plainly legible, which
+    reads as "no scoreboard here" rather than "wrong polarity".
+
+    Deciding by the median rather than a fixed threshold: a bar that is mostly
+    dark holds bright digits and needs inverting, and vice versa.
+    """
+    import cv2
+
+    grey = roi if roi.ndim == 2 else cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+    return cv2.bitwise_not(roi) if float(np.median(grey)) < 128 else roi
+
+
 def segment_glyphs(roi: np.ndarray) -> list[Glyph]:
     """Every character-shaped blob in the scoreboard crop, left to right."""
     import cv2
@@ -139,7 +156,7 @@ def read_clock(
     unreadable clock is normal — replays, timeouts, graphics over the bar — and
     a wrong time silently mis-joins every play that follows it.
     """
-    glyphs = clock_glyphs(roi)
+    glyphs = clock_glyphs(normalise_polarity(roi))
     if not 3 <= len(glyphs) <= 4:
         return None, 0.0
     digits, scores = [], []

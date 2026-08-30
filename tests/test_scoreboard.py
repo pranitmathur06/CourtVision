@@ -139,3 +139,31 @@ def test_touching_digits_are_refused_not_mis_templated():
     cv2.rectangle(bar, (70, 18), (130, 44), (20, 20, 20), -1)   # one solid blob
     with pytest.raises(ValueError, match="segmented"):
         build_templates_from_many([(bar, "347")])
+
+
+def test_normalise_polarity_inverts_a_white_on_black_bar():
+    """TNT draws white digits on black; this module was written for the reverse.
+
+    Against a white-on-black bar the segmenter returned zero glyphs from a crop
+    where the clock is plainly legible — a wrong-polarity failure that looks
+    exactly like "no scoreboard here".
+    """
+    import numpy as np
+
+    from courtvision.scoreboard import normalise_polarity, segment_glyphs
+
+    dark = np.zeros((36, 72, 3), np.uint8)
+    dark[8:28, 8:18] = 255          # a bright digit-shaped blob
+    dark[8:28, 26:36] = 255
+    assert segment_glyphs(dark) == [], "raw white-on-black finds nothing"
+    assert len(segment_glyphs(normalise_polarity(dark))) >= 2
+
+
+def test_normalise_polarity_leaves_a_dark_on_bright_bar_alone():
+    import numpy as np
+
+    from courtvision.scoreboard import normalise_polarity
+
+    bright = np.full((36, 72, 3), 240, np.uint8)
+    bright[8:28, 8:18] = 0
+    assert np.array_equal(normalise_polarity(bright), bright)
