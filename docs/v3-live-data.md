@@ -136,6 +136,14 @@ frame, a flare is a direction a cutter takes, and the set is their conjunction
 inside a two-second window. Each time the claim was re-examined it turned out
 to be a composition rather than a label.
 
+**Built: transition and stagger.** `detect_transition` names the ball
+advancing at speed — 25 ft of ground toward the rim at 12 ft/s or better. That
+separates a break from a half-court walk-up, and both terms are court feet, so
+no labels. Transition is one of the largest play-type categories in basketball
+analytics and had been missing entirely. `detect_stagger` is the off-ball twin
+of a double drag: two different screeners for the same cutter in quick
+succession, composed from the off-ball screens already detected.
+
 **Not yet demonstrated on real footage: screens.** The screen detectors are
 tested on synthetic trajectories and have never fired on the sample clip — 0
 on-ball and 0 off-ball across all 26 registered frames. `scripts/

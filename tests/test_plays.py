@@ -311,3 +311,71 @@ def test_horns_alignment_far_before_the_screen_is_not_the_same_possession():
     formations = ["horns"] + [None] * 39
 
     assert detect_sets(positions, [1] * 40, times, formations) == []
+
+
+def test_transition_is_the_ball_covering_ground_fast():
+    from courtvision.plays import detect_transition
+
+    # Handler drives from half court to the rim in 0.9 s.
+    path = [(25.0, 40.0), (25.0, 34.0), (25.0, 28.0), (25.0, 22.0),
+            (25.0, 16.0), (25.0, 11.0), (25.0, 8.0), (25.0, 7.0),
+            (25.0, 6.0), (25.0, 6.0)]
+    positions = [{1: p} for p in path]
+    plays = detect_transition(positions, [1] * 10, [i * 0.1 for i in range(10)])
+    assert [p.name for p in plays] == ["transition"], [str(p) for p in plays]
+    assert "toward the rim" in plays[0].evidence
+
+
+def test_a_half_court_walk_up_is_not_transition():
+    """Same direction, far slower and far less ground — must not be named."""
+    from courtvision.plays import detect_transition
+
+    path = [(25.0, 30.0), (25.0, 29.5), (25.0, 29.0), (25.0, 28.5),
+            (25.0, 28.0), (25.0, 27.5), (25.0, 27.0), (25.0, 26.5),
+            (25.0, 26.0), (25.0, 25.5)]
+    positions = [{1: p} for p in path]
+    assert detect_transition(positions, [1] * 10,
+                             [i * 0.1 for i in range(10)]) == []
+
+
+def test_transition_needs_the_same_handler_throughout():
+    """A possession change is not one player pushing the ball."""
+    from courtvision.plays import detect_transition
+
+    path = [(25.0, 40.0), (25.0, 34.0), (25.0, 28.0), (25.0, 22.0),
+            (25.0, 16.0), (25.0, 11.0), (25.0, 8.0), (25.0, 7.0),
+            (25.0, 6.0), (25.0, 6.0)]
+    positions = [{1: p, 2: p} for p in path]
+    handlers = [1, 1, 1, 2, 2, 2, 2, 2, 2, 2]      # ball changes hands mid-run
+    assert detect_transition(positions, handlers,
+                             [i * 0.1 for i in range(10)]) == []
+
+
+def test_stagger_is_two_screeners_for_one_cutter():
+    from courtvision.plays import detect_stagger
+
+    handler = [(25.0, 30.0)] * 14
+    # Cutter (4) is screened by 2, then by 3, in quick succession.
+    cutter = [(34.0, 10.0), (30.0, 12.0), (26.0, 14.0), (22.0, 16.0),
+              (20.0, 18.0), (18.0, 20.0), (16.0, 22.0), (14.0, 24.0),
+              (12.0, 26.0), (10.0, 27.0), (9.0, 28.0), (8.0, 28.0),
+              (8.0, 28.0), (8.0, 28.0)]
+    first = [(21.0, 17.0)] * 14
+    second = [(11.0, 27.0)] * 14
+    positions = [{1: handler[i], 2: first[i], 3: second[i], 4: cutter[i]}
+                 for i in range(14)]
+    plays = detect_stagger(positions, [1] * 14, [i * 0.1 for i in range(14)])
+    assert [p.name for p in plays] == ["stagger_screen"], [str(p) for p in plays]
+    assert plays[0].handler_id == 4
+
+
+def test_one_screener_twice_is_not_a_stagger():
+    from courtvision.plays import detect_stagger
+
+    handler = [(25.0, 30.0)] * 10
+    cutter = [(34.0, 10.0), (30.0, 12.0), (26.0, 14.0), (22.0, 16.0)] + \
+             [(20.0, 18.0)] * 6
+    screener = [(21.0, 17.0)] * 10
+    positions = [{1: handler[i], 2: screener[i], 4: cutter[i]} for i in range(10)]
+    assert detect_stagger(positions, [1] * 10,
+                          [i * 0.1 for i in range(10)]) == []

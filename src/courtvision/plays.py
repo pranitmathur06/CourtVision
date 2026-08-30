@@ -244,6 +244,85 @@ SET_WINDOW_S = 2.0             # how long a set's actions may span
 RESCREEN_WINDOW_S = 2.5
 
 
+TRANSITION_GAIN_FT = 25.0      # ground the ball must make toward the rim
+TRANSITION_SPEED_FT_S = 12.0   # and how fast, to be a break rather than a walk-up
+STAGGER_WINDOW_S = 2.0
+
+
+def detect_transition(
+    positions: list[dict[int, tuple[float, float]]],
+    handlers: list[int | None],
+    times: list[float],
+) -> list[Play]:
+    """The ball advancing at speed — a break, not a walk-up.
+
+    Transition is one of the largest play-type categories in basketball
+    analytics and is purely geometric: the ball covers ground toward the rim
+    quickly. Both terms are measurable, so no labels are needed.
+
+    A half-court set walks the ball up at a few feet per second and covers
+    little ground once it arrives. A break covers most of the visible court in
+    a couple of seconds. The thresholds separate those, and anything between is
+    left unnamed rather than forced into one.
+    """
+    plays: list[Play] = []
+    claimed: set[int] = set()
+
+    for start in range(len(positions)):
+        handler = handlers[start]
+        if handler is None or handler in claimed or handler not in positions[start]:
+            continue
+        began = distance_to_basket_ft([positions[start][handler]])[0]
+        for end in range(start + 1, len(positions)):
+            if handlers[end] != handler or handler not in positions[end]:
+                break
+            elapsed = times[end] - times[start]
+            if elapsed <= 0:
+                continue
+            gained = began - distance_to_basket_ft([positions[end][handler]])[0]
+            if gained >= TRANSITION_GAIN_FT and gained / elapsed >= TRANSITION_SPEED_FT_S:
+                claimed.add(handler)
+                plays.append(Play(
+                    "transition", times[start], handler, handler,
+                    f"ball advanced {gained:.0f} ft toward the rim in "
+                    f"{elapsed:.1f}s"))
+                break
+            if elapsed > 4.0:
+                break
+    return plays
+
+
+def detect_stagger(
+    positions: list[dict[int, tuple[float, float]]],
+    handlers: list[int | None],
+    times: list[float],
+) -> list[Play]:
+    """Two different screeners for the SAME cutter in quick succession.
+
+    A stagger is the off-ball twin of a double drag, and composes the same way:
+    take the off-ball screens, group them by cutter, and look for two with
+    different screeners close together in time. No new perception, and no
+    labels.
+    """
+    screens = detect_off_ball_screens(positions, handlers, times)
+    by_cutter: dict[int, list[Play]] = {}
+    for play in screens:
+        by_cutter.setdefault(play.handler_id, []).append(play)
+
+    plays: list[Play] = []
+    for cutter, group in by_cutter.items():
+        ordered = sorted(group, key=lambda p: p.time_s)
+        for first, second in zip(ordered, ordered[1:]):
+            gap = second.time_s - first.time_s
+            if gap <= STAGGER_WINDOW_S and first.screener_id != second.screener_id:
+                plays.append(Play(
+                    "stagger_screen", second.time_s, second.screener_id, cutter,
+                    f"{first.screener_id} then {second.screener_id} screen for "
+                    f"{cutter}, {gap:.1f}s apart"))
+    return plays
+
+
+
 def detect_sets(
     positions: list[dict[int, tuple[float, float]]],
     handlers: list[int | None],

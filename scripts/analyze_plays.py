@@ -32,7 +32,8 @@ from courtvision.formation import classify_formation
 from courtvision.possession import possession_timeline
 from courtvision.team_assignment import assign_teams, collect_samples
 from courtvision.plays import (detect_off_ball_screens, detect_screens,
-                               detect_sets)
+                               detect_sets, detect_stagger,
+                               detect_transition)
 from courtvision.tracking import PlayerTracker
 from courtvision.types import HANDLER, PLAYER, RIM, Frame
 
@@ -199,6 +200,13 @@ def main() -> int:
         print(f"  {play}")
     if not screens and not off_ball:
         print("  none detected in this window")
+
+    transition = detect_transition(positions, handlers, times)
+    stagger = detect_stagger(positions, handlers, times)
+    if transition or stagger:
+        print(f"\ntransition: {len(transition)}, stagger: {len(stagger)}")
+        for play in transition + stagger:
+            print(f"  {play}")
 
     sets = detect_sets(positions, handlers, times, shapes)
     print(f"\nnamed sets: {len(sets)}")
