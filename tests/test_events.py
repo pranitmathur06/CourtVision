@@ -104,3 +104,37 @@ def test_build_events_reports_an_action_again_after_something_else_intervenes():
     windows = [window(0, 1, "dribble"), window(2, 3, "pass"), window(4, 5, "dribble")]
     events = build_events(windows, [5] * 6, {5: "A"})
     assert [e.action for e in events] == ["dribble", "pass", "dribble"]
+
+
+def test_background_windows_never_become_events():
+    """Ordinary play is not something that happened.
+
+    Without this the classifier had nowhere to put the ~93% of a game that is
+    not a box-score moment, forced every window into an action class, and
+    emitted 2,253 rebounds against 83 real ones.
+    """
+    from courtvision.events import build_events
+    from courtvision.types import ActionWindow
+
+    windows = [
+        ActionWindow(0, 15, 0.0, 1.5, "background", 0.9),
+        ActionWindow(8, 23, 0.8, 2.3, "shot", 0.9),
+        ActionWindow(16, 31, 1.6, 3.1, "background", 0.9),
+    ]
+    events = build_events(windows, [7] * 32, {7: "A"})
+    assert [e.action for e in events] == ["shot"]
+
+
+def test_background_between_two_identical_actions_keeps_them_separate():
+    """A lull means the second one is a new event, not a continuation."""
+    from courtvision.events import build_events
+    from courtvision.types import ActionWindow
+
+    windows = [
+        ActionWindow(0, 15, 0.0, 1.5, "shot", 0.9),
+        ActionWindow(8, 23, 0.8, 2.3, "background", 0.9),
+        ActionWindow(16, 31, 1.6, 3.1, "shot", 0.9),
+    ]
+    events = build_events(windows, [7] * 32, {7: "A"})
+    assert [e.action for e in events] == ["shot", "shot"], \
+        "a background lull must break the collapse chain"

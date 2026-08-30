@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections import Counter
 from collections.abc import Sequence
 
-from courtvision.types import ActionWindow, Event
+from courtvision.types import ActionWindow, Event, BACKGROUND
 
 
 def dominant_holder(
@@ -30,6 +30,7 @@ def build_events(
 ) -> list[Event]:
     """Merge action windows, possession and team labels into ordered events.
 
+    Windows labelled `background` are dropped: ordinary play is not an event.
     Consecutive windows describing the SAME action by the SAME player collapse
     into one event. Windows overlap by design (size 16, stride 8), so a single
     real action spans several of them; emitting one event each produced
@@ -41,6 +42,13 @@ def build_events(
     last_key: tuple[str, int | None] | None = None
 
     for window in sorted(windows, key=lambda w: w.start_time_s):
+        if window.label == BACKGROUND:
+            # Ordinary play is not something that happened. It exists so the
+            # classifier can decline to name an action, and it breaks the
+            # collapse chain so two real actions either side of a lull stay
+            # separate events.
+            last_key = None
+            continue
         holder = dominant_holder(holders, window.start_index, window.end_index)
         # A change is only meaningful between two known holders; going to or from
         # "nobody" is the ball being in flight, not a turnover.

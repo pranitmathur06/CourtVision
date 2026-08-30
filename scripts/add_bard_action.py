@@ -108,6 +108,53 @@ def select_clips(action: str) -> tuple[list[str], list[str]]:
     return clean, headline
 
 
+def select_background(count: int) -> list[tuple[str, float]]:
+    """Windows of ordinary play, taken from the gaps between labelled actions.
+
+    The classifier was trained only on clips CUT to contain an action, so every
+    window it ever saw was an action and it has no way to say "nothing here".
+    Run on a game it forced all 6,287 windows into an action class and rebound
+    absorbed the slack: 2,253 rebounds against 83 real ones, 27x, at a mean
+    confidence of 0.955 on random game windows. A threshold cannot fix a model
+    that is confident, so it needs to be taught the negative.
+
+    A BARD clip runs 8-10 s and its labelled actions occupy about 1.6 s, so most
+    of every clip is a player bringing the ball up, resetting, or spacing — real
+    broadcast footage from exactly the distribution the pipeline is served, and
+    exactly what must stop reading as a rebound. This picks, per clip, the point
+    furthest from every labelled action.
+
+    What BARD cannot supply is DEAD time: timeouts, free throws, inbounds. A
+    real game has more nothing-happening than this, so training on it is
+    conservative rather than complete.
+    """
+    path = hf_hub_download(REPO, "dataset_paths.csv", repo_type="dataset",
+                           local_dir=str(META))
+    out: list[tuple[str, float]] = []
+    with open(path) as fh:
+        for row in csv.DictReader(fh, delimiter=";"):
+            try:
+                anns = ast.literal_eval(row["actions"])
+            except (ValueError, SyntaxError):
+                continue
+            if not anns:
+                continue
+            spots = [(i + 0.5) / len(anns) for i in range(len(anns))]
+            # Furthest point from every action, kept away from the clip edges
+            # where a cut often lands mid-motion.
+            best, best_gap = None, -1.0
+            for candidate in [x / 20 for x in range(3, 18)]:
+                gap = min(abs(candidate - s_) for s_ in spots)
+                if gap > best_gap:
+                    best, best_gap = candidate, gap
+            # Only worth taking when it is genuinely clear of the action.
+            if best is not None and best_gap >= 0.18:
+                out.append((row["urls"], best))
+            if len(out) >= count:
+                break
+    return out
+
+
 def select_clips_positioned(action: str) -> list[tuple[str, float]]:
     """Every clip containing this action, with WHERE in it the action falls.
 
@@ -190,7 +237,9 @@ def sample_frames(path: str, window: float = WINDOW,
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Add a BARD-sourced action class")
-    parser.add_argument("--action", choices=sorted(SELECTORS), required=True)
+    parser.add_argument("--action",
+                        choices=sorted(set(SELECTORS) | {"background"}),
+                        required=True)
     parser.add_argument("--count", type=int, default=400)
     parser.add_argument("--positional", action="store_true",
                         help="use every clip containing the action, windowed by "
@@ -204,7 +253,12 @@ def main() -> int:
         config.detector_conf, config.ball_conf,
     )
 
-    if args.positional:
+    if args.action == "background":
+        pairs = select_background(args.count)
+        print(f"BARD background: {len(pairs)} windows of ordinary play, taken "
+              f"from the gaps between labelled actions")
+        chosen_pairs = pairs[: args.count]
+    elif args.positional:
         pairs = select_clips_positioned(args.action)
         print(f"BARD {args.action}: {len(pairs)} clips contain this action, "
               f"windowed where the sequence says it falls")

@@ -19,7 +19,14 @@ CLASSES = (PLAYER, BALL, RIM, HANDLER)
 #   steal    — BARD has 435 clips that are exactly {Steal, Turnover}. That pair is
 #              ONE steal seen from both sides (different players in 891 of 929
 #              cases), not two confounded actions.
-ACTIONS = ("dribble", "pass", "shot", "rebound", "block", "steal", "other")
+# `background` is ordinary play with no discrete event — a player bringing the
+# ball up, spacing, resetting. It is not a basketball action and never becomes
+# an Event; it exists so the classifier has somewhere to put the ~93% of a real
+# game that is not a box-score moment. Without it every window was forced into
+# an action class and rebound absorbed the slack, 27x over-emitting on a game.
+ACTIONS = ("dribble", "pass", "shot", "rebound", "block", "steal", "other",
+           "background")
+BACKGROUND = "background"
 TEAMS = ("A", "B")
 
 

@@ -27,12 +27,22 @@ def test_frame_ball_returns_none_when_absent():
     assert frame.ball() is None
 
 
-def test_actions_cover_the_spec_labels_plus_block_and_steal():
-    # The spec's five, plus `block` (SpaceJam, 996 clips) and `steal`
-    # (BARD, 435 clips that are exactly {Steal, Turnover}).
-    assert ACTIONS == ("dribble", "pass", "shot", "rebound", "block", "steal", "other")
+def test_actions_cover_the_spec_labels_plus_block_steal_and_background():
+    # The spec's five, plus `block` (SpaceJam), `steal` (BARD), and
+    # `background` — ordinary play, which is not an action and never becomes an
+    # Event, but which the classifier needs somewhere to put.
+    assert ACTIONS == ("dribble", "pass", "shot", "rebound", "block", "steal",
+                       "other", "background")
     for spec_label in ("dribble", "pass", "shot", "rebound", "other"):
         assert spec_label in ACTIONS
+
+
+def test_background_is_last_so_it_never_shifts_another_class_label_index():
+    """Label indices are positional; appending keeps every existing one stable."""
+    from courtvision.types import BACKGROUND
+
+    assert ACTIONS[-1] == BACKGROUND
+    assert ACTIONS.index("dribble") == 0
 
 
 def test_one_class_changing_size_does_not_move_another_class_split():
