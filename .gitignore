@@ -9,3 +9,4 @@ outputs/*
 !**/.gitkeep
 *.pt
 yolo*.pt
+data/labeled/actions_spare/

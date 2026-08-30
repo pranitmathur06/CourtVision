@@ -1,29 +1,35 @@
-# V7 on a GPU — four sessions, $2.29, and what actually mattered
+# V7 on a GPU — six sessions, $3.65, and what actually moved the number
 
-The number moved three times. Every move came from fixing the data or the
-measurement; none came from more training.
+    run  overall  rebound  block  what changed
+     1     0.753     0.03   0.90* baseline
+     2     0.784     0.49   0.67* rebound/steal resampled to a 20% window
+     3     0.793     0.40   0.88  per-class stratified split
+     4     0.822     0.84   0.78  rebound windowed by its place in the sequence
+     5     0.816     0.78   0.86  rebound capped at 436 to reclose the confound
 
-    run   overall  rebound  block   what changed
-    1       0.753     0.03   0.90*  baseline
-    2       0.784     0.49   0.67*  rebound/steal resampled to a 20% window
-    3       0.793     0.40   0.88   per-class stratified split
+    * measured on a split that drifted — see "Fix two".
 
-    * measured on a split that drifted — see below.
+Not one of those moves came from a better model. Every one came from fixing
+the data or the measurement.
 
-## Final: V7 PASS at 0.793 on 692 held-out clips
+## Final: V7 PASS at 0.816 on 735 held-out clips
 
-    dribble  SpaceJam  0.88      block   SpaceJam  0.88
-    pass     SpaceJam  0.80      steal   BARD      0.85
-    shot     SpaceJam  0.87      other   SpaceJam  0.74
+    dribble  SpaceJam  0.90      block   SpaceJam  0.86
+    pass     SpaceJam  0.79      steal   BARD      0.82
+    shot     SpaceJam  0.84      other   SpaceJam  0.81
     shot     BARD      0.78      other   BARD      0.76
-    rebound  BARD      0.40
+    rebound  BARD      0.78
 
-    cross-source gaps: shot 0.09, other 0.02 — the best measured
-    cross-corpus confusions between single-corpus classes: 0/692
-    bar was 0.381 (uniform chance 0.143, majority class 0.231)
+    cross-source gaps: shot 0.06, other 0.05 — the best measured
+    cross-corpus confusions between single-corpus classes: 1/735
+    corpus membership is worth +0.010 of label accuracy — CONFOUND CLOSED
+    bar was 0.368 (uniform chance 0.143, majority class 0.218)
 
-Best at epoch 5. Training loss falls to 0.04 while validation stalls, so
-keeping the BEST checkpoint rather than the last is what keeps that harmless.
+Every class is between 0.76 and 0.90. Run 4 scored higher overall (0.822) and
+on rebound (0.84), and is NOT the one to keep: it had 799 rebound clips, which
+made rebound BARD's dominant class and reopened the confound to +0.099. A model
+could score by noticing the corpus and guessing. 0.816 with the confound closed
+is worth more than 0.822 with it open.
 
 ## Fix one: sample the action, not the whole clip
 
@@ -32,47 +38,54 @@ whole clip — half a second apart, against an action lasting about a second.
 Fourteen of sixteen frames showed unrelated play, so a rebound clip and a steal
 clip were largely the same footage.
 
-Measured on 240 clips with the ball-handler selection held fixed:
-
-    margin  window   accuracy   lift
-      0.25     1.0      0.621  +0.121   <- what we were training on
+    margin  window   accuracy   lift     (rebound vs steal, 240 clips)
+      0.25     1.0      0.621  +0.121    <- what we were training on
       0.25     0.2      0.713  +0.213
       1.0      0.2      0.717  +0.217
 
-Nearly double the lift, holding at both crop margins while margin itself
-changes nothing. Regenerating rebound and steal at window 0.2 took rebound from
-0.03 to 0.49.
-
-This is why five spatial hypotheses all failed: the problem was never what was
-in frame, it was when.
+Nearly double the lift at both crop margins, while margin itself changed
+nothing. That is why five spatial hypotheses had all failed: the problem was
+never what was in frame, it was when.
 
 ## Fix two: a validation split that could not drift
 
-Block appeared to fall from 0.90 to 0.67, and that was mostly measurement. The
-split concatenated every class in ACTIONS order and shuffled globally, so it
-depended on each class's SIZE. Changing rebound from 226 clips to 223 shifted
-everything ordered after it:
+Block appeared to fall from 0.90 to 0.67. Mostly measurement. The split
+concatenated every class in ACTIONS order and shuffled globally, so it depended
+on each class's SIZE — changing rebound from 226 clips to 223 reshuffled block,
+steal and other while leaving dribble, pass and shot byte-identical:
 
     dribble  run1  88  run2  88  in both  88
-    pass     run1  84  run2  84  in both  84
-    shot     run1 151  run2 151  in both 151
-    block    run1  79  run2  78  in both   15
-    other    run1 162  run2 163  in both   96
+    block    run1  79  run2  78  in both  15
 
 Only 15 of 79 block validation clips survived. With a per-class stratified
-split, block is 0.88 and never regressed.
+split block is 0.86 and never regressed. For two runs, every cross-run
+per-class comparison in this project was partly comparing different clips.
 
-For two runs, every cross-run per-class comparison in this project was partly
-comparing different clips. That is worth remembering before trusting any
-before/after table.
+## Fix three: use the clips that were being thrown away
 
-## Still open: rebound at 0.40
+Rebound sat at 0.40 and I called it a data ceiling. It was not. BARD has no
+timestamps, only an ordered list of actions per clip, and the selector demanded
+the clip be unambiguous — 223 rebound clips out of the 4,709 that contain one.
+The exclusion was never that those clips are wrong; it was that a midpoint
+window looks at the shot rather than the rebound. In 3,127 of them the rebound
+is the second of two actions, so it sits about three quarters through.
 
-The weakest class, losing 25 of 45 to steal. A real limit rather than a bug: a
-defensive rebound and a steal are both a player collecting a loose ball, and
-BARD labels them from the play-by-play rather than from what the footage shows.
-There are only 223 rebound clips, so more data would help — but the ceiling is
-set by how separable the two events are on video at all.
+The ordering places it well enough: the nth of m actions falls at roughly
+(n + 0.5) / m. Rebound went 0.40 to 0.78 at the same clip count as steal.
+
+## The one that bit back
+
+Generating 799 rebound clips reopened the confound at +0.099, because rebound
+became BARD's largest class. The audit caught it. Capping rebound at 436, level
+with steal, returns it to +0.010:
+
+    rebound n   corpus-only  majority  confound
+          436         0.228     0.218    +0.010
+          600         0.261     0.209    +0.052  OPEN
+          799         0.298     0.199    +0.099  OPEN
+
+The 363 surplus clips are kept in data/labeled/actions_spare, since they are
+good clips and would be usable if the SpaceJam side were grown to match.
 
 ## v2 §7.1 — the kernel compiles and matches, but is not reliably faster
 
