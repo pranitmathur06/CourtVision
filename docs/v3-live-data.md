@@ -320,7 +320,27 @@ both without any error.
 `nba_api` is an optional dependency (`pip install -e ".[live]"`) and is
 imported lazily, because the pipeline runs on archived clips with no network.
 
-**The real-game chain is now complete end to end:** fetch the feed, read the
+**V12 runs the whole chain on a real broadcast** (`scripts/validate_real_game.py`),
+and it took two rounds to get honest:
+
+    531 frames at 60fps
+    templates from 6 known frames: 9/10 digits
+    clock read on 36 sampled frames; 0 dropped as impossible
+    clip covers P2 232s down to 227s remaining, monotonic
+    official feed: 413 plays; 1 inside the window
+      P2 227s  other  A. Edwards  Edwards Out of Bounds - Bad Pass Turnover
+
+The first version passed while reporting the clip covering "227s down to 227s",
+a clock that never moved across 8.8 seconds. It was built from ONE known frame
+reading 3:47, so it could only read values made of 3, 4 and 7 — and it did not
+decline the others, it matched a 7 against the 3 template and returned a
+confident 3:43. Six frames came back wrong that way. With templates merged from
+six frames it reads all 36 correctly and the filter drops nothing.
+
+A 6 never appears between 3:52 and 3:47, so it cannot be learned from this clip.
+The reader declines any clock containing one rather than guessing.
+
+**The chain end to end:** fetch the feed, read the
 clock off the scoreboard, map video time to game clock, select the plays in
 that window, and hand them to `align`. What has NOT happened is running it on
 a full broadcast — the pieces are each tested, the whole is not.

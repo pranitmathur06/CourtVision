@@ -33,7 +33,11 @@ CLOCK_ROI = (slice(634, 672), slice(800, 915))
 # enough: built from 3:47 alone the reader can only read values made of 3, 4 and
 # 7, and it does not fail quietly on the rest — it matched a 7 against the 3
 # template and returned a confident 3:43 on six frames.
-KNOWN_FRAMES = ((0, "352"), (60, "351"), (150, "349"), (300, "347"))
+KNOWN_FRAMES = ((0, "352"), (60, "351"), (105, "350"), (150, "349"),
+                (225, "348"), (300, "347"))
+# Nine of ten digits. A 6 never appears between 3:52 and 3:47, so it cannot
+# be learned from this clip at all — the reader will decline any clock
+# containing one rather than guess, which is the right failure.
 SAMPLE_EVERY = 15
 
 
