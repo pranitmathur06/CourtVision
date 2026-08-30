@@ -28,6 +28,7 @@ from courtvision.detection import load_pipeline_detector
 from courtvision.device import resolve_device
 from courtvision.extraction import extract_frames
 from courtvision.formation import classify_formation
+from courtvision.possession import possession_timeline
 from courtvision.team_assignment import assign_teams, collect_samples
 from courtvision.plays import (detect_off_ball_screens, detect_screens,
                                detect_sets)
@@ -83,6 +84,19 @@ def main() -> int:
     teams = assign_teams(collect_samples(images, frames))
     print(f"  teams assigned for {len(teams)} tracks")
 
+    # Take the handler from the SMOOTHED possession timeline, not from whichever
+    # frames the detector happened to fire its handler class on. The raw label
+    # is missing in about a third of frames, and every one of those is a frame
+    # where the play layer can claim nothing: no handler means no offence to
+    # identify, so no formation and no screen. The timeline carries possession
+    # across those gaps, which is what it was built to do — and it distinguishes
+    # a ball merely unseen from a ball visibly loose, so it does not carry
+    # possession through a pass.
+    timeline = possession_timeline(frames, config)
+    raw_hits = sum(1 for f in frames if f.handler() is not None)
+    print(f"  handler present in {raw_hits}/{len(frames)} frames raw, "
+          f"{sum(1 for h in timeline if h is not None)}/{len(timeline)} smoothed")
+
     chosen = list(range(0, len(frames), args.stride))[: args.frames]
     print(f"\nregistering {len(chosen)} frames "
           f"(first is a full global search, the rest are local)")
@@ -124,8 +138,7 @@ def main() -> int:
               & ~np.isnan(court).any(axis=1))
         frame_positions = {t.track_id: (float(c[0]), float(c[1]))
                            for t, c, ok in zip(players, court, on) if ok}
-        handler = frame.handler()
-        handler_id = handler.track_id if handler else None
+        handler_id = timeline[frame.index]
 
         # Keep only the side with the ball. Without a handler there is no
         # offence to speak of, so nothing is claimed for that frame.
