@@ -248,6 +248,7 @@ def detect_sets(
     positions: list[dict[int, tuple[float, float]]],
     handlers: list[int | None],
     times: list[float],
+    formations: list[str | None] | None = None,
 ) -> list[Play]:
     """Named sets that are COMPOSITIONS of screen actions, not new perception.
 
@@ -262,13 +263,46 @@ def detect_sets(
       screeners, in quick succession.
     * **Re-screen**: the same screener screens the same handler twice.
 
-    Each is the co-occurrence of primitives with a timing and identity
-    constraint, so no labelled play types are needed. What still does need
-    labels is any set whose name is a call rather than a shape.
+    Given `formations` — the formation name per frame, from
+    `formation.classify_formation` — it also names sets that are a SHAPE plus an
+    ACTION:
+
+    * **Horns flare**: the horns alignment, then a flare screen out of it.
+    * **Horns set**: the horns alignment, then a ball screen.
+
+    "Horns Flare" was the example I kept giving for something that needs
+    labelled play types. It does not: horns is an arrangement that can be seen
+    in one frame, a flare is a direction a cutter takes, and the set is their
+    conjunction inside a window. What genuinely still needs labels is a name
+    that is a CALL rather than a shape — a coach's word for a set, which teams
+    disagree on and no camera can see.
     """
     ball_screens = detect_screens(positions, handlers, times)
     off_ball = detect_off_ball_screens(positions, handlers, times)
     sets: list[Play] = []
+
+    if formations:
+        for index, shape in enumerate(formations):
+            if shape != "horns" or index >= len(times):
+                continue
+            began = times[index]
+            for play in off_ball + ball_screens:
+                if not (0.0 <= play.time_s - began <= SET_WINDOW_S):
+                    continue
+                if play.name == "flare_screen":
+                    sets.append(Play(
+                        "horns_flare", play.time_s, play.screener_id,
+                        play.handler_id,
+                        f"flare out of horns {play.time_s - began:.1f}s after "
+                        f"the alignment"))
+                    break
+                if play.name in {"pick_and_roll", "pick_and_pop", "ball_screen"}:
+                    sets.append(Play(
+                        "horns_set", play.time_s, play.screener_id,
+                        play.handler_id,
+                        f"{play.name} out of horns "
+                        f"{play.time_s - began:.1f}s after the alignment"))
+                    break
 
     rolls = [p for p in ball_screens if p.name == "pick_and_roll"]
     for roll in rolls:

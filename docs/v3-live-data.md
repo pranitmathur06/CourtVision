@@ -126,12 +126,22 @@ Both distances are court feet, so no labels are needed. A cutter who does not
 commit anywhere is left as a plain `off_ball_screen` rather than assigned a
 direction it did not take.
 
+**Built: shape-plus-action sets.** `detect_sets()` takes the per-frame
+formation and names `horns_flare` (the horns alignment, then a flare screen
+out of it) and `horns_set` (horns, then a ball screen).
+
+"Horns Flare" was the example cited three times in this document as needing
+labelled play types. It does not. Horns is an arrangement visible in one
+frame, a flare is a direction a cutter takes, and the set is their conjunction
+inside a two-second window. Each time the claim was re-examined it turned out
+to be a composition rather than a label.
+
 **Still not built: names that are calls rather than shapes.** A set call is
-coaching vocabulary — teams differ on it and no camera can see it. Those
-genuinely need labelled play types, which BARD does not carry: its captions
+coaching vocabulary — teams differ on it and no camera can see it. That
+genuinely needs labelled play types, which BARD does not carry: its captions
 are event-level, listing jersey number, colour and one of nine action types.
-Note the difference from the row above: "flare" describes what a body did,
-while a set call describes what a coach shouted.
+The distinction that survives: "flare" and "horns" describe what bodies did,
+while a call describes what a coach shouted.
 
 BARD does not have them. Its captions were checked directly: they are
 event-level, giving jersey number, jersey colour and one of nine action types

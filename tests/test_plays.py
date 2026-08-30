@@ -262,3 +262,52 @@ def test_cutter_that_does_not_commit_is_left_unnamed():
     plays = detect_off_ball_screens(*_off_ball(cutter, screener))
     assert [p.name for p in plays] == ["off_ball_screen"], [str(p) for p in plays]
     assert "did not commit" in plays[0].evidence
+
+
+def test_horns_flare_is_a_shape_plus_a_direction():
+    """The example I kept citing as needing labels. It does not.
+
+    Horns is an arrangement visible in one frame; a flare is a direction the
+    cutter takes. The set is their conjunction inside a window.
+    """
+    from courtvision.plays import detect_sets
+
+    screener = [(20.0, 24.0)] * 10
+    cutter = [(32.0, 28.0), (30.0, 27.0), (27.0, 26.0), (23.0, 25.0),
+              (18.0, 25.0), (14.0, 25.0), (10.0, 25.0), (7.0, 25.0),
+              (5.0, 25.0), (5.0, 25.0)]
+    positions, handlers, times = _off_ball(cutter, screener)
+    formations = ["horns"] + [None] * 9
+
+    sets = detect_sets(positions, handlers, times, formations)
+    assert [p.name for p in sets] == ["horns_flare"], [str(p) for p in sets]
+    assert "out of horns" in sets[0].evidence
+
+
+def test_a_flare_without_horns_is_not_a_horns_set():
+    from courtvision.plays import detect_sets
+
+    screener = [(20.0, 24.0)] * 10
+    cutter = [(32.0, 28.0), (30.0, 27.0), (27.0, 26.0), (23.0, 25.0),
+              (18.0, 25.0), (14.0, 25.0), (10.0, 25.0), (7.0, 25.0),
+              (5.0, 25.0), (5.0, 25.0)]
+    positions, handlers, times = _off_ball(cutter, screener)
+
+    assert detect_sets(positions, handlers, times, ["isolation"] + [None] * 9) == []
+    assert detect_sets(positions, handlers, times) == []      # no formations given
+
+
+def test_horns_alignment_far_before_the_screen_is_not_the_same_possession():
+    """Two seconds is the window; beyond it they are unrelated events."""
+    from courtvision.plays import detect_sets
+
+    screener = [(20.0, 24.0)] * 40
+    cutter = ([(32.0, 28.0)] * 30 + [(30.0, 27.0), (27.0, 26.0), (23.0, 25.0),
+              (18.0, 25.0), (14.0, 25.0), (10.0, 25.0), (7.0, 25.0),
+              (5.0, 25.0), (5.0, 25.0), (5.0, 25.0)])
+    handler = [(25.0, 30.0)] * 40
+    positions = [{1: handler[i], 2: screener[i], 3: cutter[i]} for i in range(40)]
+    times = [i * 0.1 for i in range(40)]
+    formations = ["horns"] + [None] * 39
+
+    assert detect_sets(positions, [1] * 40, times, formations) == []

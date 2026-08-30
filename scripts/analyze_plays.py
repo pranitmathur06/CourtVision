@@ -88,6 +88,7 @@ def main() -> int:
           f"(first is a full global search, the rest are local)")
 
     positions: list[dict[int, tuple[float, float]]] = []
+    shapes: list[str | None] = []
     handlers: list[int | None] = []
     times: list[float] = []
     scores: list[float] = []
@@ -107,7 +108,7 @@ def main() -> int:
         if matrix is None or score < MIN_SCORE:
             print(f"  t={frame.time_s:>5.2f}s  score {score:.3f}  SKIPPED "
                   f"(below {MIN_SCORE})")
-            continue
+            continue    # positions/shapes/handlers/times all skip together
         previous = params
 
         players = [t for t in frame.tracks if t.label in (PLAYER, HANDLER)]
@@ -141,6 +142,7 @@ def main() -> int:
 
         formation = (classify_formation(np.array(list(offense.values())))
                      if offense else None)
+        shapes.append(formation.name if formation else None)
         if formation is None:
             print(f"  t={frame.time_s:>5.2f}s  score {score:.3f}  "
                   f"{on.sum()}/{len(players)} on court  no ball handler, "
@@ -167,7 +169,7 @@ def main() -> int:
     if not screens and not off_ball:
         print("  none detected in this window")
 
-    sets = detect_sets(positions, handlers, times)
+    sets = detect_sets(positions, handlers, times, shapes)
     print(f"\nnamed sets: {len(sets)}")
     for play in sets:
         print(f"  {play}")
