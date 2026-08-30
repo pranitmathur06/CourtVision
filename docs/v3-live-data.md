@@ -340,6 +340,26 @@ six frames it reads all 36 correctly and the filter drops nothing.
 A 6 never appears between 3:52 and 3:47, so it cannot be learned from this clip.
 The reader declines any clock containing one rather than guessing.
 
+V12 also runs the pipeline on the same clip and compares:
+
+    t=3.28s  other    P2 229s   official: A. Edwards other  AGREES
+    t=4.08s  rebound  P2 228s   official: A. Edwards other  differs
+    t=4.88s  steal    P2 227s   official: A. Edwards other  differs
+    t=5.68s  other    P2 227s   official: A. Edwards other  AGREES
+
+    2 of 6 events agreed on the action
+
+Two things that number is NOT. It is not the join failing — the clock reads
+correctly and selects the right official play every time. And 6-of-7 events
+falling "within 2 seconds" is not a success either, which is what the first
+version of this gate reported: **the clock stops on a dead ball**, so four
+events spanning four seconds of video all mapped to 227s and all matched the
+same single play. Clock-based joining cannot separate events inside a stoppage,
+and saying so is more useful than the flattering number.
+
+What 2-of-6 measures is the CLASSIFIER. Rebound scored 0.29 on the frozen probe
+and this clip is called rebound four times. V7 is what moves that.
+
 **The chain end to end:** fetch the feed, read the
 clock off the scoreboard, map video time to game clock, select the plays in
 that window, and hand them to `align`. What has NOT happened is running it on

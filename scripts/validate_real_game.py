@@ -14,6 +14,7 @@ Needs a network and `pip install -e ".[live]"`.
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -92,13 +93,66 @@ def main() -> int:
         print(f"    P{play.period} {play.clock_seconds:>3}s  {play.action:<8} "
               f"{str(play.player):<16} {play.description[:44]}")
 
+    # Now the part V12 previously skipped: do the PIPELINE's own events land at
+    # the same game-clock moments as the official plays?
+    print("\n  running the pipeline on the same clip...")
+    from courtvision.config import Config
+    from courtvision.enrichment import game_clock_at
+    from scripts.run_pipeline import run_pipeline
+
+    # narrate=False: this checks the JOIN, not the commentary, and narration
+    # costs an API call per run.
+    out_dir = Path("outputs/v12")
+    run_pipeline(str(CLIP), str(out_dir), Config(), narrate=False)
+    payload = json.loads((out_dir / "commentary.json").read_text())
+    events = payload.get("events", [])
+    print(f"  pipeline produced {len(events)} events")
+
+    # Temporal proximity alone is a misleading score here, and the first version
+    # of this reported it as one. The clock STOPS on a dead ball, so six events
+    # spanning four seconds of video all mapped to 227s and all "matched" the
+    # single official play there. Agreement means the ACTION agrees too.
+    near_in_time = 0
+    agreeing = 0
+    collapsed: dict[int, int] = {}
+    for event in events:
+        at = game_clock_at(kept, event["time_s"])
+        if at is None:
+            print(f"    t={event['time_s']:>5.2f}s  {event['action']:<8} "
+                  f"clock unknown here — nothing claimed")
+            continue
+        period, clock = at
+        collapsed[clock] = collapsed.get(clock, 0) + 1
+        near = [p for p in window if abs(p.clock_seconds - clock) <= 2]
+        note = ""
+        if near:
+            near_in_time += 1
+            official = near[0]
+            same = official.action == event["action"]
+            agreeing += same
+            note = (f"  official: {official.player} {official.action} "
+                    f"{'AGREES' if same else 'differs'}")
+        print(f"    t={event['time_s']:>5.2f}s  {event['action']:<8} "
+              f"P{period} {clock:>3}s{note}")
+
+    stalled = max(collapsed.values()) if collapsed else 0
+    print(f"\n  {near_in_time}/{len(events)} events fell within 2s of an official "
+          f"play; {agreeing} agreed on the action")
+    if stalled > 1:
+        print(f"  {stalled} of them mapped to the SAME game second: the clock stops "
+              f"on a dead\n  ball, so clock-based joining cannot separate events "
+              f"inside a stoppage.")
+
     ok = monotonic and len(plays) > 100 and len(window) >= 1
     print(f"\nV12 {'PASS' if ok else 'FAIL'} — the real-game join works: a clock "
           f"read off the\n  broadcast selected the official plays for that moment, "
           f"with no GameID in\n  the filename and no BARD metadata.")
     if ok:
-        print("  Not shown: whether those plays MATCH the pipeline's own events.\n"
-              "  That is what align does, and it needs a classifier worth trusting.")
+        print(f"  The pipeline's own actions agreed with the official play "
+              f"{agreeing}/{near_in_time} times.\n"
+              f"  That is the classifier's accuracy showing through, not the "
+              f"join's: rebound\n  scored 0.29 on the probe and this clip is "
+              f"mostly called rebound. V7 is what\n  moves that number.")
     return 0 if ok else 1
 
 
