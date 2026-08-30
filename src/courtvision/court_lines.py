@@ -332,3 +332,44 @@ def search_registration(
     if matrix is None or score <= 0.0:
         return None, 0.0
     return np.linalg.inv(matrix), score
+
+
+def search_camera(
+    image: np.ndarray,
+    seed: int = 0,
+    max_iterations: int = 250,
+    bounds: list[tuple[float, float]] | None = None,
+) -> tuple[np.ndarray | None, float]:
+    """As `search_registration`, but returns the 6 CAMERA PARAMETERS.
+
+    A caller tracking a panning camera needs them: the next frame's search can
+    start from tight bounds around this frame's solution, which is far faster
+    and more reliable than searching the whole space again. The homography alone
+    cannot be decomposed back into them unambiguously.
+    """
+    from scipy.optimize import differential_evolution
+
+    distance_map = line_distance_map(image)
+    if not np.isfinite(distance_map).any():
+        return None, 0.0
+    points = canonical_court_points()
+    line_pixels = sample_line_pixels(image)
+    if len(line_pixels) == 0:
+        return None, 0.0
+    shape = image.shape[:2]
+
+    def negative_score(params: np.ndarray) -> float:
+        matrix = homography_from_camera(params, shape)
+        if matrix is None:
+            return 0.0
+        return -score_homography(matrix, distance_map, points, line_pixels)
+
+    result = differential_evolution(
+        negative_score, bounds or DEFAULT_CAMERA_BOUNDS,
+        seed=seed, maxiter=max_iterations,
+        popsize=25, tol=1e-6, polish=True, init="sobol",
+    )
+    score = float(-result.fun)
+    if score <= 0.0 or homography_from_camera(result.x, shape) is None:
+        return None, 0.0
+    return np.asarray(result.x, dtype=float), score
