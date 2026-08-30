@@ -32,13 +32,23 @@ from courtvision.types import Frame
 
 CLIP = Path("data/raw_clips/sample.mp4")
 CHECKPOINT = Path("checkpoints/detector.pt")
-ANSWER_KEY = Path("outputs/v6_answer_key.json")
+# Hand-made ground truth, so it lives under version control. It sat in
+# outputs/ for most of this project's life, which .gitignore excludes: it had
+# never been committed, would have been lost with any clean of that directory,
+# and was not present on a fresh checkout at all. Irreplaceable data does not
+# belong in a directory named for disposable output.
+ANSWER_KEY = Path("data/ground_truth/v6_possession.json")
+LEGACY_ANSWER_KEY = Path("outputs/v6_answer_key.json")
 # The spec asks for 8 of 10; this keeps that 80% ratio for whatever size the
 # answer key actually is.
 REQUIRED_RATIO = 0.8
 
 
 def main() -> int:
+    if not ANSWER_KEY.exists() and LEGACY_ANSWER_KEY.exists():
+        print(f"V6 note — using the legacy key at {LEGACY_ANSWER_KEY}; "
+              f"move it to {ANSWER_KEY} so it is version-controlled")
+        globals()["ANSWER_KEY"] = LEGACY_ANSWER_KEY
     if not ANSWER_KEY.exists():
         print(
             f"V6 FAIL — no answer key at {ANSWER_KEY}; watch outputs/v4_tracking.mp4 "

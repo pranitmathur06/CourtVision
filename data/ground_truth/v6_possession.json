@@ -1,0 +1,56 @@
+[
+  {
+    "time_s": 0.68,
+    "x": 847,
+    "y": 307,
+    "note": "DET dark #0 dribbling, ball at his right hand (verified by eye against the detector's ball box)"
+  },
+  {
+    "time_s": 1.08,
+    "x": 895,
+    "y": 420,
+    "note": "DET dark jersey right of centre, ball in hands"
+  },
+  {
+    "time_s": 3.08,
+    "x": 1090,
+    "y": 380,
+    "note": "DET far right, ball in hands"
+  },
+  {
+    "time_s": 4.08,
+    "x": 1015,
+    "y": 400,
+    "note": "DET right side driving, ball at his hands"
+  },
+  {
+    "time_s": 5.58,
+    "x": 580,
+    "y": 403,
+    "note": "DET dark #12 driving, ball at his left hand (verified by eye against the detector's ball box)"
+  },
+  {
+    "time_s": 6.08,
+    "x": null,
+    "y": null,
+    "note": "shot in flight toward the rim - no possession"
+  },
+  {
+    "time_s": 7.08,
+    "x": null,
+    "y": null,
+    "note": "ball at the rim - no possession"
+  },
+  {
+    "time_s": 8.58,
+    "x": null,
+    "y": null,
+    "note": "loose ball on the floor, contested - no possession"
+  },
+  {
+    "time_s": 9.08,
+    "x": 392,
+    "y": 302,
+    "note": "BKN white #33 collects it, ball at his hands"
+  }
+]
