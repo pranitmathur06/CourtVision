@@ -16,7 +16,7 @@ from courtvision.commentary import AnthropicNarrator, generate_commentary
 from courtvision.config import Config
 from courtvision.detection import load_pipeline_detector
 from courtvision.device import resolve_device
-from courtvision.enrichment import align, plays_for_clip
+from courtvision.enrichment import align, enforce_identity_consistency, plays_for_clip
 from courtvision.events import build_events
 from courtvision.extraction import extract_frames
 from courtvision.possession import possession_timeline
@@ -85,6 +85,8 @@ def run_pipeline(clip_path: str, out_dir: str, config: Config,
     plays = plays_for_clip(clip_path, str(BARD_METADATA))
     if plays:
         events = align(events, plays)
+        # One track is one person, and one person is on one team.
+        events = enforce_identity_consistency(events)
         named = sum(1 for e in events if e.player_name)
         print(f"  stage 7b: {len(plays)} official plays for this game, "
               f"{named}/{len(events)} events named")

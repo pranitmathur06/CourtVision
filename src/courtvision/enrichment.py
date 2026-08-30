@@ -32,6 +32,8 @@ from __future__ import annotations
 import re
 import urllib.parse
 from collections.abc import Sequence
+import collections
+
 from dataclasses import dataclass, replace
 
 from courtvision.types import Event
@@ -162,6 +164,56 @@ def align(
         named.append(replace(event, player_name=play.player))
 
     return named
+
+
+def enforce_identity_consistency(events: Sequence[Event]) -> list[Event]:
+    """Drop names that break the two rules a real identity must obey.
+
+    `align` matches each event independently, consuming plays in order, so
+    nothing stops one track collecting two names or one name landing on two
+    tracks. Both happened on the V9 holdout: track 17 came out as "Randle" at
+    4.08s and "McDaniels" at 4.88s, and "McDaniels" was simultaneously on team A
+    as track 17 and team B as track 18. A player cannot be two people, and
+    cannot be on both teams.
+
+    So: a track keeps a name only if it is the one that track is called most
+    often, and a name survives only on the single track that carries it most.
+    Ties are dropped rather than broken arbitrarily — an anonymous "Player 17"
+    is a much smaller failure than confidently attributing a steal to the wrong
+    real person.
+    """
+    by_track: dict[int, collections.Counter] = collections.defaultdict(
+        collections.Counter)
+    for event in events:
+        if event.track_id is not None and event.player_name:
+            by_track[event.track_id][event.player_name] += 1
+
+    # Rule 1: one name per track, the modal one; ties lose.
+    track_name: dict[int, str] = {}
+    for track_id, counts in by_track.items():
+        ranked = counts.most_common()
+        if len(ranked) == 1 or ranked[0][1] > ranked[1][1]:
+            track_name[track_id] = ranked[0][0]
+
+    # Rule 2: one track per name, the one that carries it most; ties lose.
+    name_tracks: dict[str, list[int]] = collections.defaultdict(list)
+    for track_id, name in track_name.items():
+        name_tracks[name].append(track_id)
+    for name, tracks in name_tracks.items():
+        if len(tracks) == 1:
+            continue
+        counts = {t: by_track[t][name] for t in tracks}
+        best = max(counts.values())
+        winners = [t for t, c in counts.items() if c == best]
+        for track_id in tracks:
+            if len(winners) > 1 or track_id not in winners:
+                track_name.pop(track_id, None)
+
+    return [
+        event if event.track_id is None
+        else replace(event, player_name=track_name.get(event.track_id))
+        for event in events
+    ]
 
 
 def plays_for_clip(clip_path: str, metadata_csv: str) -> list[PlayByPlayEvent]:
