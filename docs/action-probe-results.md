@@ -117,6 +117,37 @@ intervention — and also why it might not be enough. A rebound and a steal are
 both scrambles for a loose ball, and they may be genuinely hard to separate
 from a cropped clip of one player.
 
+## A hypothesis that did not pan out
+
+Mean-pooling the backbone's tokens averages over space AND time, and rebound
+versus steal is a temporal distinction — a rebound follows a shot down, a steal
+takes the ball sideways. So discarded temporal structure was a plausible
+explanation for the confusion, and a testable one: VideoMAE's 1,568 tokens are
+8 temporal positions by 196 spatial, so the time axis can be kept.
+
+Extracted temporally-resolved features for all 660 rebound and steal clips and
+tried six poolings. Rebound vs steal, majority baseline 0.658, 5-fold CV:
+
+| features | accuracy |
+|---|---:|
+| mean over time (what the probe uses) | 0.715 |
+| **all 8 timesteps concatenated** | **0.732** |
+| mean + std over time | 0.709 |
+| mean + (last − first) | 0.729 |
+| first half − second half | 0.673 |
+| last timestep − first | 0.635 |
+
+Keeping the time axis is worth **+0.017**, not a fix. Two of the six poolings
+are worse than plain averaging, and the difference-only features are worst of
+all — barely above the baseline of always answering "steal".
+
+So the temporal explanation is wrong. These two actions are simply not well
+separated by this backbone's representation, however it is pooled, which is
+consistent with everything else measured here: no head helps, no pooling helps.
+Either the actions genuinely look alike in a cropped clip of one player, or 226
+rebound clips is not enough to learn the difference. Fine-tuning is the only
+untried lever, and this makes its ceiling less certain rather than more.
+
 ## What V7 still has to answer
 
 Whether fine-tuning the top blocks lifts 0.708, and by how much — particularly
