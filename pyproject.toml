@@ -25,6 +25,9 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
+# Only for live-game play-by-play (courtvision.nba_feed). Optional on
+# purpose: the pipeline runs on archived clips with no network at all.
+live = ["nba_api>=1.4"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

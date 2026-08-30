@@ -303,7 +303,24 @@ already does whenever it cannot be sure.
 `PlayByPlayEvent` gained optional `period` and `clock_seconds`, so the BARD
 path — whose URLs carry neither — is untouched.
 
-**What is left for a real game: step 1 and 2 only.** `pip install nba_api`,
-then fetch `playbyplayv3` for the GameID and map its clock strings through
-`scoreboard.clock_to_seconds`. Both are network plumbing against a live
-service, not vision or logic.
+**Steps 1 and 2 are built too** — `courtvision.nba_feed`, verified against the
+live feed for game 0022400861, the same game the holdout clip comes from:
+**476 usable plays out of 552 entries**, every one carrying a period and a
+clock, 446 with a player.
+
+    P1  704s  shot     T. Hardaway Jr.  MISS Hardaway Jr. 26' 3PT Jump Shot
+    P1  702s  rebound  K. Johnson       K. Johnson REBOUND (Off:0 Def:1)
+
+One quirk is worth knowing, because it silently costs two of the seven classes.
+In this feed a **STEAL and a BLOCK carry an empty `actionType`** and are named
+only in the description text. On that game the 40 entries with no action type
+were exactly the 17 steals and 23 blocks. Keying on `actionType` alone loses
+both without any error.
+
+`nba_api` is an optional dependency (`pip install -e ".[live]"`) and is
+imported lazily, because the pipeline runs on archived clips with no network.
+
+**The real-game chain is now complete end to end:** fetch the feed, read the
+clock off the scoreboard, map video time to game clock, select the plays in
+that window, and hand them to `align`. What has NOT happened is running it on
+a full broadcast — the pieces are each tested, the whole is not.
