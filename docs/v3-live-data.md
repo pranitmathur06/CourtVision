@@ -94,12 +94,25 @@ Horns, five-out, post-up and isolation from court coordinates, and returns
 also reports spacing as mean nearest-neighbour distance, which is what "they
 have no room" actually means.
 
-**Not built: plays.** A formation is an arrangement at one instant; a play is a
-sequence. Horns is visible in a single frame, which is why it can be named.
-Spain pick-and-roll is a screen, then a back-screen on the screener, then a
-roll — no snapshot contains it. Getting there needs formation sequences over
-time and labelled play types, and neither BARD nor SpaceJam carries play-type
-labels. That is still the honest next hard problem.
+**Built: screen actions over time.** `plays.detect_screens()` reports
+pick-and-roll, pick-and-pop, dribble hand-off and unresolved ball screens;
+`detect_off_ball_screens()` covers screens away from the ball. These need no
+labelled data because they are definitions rather than categories: two
+offensive players converge, one holding the ball, and afterwards the screener
+either cuts to the rim (roll), steps out beyond the arc (pop), or takes the
+ball (hand-off). Every term is measurable in court feet.
+
+**Not built: plays that are conventions rather than geometry.** "Spain
+pick-and-roll" is a back-screen on the roller by a third player, and set calls
+like "Horns Flare" are coaching vocabulary invisible to a camera; teams differ
+on the names. Those need labelled play types.
+
+BARD does not have them. Its captions were checked directly: they are
+event-level, giving jersey number, jersey colour and one of nine action types
+(Turnover, Foul, Block, Rebound, Steal, 2PT Shot, 3PT Shot, Free Throw,
+Violation), with no play names anywhere. SpaceJam is action clips only. So this
+is a data gap, not an implementation gap, and it is the honest limit of what
+this layer can claim.
 
 **Also not built: automatic registration.** Until court lines are detected
 without help, the homography must be supplied per camera.
