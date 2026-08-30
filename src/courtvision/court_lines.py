@@ -141,3 +141,194 @@ def alignment_score(
     visible = xy[inside].astype(int)
     hits = distance[visible[:, 1], visible[:, 0]] <= tolerance_px
     return float(hits.mean())
+
+
+def line_distance_map(image: np.ndarray) -> np.ndarray:
+    """Distance to the nearest detected line pixel, computed once.
+
+    `alignment_score` re-detects lines on every call, which costs 46 ms. A
+    search evaluates thousands of candidates, so it wants this precomputed and
+    each evaluation reduced to a projection and a lookup.
+    """
+    import cv2
+
+    mask = court_line_mask(image)
+    if not mask.any():
+        return np.full(mask.shape, np.inf, dtype=np.float32)
+    return cv2.distanceTransform(255 - mask, cv2.DIST_L2, 3)
+
+
+def homography_from_camera(
+    params: np.ndarray, image_shape: tuple[int, int]
+) -> np.ndarray | None:
+    """Court-to-image homography from 6 physical camera parameters.
+
+    Parameters are (cx, cy, cz, tx, ty, focal): where the camera is in court
+    feet, the point on the floor it is aimed at, and its focal length in pixels.
+
+    Six physical parameters rather than a homography's eight free ones. Every
+    point in this space is a camera that could exist; most of the 8-dimensional
+    space is not, and a search there spends its time on homographies that fold
+    the court through itself.
+    """
+    cx, cy, cz, tx, ty, focal = params
+    if cz <= 1.0 or focal <= 1.0:
+        return None
+    centre = np.array([cx, cy, cz], dtype=np.float64)
+    target = np.array([tx, ty, 0.0], dtype=np.float64)
+
+    forward = target - centre
+    norm = np.linalg.norm(forward)
+    if norm < 1e-6:
+        return None
+    forward /= norm
+    right = np.cross(forward, np.array([0.0, 0.0, 1.0]))
+    norm = np.linalg.norm(right)
+    if norm < 1e-6:                      # looking straight down: right is undefined
+        return None
+    right /= norm
+    down = np.cross(forward, right)
+
+    rotation = np.stack([right, down, forward])          # world -> camera
+    height, width = image_shape[:2]
+    intrinsics = np.array([[focal, 0.0, width / 2.0],
+                           [0.0, focal, height / 2.0],
+                           [0.0, 0.0, 1.0]])
+    # A court point is (X, Y, 0), so only the first two rotation columns matter.
+    extrinsic = np.stack([rotation[:, 0], rotation[:, 1], -rotation @ centre], axis=1)
+    return intrinsics @ extrinsic
+
+
+def score_homography(
+    court_to_image: np.ndarray,
+    distance_map: np.ndarray,
+    points: np.ndarray | None = None,
+    line_pixels: np.ndarray | None = None,
+    tolerance_px: float = 6.0,
+) -> float:
+    """How well a homography explains the image's lines, in BOTH directions.
+
+    Asking only "do the model's lines land on detected lines" is not enough, and
+    the failure is not subtle. A search using that alone returned a camera
+    scoring 0.998 whose court coordinates were several hundred feet wrong: it
+    had zoomed onto a small patch where a couple of arcs happened to coincide,
+    and every projected point landed on a line because only a sliver of court
+    was in frame. Measured against the true camera:
+
+        true camera     recall 1.000   coverage 0.801
+        search winner   recall 0.998   coverage 0.023
+
+    So coverage — the share of DETECTED line pixels the model accounts for — is
+    what separates them, and the score is the harmonic mean of the two. A
+    homography must both land on lines and explain the lines that are there.
+    """
+    import cv2
+
+    if points is None:
+        points = canonical_court_points()
+    homogeneous = np.hstack([points, np.ones((len(points), 1))])
+    projected = homogeneous @ court_to_image.T
+    w = projected[:, 2]
+    valid = np.abs(w) > 1e-9
+    if valid.sum() < 20:
+        return 0.0
+    xy = projected[valid, :2] / w[valid, None]
+
+    height, width = distance_map.shape
+    inside = ((xy[:, 0] >= 0) & (xy[:, 0] < width)
+              & (xy[:, 1] >= 0) & (xy[:, 1] < height))
+    if inside.sum() < 0.15 * len(points):
+        return 0.0
+    visible = xy[inside].astype(int)
+    recall = float((distance_map[visible[:, 1], visible[:, 0]] <= tolerance_px).mean())
+    if line_pixels is None or len(line_pixels) == 0 or recall == 0.0:
+        return recall
+
+    canvas = np.zeros((height, width), np.uint8)
+    canvas[visible[:, 1], visible[:, 0]] = 255
+    reach = int(tolerance_px) * 2 + 1
+    canvas = cv2.dilate(canvas, np.ones((reach, reach), np.uint8))
+    coverage = float((canvas[line_pixels[:, 1], line_pixels[:, 0]] > 0).mean())
+    if coverage <= 0.0:
+        return 0.0
+    return 2.0 * recall * coverage / (recall + coverage)
+
+
+def sample_line_pixels(image: np.ndarray, limit: int = 4000,
+                       seed: int = 0) -> np.ndarray:
+    """A random subset of detected line pixels, as (N, 2) x/y — for coverage."""
+    mask = court_line_mask(image)
+    ys, xs = np.nonzero(mask)
+    if len(xs) == 0:
+        return np.zeros((0, 2), dtype=int)
+    if len(xs) > limit:
+        pick = np.random.default_rng(seed).choice(len(xs), limit, replace=False)
+        ys, xs = ys[pick], xs[pick]
+    return np.stack([xs, ys], axis=1)
+
+
+DEFAULT_CAMERA_BOUNDS = [
+    (-60.0, 110.0),     # camera x, feet
+    (-50.0, 90.0),      # camera y
+    (12.0, 65.0),       # camera height
+    (5.0, 45.0),        # aim point x
+    (0.0, 40.0),        # aim point y
+    (700.0, 3200.0),    # focal length, pixels
+]
+
+
+def search_registration(
+    image: np.ndarray,
+    seed: int = 0,
+    max_iterations: int = 250,
+    bounds: list[tuple[float, float]] | None = None,
+) -> tuple[np.ndarray | None, float]:
+    """Search camera parameters for the homography that best explains the lines.
+
+    Returns (image_to_court, score), or (None, 0.0) if nothing plausible was
+    found. Differential evolution over the six physical parameters.
+
+    Random restarts plus Nelder-Mead was tried first and does not work: the
+    objective's good basin is narrow, 600 restarts across the space never
+    landed in it, and the refinement stalled at 0.233 against the true camera's
+    0.888. Differential evolution finds it — on a synthetic court with a known
+    camera it recovers court coordinates to 0.36 ft, roughly four inches.
+
+    The full search needs its budget. At maxiter 25 and 60 it returns 0.198 and
+    0.229 against the true camera's 0.888, so a cheap run is not a fast answer,
+    it is a wrong one — check the score. Narrow `bounds` when the camera's rough
+    placement is known; it converges far faster and more reliably than the
+    default global sweep.
+
+    The score is two-sided but still an upper bound, because players contaminate
+    the line mask. Check it before trusting the result: a homography that
+    explains the lines poorly is worse than none, since it puts players in
+    plausible-looking but wrong places.
+    """
+    from scipy.optimize import differential_evolution
+
+    distance_map = line_distance_map(image)
+    if not np.isfinite(distance_map).any():
+        return None, 0.0
+    points = canonical_court_points()
+    line_pixels = sample_line_pixels(image)
+    if len(line_pixels) == 0:
+        return None, 0.0
+    shape = image.shape[:2]
+
+    def negative_score(params: np.ndarray) -> float:
+        matrix = homography_from_camera(params, shape)
+        if matrix is None:
+            return 0.0
+        return -score_homography(matrix, distance_map, points, line_pixels)
+
+    result = differential_evolution(
+        negative_score, bounds or DEFAULT_CAMERA_BOUNDS,
+        seed=seed, maxiter=max_iterations,
+        popsize=25, tol=1e-6, polish=True, init="sobol",
+    )
+    score = float(-result.fun)
+    matrix = homography_from_camera(result.x, shape)
+    if matrix is None or score <= 0.0:
+        return None, 0.0
+    return np.linalg.inv(matrix), score

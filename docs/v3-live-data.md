@@ -136,10 +136,37 @@ jersey numbers survive the blob filter. That biases `alignment_score` toward
 accepting a homography, so it is an upper bound and its threshold should stay
 strict.
 
-**Still not built: the search.** With a scoring function in place, automatic
-registration becomes an optimisation over camera parameters rather than a
-perception problem. That search is not written, so the homography is still
-supplied per camera.
+**Built: the search.** `search_registration()` recovers the camera
+automatically — differential evolution over six PHYSICAL parameters (camera
+position, aim point, focal length) rather than a homography's eight free ones,
+because every point in the physical space is a camera that could exist and most
+of the 8-dimensional space is not.
+
+On a synthetic court with a known camera it recovers court coordinates to
+**0.36 ft**. On the real Pistons broadcast it scores 0.42 and puts **10 of 11
+detected players on the court** — an independent check that never touches the
+alignment score.
+
+Two failures on the way, both worth keeping in mind:
+
+*The one-directional score was not enough.* Asking only "do the model's lines
+land on detected lines" returned a camera scoring **0.998 whose court
+coordinates were hundreds of feet wrong**: it had zoomed onto a patch where two
+arcs coincided, so every projected point sat on a line. Measured against the
+true camera — recall 1.000 / coverage 0.801 versus recall 0.998 / coverage
+0.023. The score is now the harmonic mean of both directions.
+
+*Random restarts do not find it.* 600 restarts plus Nelder-Mead stalled at
+0.233 against the true camera's 0.888. The good basin is narrow. Differential
+evolution finds it, but needs its budget: at maxiter 25 and 60 it returns 0.198
+and 0.229, so a cheap run is a wrong answer rather than a fast one. Pass
+`bounds` when the camera's rough placement is known.
+
+**Caveat that has not gone away.** 0.42 on real footage is far from the 0.89 the
+synthetic court reaches, and the score is an upper bound because players
+contaminate the line mask. Registration works on this footage; it is not yet
+something to run unattended on arbitrary broadcasts without checking the score
+and the on-court player count.
 
 ## Wiring up a real game
 
