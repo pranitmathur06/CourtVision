@@ -13,6 +13,12 @@
 # a venv would hide it and pip would helpfully install a CPU-only wheel over the
 # top, at which point everything runs and nothing uses the GPU you are paying
 # for. So this checks CUDA before and after, and stops if it disappears.
+# Failure paths verified locally by stubbing nvidia-smi and python3, since the
+# success path needs a GPU and this runs FIRST on a metered box:
+#   no nvidia-smi            -> "this is not a GPU pod", exit 1
+#   torch not importable     -> names the image's python, exit 1
+#   torch imports, cuda=False-> "pick a PyTorch/CUDA template", exit 1
+# Each is actionable rather than a stack trace at $0.60/hour.
 set -uo pipefail
 
 REPO_BRANCH="feat/v1-pipeline"
