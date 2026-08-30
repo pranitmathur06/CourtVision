@@ -50,12 +50,17 @@ run "V7: per-class + cross-source report" confusion.log \
 run "V9: end-to-end" v9.log \
     $PY -m scripts.validate_v9
 
-# 5. Host-side kernel check. Runs without a GPU and is seconds long; if the
+# 5. Disaggregation logic. Device-independent, so a failure here is a bug in
+#    the producer/consumer code rather than anything about the GPUs.
+run "v2 §7.2: disaggregation logic" disagg.log \
+    $PY -m scripts.verify_disaggregation
+
+# 6. Host-side kernel check. Runs without a GPU and is seconds long; if the
 #    arithmetic is wrong here, nvcc will not save it.
 run "kernel: host numerics + reduction" kernel_host.log \
     $PY -m scripts.verify_kernel_numerics
 
-# 6. v2 §7.1/§7.2 — kernel compiles, matches the oracle, is faster, and the
+# 7. v2 §7.1/§7.2 — kernel compiles, matches the oracle, is faster, and the
 #    split pipeline runs. Needs 2 devices for the disaggregation step.
 run "v2: CUDA kernel + disaggregated serving" verify_v2.log \
     $PY -m scripts.verify_v2_gpu

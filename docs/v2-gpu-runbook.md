@@ -205,7 +205,13 @@ Runs the whole sequence with a PASS/FAIL per step:
 3. The kernel matches the OpenCV oracle numerically
 4. It is actually **faster** than the reference (a correct-but-slower kernel is
    not worth the risk of using)
-5. The disaggregated pipeline runs, with per-stage wait times
+5. The disaggregated pipeline runs, with per-stage wait times.
+   Its LOGIC is already verified without CUDA by
+   `scripts/verify_disaggregation.py`, which runs the real pipeline on real
+   frames: 12 windows from 12 classifier calls, backpressure applied at
+   queue_size=1 (producer waits 0.27 s rather than buffering the clip), and
+   a raising classifier propagating instantly rather than deadlocking. What
+   two GPUs add is the overlap SPEEDUP, not the correctness
 
 Do not wire the kernel into `team_assignment` until step 3 passes. A subtly wrong
 kernel shifts team assignments silently, which is worse than no kernel.
