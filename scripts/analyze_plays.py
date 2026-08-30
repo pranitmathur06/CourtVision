@@ -28,6 +28,7 @@ from courtvision.detection import load_pipeline_detector
 from courtvision.device import resolve_device
 from courtvision.extraction import extract_frames
 from courtvision.formation import classify_formation
+from courtvision.team_assignment import assign_teams, collect_samples
 from courtvision.plays import (detect_off_ball_screens, detect_screens,
                                detect_sets)
 from courtvision.tracking import PlayerTracker
@@ -72,6 +73,16 @@ def main() -> int:
         images.append(image)
     print(f"  {len(frames)} frames")
 
+    # Split the teams. Formation and screens are claims about ONE side: five
+    # offensive players make a shape, and a screen is set by a TEAMMATE. Fed
+    # both teams, formation never matches — ten players are not a five-player
+    # shape — and spacing collapses, because a defender guards at three to six
+    # feet and drags every nearest-neighbour distance down with him. Screens
+    # are worse than useless: a defender closing out on the ball handler
+    # converges exactly like a screener and gets reported as one.
+    teams = assign_teams(collect_samples(images, frames))
+    print(f"  teams assigned for {len(teams)} tracks")
+
     chosen = list(range(0, len(frames), args.stride))[: args.frames]
     print(f"\nregistering {len(chosen)} frames "
           f"(first is a full global search, the rest are local)")
@@ -113,14 +124,32 @@ def main() -> int:
         frame_positions = {t.track_id: (float(c[0]), float(c[1]))
                            for t, c, ok in zip(players, court, on) if ok}
         handler = frame.handler()
-        positions.append(frame_positions)
-        handlers.append(handler.track_id if handler else None)
+        handler_id = handler.track_id if handler else None
+
+        # Keep only the side with the ball. Without a handler there is no
+        # offence to speak of, so nothing is claimed for that frame.
+        offense_team = teams.get(handler_id) if handler_id is not None else None
+        if offense_team is None:
+            offense = {}
+        else:
+            offense = {tid: xy for tid, xy in frame_positions.items()
+                       if teams.get(tid) == offense_team}
+
+        positions.append(offense)
+        handlers.append(handler_id)
         times.append(frame.time_s)
 
-        formation = classify_formation(np.array(list(frame_positions.values())))
-        print(f"  t={frame.time_s:>5.2f}s  score {score:.3f}  "
-              f"{on.sum()}/{len(players)} players on court  "
-              f"spacing {formation.spacing_ft:>4.1f}ft  {formation}")
+        formation = (classify_formation(np.array(list(offense.values())))
+                     if offense else None)
+        if formation is None:
+            print(f"  t={frame.time_s:>5.2f}s  score {score:.3f}  "
+                  f"{on.sum()}/{len(players)} on court  no ball handler, "
+                  f"nothing claimed")
+        else:
+            print(f"  t={frame.time_s:>5.2f}s  score {score:.3f}  "
+                  f"{on.sum()}/{len(players)} on court  "
+                  f"{len(offense)} on offence  "
+                  f"spacing {formation.spacing_ft:>4.1f}ft  {formation}")
 
     if not positions:
         print("\nno frame registered well enough to use")

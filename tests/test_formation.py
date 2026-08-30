@@ -101,3 +101,26 @@ def test_spacing_of_a_single_player_is_undefined_not_zero():
 def test_formation_str_is_readable():
     f = Formation("horns", "both elbows occupied", 12.0, 8.0)
     assert str(f) == "horns (both elbows occupied)"
+
+
+def test_both_teams_is_refused_rather_than_answered():
+    """Ten players is not a five-player shape, and saying so beats guessing.
+
+    Fed both teams this returned `unknown` for every frame of real footage and
+    reported spacing of 6-8 ft, because defenders guard at three to six feet.
+    Filtered to the side with the ball, the same footage read 13-20 ft.
+    """
+    both_teams = np.array([
+        [17.0, 19.0], [33.0, 19.0], [3.0, 6.0], [47.0, 6.0], [25.0, 28.0],
+        [18.0, 20.0], [32.0, 20.0], [4.0, 8.0], [46.0, 8.0], [25.0, 26.0],
+    ])
+    result = classify_formation(both_teams)
+    assert result.name == "unknown"
+    assert "one team" in result.evidence
+
+
+def test_five_offensive_players_is_still_accepted():
+    offense = np.array([
+        [17.0, 19.0], [33.0, 19.0], [3.0, 6.0], [47.0, 6.0], [25.0, 28.0],
+    ])
+    assert classify_formation(offense).name == "horns"

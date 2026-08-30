@@ -38,6 +38,7 @@ CORNER_MAX_X = 9.0
 CORNER_MAX_Y = 11.0
 PAINT_HALF_WIDTH = 8.0
 ISOLATION_CLEARANCE_FT = 14.0
+MAX_OFFENSE = 7          # five, plus slack for a duplicated track
 
 
 @dataclass(frozen=True)
@@ -96,6 +97,16 @@ def classify_formation(offense: np.ndarray) -> Formation:
     if len(pts) < 4:
         return Formation("unknown", f"only {len(pts)} players located",
                          mean_gap, tightest)
+    if len(pts) > MAX_OFFENSE:
+        # Almost certainly both teams. Say so rather than answering: fed ten
+        # players this returned `unknown` for every frame and reported spacing
+        # of 6-8 ft, because a defender guards at three to six feet and drags
+        # every nearest-neighbour distance down. Filtered to the five with the
+        # ball, the same footage reads 13-20 ft, which is what NBA half-court
+        # spacing actually looks like.
+        return Formation("unknown",
+                         f"{len(pts)} players given; this expects one team, so "
+                         f"filter to the side with the ball", mean_gap, tightest)
 
     at_elbow = [p for p in pts
                 if _near(p, ELBOW_LEFT, ELBOW_TOLERANCE_FT)
