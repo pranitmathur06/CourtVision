@@ -69,7 +69,15 @@ gitignored, so the clips travel separately. From your Mac:
 git push -u origin feat/v1-pipeline
 ```
 
-Then on the pod:
+Then on the pod, either run the bootstrap, which clones, installs, checks
+that CUDA survived the install and runs the tests:
+
+```bash
+git clone -b feat/v1-pipeline https://github.com/pronton1234/CourtVision.git
+cd CourtVision && bash scripts/bootstrap_pod.sh
+```
+
+...or do it by hand:
 
 ```bash
 git clone -b feat/v1-pipeline https://github.com/pronton1234/CourtVision.git
@@ -81,11 +89,14 @@ And from your Mac, to move the clips (RunPod shows the host/port under
 **Connect → SSH**):
 
 ```bash
-rsync -avz -e "ssh -p <PORT>" data/labeled/actions data/raw_clips \
-  root@<HOST>:/workspace/CourtVision/data/
+rsync -avz -e "ssh -p <PORT>" data/labeled/actions root@<HOST>:/workspace/CourtVision/data/labeled/
+rsync -avz -e "ssh -p <PORT>" data/raw_clips checkpoints root@<HOST>:/workspace/CourtVision/
 ```
 
-That is ~160 MB, a minute or two. Do **not** send `data/labeled/detector` —
+rsync appends the source directory name, so `data/labeled/actions` sent to
+`data/` lands at `data/actions` and every script then reports no clips.
+
+That is ~277 MB of clips plus the detector checkpoint, a minute or two. Do **not** send `data/labeled/detector` —
 it is 9.3 GB and nothing here needs it unless you retrain the detector.
 
 ## 2. Train V7 first — it is the thing that is blocked
