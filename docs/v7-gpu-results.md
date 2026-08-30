@@ -1,139 +1,106 @@
-# V7 on a GPU — the run, and what it settled
+# V7 on a GPU — four sessions, $2.29, and what actually mattered
 
-RTX 4090, EU-RO-1, 8 epochs over 2,764 training clips at ~108 s each. Total
-cost of the whole session, including v2 and a pod deleted for a missing SSH
-key: **$0.43**.
+The number moved three times. Every move came from fixing the data or the
+measurement; none came from more training.
 
-## V7 PASS — 0.753 on 691 held-out clips
+    run   overall  rebound  block   what changed
+    1       0.753     0.03   0.90*  baseline
+    2       0.784     0.49   0.67*  rebound/steal resampled to a 20% window
+    3       0.793     0.40   0.88   per-class stratified split
 
-    accuracy by epoch: [0.667, 0.753, 0.708, 0.734, 0.742, 0.713, 0.735, 0.750]
-    best epoch 2 at 0.753 (bar was 0.384)
+    * measured on a split that drifted — see below.
 
-Train loss fell 0.95 to 0.04 while validation stalled after epoch 2, so
-everything past it was overfitting. Keeping the BEST checkpoint rather than the
-last is what made that harmless.
+## Final: V7 PASS at 0.793 on 692 held-out clips
 
-**Fine-tuning bought +0.003 over the frozen probe's 0.750.** That is the
-headline finding and it was predicted here before the run: no head, no pooling
-and no reweighting moved the number, so the limit was never the method.
+    dribble  SpaceJam  0.88      block   SpaceJam  0.88
+    pass     SpaceJam  0.80      steal   BARD      0.85
+    shot     SpaceJam  0.87      other   SpaceJam  0.74
+    shot     BARD      0.78      other   BARD      0.76
+    rebound  BARD      0.40
 
-## The confound fix is confirmed
+    cross-source gaps: shot 0.09, other 0.02 — the best measured
+    cross-corpus confusions between single-corpus classes: 0/692
+    bar was 0.381 (uniform chance 0.143, majority class 0.231)
 
-    shot   SpaceJam 0.83  BARD 0.78   gap 0.05
-    other  SpaceJam 0.73  BARD 0.61   gap 0.12
+Best at epoch 5. Training loss falls to 0.04 while validation stalls, so
+keeping the BEST checkpoint rather than the last is what keeps that harmless.
 
-Both inside the 0.25 bar, and `shot` improved on the probe's 0.17. The model
-handles the same action from either corpus, which is what the rebalance was
-for.
+## Fix one: sample the action, not the whole clip
 
-## Rebound collapsed, exactly as the crop analysis predicted
+BARD source clips run 8-10 s and the sampler took 16 frames evenly across the
+whole clip — half a second apart, against an action lasting about a second.
+Fourteen of sixteen frames showed unrelated play, so a rebound clip and a steal
+clip were largely the same footage.
 
-    rebound  BARD  38 clips  0.03  — 21 of 38 called steal
-    steal    BARD  89 clips  0.88
-
-One correct out of 38. The frozen probe managed 0.32, so fine-tuning made
-rebound **worse**, despite class weighting at 2.10x.
-
-That is not a surprise, it is the predicted failure. The rim appears in 0 of 40
-sampled clips of every class: the crops are framed on the ball-handler, and a
-rebound is defined by the ball coming off a rim that is never in shot. When two
-classes are indistinguishable in the input, the loss-minimising move is to
-concede the rarer one, and a stronger model does that more completely than a
-weak one. Class weighting could not prevent it.
-
-**The fix is not more training.** Everything else improved — dribble 0.92,
-block 0.90, steal 0.88, shot 0.83/0.78 — so the model is learning; it simply
-cannot learn this one.
-
-### The crop is NOT the cause — tested properly, on two GPUs
-
-A basket-relative crop was the natural remedy, and widening does bring the rim
-back: at margin 1.5 it appears in 5 of 12 clips against 0 of 12 at 0.25.
-
-The first attempt to test it was confounded — it cropped to the
-highest-confidence player while the real clips crop to the BALL-HANDLER, so it
-varied which person was centred as well as how much court was visible.
-`scripts/crop_margin_experiment.py` holds that selection identical to
-add_bard_action and changes only the margin. 240 clips, 5-fold CV:
-
-    margin 0.25   acc 0.629   lift +0.129
-    margin 1.0    acc 0.600   lift +0.100
-    margin 2.0    acc 0.637   lift +0.137
-
-**No difference.** An eightfold change in visible court moves nothing, so the
-recommendation I wrote after the first GPU run — regenerate the clips with a
-basket-relative crop — is wrong and is withdrawn.
-
-### FIXED — the cause was temporal, and rebound went 0.03 to 0.49
-
-Every spatial lever failed, so the remaining variable was WHEN the frames come
-from. BARD source clips run 8-10 s and `sample_frames` drew 16 frames evenly
-across the whole clip: half a second apart, against a labelled action lasting
-about one second. Fourteen of sixteen frames showed unrelated play, and a
-rebound clip and a steal clip were largely the same footage.
-
-Measured on 240 clips, ball-handler selection held fixed:
+Measured on 240 clips with the ball-handler selection held fixed:
 
     margin  window   accuracy   lift
-      0.25     1.0      0.621  +0.121     <- what we were training on
-      0.25     0.4      0.675  +0.175
+      0.25     1.0      0.621  +0.121   <- what we were training on
       0.25     0.2      0.713  +0.213
-      1.0      1.0      0.600  +0.100
       1.0      0.2      0.717  +0.217
 
-Nearly double the lift at both margins, while margin itself changes nothing.
+Nearly double the lift, holding at both crop margins while margin itself
+changes nothing. Regenerating rebound and steal at window 0.2 took rebound from
+0.03 to 0.49.
 
-Regenerating rebound and steal at window 0.2 and retraining:
+This is why five spatial hypotheses all failed: the problem was never what was
+in frame, it was when.
 
-    class            before   after
-    rebound            0.03    0.49
-    overall            0.753   0.784
-    pass               0.71    0.79
-    shot   SpaceJam    0.83    0.93
-    other  SpaceJam    0.73    0.93
-    other  BARD        0.61    0.77
-    steal              0.88    0.73
-    block              0.90    0.67
+## Fix two: a validation split that could not drift
 
-Rebound is no longer conceded. Steal falling from 0.88 is the other side of the
-same coin — it had been absorbing rebounds — and block dropping is the one
-regression worth watching, since block was not regenerated.
+Block appeared to fall from 0.90 to 0.67, and that was mostly measurement. The
+split concatenated every class in ACTIONS order and shuffled globally, so it
+depended on each class's SIZE. Changing rebound from 226 clips to 223 shifted
+everything ordered after it:
 
-### Levers that did NOT fix it, for the record
+    dribble  run1  88  run2  88  in both  88
+    pass     run1  84  run2  84  in both  84
+    shot     run1 151  run2 151  in both 151
+    block    run1  79  run2  78  in both   15
+    other    run1 162  run2 163  in both   96
 
-  * not the head — logistic, weighted logistic and an MLP all fail alike
-  * not the pooling — six temporal variants, +0.017 at best
-  * not the data volume — the learning curve plateaus at 0.735
-  * not class weighting — 2.10x still let the model concede the class
-  * not fine-tuning — it made rebound worse, 0.32 to 0.03
-  * not the crop — 0.25, 1.0 and 2.0 are indistinguishable
+Only 15 of 79 block validation clips survived. With a per-class stratified
+split, block is 0.88 and never regressed.
 
-Rebound and steal are not separable in this footage. Both are a player
-collecting a loose ball, and from BARD's clips that is the same event; the
-labels may also be genuinely ambiguous, since a steal and a defensive rebound
-can look identical from one angle. The next thing worth trying is different
-DATA — a source that labels them distinctly, or clips that show the ball's
-trajectory before the collection — not another model.
+For two runs, every cross-run per-class comparison in this project was partly
+comparing different clips. That is worth remembering before trusting any
+before/after table.
 
-## §7.2 on a two-GPU box: no benefit, and now measured
+## Still open: rebound at 0.40
+
+The weakest class, losing 25 of 45 to steal. A real limit rather than a bug: a
+defensive rebound and a steal are both a player collecting a loose ball, and
+BARD labels them from the play-by-play rather than from what the footage shows.
+There are only 223 rebound clips, so more data would help — but the ceiling is
+set by how separable the two events are on video at all.
+
+## v2 §7.1 — the kernel compiles and matches, but is not reliably faster
+
+`torso_color.cu` compiles under nvcc 12.8 and matches the OpenCV oracle to
+0.1456 against a 2.0 tolerance, on every box tried. Speed does not reproduce:
+
+    single-GPU box   fused 0.221 ms  vs reference 0.302 ms   1.4x, 3/3 runs
+    two-GPU box      fused 0.310 ms  vs reference 0.302 ms   1.0x, 1/5 runs
+
+Same GPU model, same 32-vCPU Ryzen 7950X. "1.4x faster" was a property of one
+machine, not of the kernel, and should not be quoted.
+
+Two bugs only compiling could find. `load_inline` was called with
+`cpp_sources=""`, so nvcc compiled the .cu perfectly and the build then died in
+torch's generated glue with "'torso_mean_lab' was not declared in this scope" —
+a CUDA-shaped error that was not a CUDA problem. And the upload carried 3,574
+macOS AppleDouble files, one of which matches the `*.mp4` glob and crashed V7
+after the clips had shipped.
+
+## v2 §7.2 — verified, and it does not help this pipeline
+
+On two 4090s, with the real detector and classifier:
 
     single cuda:0   0.27s   windowing wait 0.214s   classification wait 0.0
     split  0/1      0.28s   windowing wait 0.227s   classification wait 0.0
 
-Splitting detection and action across two 4090s is marginally SLOWER. The
-reason is in the waits: classification never waits at all, so the classifier is
-not the bottleneck — window construction is. Disaggregation helps when two
-stages contend for one device, and here they do not.
-
-The machinery is correct and verified (`[PASS] two devices for §7.2`, backpressure,
-no deadlock). The premise does not hold for this pipeline as structured.
-
-## The kernel's speedup does not generalise
-
-    single-GPU box   fused 0.221 ms  vs reference 0.302 ms   1.4x, 3/3 runs
-    two-GPU box      fused 0.310 ms  vs reference 0.302 ms   1.0x, PASS 1/5 runs
-
-Same GPU model, same code, same 32-vCPU Ryzen 7950X. The 1.4x measured on the
-first box is not reproducible on the second. The kernel is correct — it matches
-the OpenCV oracle to 0.1456 against a 2.0 tolerance on both — but "1.4x faster"
-was a property of one machine, not of the kernel, and should not be quoted.
+Splitting is marginally slower. The waits say why: classification never waits,
+so the classifier is not the bottleneck — window construction is.
+Disaggregation helps when two stages contend for one device, and here they do
+not. The machinery is correct (`[PASS] two devices for §7.2`, backpressure, no
+deadlock); the premise does not hold for this workload.
