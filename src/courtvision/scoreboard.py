@@ -96,6 +96,27 @@ def build_templates(roi: np.ndarray, reading: str) -> dict[str, np.ndarray]:
     return {digit: glyph.image for digit, glyph in zip(reading, glyphs)}
 
 
+def build_templates_from_many(
+    samples: "list[tuple[np.ndarray, str]]",
+) -> dict[str, np.ndarray]:
+    """Merge templates from several frames, each with its known clock value.
+
+    One frame cannot cover ten digits, and the gap is not cosmetic. Built from a
+    single frame reading 3:47, the reader could only ever read clock values made
+    of 3, 4 and 7 — and worse, it did not fail silently on the rest: it matched a
+    7 against the 3 template and returned a confident 3:43. Six frames of the
+    holdout clip came back wrong that way.
+
+    Later samples do not overwrite earlier ones, so the first clear rendering of
+    a digit wins.
+    """
+    templates: dict[str, np.ndarray] = {}
+    for roi, reading in samples:
+        for digit, image in build_templates(roi, reading).items():
+            templates.setdefault(digit, image)
+    return templates
+
+
 def _match(image: np.ndarray, templates: dict[str, np.ndarray]) -> tuple[str, float]:
     import cv2
 

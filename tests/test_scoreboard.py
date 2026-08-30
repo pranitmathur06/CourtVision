@@ -75,3 +75,67 @@ def test_single_digit_minute_clock_is_read():
     templates = build_templates(render_bar("10:59"), "1059")
     text, _ = read_clock(render_bar("9:15"), templates)
     assert text == "9:15"
+
+
+def test_templates_merge_across_frames():
+    """One frame cannot cover ten digits, and the gap is not cosmetic.
+
+    Built from 3:47 alone, the reader can only read values made of 3, 4 and 7 —
+    and it does not fail quietly on the rest. On the holdout clip it matched a 7
+    against the 3 template and returned a confident 3:43 for six frames.
+    """
+    from courtvision.scoreboard import build_templates_from_many
+
+    samples = [(render_bar("3:52"), "352"), (render_bar("3:49"), "349"),
+               (render_bar("10:47"), "1047")]
+    templates = build_templates_from_many(samples)
+    assert sorted(templates) == ["0", "1", "2", "3", "4", "5", "7", "9"]
+
+
+def test_the_first_rendering_of_a_digit_wins():
+    from courtvision.scoreboard import build_templates_from_many
+
+    first = render_bar("3:47")
+    merged = build_templates_from_many([(first, "347"), (render_bar("3:19"), "319")])
+    from courtvision.scoreboard import build_templates
+    assert np.array_equal(merged["3"], build_templates(first, "347")["3"])
+
+
+def test_merged_templates_read_a_value_no_single_frame_contained():
+    from courtvision.scoreboard import build_templates_from_many
+
+    templates = build_templates_from_many(
+        [(render_bar("3:52"), "352"), (render_bar("9:41"), "941")])
+    text, score = read_clock(render_bar("2:19"), templates)
+    assert text == "2:19" and score > 0.9
+
+
+def test_a_wide_bold_font_is_not_rejected():
+    """`w > h` looked reasonable and rejected every digit on a second broadcast.
+
+    ESPN renders the clock 19 px wide against 17 tall; the earlier network's
+    font was narrower. The bound must allow a digit slightly wider than it is
+    tall while still rejecting the scoreboard outline, which is far wider.
+    """
+    from courtvision.scoreboard import segment_glyphs
+
+    bar = np.full((60, 220, 3), 240, np.uint8)
+    # A deliberately wide, bold glyph: wider than tall, but not a bar.
+    cv2.rectangle(bar, (40, 20), (63, 40), (20, 20, 20), -1)
+    found = [g for g in segment_glyphs(bar) if g.width > g.height]
+    assert found, "a digit slightly wider than tall must survive segmentation"
+
+
+def test_touching_digits_are_refused_not_mis_templated():
+    """Connected components cannot split glyphs that touch.
+
+    A rendering where two digits merge segments as one, and build_templates
+    raises rather than pairing the wrong image with a digit — bad templates
+    would poison every later read silently.
+    """
+    from courtvision.scoreboard import build_templates_from_many
+
+    bar = np.full((60, 220, 3), 240, np.uint8)
+    cv2.rectangle(bar, (70, 18), (130, 44), (20, 20, 20), -1)   # one solid blob
+    with pytest.raises(ValueError, match="segmented"):
+        build_templates_from_many([(bar, "347")])

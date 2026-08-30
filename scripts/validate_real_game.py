@@ -22,13 +22,18 @@ import cv2
 from courtvision.enrichment import (ClockReading, drop_impossible_readings,
                                     plays_in_window)
 from courtvision.nba_feed import fetch_game_plays
-from courtvision.scoreboard import build_templates, clock_to_seconds, read_clock
+from courtvision.scoreboard import (build_templates_from_many,
+                                    clock_to_seconds, read_clock)
 
 CLIP = Path("data/raw_clips/holdout.mp4")
 GAME_ID = "0022400952"          # min-vs-den, from the clip's .source.json
 PERIOD = 2
 CLOCK_ROI = (slice(634, 672), slice(800, 915))
-KNOWN_READING = "347"           # the clock in the middle frame, read by eye once
+# Frames whose clock was read by eye once, to build templates. One frame is not
+# enough: built from 3:47 alone the reader can only read values made of 3, 4 and
+# 7, and it does not fail quietly on the rest — it matched a 7 against the 3
+# template and returned a confident 3:43 on six frames.
+KNOWN_FRAMES = ((0, "352"), (60, "351"), (150, "349"), (300, "347"))
 SAMPLE_EVERY = 15
 
 
@@ -51,8 +56,10 @@ def main() -> int:
         return 1
     print(f"  {len(frames)} frames at {fps:.0f}fps")
 
-    templates = build_templates(frames[len(frames) // 2][CLOCK_ROI], KNOWN_READING)
-    print(f"  templates from one known frame: {sorted(templates)}")
+    templates = build_templates_from_many(
+        [(frames[index][CLOCK_ROI], reading) for index, reading in KNOWN_FRAMES])
+    print(f"  templates from {len(KNOWN_FRAMES)} known frames: "
+          f"{sorted(templates)} ({len(templates)}/10 digits)")
 
     raw: list[ClockReading] = []
     for index in range(0, len(frames), SAMPLE_EVERY):
