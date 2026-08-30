@@ -60,6 +60,24 @@ Order of operations on RunPod:
 **The only real cost risk is forgetting to destroy the pod.** Stopping is not
 destroying — a stopped pod still bills for its volume. Destroy it when done.
 
+### If runpodctl says it has no credentials
+
+`~/.runpod/config.toml` existing does NOT mean a key is set. On this machine it
+existed with a **2-character `apikey`** — a placeholder, where a real key is
+40-odd characters — so `runpodctl user` returned `no_credentials` while the
+file's presence made it look configured.
+
+Credential order is `RUNPOD_API_KEY` env → `.env` → `~/.runpod/config.toml`, so
+either works:
+
+```bash
+export RUNPOD_API_KEY=...        # nothing written to disk
+runpodctl config --apiKey ...    # persists it to config.toml
+```
+
+Tell them apart by the error: `no_credentials` means nothing was found at all,
+while `unauthorized` / 401 means a key was found and rejected.
+
 ### Getting the code and data there
 
 The repo has a remote but this branch has never been pushed, and `data/` is
