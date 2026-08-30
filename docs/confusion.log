@@ -1,0 +1,24 @@
+class -> corpus: dribble=SpaceJam, pass=SpaceJam, shot=both, rebound=BARD, block=SpaceJam, steal=BARD, other=both
+
+Loading weights:   0%|          | 0/198 [00:00<?, ?it/s]Loading weights: 100%|██████████| 198/198 [00:00<00:00, 15572.03it/s]
+per-class accuracy on 691 held-out clips
+
+  class    source        n    acc   most confused with
+  dribble  SpaceJam     88   0.92   pass (5)
+  pass     SpaceJam     84   0.71   dribble (11)
+  shot     SpaceJam     69   0.83   block (8)
+  shot     BARD         82   0.78   other (16)
+  rebound  BARD         38   0.03   steal (21)
+  block    SpaceJam     79   0.90   other (7)
+  steal    BARD         89   0.88   shot (8)
+  other    SpaceJam     77   0.73   block (9)
+  other    BARD         85   0.61   shot (22)
+
+  cross-source generalisation on classes present in both corpora
+    shot      SpaceJam 0.83  BARD 0.78  gap 0.05
+    other     SpaceJam 0.73  BARD 0.61  gap 0.12
+    worst gap: 0.12  — acceptable
+
+  cross-corpus confusions (single-corpus classes only): 0/691 (0.0%)
+  Zero here means the model never mistakes a BARD-only action for a
+  SpaceJam-only one, which is what reading the corpus would look like.

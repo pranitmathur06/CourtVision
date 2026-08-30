@@ -106,8 +106,15 @@ NEEDED=(src scripts tests pyproject.toml
 for path in "${NEEDED[@]}"; do
   [ -e "$path" ] || die "missing $path — the suite needs it"
 done
-tar czf /tmp/courtvision.tgz --exclude='__pycache__' "${NEEDED[@]}" \
-  || die "tar failed"
+# COPYFILE_DISABLE stops macOS tar writing an AppleDouble `._name` sidecar for
+# every file with an extended attribute. Without it the bundle carried 3,574 of
+# them, and `._0010446_flipped.mp4` matches the *.mp4 glob: V7 crashed on the
+# first one with "no frames in ..." after the clips had already been shipped.
+COPYFILE_DISABLE=1 tar czf /tmp/courtvision.tgz \
+  --exclude='__pycache__' --exclude='._*' "${NEEDED[@]}" || die "tar failed"
+if tar tzf /tmp/courtvision.tgz | grep -q '/\._'; then
+  die "bundle still contains AppleDouble files; they will break the clip globs"
+fi
 ls -lh /tmp/courtvision.tgz | awk '{print "  bundle:", $5}'
 "${SSHQ[@]}" 'mkdir -p /workspace/CourtVision' || die "ssh failed"
 scp -i "$KEY" -o StrictHostKeyChecking=no -P "$PORT" /tmp/courtvision.tgz \

@@ -145,11 +145,22 @@ def load_fused_kernel():
     from torch.utils.cpp_extension import load_inline
 
     source = (Path(__file__).with_suffix(".cu")).read_text()
-    # The .cu carries its own includes and PYBIND11_MODULE, so it is passed as
-    # the CUDA source with an empty C++ stub.
+
+    # load_inline GENERATES its own pybind module and binds the names in
+    # `functions`, so the .cu's own PYBIND11_MODULE is a duplicate — strip it.
+    # And the generated main.cpp calls torso_mean_lab without ever seeing it,
+    # so its declaration has to be handed over as cpp_sources. With
+    # cpp_sources="" nvcc compiles the .cu perfectly and the build then dies in
+    # the glue with "'torso_mean_lab' was not declared in this scope", which
+    # reads like a CUDA failure and is not one.
+    marker = "PYBIND11_MODULE"
+    if marker in source:
+        source = source[:source.index(marker)].rstrip() + "\n"
+    declaration = "torch::Tensor torso_mean_lab(torch::Tensor image, torch::Tensor boxes);"
+
     module = load_inline(
         name="courtvision_torso_color",
-        cpp_sources="",
+        cpp_sources=declaration,
         cuda_sources=source,
         functions=["torso_mean_lab"],
         verbose=False,
