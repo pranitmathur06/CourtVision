@@ -19,6 +19,7 @@ from courtvision.device import resolve_device
 from courtvision.enrichment import align, enforce_identity_consistency, plays_for_clip
 from courtvision.events import build_events
 from courtvision.extraction import extract_frames
+from courtvision.framestore import FrameStore
 from courtvision.possession import possession_timeline
 from courtvision.render import render_video, write_log
 from courtvision.team_assignment import assign_teams, collect_samples
@@ -44,7 +45,11 @@ def run_pipeline(clip_path: str, out_dir: str, config: Config,
         str(DETECTOR), device, config.detector_conf, config.ball_conf
     )
     tracker = PlayerTracker()
-    images, frames = [], []
+    # Frames go to disk, not into a list. Holding them cost 2.8 MB each, so a
+    # 19-minute clip would have needed 31.9 GB and the pipeline was quietly
+    # limited to the ten-second clips every test used. FrameStore is a
+    # Sequence, so the stages below are unchanged.
+    images, frames = FrameStore(), []
     for index, time_s, image in extract_frames(clip_path, config.target_fps):
         images.append(image)
         frames.append(
@@ -112,6 +117,7 @@ def run_pipeline(clip_path: str, out_dir: str, config: Config,
     timings["9 render"] = time.perf_counter() - start
     print(f"  stage 9: wrote {video_path} and {log_path}")
 
+    images.close()
     total = sum(timings.values())
     print(f"\n  {'stage':<28}{'seconds':>9}{'%':>7}")
     for name, seconds in timings.items():
