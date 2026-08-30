@@ -187,3 +187,100 @@ def test_events_without_a_track_are_untouched():
 
     events = [_ev(3.28, None, "other", None)]
     assert enforce_identity_consistency(events)[0].player_name is None
+
+
+def _reading(video_time_s, period, clock_seconds):
+    from courtvision.enrichment import ClockReading
+    return ClockReading(video_time_s, period, clock_seconds)
+
+
+def _play(event_id, action, player, period=None, clock_seconds=None):
+    from courtvision.enrichment import PlayByPlayEvent
+    return PlayByPlayEvent("0022400861", event_id, f"{player} {action}",
+                           player, action, period, clock_seconds)
+
+
+def test_game_clock_interpolates_between_close_readings():
+    from courtvision.enrichment import game_clock_at
+
+    readings = [_reading(0.0, 1, 659), _reading(2.0, 1, 657)]
+    assert game_clock_at(readings, 0.0) == (1, 659)
+    assert game_clock_at(readings, 1.0) == (1, 658)
+    assert game_clock_at(readings, 2.0) == (1, 657)
+
+
+def test_a_wide_gap_returns_nothing_rather_than_inventing_a_time():
+    """The clock stops for fouls, timeouts and reviews, so it is not linear.
+
+    Interpolating across a wide gap invents a game time that never existed, and
+    every play joined against it would be attached to the wrong moment.
+    """
+    from courtvision.enrichment import game_clock_at
+
+    readings = [_reading(0.0, 1, 659), _reading(90.0, 1, 600)]
+    assert game_clock_at(readings, 45.0) is None
+
+
+def test_a_period_boundary_between_readings_returns_nothing():
+    from courtvision.enrichment import game_clock_at
+
+    readings = [_reading(0.0, 1, 3), _reading(2.0, 2, 720)]
+    assert game_clock_at(readings, 1.0) is None
+
+
+def test_extrapolation_is_refused():
+    from courtvision.enrichment import game_clock_at
+
+    readings = [_reading(10.0, 1, 659), _reading(12.0, 1, 657)]
+    assert game_clock_at(readings, 0.0) is None      # before any reading
+    assert game_clock_at(readings, 30.0) is None     # after the last
+
+
+def test_no_readings_at_all():
+    from courtvision.enrichment import game_clock_at
+    assert game_clock_at([], 1.0) is None
+
+
+def test_plays_in_window_selects_by_clock_and_period():
+    from courtvision.enrichment import plays_in_window
+
+    plays = [
+        _play(1, "rebound", "Randle", period=1, clock_seconds=660),
+        _play(2, "steal", "McDaniels", period=1, clock_seconds=655),
+        _play(3, "shot", "Murray", period=1, clock_seconds=640),
+        _play(4, "shot", "Other", period=2, clock_seconds=655),
+        _play(5, "shot", "NoClock"),
+    ]
+    got = plays_in_window(plays, 1, 660, 650)
+    assert [p.event_id for p in got] == [1, 2]
+
+
+def test_plays_in_window_tolerates_reversed_bounds():
+    """The clock counts down, so the bounds are easy to pass backwards."""
+    from courtvision.enrichment import plays_in_window
+
+    plays = [_play(1, "rebound", "Randle", period=1, clock_seconds=655)]
+    assert plays_in_window(plays, 1, 650, 660) == plays_in_window(plays, 1, 660, 650)
+
+
+def test_window_results_are_in_chronological_order():
+    """Descending clock is forward in time."""
+    from courtvision.enrichment import plays_in_window
+
+    plays = [
+        _play(3, "shot", "C", period=1, clock_seconds=641),
+        _play(1, "rebound", "A", period=1, clock_seconds=659),
+        _play(2, "steal", "B", period=1, clock_seconds=650),
+    ]
+    got = plays_in_window(plays, 1, 660, 640)
+    assert [p.player for p in got] == ["A", "B", "C"]
+
+
+def test_bard_plays_still_work_without_clock_fields():
+    """The BARD path carries neither period nor clock; it must be unaffected."""
+    from courtvision.enrichment import align
+
+    events = [_ev(1.0, 7, "rebound")]
+    plays = [_play(1, "rebound", "Randle")]
+    named = align(events, plays)
+    assert named[0].player_name == "Randle"

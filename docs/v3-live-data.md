@@ -284,4 +284,26 @@ frames rather than guessing, which is the required behaviour: an unreadable
 clock is normal (replays, timeouts, graphics over the bar) while a wrong one
 silently mis-joins every play that follows.
 
-Steps 1, 2 and 5 remain ready. Step 4 is arithmetic once the clock is readable.
+**Step 4 is built too** — `game_clock_at` and `plays_in_window` in
+`courtvision.enrichment`. Video time means nothing to a play-by-play feed,
+which is indexed by period and game clock, so this converts between them.
+
+The interpolation is deliberately timid, and that is the whole design. A game
+clock is NOT a linear function of video time: it stops for fouls, timeouts,
+free throws and reviews, and a replay can run while it is stopped.
+Interpolating across a wide gap invents a game time that never existed, and
+every play joined against it lands on the wrong moment. So bracketing readings
+are used only when they are close together and inside the same period.
+Extrapolation past the first or last reading is refused outright.
+
+Returning None there is not a failure. Unreadable stretches are normal, and the
+pipeline narrates anonymously through them — the same thing the naming layer
+already does whenever it cannot be sure.
+
+`PlayByPlayEvent` gained optional `period` and `clock_seconds`, so the BARD
+path — whose URLs carry neither — is untouched.
+
+**What is left for a real game: step 1 and 2 only.** `pip install nba_api`,
+then fetch `playbyplayv3` for the GameID and map its clock strings through
+`scoreboard.clock_to_seconds`. Both are network plumbing against a live
+service, not vision or logic.

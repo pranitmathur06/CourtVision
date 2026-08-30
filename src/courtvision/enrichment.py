@@ -89,6 +89,10 @@ class PlayByPlayEvent:
     description: str
     player: str | None
     action: str | None
+    # Present for plays fetched from the official feed, absent for BARD, whose
+    # URL format carries neither. Optional so the BARD path is unchanged.
+    period: int | None = None
+    clock_seconds: int | None = None
 
 
 def parse_nba_url(url: str) -> PlayByPlayEvent | None:
@@ -214,6 +218,83 @@ def enforce_identity_consistency(events: Sequence[Event]) -> list[Event]:
         else replace(event, player_name=track_name.get(event.track_id))
         for event in events
     ]
+
+
+@dataclass(frozen=True)
+class ClockReading:
+    """The game clock as read off one video frame."""
+
+    video_time_s: float
+    period: int
+    clock_seconds: int
+
+
+def game_clock_at(
+    readings: Sequence[ClockReading], video_time_s: float, max_gap_s: float = 5.0
+) -> tuple[int, int] | None:
+    """The (period, clock_seconds) at a video time, or None if unknowable.
+
+    Step 4 of wiring a real game: video time means nothing to a play-by-play
+    feed, which is indexed by period and game clock.
+
+    Interpolation is deliberately timid. A game clock is NOT a linear function
+    of video time — it stops for fouls, timeouts, free throws and reviews, and
+    a replay can run while it is stopped — so interpolating across a wide gap
+    invents a time the game never had, and every play joined against it would
+    be wrong. Bracketing readings are used only when they are close together
+    and in the same period; anything wider returns None.
+
+    Returning None is not failure. Unreadable stretches are normal, and the
+    caller narrates anonymously through them, which is what the whole naming
+    layer already does when it cannot be sure.
+    """
+    if not readings:
+        return None
+    ordered = sorted(readings, key=lambda r: r.video_time_s)
+
+    exact = min(ordered, key=lambda r: abs(r.video_time_s - video_time_s))
+    if abs(exact.video_time_s - video_time_s) < 1e-6:
+        return exact.period, exact.clock_seconds
+
+    before = [r for r in ordered if r.video_time_s <= video_time_s]
+    after = [r for r in ordered if r.video_time_s >= video_time_s]
+    if not before or not after:
+        return None                      # extrapolation invents time
+    low, high = before[-1], after[0]
+    if low.period != high.period:
+        return None                      # a period boundary sits between them
+    if high.video_time_s - low.video_time_s > max_gap_s:
+        return None
+
+    span = high.video_time_s - low.video_time_s
+    if span <= 0:
+        return low.period, low.clock_seconds
+    ratio = (video_time_s - low.video_time_s) / span
+    clock = low.clock_seconds + ratio * (high.clock_seconds - low.clock_seconds)
+    return low.period, int(round(clock))
+
+
+def plays_in_window(
+    plays: Sequence[PlayByPlayEvent],
+    period: int,
+    from_clock_s: int,
+    to_clock_s: int,
+) -> list[PlayByPlayEvent]:
+    """Plays inside a game-clock window, ordered as they happened.
+
+    The clock counts DOWN, so `from_clock_s` is the LARGER number. Passing them
+    the other way round is a silent way to get an empty list, so they are
+    swapped rather than trusted.
+    """
+    low, high = sorted((from_clock_s, to_clock_s))
+    inside = [
+        play for play in plays
+        if play.period == period
+        and play.clock_seconds is not None
+        and low <= play.clock_seconds <= high
+    ]
+    # Descending clock is chronological order.
+    return sorted(inside, key=lambda p: -p.clock_seconds)
 
 
 def plays_for_clip(clip_path: str, metadata_csv: str) -> list[PlayByPlayEvent]:
