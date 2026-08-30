@@ -160,3 +160,35 @@ def balanced_subset(clips, limit: int) -> list:
         if len(picked) >= limit:
             break
     return sorted(picked)
+
+
+
+def stratified_split(per_class: dict, val_fraction: float = 0.2, seed: int = 0):
+    """Split each class independently, so one class's size cannot move another's.
+
+    The previous split concatenated every class into one list in ACTIONS order
+    and shuffled the whole thing. That made the split fragile in a way that
+    silently invalidated comparisons: changing rebound from 226 clips to 223
+    shifted every sample ordered AFTER rebound into different positions, so
+    block, steal and other were reshuffled while dribble, pass and shot — which
+    come before it — kept identical validation sets. Only 15 of 79 block
+    validation clips survived a change to a different class, and a per-class
+    accuracy that looks like a 23-point regression is then partly a different
+    set of clips.
+
+    Splitting per class also makes the validation set stratified, so a rare
+    class cannot land mostly on one side by luck.
+
+    Returns (train, val) as lists of (path, label_index).
+    """
+    import random as _random
+
+    train: list = []
+    val: list = []
+    for label_index, action in enumerate(sorted(per_class)):
+        clips = sorted(per_class[action])
+        _random.Random(seed + label_index).shuffle(clips)
+        cut = int(len(clips) * (1 - val_fraction))
+        train.extend((c, label_index) for c in clips[:cut])
+        val.extend((c, label_index) for c in clips[cut:])
+    return train, val

@@ -18,7 +18,8 @@ import sys
 from pathlib import Path
 
 from courtvision.device import resolve_device
-from courtvision.types import ACTIONS, balanced_subset, clip_source
+from courtvision.types import (ACTIONS, balanced_subset, clip_source,
+                               stratified_split)
 
 DATA_DIR = Path("data/labeled/actions")
 # Same overrides as validate_v7, so a smoke run can exercise this report
@@ -41,12 +42,13 @@ def main() -> int:
 
     populated = [a for a in ACTIONS if list((DATA_DIR / a).glob("*.mp4"))]
     samples: list[tuple[Path, int]] = []
-    for index, action in enumerate(populated):
-        clips = sorted((DATA_DIR / action).glob("*.mp4"))
-        clips = balanced_subset(clips, MAX_PER_CLASS)
-        samples.extend((p, index) for p in clips)
-    random.Random(0).shuffle(samples)
-    val = samples[int(len(samples) * (1 - VAL_FRACTION)):]
+    per_class = {a: balanced_subset(sorted((DATA_DIR / a).glob("*.mp4")),
+                                    MAX_PER_CLASS) for a in populated}
+    # Same split as validate_v7, which is per class so that one class's size
+    # cannot move another's validation set.
+    _, val_raw = stratified_split(per_class, VAL_FRACTION)
+    order = {a: i for i, a in enumerate(populated)}
+    val = [(p, order[p.parent.name]) for p, _ in val_raw]
 
     # Which corpus each class actually draws from, measured, not assumed.
     source_of = []

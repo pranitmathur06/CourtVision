@@ -19,7 +19,7 @@ from pathlib import Path
 import numpy as np
 
 from courtvision.device import resolve_device
-from courtvision.types import ACTIONS, balanced_subset
+from courtvision.types import ACTIONS, balanced_subset, stratified_split
 
 DATA_DIR = Path("data/labeled/actions")
 # Overridable so a smoke run can exercise the whole path — decode, train,
@@ -135,14 +135,15 @@ def main() -> int:
         print(f"V7 note — no training clips for {missing}; training on {populated}. "
               "The classifier cannot predict a class it never saw.")
 
-    samples: list[tuple[Path, int]] = []
+    per_class = {}
     counts = {}
-    for label_index, action in enumerate(populated):
-        clips = sorted((DATA_DIR / action).glob("*.mp4"))
-        clips = balanced_subset(clips, MAX_PER_CLASS)
+    for action in populated:
+        clips = balanced_subset(sorted((DATA_DIR / action).glob("*.mp4")),
+                                MAX_PER_CLASS)
+        per_class[action] = clips
         counts[action] = len(clips)
-        samples.extend((clip_path, label_index) for clip_path in clips)
     print(f"V7 clips per class: {counts}")
+    samples = [(c, i) for i, a in enumerate(populated) for c in per_class[a]]
 
     if len(samples) < 20:
         print(f"V7 FAIL — only {len(samples)} labeled clips; need at least 20")
@@ -150,9 +151,17 @@ def main() -> int:
 
     chance = 1.0 / len(populated)
 
-    random.Random(0).shuffle(samples)
-    split = int(len(samples) * (1 - VAL_FRACTION))
-    train, val = samples[:split], samples[split:]
+    # Split per class. A global shuffle over one concatenated list made the
+    # split depend on every class's SIZE: changing rebound from 226 clips to
+    # 223 reshuffled block, steal and other while leaving dribble, pass and
+    # shot untouched, so only 15 of 79 block validation clips survived and a
+    # per-class comparison across runs measured partly a different set of clips.
+    indexed = {action: per_class[action] for action in populated}
+    train_raw, val_raw = stratified_split(indexed, VAL_FRACTION)
+    order = {a: i for i, a in enumerate(populated)}
+    train = [(c, order[c.parent.name]) for c, _ in train_raw]
+    val = [(c, order[c.parent.name]) for c, _ in val_raw]
+    random.Random(0).shuffle(train)
 
     device = resolve_device()
     processor = VideoMAEImageProcessor.from_pretrained(BASE_MODEL)

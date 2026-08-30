@@ -33,3 +33,43 @@ def test_actions_cover_the_spec_labels_plus_block_and_steal():
     assert ACTIONS == ("dribble", "pass", "shot", "rebound", "block", "steal", "other")
     for spec_label in ("dribble", "pass", "shot", "rebound", "other"):
         assert spec_label in ACTIONS
+
+
+def test_one_class_changing_size_does_not_move_another_class_split():
+    """The bug this replaced silently invalidated cross-run comparisons.
+
+    The old split concatenated all classes and shuffled globally, so changing
+    rebound from 226 clips to 223 reshuffled every class ordered after it: only
+    15 of 79 block validation clips survived, and block's apparent 23-point
+    regression was partly a different set of clips.
+    """
+    from pathlib import Path
+
+    from courtvision.types import stratified_split
+
+    def clips(action, n):
+        return [Path(f"data/labeled/actions/{action}/{i:07d}.mp4") for i in range(n)]
+
+    before = {"block": clips("block", 400), "rebound": clips("rebound", 226)}
+    after = {"block": clips("block", 400), "rebound": clips("rebound", 223)}
+
+    _, val_before = stratified_split(before)
+    _, val_after = stratified_split(after)
+    block_before = {p for p, _ in val_before if p.parent.name == "block"}
+    block_after = {p for p, _ in val_after if p.parent.name == "block"}
+    assert block_before == block_after, "block's split must not depend on rebound"
+
+
+def test_every_class_is_represented_in_validation():
+    """Splitting per class makes the validation set stratified."""
+    from pathlib import Path
+
+    from courtvision.types import stratified_split
+
+    per_class = {
+        "rare": [Path(f"a/rare/{i}.mp4") for i in range(10)],
+        "common": [Path(f"a/common/{i}.mp4") for i in range(800)],
+    }
+    _, val = stratified_split(per_class)
+    labels = {label for _, label in val}
+    assert len(labels) == 2, "a rare class must still appear in validation"
