@@ -148,6 +148,36 @@ Either the actions genuinely look alike in a cropped clip of one player, or 226
 rebound clips is not enough to learn the difference. Fine-tuning is the only
 untried lever, and this makes its ceiling less certain rather than more.
 
+## The actual cause: the crop cannot contain a rebound
+
+Every avenue above failed the same way, so the last question was whether the
+information is in the input at all. It is not.
+
+Sampling 40 clips per class and running the detector over them:
+
+    rebound   rim visible in  0/40 clips,  ball in 40/40
+    steal     rim visible in  0/40 clips,  ball in 40/40
+    shot      rim visible in  0/40 clips,  ball in 38/40
+
+**The rim appears in none of them.** The clips are cropped to the ball-handler
+at SpaceJam's 128x176 aspect ratio, which is right for dribble and pass —
+actions that happen at the player — and wrong for anything defined relative to
+the basket. A rebound IS the ball coming off the rim. Looking at the crops
+confirms it: two of three sampled rebounds contain no ball at all, and one is
+mostly spectators.
+
+That explains every negative result here at once. No head helps, no pooling
+helps, the learning curve plateaus, and strong regularisation does not close
+the train-val gap, because a model cannot learn a distinction the pixels do not
+contain. Rebound and steal both reduce to "a player near a loose ball", and
+from a tight crop that is genuinely the same picture.
+
+**This lowers what V7 can be expected to do for rebound specifically.**
+Fine-tuning changes the representation; it cannot recover information that was
+cropped away before the model ever saw it. The fix is a wider or
+basket-relative crop for rim-defined actions, which means regenerating those
+clips — not more training.
+
 ## What V7 still has to answer
 
 Whether fine-tuning the top blocks lifts 0.708, and by how much — particularly

@@ -198,6 +198,13 @@ and no head helped more. Rebound against steal as a TWO-class problem scores
 those two actions at all. Fine-tuning is the only lever that changes the
 features — the right intervention, and not a guaranteed one.
 
+Since then it has got worse for rebound, and the runbook should say so. The rim
+appears in 0 of 40 sampled clips of EVERY class: the crops are framed on the
+ball-handler, which is right for dribble and pass and wrong for an action
+defined relative to the basket. Fine-tuning cannot recover information cropped
+away before the model saw it, so if rebound does not move, that is the reason
+and the fix is regenerating those clips with a basket-relative crop.
+
 Then the check that actually matters:
 
 ```bash
