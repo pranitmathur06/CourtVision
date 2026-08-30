@@ -96,7 +96,35 @@ def select_clips(action: str) -> tuple[list[str], list[str]]:
     return clean, headline
 
 
-def sample_frames(path: str, window: float = WINDOW) -> list[np.ndarray]:
+def select_clips_positioned(action: str) -> list[tuple[str, float]]:
+    """Every clip containing this action, with WHERE in it the action falls.
+
+    BARD carries no timestamps, only an ordered list of actions per clip. That
+    ordering places the action well enough to window on: the nth of m actions
+    sits at about (n + 0.5) / m through the clip. It turns 223 usable rebound
+    clips into thousands, because the exclusion was never about the clips being
+    wrong — it was that a midpoint window looked at the shot instead.
+    """
+    wanted = TARGET_ACTIONS[action]
+    path = hf_hub_download(REPO, "dataset_paths.csv", repo_type="dataset",
+                           local_dir=str(META))
+    out: list[tuple[str, float]] = []
+    with open(path) as fh:
+        for row in csv.DictReader(fh, delimiter=";"):
+            try:
+                anns = ast.literal_eval(row["actions"])
+            except (ValueError, SyntaxError):
+                continue
+            actions = [a.get("action") for a in anns]
+            hit = next((i for i, a in enumerate(actions) if a in wanted), None)
+            if hit is None:
+                continue
+            out.append((row["urls"], (hit + 0.5) / len(actions)))
+    return out
+
+
+def sample_frames(path: str, window: float = WINDOW,
+                  position: float = 0.5) -> list[np.ndarray]:
     """Sample N_FRAMES from the middle `window` fraction of the clip.
 
     Sampling across the WHOLE clip was the single biggest defect in this
@@ -111,6 +139,14 @@ def sample_frames(path: str, window: float = WINDOW) -> list[np.ndarray]:
 
     Nearly double the lift, and it held at two different crop margins. Crop
     width, by contrast, changed nothing — the problem was never spatial.
+
+    `position` says WHERE in the clip to look, as a fraction. BARD gives an
+    ordered list of actions per clip but no timestamps, and that ordering is
+    enough: in 3,127 clips the rebound is the second of two actions, so it sits
+    around three quarters of the way through while the shot that caused it sits
+    early. Centring every window at 0.5 finds the shot, not the rebound — which
+    is why only the 101 single-action clips were usable and 4,709 clips contain
+    a rebound.
     """
     capture = cv2.VideoCapture(path)
     total = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -118,8 +154,12 @@ def sample_frames(path: str, window: float = WINDOW) -> list[np.ndarray]:
         capture.release()
         return []
     half = max(total * window / 2.0, N_FRAMES / 2.0)
-    low = max(int(total / 2 - half), 0)
-    high = min(int(total / 2 + half), total - 1)
+    centre = total * position
+    low = max(int(centre - half), 0)
+    high = min(int(centre + half), total - 1)
+    if high - low < N_FRAMES:                    # clamped at an edge
+        low = max(min(low, total - N_FRAMES), 0)
+        high = min(low + max(int(2 * half), N_FRAMES), total - 1)
     wanted = set(np.linspace(low, high, N_FRAMES).round().astype(int).tolist())
     frames, index = [], 0
     while True:
@@ -140,6 +180,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Add a BARD-sourced action class")
     parser.add_argument("--action", choices=sorted(SELECTORS), required=True)
     parser.add_argument("--count", type=int, default=400)
+    parser.add_argument("--positional", action="store_true",
+                        help="use every clip containing the action, windowed by "
+                             "where the action sequence says it falls")
     args = parser.parse_args()
     out = ACTIONS_DIR / args.action
 
@@ -149,16 +192,25 @@ def main() -> int:
         config.detector_conf, config.ball_conf,
     )
 
-    clean, headline = select_clips(args.action)
-    print(f"BARD {args.action} clips: {len(clean)} clean, {len(headline)} headline-only")
-    chosen = (clean + headline)[: args.count]
+    if args.positional:
+        pairs = select_clips_positioned(args.action)
+        print(f"BARD {args.action}: {len(pairs)} clips contain this action, "
+              f"windowed where the sequence says it falls")
+        chosen_pairs = pairs[: args.count]
+    else:
+        clean, headline = select_clips(args.action)
+        print(f"BARD {args.action} clips: {len(clean)} clean, "
+              f"{len(headline)} headline-only")
+        chosen_pairs = [(u, 0.5) for u in (clean + headline)[: args.count]]
+    chosen = [u for u, _ in chosen_pairs]
+    positions = {u: pos for u, pos in chosen_pairs}
 
     out.mkdir(parents=True, exist_ok=True)
     written = 0
     for video in chosen:
         local = hf_hub_download(REPO, video, repo_type="dataset",
                                 local_dir=str(META / "clips"))
-        frames = sample_frames(local)
+        frames = sample_frames(local, position=positions.get(video, 0.5))
         if len(frames) < N_FRAMES:
             continue
 
