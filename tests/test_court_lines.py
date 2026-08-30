@@ -206,3 +206,38 @@ def test_rim_anchor_pins_absolute_position():
     got = project_world_point(params, (25.0, 5.25, 10.0), (720, 1280))
     error = float(np.hypot(got[0] - rim_px[0], got[1] - rim_px[1]))
     assert error < 25.0, f"rim landed {error:.0f} px from its known position"
+
+
+def test_masking_players_removes_their_pixels_from_the_line_mask():
+    """Players are dark against the wood exactly like the paint is.
+
+    The blob filter only removes their solid interiors; edges, shorts and
+    jersey numbers survive as thin dark structure indistinguishable from a
+    painted line. On a real broadcast frame this halved the mask, from 25,443
+    pixels to 12,857.
+    """
+    from courtvision.court_lines import court_line_mask
+
+    image = render_court(camera_matrix())
+    # A dark rectangle standing on the court, as a player would appear.
+    cv2.rectangle(image, (500, 380), (540, 470), (70, 60, 55), -1)
+
+    without = court_line_mask(image)
+    boxes = np.array([[500.0, 380.0, 540.0, 470.0]])
+    with_mask = court_line_mask(image, boxes)
+
+    inside_before = without[380:470, 500:540].sum()
+    inside_after = with_mask[380:470, 500:540].sum()
+    assert inside_after == 0, "player region should be cleared"
+    assert with_mask.sum() < without.sum()
+    # Lines elsewhere must be untouched.
+    assert with_mask[:300].sum() == without[:300].sum()
+
+
+def test_empty_or_absent_boxes_are_harmless():
+    from courtvision.court_lines import court_line_mask
+
+    image = render_court(camera_matrix())
+    base = court_line_mask(image)
+    assert court_line_mask(image, None).sum() == base.sum()
+    assert court_line_mask(image, np.zeros((0, 4))).sum() == base.sum()

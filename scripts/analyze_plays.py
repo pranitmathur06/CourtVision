@@ -118,7 +118,13 @@ def main() -> int:
             best = max(rims, key=lambda k: k.conf)
             rim_px = ((best.box.x1 + best.box.x2) / 2,
                       (best.box.y1 + best.box.y2) / 2)
-        matrix, score, params = _search(image, bounds, rim_px)
+        # Mask players out of the line detector: they are dark against the wood
+        # exactly like the paint is. frame.tracks may be non-empty while the
+        # filtered list is not, so test the filtered list.
+        people = [[k.box.x1, k.box.y1, k.box.x2, k.box.y2]
+                  for k in frame.tracks if k.label in (PLAYER, HANDLER)]
+        boxes = np.array(people) if people else None
+        matrix, score, params = _search(image, bounds, rim_px, boxes)
         scores.append(score)
         if matrix is None or score < MIN_SCORE:
             print(f"  t={frame.time_s:>5.2f}s  score {score:.3f}  SKIPPED "
@@ -207,7 +213,7 @@ def main() -> int:
     return 0
 
 
-def _search(image, bounds, rim_px=None):
+def _search(image, bounds, rim_px=None, exclude_boxes=None):
     """Register a frame, returning the matrix, its score, and the parameters.
 
     The parameters matter: they seed the next frame's bounds. An earlier version
@@ -218,7 +224,7 @@ def _search(image, bounds, rim_px=None):
 
     params, score = search_camera(
         image, seed=0, max_iterations=60 if bounds else 250, bounds=bounds,
-        rim_px=rim_px)
+        rim_px=rim_px, exclude_boxes=exclude_boxes)
     if params is None:
         return None, score, None
     matrix = homography_from_camera(params, image.shape[:2])

@@ -86,9 +86,16 @@ def main() -> int:
             best = max(rims, key=lambda t: t.conf)
             rim_px = ((best.box.x1 + best.box.x2) / 2,
                       (best.box.y1 + best.box.y2) / 2)
+        # Mask the players out of the line detector: they are dark against the
+        # wood exactly like the paint is, and their edges survive the blob
+        # filter. `or None` would raise here — a numpy array has no truth value.
+        people = [[t.box.x1, t.box.y1, t.box.x2, t.box.y2]
+                  for t in frames[index].tracks if t.label in (PLAYER, HANDLER)]
+        boxes = np.array(people) if people else None
         params, score = search_camera(images[index], seed=0,
                                       max_iterations=60 if bounds else 250,
-                                      bounds=bounds, rim_px=rim_px)
+                                      bounds=bounds, rim_px=rim_px,
+                                      exclude_boxes=boxes)
         if params is None or score < MIN_SCORE:
             continue
         scores.append(score)

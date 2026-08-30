@@ -41,8 +41,17 @@ LOCAL_MEDIAN_KERNEL = 51
 PLAYER_BLOB_KERNEL = 11
 
 
-def court_line_mask(image: np.ndarray) -> np.ndarray:
-    """Binary mask of pixels that plausibly belong to a painted court line."""
+def court_line_mask(
+    image: np.ndarray, exclude_boxes: "np.ndarray | None" = None
+) -> np.ndarray:
+    """Binary mask of pixels that plausibly belong to a painted court line.
+
+    `exclude_boxes` is (N, 4) x1,y1,x2,y2 of detected people. Players are dark
+    against the wood exactly like the lines are, and the blob filter only
+    removes their solid interiors — edges, shorts and jersey numbers survive as
+    thin dark structure indistinguishable from paint. Masking the detections
+    out is the fix that the blob heuristic was standing in for.
+    """
     import cv2
 
     grey = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -66,7 +75,17 @@ def court_line_mask(image: np.ndarray) -> np.ndarray:
     # regions, which are then removed with a margin for their edges.
     blobs = cv2.morphologyEx(lines, cv2.MORPH_OPEN,
                              np.ones((PLAYER_BLOB_KERNEL, PLAYER_BLOB_KERNEL), np.uint8))
-    return cv2.subtract(lines, cv2.dilate(blobs, np.ones((9, 9), np.uint8)))
+    lines = cv2.subtract(lines, cv2.dilate(blobs, np.ones((9, 9), np.uint8)))
+
+    if exclude_boxes is not None and len(exclude_boxes):
+        height, width = lines.shape
+        for x1, y1, x2, y2 in np.asarray(exclude_boxes, dtype=float):
+            # Pad a little: a detection box clips shoulders and feet, and it is
+            # the boundary pixels that most resemble a painted line.
+            a = max(int(x1) - 4, 0), max(int(y1) - 4, 0)
+            b = min(int(x2) + 4, width), min(int(y2) + 4, height)
+            lines[a[1]:b[1], a[0]:b[0]] = 0
+    return lines
 
 
 def canonical_court_points(step_ft: float = 1.0) -> np.ndarray:
@@ -144,7 +163,9 @@ def alignment_score(
     return float(hits.mean())
 
 
-def line_distance_map(image: np.ndarray) -> np.ndarray:
+def line_distance_map(
+    image: np.ndarray, exclude_boxes: "np.ndarray | None" = None
+) -> np.ndarray:
     """Distance to the nearest detected line pixel, computed once.
 
     `alignment_score` re-detects lines on every call, which costs 46 ms. A
@@ -153,7 +174,7 @@ def line_distance_map(image: np.ndarray) -> np.ndarray:
     """
     import cv2
 
-    mask = court_line_mask(image)
+    mask = court_line_mask(image, exclude_boxes)
     if not mask.any():
         return np.full(mask.shape, np.inf, dtype=np.float32)
     return cv2.distanceTransform(255 - mask, cv2.DIST_L2, 3)
@@ -293,10 +314,10 @@ def score_homography(
     return 2.0 * recall * coverage / (recall + coverage)
 
 
-def sample_line_pixels(image: np.ndarray, limit: int = 4000,
-                       seed: int = 0) -> np.ndarray:
+def sample_line_pixels(image: np.ndarray, limit: int = 4000, seed: int = 0,
+                       exclude_boxes: "np.ndarray | None" = None) -> np.ndarray:
     """A random subset of detected line pixels, as (N, 2) x/y — for coverage."""
-    mask = court_line_mask(image)
+    mask = court_line_mask(image, exclude_boxes)
     ys, xs = np.nonzero(mask)
     if len(xs) == 0:
         return np.zeros((0, 2), dtype=int)
@@ -321,6 +342,7 @@ def search_registration(
     seed: int = 0,
     max_iterations: int = 250,
     bounds: list[tuple[float, float]] | None = None,
+    exclude_boxes: "np.ndarray | None" = None,
 ) -> tuple[np.ndarray | None, float]:
     """Search camera parameters for the homography that best explains the lines.
 
@@ -346,11 +368,11 @@ def search_registration(
     """
     from scipy.optimize import differential_evolution
 
-    distance_map = line_distance_map(image)
+    distance_map = line_distance_map(image, exclude_boxes)
     if not np.isfinite(distance_map).any():
         return None, 0.0
     points = canonical_court_points()
-    line_pixels = sample_line_pixels(image)
+    line_pixels = sample_line_pixels(image, exclude_boxes=exclude_boxes)
     if len(line_pixels) == 0:
         return None, 0.0
     shape = image.shape[:2]
@@ -380,6 +402,7 @@ def search_camera(
     bounds: list[tuple[float, float]] | None = None,
     rim_px: tuple[float, float] | None = None,
     rim_weight: float = 0.5,
+    exclude_boxes: "np.ndarray | None" = None,
 ) -> tuple[np.ndarray | None, float]:
     """As `search_registration`, but returns the 6 CAMERA PARAMETERS.
 
