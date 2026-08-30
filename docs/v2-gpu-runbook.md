@@ -109,12 +109,22 @@ And from your Mac, to move the clips (RunPod shows the host/port under
 ```bash
 rsync -avz -e "ssh -p <PORT>" data/labeled/actions root@<HOST>:/workspace/CourtVision/data/labeled/
 rsync -avz -e "ssh -p <PORT>" data/raw_clips checkpoints root@<HOST>:/workspace/CourtVision/
+# V9 names players from the official play list, which run_pipeline reads from
+# this one CSV. Omit it and V9 still runs but never names anybody.
+rsync -avz -e "ssh -p <PORT>" data/labeled/bard_meta/dataset.csv \
+  root@<HOST>:/workspace/CourtVision/data/labeled/bard_meta/
 ```
 
 rsync appends the source directory name, so `data/labeled/actions` sent to
 `data/` lands at `data/actions` and every script then reports no clips.
 
-That is ~277 MB of clips plus the detector checkpoint, a minute or two. Do **not** send `data/labeled/detector` —
+That is ~496 MB compressed. Send only these; `data/labeled` holds 15 GB across
+`bard_meta/clips` (11 GB), `detector` (1.3 GB), `handler_harvest` (1.1 GB),
+`spacejam` (682 MB) and `roboflow` (166 MB), and no stage on the pod opens any
+of them. `scripts/launch_gpu_run.sh` builds its bundle from an explicit include
+list for that reason: an exclude list goes stale the moment a new directory
+appears, and the failure mode is a silent 12 GB upload to a machine billing by
+the second. Do **not** send `data/labeled/detector` —
 it is 9.3 GB and nothing here needs it unless you retrain the detector.
 
 ## 2. Train V7 first — it is the thing that is blocked

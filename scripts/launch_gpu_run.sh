@@ -88,9 +88,26 @@ SSHQ=(ssh -i "$KEY" -o StrictHostKeyChecking=no -p "$PORT" "root@$IP")
 echo "pod $POD at $IP:$PORT"
 
 say "Shipping the tree (source + clips + checkpoints, skipping the 9.3 GB detector set)"
-tar czf /tmp/courtvision.tgz \
-  --exclude='.venv' --exclude='.git' --exclude='data/labeled/detector' \
-  --exclude='outputs' --exclude='__pycache__' . || die "tar failed"
+# INCLUDE what the suite reads, rather than excluding what it does not. An
+# exclude list silently grows stale: data/labeled holds 15 GB across
+# bard_meta/clips, detector, handler_harvest, spacejam and roboflow, none of
+# which any stage on the pod opens, and each new one would have to be
+# remembered. This list is short because the suite's real appetite is small.
+#
+#   data/labeled/actions            3,455 clips — audit, V7, confusion report
+#   data/raw_clips                  sample + holdout — V9, disaggregation
+#   checkpoints                     detector + current classifier
+#   data/labeled/bard_meta/*.csv    the official play list V9 names players from
+#   data/ground_truth               hand-made answer keys
+NEEDED=(src scripts tests pyproject.toml
+        data/labeled/actions data/raw_clips data/ground_truth
+        checkpoints
+        data/labeled/bard_meta/dataset.csv)
+for path in "${NEEDED[@]}"; do
+  [ -e "$path" ] || die "missing $path — the suite needs it"
+done
+tar czf /tmp/courtvision.tgz --exclude='__pycache__' "${NEEDED[@]}" \
+  || die "tar failed"
 ls -lh /tmp/courtvision.tgz | awk '{print "  bundle:", $5}'
 "${SSHQ[@]}" 'mkdir -p /workspace/CourtVision' || die "ssh failed"
 scp -i "$KEY" -o StrictHostKeyChecking=no -P "$PORT" /tmp/courtvision.tgz \
