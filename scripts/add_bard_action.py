@@ -50,6 +50,18 @@ OUT_FPS = 10
 # sample_frames for the measurement behind it.
 WINDOW = 0.2
 
+# BARD action names that map onto each output class, for the positional
+# selector. Unlike SELECTORS these do NOT require the clip to be unambiguous:
+# the action's index in the sequence says where to look, so a rebound inside a
+# shot-then-rebound clip is perfectly usable. That is the difference between
+# 223 rebound clips and the 4,709 that contain one.
+TARGET_ACTIONS: dict[str, set[str]] = {
+    "rebound": {"Rebound"},
+    "steal": {"Steal"},
+    "block": {"Block"},
+    "shot": {"2PT Shot", "3PT Shot"},
+}
+
 
 # For each output class: the action sets that count as a clean example, then a
 # looser headline fallback.
