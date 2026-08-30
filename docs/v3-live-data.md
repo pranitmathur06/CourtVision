@@ -114,8 +114,32 @@ Violation), with no play names anywhere. SpaceJam is action clips only. So this
 is a data gap, not an implementation gap, and it is the honest limit of what
 this layer can claim.
 
-**Also not built: automatic registration.** Until court lines are detected
-without help, the homography must be supplied per camera.
+**Partly built: automatic registration.** `court_lines.court_line_mask()`
+finds the painted lines, and `alignment_score()` scores a homography by
+projecting the canonical court into the image and measuring how much of it
+lands on detected lines. That closes the gap `court.register()` could not: its
+own error only measures how well the fit reproduces the points it was handed,
+which with four of them is zero however wrong they were.
+
+The detector came from measurement, and the measurement overturned the obvious
+approach. The Pistons floor lines look navy, but thresholding blue (hue
+100-135) finds the bench area, the floor advertising and the crowd while
+missing every arc. The lines actually sample at hue 155-175, and far more
+reliably at grey 52-110 against a local median of 198-225. Finding them as dark
+pixels relative to a local median also survives the floor being brightly lit at
+the far sideline and shadowed near the camera. On real broadcast frames it
+returns ~2.8-3.0% of the frame as line pixels and 57-71 Hough segments of 60 px
+or more.
+
+Contamination is honest and known: players are dark too, and their edges and
+jersey numbers survive the blob filter. That biases `alignment_score` toward
+accepting a homography, so it is an upper bound and its threshold should stay
+strict.
+
+**Still not built: the search.** With a scoring function in place, automatic
+registration becomes an optimisation over camera parameters rather than a
+perception problem. That search is not written, so the homography is still
+supplied per camera.
 
 ## Wiring up a real game
 
