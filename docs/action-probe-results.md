@@ -61,6 +61,39 @@ its number means much.
 **691 validation clips**, so per-class cells are 38-89 and the per-corpus splits
 are smaller still. Treat single-class figures as indicative.
 
+## Why rebound fails, measured
+
+Rebound at 0.29 was the standout weakness, so before spending GPU time on a fix
+aimed at it, the fix was tested on the cached features. Three heads, seconds
+each:
+
+| head | overall | rebound | confused with |
+|---|---:|---:|---|
+| logistic (current) | 0.708 | 0.289 | steal 14, shot 7 |
+| logistic + balanced class weights | 0.713 | **0.342** | steal 13, shot 6 |
+| MLP (256) | **0.750** | 0.316 | steal 13, shot 7 |
+
+Class weighting moves rebound 0.289 to 0.342 — real, and far short of a fix. A
+stronger head gains 0.04 overall while doing nothing for rebound. Every head
+loses rebound to steal, 13 or 14 of 38 every time.
+
+So the confusion is in the FEATURES, not the head. The cleanest test is rebound
+against steal as a two-class problem, the easiest possible version:
+
+    rebound vs steal, two classes only: 0.682
+    (226 rebound, 434 steal; majority-class baseline 0.658)
+
+**+0.024 over always answering "steal".** The frozen Kinetics features barely
+encode the difference between a rebound and a steal at all.
+
+This matters for what V7 is expected to do. No head can fix a feature problem,
+so the class weighting added to V7 should be expected to buy something like the
++0.05 measured here, not a repair. Fine-tuning the top blocks is the only
+remaining lever that CHANGES the features, which is why it is the right
+intervention — and also why it might not be enough. A rebound and a steal are
+both scrambles for a loose ball, and they may be genuinely hard to separate
+from a cropped clip of one player.
+
 ## What V7 still has to answer
 
 Whether fine-tuning the top blocks lifts 0.708, and by how much — particularly

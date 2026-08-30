@@ -165,7 +165,12 @@ a distance at 0.29, trading errors with steal both ways, while every
 well-represented class sat between 0.62 and 0.88. Unweighted, the cheapest way
 to cut the loss is to concede the rare class. Rebound is weighted 3.5x shot.
 Watch rebound specifically in the per-class report; it is the class this run
-most needs to move.
+most needs to move. But temper the expectation, because the fix was tested on
+the frozen features first: class weighting moved rebound 0.289 to 0.342 there,
+and no head helped more. Rebound against steal as a TWO-class problem scores
+0.682 against a 0.658 majority baseline, so the frozen features barely separate
+those two actions at all. Fine-tuning is the only lever that changes the
+features — the right intervention, and not a guaranteed one.
 
 Then the check that actually matters:
 
