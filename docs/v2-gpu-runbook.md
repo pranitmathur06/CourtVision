@@ -124,7 +124,23 @@ That is ~496 MB compressed. Send only these; `data/labeled` holds 15 GB across
 of them. `scripts/launch_gpu_run.sh` builds its bundle from an explicit include
 list for that reason: an exclude list goes stale the moment a new directory
 appears, and the failure mode is a silent 12 GB upload to a machine billing by
-the second. Do **not** send `data/labeled/detector` —
+the second.
+
+**The bundle was extracted into an empty directory and the suite run from
+there**, which is the only way to know it carries what it needs rather than
+quietly leaning on the development tree:
+
+    audit          CONFOUND CLOSED (+0.010)
+    kernel host    PASS — numerics and reduction against OpenCV
+    disaggregation PASS — backpressure and no deadlock
+    V6             PASS 9/9
+    V9             PASS — 168 official plays, 4/7 events named
+    V12            PASS — 9/10 digits, 36 frames, 413 official plays
+    pytest         276 passed
+
+V9 naming 4 of 7 events is the load-bearing line there: it proves the single
+CSV the bundle carries out of `bard_meta` is present and being read. Without it
+V9 still passes and names nobody — a wrong result wearing a green tick. Do **not** send `data/labeled/detector` —
 it is 9.3 GB and nothing here needs it unless you retrain the detector.
 
 ## 2. Train V7 first — it is the thing that is blocked
