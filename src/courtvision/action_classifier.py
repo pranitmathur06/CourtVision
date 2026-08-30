@@ -73,7 +73,9 @@ def _classify_batch_fallback(
 class VideoMaeClassifier:
     """Fine-tuned VideoMAE behind the `ActionClassifier` protocol."""
 
-    def __init__(self, weights_dir: str, device: str, batch_size: int = 8) -> None:
+    def __init__(self, weights_dir: str, device: str, batch_size: int = 8,
+                 prior_strength: float = 0.0,
+                 train_counts: dict[str, int] | None = None) -> None:
         import torch
         from transformers import VideoMAEImageProcessor
 
@@ -88,6 +90,20 @@ class VideoMaeClassifier:
         self._model.to(device).eval()
         self._device = device
         self._batch_size = batch_size
+
+        # Correct the train/serve prior mismatch in log space. Training clips
+        # are class-balanced because each was cut to contain an action; a game
+        # is mostly ordinary play. Without this the model emitted 2,253
+        # rebounds against 83 real ones. `prior_strength` 0 disables it.
+        self._shift = None
+        if prior_strength and train_counts:
+            from courtvision.calibration import logit_shift
+
+            labels = self._model.config.id2label
+            ordered = [labels[i] for i in range(len(labels))]
+            self._shift = self._torch.tensor(
+                logit_shift(train_counts, ordered, prior_strength),
+                dtype=self._torch.float32, device=device)
 
     def classify(self, clip: np.ndarray) -> tuple[str, float]:
         """clip: (n_frames, height, width, 3) uint8 RGB."""
@@ -111,6 +127,8 @@ class VideoMaeClassifier:
             inputs = {k: v.to(self._device) for k, v in inputs.items()}
             with self._torch.no_grad():
                 logits = self._model(**inputs).logits
+            if self._shift is not None:
+                logits = logits + self._shift
             for row in logits.softmax(dim=-1):
                 index = int(row.argmax())
                 results.append(

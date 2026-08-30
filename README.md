@@ -1,11 +1,15 @@
 # CourtVision
 
-Basketball video in. Named play-by-play out.
+**Basketball video in. Named play-by-play out.**
+
+A nine-stage computer-vision pipeline that watches NBA broadcast footage and
+produces timestamped, named, natural-language commentary — detection, tracking,
+team assignment, possession, action recognition, and narration, end to end.
 
 ![CourtVision annotating an NBA possession](docs/media/demo.gif)
 
-Boxes are coloured by team, numbered by track. The **yellow box is whoever has the
-ball** — inferred from the footage, not from a scoreboard feed.
+Boxes are coloured by team and numbered by track. The **yellow box is whoever has
+the ball** — inferred from the footage, not read off a scoreboard feed.
 
 ```json
 { "time_s": 4.08, "action": "steal",   "team": "A", "player_name": "Conley" }
@@ -13,20 +17,31 @@ ball** — inferred from the footage, not from a scoreboard feed.
 { "time_s": 7.28, "action": "pass",    "team": "B", "player_name": "Jokić" }
 ```
 
-Those names come from joining the event timeline against the official play-by-play
-— no jersey OCR. If a match isn't confident, the event keeps its anonymous track id
-rather than guessing.
-
 ```bash
 python -m scripts.run_pipeline clip.mp4 --out outputs/run
 ```
 
-Nine stages: extract → detect → track → team assignment → possession → action
-classification → events → commentary → render.
+---
 
-## What it does well
+## At a glance
 
-Action classification, 735 held-out clips, seven classes:
+| | |
+|---|---|
+| **Stack** | PyTorch · YOLO11 · VideoMAE · ByteTrack · OpenCV · scikit-learn · LangGraph · CUDA C++ |
+| **Scale** | ~4,000 lines of library code, 287 tests, 11 validation gates, 112 commits |
+| **Throughput** | 84 minutes of video in 47.7 minutes — **1.76× real time** on one RTX 4090 |
+| **Action recognition** | **0.816** across 7 classes on 735 held-out clips (chance 0.143) |
+| **Possession** | 9/9 on a human-annotated answer key |
+| **Player naming** | Real names, no jersey OCR — joined against the official NBA play-by-play |
+
+---
+
+## What it does
+
+**Nine stages:** extract → detect → track → team assignment → possession → action
+classification → event structuring → commentary → render.
+
+**Action classification** — 735 held-out clips, seven classes:
 
 | | | | |
 |---|---|---|---|
@@ -35,19 +50,73 @@ Action classification, 735 held-out clips, seven classes:
 | other | 0.81 | pass | 0.79 |
 | rebound | 0.78 | **overall** | **0.816** |
 
-Chance is 0.143. Possession resolution is 9/9 on the human-annotated answer key.
-Commentary is guarded against fabrication — an unrecognised name fails the gate.
+Every class lands between 0.76 and 0.90 against a uniform chance of 0.143.
 
-The numbers are trustworthy in a specific way: SpaceJam and BARD clips are
-visually distinguishable, so an earlier 0.810 was partly reading *which dataset*
-a clip came from. Classes were rebalanced until corpus membership was worth
-+0.010 of accuracy, and the same action now scores within 0.06 whichever corpus
-it came from.
+**Players get real names without solving jersey OCR.** Jersey-number recognition
+is a hard open research problem — small text, motion blur, occlusion. But you
+don't have to *recognise* a player to *name* one. Basketball already publishes an
+authoritative timestamped event stream. Read the game clock off the scoreboard
+(large, high-contrast digits — far easier than a jersey), look up what the
+official play-by-play says happened at that moment, and naming becomes a **join,
+not a recognition problem**.
+
+**The commentary cannot fabricate.** The language model narrates events already
+computed upstream; it never decides anything. A validator checks both directions —
+a real name where the event has none is an error, and a *different* name than the
+event's is an error. An unrecognised capitalised word is assumed to be a name and
+flagged, because a false flag costs one retry while a missed fabrication puts a
+false claim about a real person into the output.
+
+---
+
+## The part I'd actually want to talk about
+
+The interesting work here wasn't modelling. It was **measurement** — repeatedly
+finding that a good-looking number was measuring the wrong thing.
+
+**The 0.810 accuracy was partly reading the dataset, not the action.** SpaceJam
+and BARD clips are visually distinguishable, and every rebound and steal clip came
+from one corpus while every other class came from the other — so corpus membership
+predicted the label for 660 of 2,660 clips. Augmentation doesn't fix that, and
+measurably didn't: image statistics still separated the corpora 95% of the time
+after jitter. The fix was rebalancing composition until corpus membership was
+worth **+0.010** of accuracy instead of +0.150. The same action now scores within
+0.06 whichever corpus it came from.
+
+**I kept the model that scored lower.** One run hit 0.822 overall and 0.84 on
+rebound — and reopened the confound to +0.099, because rebound had become the
+dominant class in one corpus. 0.816 with the confound closed is worth more than
+0.822 with it open.
+
+**A class "regressed" from 0.90 to 0.67 and the model was fine.** The validation
+split shuffled globally after concatenating classes in order, so it depended on
+each class's *size*. Changing one class from 226 clips to 223 reshuffled three
+others — only 15 of 79 clips in that class's validation set survived between runs.
+For two runs, every cross-run comparison in the project was partly comparing
+different clips.
+
+**Profiling overturned the obvious optimisation target.** Action classification
+was 76.8% of runtime and detection only 14.6% — but profiling *without* the
+classifier showed detection at 92%, which would have aimed every hour of CUDA work
+at the wrong stage. Batching the classifier's windows took stage 6 from 76.8% to
+**35.8% with no CUDA at all**. The hand-written kernel then went to team
+assignment, the largest stage with no vendor-tuned implementation behind it.
+
+**Two GPU experiments that returned "no".** The custom CUDA kernel compiles and
+matches an OpenCV oracle to 0.1456 against a 2.0 tolerance — but the 1.4× speedup
+reproduced on one box and not another with the same GPU and CPU, so it was a
+property of the machine and shouldn't be quoted. And the dual-GPU stage split
+works correctly and is *marginally slower*: the wait times show the classifier
+never starves, so the two stages were never contending. Both results cost a few
+dollars of rented GPU time and each prevented an optimisation track built on a
+false premise.
+
+---
 
 ## What it does not do yet
 
 **It has been validated on clips, not on games.** Running 84 minutes of continuous
-footage — 50,304 frames — surfaced the gap:
+footage — 50,304 frames, 570× the reference clip — surfaced the real gap:
 
 | action | emitted/min | realistic/min | |
 |---|---|---|---|
@@ -55,27 +124,52 @@ footage — 50,304 frames — surfaced the gap:
 | steal | 3.4 | 0.3 | 11× too many |
 | pass | 0.2 | 9.6 | **48× too few** |
 
-The classifier was trained on a balanced mix of curated action clips. A real game
-is mostly ordinary play. The model has never seen that prior, so it forces every
-window into an action class and rebound absorbs the slack.
+The classifier was trained on clips that were *cut to contain an action*. A real
+game is mostly ordinary play. The model has never seen that prior, so it forces
+every window into an action class and rebound absorbs the slack. It isn't
+uncertain, either — 60 random game windows came back 47 rebound at a mean
+confidence of 0.955, so a confidence floor can't fix it. A `background` class,
+sampled from the quiet stretches of real broadcast footage, is built and awaiting
+a retrain.
 
-Two structural findings from the same run: 268 broadcast cuts fragment tracking
-into **8,602 track ids** (19 on a short clip), which defeats event de-duplication
-and inflates 3,383 events out of maybe 400 real ones; and the annotated output is
-4.8 GB for 84 minutes.
+Two more structural findings from the same run: 268 broadcast cuts fragmented
+tracking into **8,602 track IDs** (19 on a short clip), which defeats event
+de-duplication; and the annotated output is 4.8 GB for 84 minutes.
 
-The pipeline itself scales — **47.7 minutes to process 84 minutes of video**, 1.76×
-real time, with memory flat in clip length.
+**The pipeline itself scaled cleanly** — 1.76× real time, memory flat in clip
+length. The honest claim is narrower and better evidenced than it was: the
+pipeline runs on game-length video, and the action model is not yet usable on it.
+
+---
 
 ## Where things stand
 
 | | |
 |---|---|
-| v1 — pipeline | done, 11 gates, 284 tests |
+| v1 — pipeline | done, 11 gates, 287 tests |
 | v2 — CUDA kernel | compiles, matches an OpenCV oracle; speedup does not reproduce across machines |
 | v2 — dual-GPU split | verified, and measurably *not* worth it — the classifier was never the bottleneck |
 | v3 — player naming | working end to end against the official feed |
-| v3 — play recognition | geometric sets only (pick-and-roll, horns, DHO); real playbook recognition is open |
+| v3 — play recognition | geometric sets only (pick-and-roll, horns, DHO); coaching set *calls* are a real data gap |
 
-Detail: [full-game findings](docs/full-game-findings.md) · [model results](docs/v7-gpu-results.md) ·
-[GPU runbook](docs/v2-gpu-runbook.md) · [v1 spec](docs/spec-v1.md)
+---
+
+## Read more
+
+**→ [Technical report](docs/technical-report.md)** — the full engineering account:
+architecture, every design decision with its measurement, what was tried and
+rejected, and where it breaks.
+
+[Full-game findings](docs/full-game-findings.md) ·
+[Model results](docs/v7-gpu-results.md) ·
+[Possession investigation](docs/possession-investigation.md) ·
+[GPU runbook](docs/v2-gpu-runbook.md) ·
+[v1 spec](docs/spec-v1.md)
+
+---
+
+## Attribution
+
+Clips and annotations from the **BARD** dataset (Gabriele Giudici, 2025, CC BY
+4.0) and **SpaceJam**; detector training data from **basketball-player-detection-3**
+on Roboflow Universe (CC BY 4.0). Official play-by-play via `stats.nba.com`.
