@@ -241,6 +241,9 @@ def main() -> int:
                         choices=sorted(set(SELECTORS) | {"background"}),
                         required=True)
     parser.add_argument("--count", type=int, default=400)
+    parser.add_argument("--full-frame", action="store_true",
+                        help="keep the whole frame instead of cropping to the "
+                             "ball-handler; required for rim events")
     parser.add_argument("--positional", action="store_true",
                         help="use every clip containing the action, windowed by "
                              "where the action sequence says it falls")
@@ -280,29 +283,40 @@ def main() -> int:
         if len(frames) < N_FRAMES:
             continue
 
-        crops, last_box = [], None
-        for image in frames:
-            detections = detector.detect(image)
-            handlers = [d for d in detections if d.label == HANDLER]
-            box = None
-            if handlers:
-                box = max(handlers, key=lambda d: d.conf).box
-            else:
-                balls = [d for d in detections if d.label == BALL]
-                players = [d for d in detections if d.label == PLAYER]
-                if balls and players:
-                    ball = max(balls, key=lambda d: d.conf)
-                    bx, by = ball.box.center
-                    box = min(
-                        players,
-                        key=lambda p: (p.box.center[0] - bx) ** 2
-                        + (p.box.center[1] - by) ** 2,
-                    ).box
-            box = box or last_box
-            last_box = box or last_box
-            if box is None:
-                break
-            crops.append(crop_player(image, box))
+        if args.full_frame:
+            # A rebound is the ball coming off the rim and players converging on
+            # it. crop_player keeps ONE player, so the event is outside the
+            # frame: `rebound` and ordinary-play clips are visually
+            # indistinguishable, and the class became the model's label for
+            # "generic player crop" — 82% of a game. Measured on 240 windows,
+            # separating rebound from ordinary play scores +0.042 over chance
+            # from a player crop and +0.113 from the whole frame.
+            crops = [cv2.resize(image, (FRAME_SIZE, FRAME_SIZE))
+                     for image in frames]
+        else:
+            crops, last_box = [], None
+            for image in frames:
+                detections = detector.detect(image)
+                handlers = [d for d in detections if d.label == HANDLER]
+                box = None
+                if handlers:
+                    box = max(handlers, key=lambda d: d.conf).box
+                else:
+                    balls = [d for d in detections if d.label == BALL]
+                    players = [d for d in detections if d.label == PLAYER]
+                    if balls and players:
+                        ball = max(balls, key=lambda d: d.conf)
+                        bx, by = ball.box.center
+                        box = min(
+                            players,
+                            key=lambda p: (p.box.center[0] - bx) ** 2
+                            + (p.box.center[1] - by) ** 2,
+                        ).box
+                box = box or last_box
+                last_box = box or last_box
+                if box is None:
+                    break
+                crops.append(crop_player(image, box))
 
         if len(crops) < N_FRAMES:
             continue
