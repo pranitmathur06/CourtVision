@@ -14,15 +14,17 @@ GPU="${GPU:-NVIDIA GeForce RTX 4090}"
 DC="${DC:-EU-RO-1}"
 TEMPLATE="${TEMPLATE:-runpod-torch-v280}"
 VOLUME_GB="${VOLUME_GB:-60}"
-HOURS="${HOURS:-3}"
+DISK_GB="${DISK_GB:-60}"     # container disk; the default 20 will not hold the frame cache
+GPU_COUNT="${GPU_COUNT:-1}"  # 2 for v2 §7.2 disaggregation across cuda:0/cuda:1
+HOURS="${HOURS:-3}"          # hard deadline enforced by a local watchdog, see below
 NAME="${NAME:-courtvision}"
 
 say() { printf "\n\033[1m>>> %s\033[0m\n" "$*"; }
 die() { printf "\n\033[31mFAILED: %s\033[0m\n" "$*"; exit 1; }
 
-TERMINATE_AT=$(python3 -c "
+DEADLINE=$(python3 -c "
 import datetime as d
-print((d.datetime.now(d.timezone.utc)+d.timedelta(hours=$HOURS)).strftime('%Y-%m-%dT%H:%M:%SZ'))")
+print((d.datetime.now(d.timezone.utc)+d.timedelta(hours=$HOURS)).strftime('%Y-%m-%d %H:%M UTC'))")
 
 cat <<PLAN
 Plan
@@ -30,12 +32,19 @@ Plan
   data centre      $DC
   template         $TEMPLATE  (ships a CUDA torch; do NOT create a venv over it)
   network volume   ${VOLUME_GB} GB, survives the pod
-  auto-terminate   $TERMINATE_AT  (~${HOURS}h from now)
+  container disk   ${DISK_GB} GB  (the default 20 will NOT hold the ~8 GB frame cache)
+  gpus             ${GPU_COUNT}
+  hard deadline    $DEADLINE  (~${HOURS}h) — enforced locally, see below
   ships            ~$(du -sh data/labeled/actions 2>/dev/null | cut -f1) clips,
                    $(du -sh checkpoints 2>/dev/null | cut -f1) checkpoints, plus the source tree
   runs             scripts/run_gpu_suite.sh (audit, V7, confusion, V9, v2 CUDA)
 
-  --terminate-after is the real cost guard: the pod DELETES itself at that time.
+  COST GUARD. Runpod golden path 04 uses --terminate-after, but runpodctl
+  2.12.0 has no such flag and no TTL of any kind: pod-create offers only
+  --wait-timeout, which is how long to wait for SSH, not a lifetime. So
+  nothing on Runpod's side will stop the meter. This script starts a local
+  watchdog that deletes the pod at the deadline, and prints the delete command.
+  Neither is bulletproof if this machine sleeps — check the console yourself.
   A stopped pod still bills for its volume; a deleted one does not.
 PLAN
 
@@ -53,22 +62,25 @@ VOL=$(runpodctl network-volume create --name "${NAME}-vol" --size "$VOLUME_GB" \
 [ -n "$VOL" ] || die "no volume id returned"
 
 say "Creating the pod (no --ports: this is a batch job, it serves nothing)"
+# --wait blocks until ssh answers, which is what the hand-rolled polling loop
+# here used to do worse. --ports is deliberately absent: a batch job serves
+# nothing.
 POD=$(runpodctl pod create --name "$NAME" --template-id "$TEMPLATE" \
-        --gpu-id "$GPU" --data-center-ids "$DC" \
+        --gpu-id "$GPU" --gpu-count "$GPU_COUNT" --data-center-ids "$DC" \
+        --container-disk-in-gb "$DISK_GB" \
         --network-volume-id "$VOL" --volume-mount-path /workspace \
-        --ssh --terminate-after "$TERMINATE_AT" 2>&1 | tee /dev/stderr \
+        --ssh --wait --wait-timeout 10m 2>&1 | tee /dev/stderr \
       | grep -oE '[0-9a-z]{20,}' | head -1)
-[ -n "$POD" ] || die "no pod id returned"
+[ -n "$POD" ] || die \
+"pod create failed or timed out. A brand-new pod can draw a machine whose
+runtime never becomes ready (golden path 07 hit this). If an id was printed
+above, delete it and try again rather than waiting:
+  runpodctl pod delete <id>"
 
-say "Waiting for the runtime"
-for i in $(seq 1 40); do
-  if runpodctl ssh info "$POD" >/dev/null 2>&1; then echo "ready"; break; fi
-  printf "."; sleep 15
-done
-runpodctl ssh info "$POD" >/dev/null 2>&1 || die \
-"runtime never came up. Golden path 07 hit this: a bad machine never becomes ready.
-Delete it and create a fresh one rather than waiting:
-  runpodctl pod delete $POD"
+say "Starting the local cost watchdog (${HOURS}h)"
+setsid bash -c "sleep $((HOURS*3600)); runpodctl pod delete '$POD'" \
+  >/tmp/courtvision-watchdog.log 2>&1 </dev/null &
+echo "watchdog pid $! — deletes pod $POD at $DEADLINE"
 
 eval "$(runpodctl ssh info "$POD" | python3 -c \
   'import sys,json; d=json.load(sys.stdin); print(f"IP={d[\"ip\"]} PORT={d[\"port\"]} KEY={d[\"ssh_key\"][\"path\"]}")')"
@@ -99,6 +111,9 @@ Running. Monitor from here:
 Retrieve results:
   scp -i "$KEY" -P $PORT -r root@$IP:/workspace/CourtVision/outputs ./outputs-gpu
 
-Pod $POD self-deletes at $TERMINATE_AT. To stop paying sooner:
+Runpod has no auto-terminate in runpodctl 2.12.0, so the meter runs until the
+pod is deleted. A local watchdog will delete it at $DEADLINE, but that dies if
+this machine sleeps. Delete it yourself as soon as the results are copied:
   runpodctl pod delete $POD
+  runpodctl network-volume delete $VOL     # the volume bills separately
 NEXT
