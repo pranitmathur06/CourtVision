@@ -64,7 +64,42 @@ add_bard_action and changes only the margin. 240 clips, 5-fold CV:
 recommendation I wrote after the first GPU run — regenerate the clips with a
 basket-relative crop — is wrong and is withdrawn.
 
-### So rebound is not fixable by any lever tried
+### FIXED — the cause was temporal, and rebound went 0.03 to 0.49
+
+Every spatial lever failed, so the remaining variable was WHEN the frames come
+from. BARD source clips run 8-10 s and `sample_frames` drew 16 frames evenly
+across the whole clip: half a second apart, against a labelled action lasting
+about one second. Fourteen of sixteen frames showed unrelated play, and a
+rebound clip and a steal clip were largely the same footage.
+
+Measured on 240 clips, ball-handler selection held fixed:
+
+    margin  window   accuracy   lift
+      0.25     1.0      0.621  +0.121     <- what we were training on
+      0.25     0.4      0.675  +0.175
+      0.25     0.2      0.713  +0.213
+      1.0      1.0      0.600  +0.100
+      1.0      0.2      0.717  +0.217
+
+Nearly double the lift at both margins, while margin itself changes nothing.
+
+Regenerating rebound and steal at window 0.2 and retraining:
+
+    class            before   after
+    rebound            0.03    0.49
+    overall            0.753   0.784
+    pass               0.71    0.79
+    shot   SpaceJam    0.83    0.93
+    other  SpaceJam    0.73    0.93
+    other  BARD        0.61    0.77
+    steal              0.88    0.73
+    block              0.90    0.67
+
+Rebound is no longer conceded. Steal falling from 0.88 is the other side of the
+same coin — it had been absorbing rebounds — and block dropping is the one
+regression worth watching, since block was not regenerated.
+
+### Levers that did NOT fix it, for the record
 
   * not the head — logistic, weighted logistic and an MLP all fail alike
   * not the pooling — six temporal variants, +0.017 at best
