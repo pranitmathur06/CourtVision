@@ -71,12 +71,38 @@ players were, how the play developed, who was defending, off-ball movement.
 Fused, they produce commentary neither could alone — that is the actual case for
 the system.
 
-## Not done: play recognition
+## Play recognition — what is built, and what is not
 
-"What play are they running" (Horns, Spain pick-and-roll) needs court
-registration — a homography mapping players onto court coordinates — then
-formation classification over all ten players. That is real research, well past
-this layer, and it is the honest next hard problem.
+`courtvision.court` and `courtvision.formation` are the first two layers.
+
+**Built: court registration.** `court.register()` fits an image-to-court
+homography from named NBA landmarks and reports its error in feet. It does not
+find the court by itself — robust line detection through crowds, glare, floor
+logos and a panning camera is a research problem, and a silently wrong
+homography is worse than none, because it places players plausibly but
+incorrectly and every formation claim inherits the error.
+
+Note the trap it guards: a homography has 8 degrees of freedom and 4 point pairs
+give 8 equations, so with exactly four correspondences the fit is exact and
+reports zero error *however wrong the inputs were*. Corrupting one by 300 px
+still reports 0.000 ft while the true held-out error passes 2 ft. Supply more
+than four, and check `is_usable()` before trusting anything downstream.
+
+**Built: formation classification.** `formation.classify_formation()` names
+Horns, five-out, post-up and isolation from court coordinates, and returns
+`unknown` — with a reason — when the arrangement is not one it can justify. It
+also reports spacing as mean nearest-neighbour distance, which is what "they
+have no room" actually means.
+
+**Not built: plays.** A formation is an arrangement at one instant; a play is a
+sequence. Horns is visible in a single frame, which is why it can be named.
+Spain pick-and-roll is a screen, then a back-screen on the screener, then a
+roll — no snapshot contains it. Getting there needs formation sequences over
+time and labelled play types, and neither BARD nor SpaceJam carries play-type
+labels. That is still the honest next hard problem.
+
+**Also not built: automatic registration.** Until court lines are detected
+without help, the homography must be supplied per camera.
 
 ## Wiring up a real game
 
