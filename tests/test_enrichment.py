@@ -284,3 +284,47 @@ def test_bard_plays_still_work_without_clock_fields():
     plays = [_play(1, "rebound", "Randle")]
     named = align(events, plays)
     assert named[0].player_name == "Randle"
+
+
+def test_a_clock_that_goes_up_is_dropped():
+    """The real failure this was written for.
+
+    On the holdout clip the reader returned 3:43 for six early frames at match
+    scores 0.51-0.71, then 3:47 for eighteen more at 0.94-0.97: it was reading a
+    7 as a 3, and those misreads cleared a 0.5 confidence bar. A clock cannot go
+    up, so ordering separates them where no score threshold reliably does.
+    """
+    from courtvision.enrichment import drop_impossible_readings
+
+    readings = [_reading(t, 2, 223) for t in (3.0, 3.2, 3.5, 3.8, 4.0, 4.2)]
+    readings += [_reading(t, 2, 227) for t in (4.5, 4.8, 5.0, 5.2, 5.5, 5.8, 6.0)]
+    kept = drop_impossible_readings(readings)
+    assert {r.clock_seconds for r in kept} == {227}
+    assert len(kept) == 7, "the longer consistent run should win"
+
+
+def test_a_clean_countdown_is_kept_whole():
+    from courtvision.enrichment import drop_impossible_readings
+
+    readings = [_reading(i * 0.5, 1, 659 - i) for i in range(8)]
+    assert drop_impossible_readings(readings) == readings
+
+
+def test_periods_are_filtered_independently():
+    """The clock resets between periods; that is not a violation."""
+    from courtvision.enrichment import drop_impossible_readings
+
+    readings = [_reading(0.0, 1, 10), _reading(1.0, 1, 5),
+                _reading(2.0, 2, 720), _reading(3.0, 2, 715)]
+    assert len(drop_impossible_readings(readings)) == 4
+
+
+def test_a_single_reading_survives():
+    from courtvision.enrichment import drop_impossible_readings
+    one = [_reading(0.0, 1, 100)]
+    assert drop_impossible_readings(one) == one
+
+
+def test_no_readings():
+    from courtvision.enrichment import drop_impossible_readings
+    assert drop_impossible_readings([]) == []

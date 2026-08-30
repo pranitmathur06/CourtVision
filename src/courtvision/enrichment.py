@@ -229,6 +229,50 @@ class ClockReading:
     clock_seconds: int
 
 
+def drop_impossible_readings(
+    readings: Sequence[ClockReading],
+) -> list[ClockReading]:
+    """Keep the longest run of readings a real clock could have produced.
+
+    A game clock never goes up inside a period. That is a physical law, not a
+    threshold, and it makes a far better filter than match confidence.
+
+    On the holdout clip the reader returned 3:43 for six early frames at scores
+    0.51-0.71, then 3:47 for the rest at 0.94-0.97 — it was misreading a 7 as a
+    3, and those misreads cleared a 0.5 confidence bar. No score threshold
+    separates the two cases in general, because a confident misread is exactly
+    what a template match produces when the true digit has no template. The
+    ordering does separate them, every time.
+
+    Implemented as a longest non-increasing subsequence over each period, so the
+    majority consistent story wins and outliers are dropped rather than the
+    whole sequence being discarded.
+    """
+    if not readings:
+        return []
+    kept: list[ClockReading] = []
+    by_period: dict[int, list[ClockReading]] = {}
+    for reading in sorted(readings, key=lambda r: r.video_time_s):
+        by_period.setdefault(reading.period, []).append(reading)
+
+    for period in sorted(by_period):
+        run = by_period[period]
+        # best[i] = length of the longest valid run ending at i.
+        best = [1] * len(run)
+        prev = [-1] * len(run)
+        for i in range(len(run)):
+            for j in range(i):
+                if run[j].clock_seconds >= run[i].clock_seconds and best[j] + 1 > best[i]:
+                    best[i], prev[i] = best[j] + 1, j
+        end = max(range(len(run)), key=lambda i: best[i])
+        chain = []
+        while end != -1:
+            chain.append(run[end])
+            end = prev[end]
+        kept.extend(reversed(chain))
+    return kept
+
+
 def game_clock_at(
     readings: Sequence[ClockReading], video_time_s: float, max_gap_s: float = 5.0
 ) -> tuple[int, int] | None:

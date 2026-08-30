@@ -28,6 +28,12 @@ import numpy as np
 MIN_DIGIT_HEIGHT = 12
 MAX_DIGIT_HEIGHT = 45
 TALL_CLUSTER_TOLERANCE = 4      # px; separates clock digits from the period label
+# Widest a glyph may be relative to its height. `w > h` looked reasonable and is
+# wrong: it was calibrated on one broadcast's narrow font and rejected every
+# digit on a second, where a bolder face renders 19 px wide against 17 tall.
+# It still rejects the scoreboard's own outline, which is three times wider
+# than tall.
+MAX_ASPECT = 1.3
 
 
 @dataclass(frozen=True)
@@ -55,7 +61,7 @@ def segment_glyphs(roi: np.ndarray) -> list[Glyph]:
         x, y, w, h, area = stats[index]
         if not (MIN_DIGIT_HEIGHT <= h <= MAX_DIGIT_HEIGHT):
             continue
-        if w < 3 or w > h or area < 30:
+        if w < 3 or w > MAX_ASPECT * h or area < 30:
             continue
         glyphs.append(Glyph(int(x), int(y), int(w), int(h),
                             binary[y:y + h, x:x + w]))
