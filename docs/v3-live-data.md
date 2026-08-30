@@ -162,11 +162,32 @@ evolution finds it, but needs its budget: at maxiter 25 and 60 it returns 0.198
 and 0.229, so a cheap run is a wrong answer rather than a fast one. Pass
 `bounds` when the camera's rough placement is known.
 
-**Caveat that has not gone away.** 0.42 on real footage is far from the 0.89 the
-synthetic court reaches, and the score is an upper bound because players
-contaminate the line mask. Registration works on this footage; it is not yet
-something to run unattended on arbitrary broadcasts without checking the score
-and the on-court player count.
+**Measured, not asserted: V11.** The alignment score cannot say whether the
+resulting COURT COORDINATES are right, and hand-annotating landmarks would only
+move the problem — my pixel estimates become the ground truth and could be wrong
+in the same way the registration is. So `scripts/validate_registration.py`
+checks physics instead: players do not teleport, so the implied speeds must look
+like basketball.
+
+    12 frames registered, median score 0.397; 14 tracks, 102 steps
+    speed ft/s: p50 7.9   p90 21.7   p95 25.0   max 33.9
+    within sprint (25 ft/s): 95.1%
+    court extent: x -6.3..54.3 (court 0..50), y -1.9..39.0 (0..47)
+
+A median of 7.9 ft/s is what sustained NBA movement actually looks like, and a
+registration wrong in scale would inflate every one of these. So scale and
+frame-to-frame stability are sound.
+
+**What V11 still cannot see.** A court offset by a constant would pass it
+unchanged — this measures relative motion, not absolute position. The x extent
+running -6.3 to 54.3 against a 50 ft court is a real hint of that: some of it is
+players genuinely out of bounds, some is offset error. And 5% of steps still
+exceed sprint speed, part registration jitter and part track ID switches.
+
+**Caveat that has not gone away.** 0.40 on real footage is far from the 0.89 the
+synthetic court reaches. Registration works on this footage; it is not something
+to run unattended on arbitrary broadcasts without checking the score, the
+on-court player count, and V11.
 
 ## Wiring up a real game
 
