@@ -45,7 +45,7 @@ def read_clock_track(video: str, templates, sample_every_s: float = 2.0):
     top, bottom, left, right = CLOCK_ROI
 
     track: list[tuple[int, int, int]] = []
-    period, previous = 1, None
+    period, previous, dropped = 1, None, 0
     for index in range(0, total, step):
         cap.set(cv2.CAP_PROP_POS_FRAMES, index)
         ok, frame = cap.read()
@@ -57,13 +57,34 @@ def read_clock_track(video: str, templates, sample_every_s: float = 2.0):
         seconds = clock_to_seconds(text)
         if seconds > PERIOD_SECONDS:            # 12:00 is the maximum
             continue
-        # A clock only counts down. A jump upward of more than a minute is a new
-        # period, not a misread; smaller upward jumps are misreads and dropped.
+        # A clock only counts down. A real period boundary is specific: the
+        # clock was near zero and is now near twelve minutes. "Any jump upward
+        # over a minute" is far too loose — it fired on misreads and produced 28
+        # periods for a five-period game, which then stranded 84% of the
+        # play-by-play with nowhere to align to.
         if previous is not None and seconds > previous + 60:
-            period += 1
-        elif previous is not None and seconds > previous + 2:
+            if seconds >= 600 and previous <= 150:
+                period += 1
+                previous, dropped = seconds, 0
+                track.append((index, period, seconds))
+                continue
+            # A misread — unless we keep saying that. One bad LOW reading sets
+            # `previous` too low and then every correct reading after it looks
+            # like a jump upward, so the whole rest of the game is discarded.
+            # Several rejections in a row mean the reference is wrong, not the
+            # readings, so resynchronise onto what we are actually seeing.
+            dropped += 1
+            if dropped >= 4:
+                previous, dropped = seconds, 0
+                track.append((index, period, seconds))
             continue
-        previous = seconds
+        if previous is not None and seconds > previous + 2:
+            dropped += 1
+            if dropped >= 4:
+                previous, dropped = seconds, 0
+                track.append((index, period, seconds))
+            continue
+        previous, dropped = seconds, 0
         track.append((index, period, seconds))
     cap.release()
     return track, fps
