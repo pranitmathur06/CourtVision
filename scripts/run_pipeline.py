@@ -33,7 +33,8 @@ BARD_METADATA = Path("data/labeled/bard_meta/dataset.csv")
 
 
 def run_pipeline(clip_path: str, out_dir: str, config: Config,
-                 narrate: bool = True, prior_strength: float = 0.0) -> dict:
+                 narrate: bool = True, prior_strength: float = 0.0,
+                 render: bool = True) -> dict:
     device = resolve_device()
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -120,7 +121,13 @@ def run_pipeline(clip_path: str, out_dir: str, config: Config,
     start = time.perf_counter()
     video_path = out / "annotated.mp4"
     log_path = out / "commentary.json"
-    render_video(images, frames, teams, holders, str(video_path), config.target_fps)
+    if render:
+        render_video(images, frames, teams, holders, str(video_path),
+                     config.target_fps)
+    else:
+        # 28% of runtime, and 4.6 GB for a full game — worth skipping whenever
+        # the run exists to be scored rather than watched.
+        print("  stage 9: render skipped")
     write_log(events, lines, str(log_path))
     timings["9 render"] = time.perf_counter() - start
     print(f"  stage 9: wrote {video_path} and {log_path}")
@@ -151,6 +158,8 @@ def main() -> int:
     parser.add_argument("--out", default="outputs/run", help="output directory")
     parser.add_argument("--prior-strength", type=float, default=0.0,
                         help="correct the train/serve prior mismatch; 0 disables")
+    parser.add_argument("--no-render", action="store_true",
+                        help="skip the annotated video (28%% of runtime)")
     parser.add_argument("--no-narrate", action="store_true",
                         help="skip stage 8 (no API key needed)")
     args = parser.parse_args()
@@ -165,7 +174,8 @@ def main() -> int:
 
     summary = run_pipeline(args.clip, args.out, Config(),
                            narrate=not args.no_narrate,
-                           prior_strength=args.prior_strength)
+                           prior_strength=args.prior_strength,
+                           render=not args.no_render)
     print(f"\n{summary}")
     return 0
 
