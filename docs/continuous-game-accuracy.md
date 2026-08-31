@@ -394,3 +394,68 @@ Roughly fifty minutes on a rented GPU, about a dollar. Every component in that
 command is committed and tested: cut segmentation, possession derivation with a
 swept floor, prior calibration, timeline capture for offline tuning, and
 scoring against the NBA's own record.
+
+
+---
+
+# The ceiling: what the event logic achieves with perfect perception
+
+Ten full NBA games from the 2015-16 SportVU release (25 Hz, court feet, stable
+player ids), scored against the official play-by-play for each game. This does
+**not** measure the vision stack — tracking covers 2015-10-27 to 2016-01-23 and
+nothing pairs it with broadcast video. It measures whether the event logic is
+right when perception is perfect.
+
+    action    median x   precision   recall   bar
+    shot         0.78x        0.89     0.71   met
+    rebound      1.20x        0.51     0.59   met
+    steal        1.71x        0.24     0.35   met
+    block            —           —        —   not emitted
+
+Per game, every class stayed inside the bar: shot 0.71-0.94x, rebound
+0.98-1.43x, steal 0.83-2.31x.
+
+## Read the precision column, not the ratio
+
+Counts can be hit by accident. Earlier, tuning the shot window alone brought
+steal to 1.54x of official while 90% of the emitted events were the wrong
+moments — which is why precision and recall are reported beside every ratio.
+
+  * **shot is genuinely solved.** 0.89 precision from ball geometry alone: the
+    rims never move, so a shot is the ball approaching one having gone up.
+  * **rebound is sound.** 0.51 precision — half the emitted rebounds are the
+    right moment — and the count is stable across ten games. It inherits shot's
+    accuracy by construction, which is why it works.
+  * **steal is marginal even here.** The count fits, but 0.24 precision means
+    three of four emitted steals are the wrong moment. Perfect perception did
+    not fix it, so this is the EVENT LOGIC, not the camera. A steal is not
+    simply "possession changed with no shot behind it": that also catches
+    turnovers, loose balls, and the nearest-player attribution flickering while
+    the ball is in flight.
+  * **block is not emitted at all**, and that is measured rather than skipped.
+
+## What was needed to get there
+
+Three filters, each swept against ground truth rather than chosen:
+
+  * **possession distance 0.35** in court feet, not the 0.6 body-heights fitted
+    to projected pixels. At 1.0 rebound fell to 0.63x.
+  * **a held ball, under 9 ft.** Nearest-player attribution is wrong while the
+    ball is in flight — mid-pass it can sit closest to an opponent and invent a
+    turnover. This took steal from 6.08x to 3.62x and precision 0.13 to 0.19.
+  * **a handover under 15 ft.** A steal takes the ball off the handler; a bad
+    pass travels far before an opponent collects it. 3.62x to 1.92x, precision
+    0.19 to 0.24.
+
+And `MIN_POSSESSION_S` dropped from 6.0 to 1.0. Six seconds existed to absorb
+broadcast-cut track churn — 14,640 ids in one game. With stable ids that floor
+only discards real short possessions, exactly the fast breaks and steals that
+matter.
+
+## What this says about the vision work
+
+The event architecture is right for shot and rebound and insufficient for
+steal. That is worth knowing before more model training: no perception
+improvement will fix steal, because steal does not fail from perception here.
+Block needs a different signal entirely — it is below chance from pixels and
+undetectable from trajectory.

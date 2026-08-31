@@ -26,6 +26,7 @@ So derive them instead of recognising them.
 
 from __future__ import annotations
 
+import math
 from collections.abc import Sequence
 from dataclasses import dataclass
 
@@ -77,9 +78,27 @@ def possessions(times: Sequence[float], holders: Sequence[int | None],
     return [s for s in spans if s.end_s - s.start_s >= min_seconds]
 
 
+# A steal hands the ball over a short distance — a defender takes it off the
+# handler. A bad pass travels far before an opponent collects it, and a loose
+# ball further still. Measured against the 13 official steals in 0021500492,
+# filtering non-shot possession changes by how far the ball moved between the
+# old holder and the new one:
+#
+#     no limit   47 emitted  3.62x  precision 0.19
+#     <= 15 ft   25          1.92x  precision 0.24
+#     <=  6 ft   10          0.77x  precision 0.40
+#
+# 15 ft brings the count inside tolerance; 6 ft buys precision at the cost of
+# recall. Neither makes steal a solved class — see the ceiling note in
+# docs/continuous-game-accuracy.md.
+MAX_HANDOFF_FT = 15.0
+
+
 def derive(times: Sequence[float], holders: Sequence[int | None],
            teams: dict[int, str], shots: Sequence[Event],
-           min_seconds: float = MIN_POSSESSION_S) -> list[Event]:
+           min_seconds: float = MIN_POSSESSION_S,
+           positions: dict[int, dict[float, tuple[float, float]]] | None = None,
+           max_handoff_ft: float = MAX_HANDOFF_FT) -> list[Event]:
     """Steals and rebounds from possession changes, anchored on shots.
 
     A change of team within `SHOT_WINDOW_S` after a shot is a rebound: the
@@ -94,6 +113,15 @@ def derive(times: Sequence[float], holders: Sequence[int | None],
             continue
         changed_at = current.start_s
         recent_shot = any(0.0 <= changed_at - t <= SHOT_WINDOW_S for t in shot_times)
+        if not recent_shot and positions is not None:
+            # No shot behind it, so this is a steal or a turnover. A steal is
+            # the short handover; drop the long ones.
+            start = positions.get(previous.track_id, {}).get(round(previous.end_s, 1))
+            end = positions.get(current.track_id, {}).get(round(current.start_s, 1))
+            if start is not None and end is not None:
+                moved = math.hypot(start[0] - end[0], start[1] - end[1])
+                if moved > max_handoff_ft:
+                    continue
         out.append(Event(
             time_s=changed_at,
             track_id=current.track_id,
