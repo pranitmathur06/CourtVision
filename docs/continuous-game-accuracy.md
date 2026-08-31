@@ -94,3 +94,64 @@ distributed as video rather than as links, would unblock it immediately —
 Not accurate over a full game. Shot is (0.94x). Rebound, steal and block are
 not, and the reason is measured rather than guessed: they have 149, 15 and 15
 live-labelled examples against shot's 254.
+
+
+---
+
+# Round three: these are possession events, not looks
+
+## Separability, measured per class
+
+VideoMAE features, each action against ordinary play, 200-240 windows:
+
+    class     player crop   full frame
+    rebound        +0.042      +0.113
+    steal          +0.054      +0.037
+    block          -0.170      -0.125
+
+Block is **below chance** — the classifier does worse than always guessing.
+Steal is barely separable in either view. So steal's 33.8x was never a data
+volume problem the way I had concluded: no quantity of examples teaches a
+signal that is not in the frame.
+
+Two hypotheses died here, both worth testing. A steal is NOT invisible in a
+ball-handler crop the way a rebound is — it happens at the ball, and the crop
+beats the whole frame for it. And block is not a representation problem either;
+neither view separates it.
+
+## What they are instead
+
+A steal is possession changing team with no shot behind it. A rebound is
+possession resolving after a shot goes up. The pipeline already computes
+possession to 9/9 on the human-annotated answer key, and shots already land at
+0.94x of the official count over a full game. Both events follow from what
+works, so `derived_events.py` builds them instead of recognising them.
+
+Track ids restart at every broadcast cut — 14,640 in one game — so a bare team
+change is mostly noise. Swept against BARD's labels, derived steals against the
+18 real ones:
+
+    min_seconds   derived   steal ratio
+            0.6       377        20.4x
+            3.0        98         5.3x
+            5.0        65         3.5x
+            8.0        26         1.4x
+
+**Steal: 33.8x from the classifier, 2.39x derived at the 6 s default.** A 14x
+improvement, and the first time that class has been anywhere near usable.
+
+`run_pipeline` now writes the possession timeline beside the events, so this
+threshold is swept offline in seconds rather than an hour per setting.
+
+## What is still open
+
+Rebound did not improve here, and the reason is specific rather than
+mysterious: the rebound/steal split turns entirely on shot detection, which is
+0.94x on live broadcast footage but **0.12x on the concatenated BARD clips this
+was scored against** — the model is out of domain on that footage, so almost
+every possession change reads as a steal. Re-measuring on continuous footage
+should move rebound with it, and that needs game video.
+
+Block should probably not be emitted at all until something separates it. A
+class the model scores below chance on is noise, and reporting it is worse than
+staying quiet.
