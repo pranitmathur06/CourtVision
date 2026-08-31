@@ -196,3 +196,33 @@ Two things hold it back, both identified rather than guessed:
 
 Shot is there. Steal moved an order of magnitude and is not there yet. Rebound
 and block are not.
+
+
+## Why the combined run could not be validated
+
+The obvious next experiment was the model that scored shots at 0.94x paired
+with possession derivation. It ran, and it could not be scored: on the
+concatenated BARD footage that model detects **22 shots against 180**, the same
+as every other checkpoint. 0.94x was a property of the live broadcast, not of
+that checkpoint, so pairing them needs the live video and nothing else
+substitutes.
+
+Rebound is defined as possession resolving after a shot. With 22 shots found in
+a game containing 180, almost every possession change has no shot behind it and
+reads as a steal. That is the whole of rebound's 0.02x here — it is downstream
+of shot detection, not a separate failure.
+
+## Final measured state, full continuous game
+
+    action    best measured   how
+    shot              0.94x   classifier, live broadcast
+    steal              6.6x   derived from possession, was 33.8x classified
+    rebound           4.25x   classifier; derivation blocked on shot detection
+    block             0.36x   below chance to classify; should not be emitted
+
+Shot meets the bar. Steal is an order of magnitude better than it was and does
+not. Rebound and block do not.
+
+The single run that would close most of the remaining gap is the 0.94x
+configuration plus derivation, on continuous broadcast footage. Every part of
+it exists and is committed; it needs a game file the pipeline can open.
