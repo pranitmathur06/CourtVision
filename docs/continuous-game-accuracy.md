@@ -232,3 +232,59 @@ not. Rebound and block do not.
 The single run that would close most of the remaining gap is the 0.94x
 configuration plus derivation, on continuous broadcast footage. Every part of
 it exists and is committed; it needs a game file the pipeline can open.
+
+
+---
+
+# Round four: the evaluation footage was running at half speed
+
+Every measurement taken on the assembled BARD video was void. The source clips
+are 60fps and I wrote them at 30fps keeping every frame, so the video played at
+**half speed** — 19.2 minutes of basketball stretched over 38.4. A 16-frame
+window at the pipeline's sampling rate then covered 0.8 s of real action
+instead of 1.6 s, which is not what any of these models were trained on. That
+is why shot detection read 0.27x there against 0.94x on a genuine broadcast.
+
+Rebuilt at real-time speed (keep every second frame), with truth scoped to the
+123 clips the video actually holds:
+
+    action    emitted   truth   ratio
+    steal          20      11   1.82x   <- within the 2.0x bar
+    shot           11      97   0.11x
+    rebound         2      48   0.04x
+    block           0       3   0.00x
+    other         126      49   2.57x
+
+**Steal: 33.8x classified, 1.82x derived.** The first of the failing classes to
+meet the bar. Sweeping the possession floor on this footage confirms the 6.0 s
+default was not luck — it was chosen from the half-speed sweep and lands in
+tolerance here too:
+
+    floor   steal   ratio
+      3.0      51   4.64x
+      4.5      27   2.45x
+      6.0      20   1.82x
+      8.0       3   0.27x
+
+## What still fails, and why it is one problem not three
+
+shot, rebound and block all UNDER-emit here, and they share a cause. This video
+is 123 clips joined end to end, so a cut lands every nine seconds. A 16-frame
+window spanning a cut contains two unrelated scenes, tracking restarts, and
+possession resolves on only 56% of frames. Shot detection collapses to 11 of 97
+— on a continuous broadcast the same checkpoint finds 246 of 262.
+
+Rebound is defined as possession resolving after a shot, so with 11 shots found
+it has almost nothing to attach to. Block is not separable at all.
+
+## Where accuracy stands
+
+    action    best measured   footage
+    shot              0.94x   continuous broadcast
+    steal             1.82x   correct-speed clips, derived
+    rebound           4.25x   continuous broadcast, classified
+    block             0.36x   below chance to classify
+
+Shot and steal each meet the bar, on different footage. Both on one continuous
+game is a single run away and needs a game file. Rebound follows shot by
+construction; block needs a signal that does not exist in a ball-handler crop.
