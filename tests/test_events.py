@@ -132,9 +132,41 @@ def test_background_between_two_identical_actions_keeps_them_separate():
 
     windows = [
         ActionWindow(0, 15, 0.0, 1.5, "shot", 0.9),
-        ActionWindow(8, 23, 0.8, 2.3, "background", 0.9),
-        ActionWindow(16, 31, 1.6, 3.1, "shot", 0.9),
+        ActionWindow(80, 95, 8.0, 9.5, "background", 0.9),
+        ActionWindow(160, 175, 16.0, 17.5, "shot", 0.9),
     ]
-    events = build_events(windows, [7] * 32, {7: "A"})
+    events = build_events(windows, [7] * 176, {7: "A"})
     assert [e.action for e in events] == ["shot", "shot"], \
-        "a background lull must break the collapse chain"
+        "two shots sixteen seconds apart are two shots"
+
+
+def test_same_action_moments_apart_is_one_event_even_if_the_holder_id_changed():
+    """Track ids are not stable across a broadcast cut.
+
+    A full game produced 14,640 of them, so keying only on (action, holder) let
+    one rebound be reported once per window: 2,112 rebound events collapsing
+    into 1,005 bursts against 114 real rebounds.
+    """
+    from courtvision.events import build_events
+    from courtvision.types import ActionWindow
+
+    windows = [
+        ActionWindow(0, 15, 0.0, 1.5, "rebound", 0.9),
+        ActionWindow(8, 23, 0.8, 2.3, "rebound", 0.9),
+        ActionWindow(16, 31, 1.6, 3.1, "rebound", 0.9),
+    ]
+    holders = [1] * 12 + [2] * 12 + [3] * 12      # id churns every window
+    events = build_events(windows, holders, {1: "A", 2: "A", 3: "A"})
+    assert len(events) == 1, "one rebound, however the tracker renumbered it"
+
+
+def test_the_same_action_far_apart_stays_two_events():
+    from courtvision.events import build_events
+    from courtvision.types import ActionWindow
+
+    windows = [
+        ActionWindow(0, 15, 0.0, 1.5, "shot", 0.9),
+        ActionWindow(200, 215, 20.0, 21.5, "shot", 0.9),
+    ]
+    events = build_events(windows, [7] * 216, {7: "A"})
+    assert len(events) == 2, "twenty seconds apart is two shots"

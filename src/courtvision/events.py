@@ -12,6 +12,11 @@ from collections.abc import Sequence
 
 from courtvision.types import ActionWindow, Event, BACKGROUND
 
+# Two detections of the same action closer than this are one event. A
+# window is 1.6 s long with a 0.8 s stride, so a single action spans two
+# or three windows; anything inside that span is the same moment.
+REPEAT_WINDOW_S = 2.4
+
 
 def dominant_holder(
     holders: Sequence[int | None], start: int, end: int
@@ -57,11 +62,27 @@ def build_events(
             and previous_holder is not None
             and holder != previous_holder
         )
-        key = (window.label, holder)
-        if key == last_key:
-            # Same action, same player, adjacent window: already reported.
-            continue
-        last_key = key
+        # One action spans two or three overlapping windows, so the same label
+        # arriving moments later is the same moment being scored again.
+        #
+        # Keying on (action, holder) alone was wrong twice over. It collapsed
+        # two shots by one player twenty seconds apart into a single event,
+        # because it never looked at time. And it FAILED to collapse a genuine
+        # repeat when the tracker renumbered the player mid-action — a full
+        # game yields 14,640 ids because every broadcast cut restarts them — so
+        # one rebound was reported once per window: 2,112 rebound events that
+        # collapse into 1,005 bursts, against 114 real rebounds.
+        #
+        # Time bounds it, and the TEAM decides whether a different holder id
+        # means anything. Churn happens within a team; a real change of
+        # possession crosses to the other one, and that is a new event.
+        team = teams.get(holder) if holder is not None else None
+        if events and window.label == events[-1].action \
+                and window.start_time_s - events[-1].time_s <= REPEAT_WINDOW_S:
+            previous_team = events[-1].team
+            if team is None or previous_team is None or team == previous_team:
+                continue
+        last_key = key = (window.label, holder)
 
         events.append(
             Event(
