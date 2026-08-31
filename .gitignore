@@ -10,3 +10,4 @@ outputs/*
 *.pt
 yolo*.pt
 data/labeled/actions_spare/
+data/tracking/
