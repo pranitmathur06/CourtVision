@@ -64,7 +64,33 @@ digit-shaped glyphs, then bootstrap templates using the monotonicity constraint
 one per second. Nothing about it is research; it is the difference between 3
 labelled games and 20.
 
+## The blocker was automated, then a different one appeared
+
+`autoscoreboard.py` removes the per-broadcast hand-tuning, deriving both halves
+from the clock's own behaviour rather than from someone reading it:
+
+  * **locating it** — the seconds digit changes every second and nothing else
+    on a scoreboard does, so the clock is the region that segments into
+    digit-shaped glyphs AND whose rightmost glyph keeps changing. A frozen
+    screen yields no location rather than a false one.
+  * **labelling the digits** — one frame per second gives a ones digit that
+    must decrease by one, fixing the digits relative to each other; the digit
+    to its left changes only when the ones wraps 0 -> 9, and that anchors the
+    alphabet absolutely. Without a wrap it returns nothing rather than a
+    relative-only alphabet, which would silently mislabel every read after it.
+
+Unit-tested against synthetic scoreboards. **Not yet validated on a real
+broadcast**: YouTube now answers downloads with "Sign in to confirm you're not
+a bot", and working around bot detection is not something to do. The three
+games already labelled came through before that gate appeared.
+
+So the path to twenty labelled games is no longer blocked by hand-tuning, but
+it is blocked by access to footage. Licensed game video, or a dataset
+distributed as video rather than as links, would unblock it immediately —
+`label_live_game.py` takes any file.
+
 ## Honest status
 
 Not accurate over a full game. Shot is (0.94x). Rebound, steal and block are
-not, and the reason is measured rather than guessed.
+not, and the reason is measured rather than guessed: they have 149, 15 and 15
+live-labelled examples against shot's 254.
