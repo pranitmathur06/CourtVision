@@ -33,7 +33,7 @@ BARD_METADATA = Path("data/labeled/bard_meta/dataset.csv")
 
 
 def run_pipeline(clip_path: str, out_dir: str, config: Config,
-                 narrate: bool = True) -> dict:
+                 narrate: bool = True, prior_strength: float = 0.0) -> dict:
     device = resolve_device()
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -73,7 +73,15 @@ def run_pipeline(clip_path: str, out_dir: str, config: Config,
 
     # Stage 6: action classification, cropped to the ball-handler and batched.
     start = time.perf_counter()
-    classifier = VideoMaeClassifier(str(ACTION_MODEL), device)
+    # Training is class-balanced because every clip was cut to contain an
+    # action; a game is ~90% ordinary play. Left uncorrected the classifier
+    # emitted 7.6x the official event volume. The shift is per class and
+    # additive in log space, so overwhelming evidence is untouched.
+    train_counts = {d.name: len(list(d.glob("*.mp4")))
+                    for d in Path("data/labeled/actions").iterdir() if d.is_dir()}
+    classifier = VideoMaeClassifier(str(ACTION_MODEL), device,
+                                    prior_strength=prior_strength,
+                                    train_counts=train_counts or None)
     windows = classify_windows(images, frames, classifier, config, holders)
     timings["6 action classification"] = time.perf_counter() - start
     print(f"  stage 6: {len(windows)} action windows classified")
@@ -141,6 +149,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Run the CourtVision pipeline")
     parser.add_argument("clip", help="path to an input .mp4")
     parser.add_argument("--out", default="outputs/run", help="output directory")
+    parser.add_argument("--prior-strength", type=float, default=0.0,
+                        help="correct the train/serve prior mismatch; 0 disables")
     parser.add_argument("--no-narrate", action="store_true",
                         help="skip stage 8 (no API key needed)")
     args = parser.parse_args()
@@ -153,7 +163,9 @@ def main() -> int:
             print(f"missing model: {path}; run validate_v3.py and validate_v7.py first")
             return 1
 
-    summary = run_pipeline(args.clip, args.out, Config(), narrate=not args.no_narrate)
+    summary = run_pipeline(args.clip, args.out, Config(),
+                           narrate=not args.no_narrate,
+                           prior_strength=args.prior_strength)
     print(f"\n{summary}")
     return 0
 
