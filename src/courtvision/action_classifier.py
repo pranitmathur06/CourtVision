@@ -180,6 +180,7 @@ def classify_windows(
     classifier: ActionClassifier,
     config: Config,
     holders: Sequence[int | None] | None = None,
+    boundaries: Sequence[tuple[int, int]] | None = None,
 ) -> list[ActionWindow]:
     """Slide a window over the clip and classify the ball-handler in each one.
 
@@ -191,9 +192,21 @@ def classify_windows(
 
     windows: list[ActionWindow] = []
     pending: list[tuple[int, np.ndarray]] = []
-    for start, end in plan_windows(
-        len(images), config.action_window_frames, config.action_stride_frames
-    ):
+    # Windows are planned WITHIN camera segments, never across a cut. A window
+    # spanning a cut holds two unrelated scenes, which is not an action; on
+    # footage cut every nine seconds that collapsed shot detection to 11 of 97
+    # where the same model finds 246 of 262 on uncut video.
+    if boundaries:
+        plan = []
+        for seg_start, seg_end in boundaries:
+            for a, b in plan_windows(seg_end - seg_start,
+                                     config.action_window_frames,
+                                     config.action_stride_frames):
+                plan.append((seg_start + a, seg_start + b))
+    else:
+        plan = plan_windows(len(images), config.action_window_frames,
+                            config.action_stride_frames)
+    for start, end in plan:
         holder = None
         if holders is not None:
             seen = [h for h in holders[start : end + 1] if h is not None]

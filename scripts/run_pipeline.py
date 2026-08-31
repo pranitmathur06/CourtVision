@@ -102,7 +102,13 @@ def run_pipeline(clip_path: str, out_dir: str, config: Config,
     classifier = VideoMaeClassifier(str(ACTION_MODEL), device,
                                     prior_strength=prior_strength,
                                     train_counts=train_counts)
-    windows = classify_windows(images, frames, classifier, config, holders)
+    # Broadcast video is cut constantly. Find the cuts so no classification
+    # window spans two unrelated scenes and no possession is carried across one.
+    cuts = cut_frames(images)
+    boundaries = segments(len(images), cuts)
+    print(f"  stage 5b: {len(cuts)} camera cuts, {len(boundaries)} segments")
+    windows = classify_windows(images, frames, classifier, config, holders,
+                               boundaries=boundaries)
     timings["6 action classification"] = time.perf_counter() - start
     print(f"  stage 6: {len(windows)} action windows classified")
 
