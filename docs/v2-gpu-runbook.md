@@ -91,14 +91,14 @@ Then on the pod, either run the bootstrap, which clones, installs, checks
 that CUDA survived the install and runs the tests:
 
 ```bash
-git clone -b feat/v1-pipeline https://github.com/pronton1234/CourtVision.git
+git clone -b feat/v1-pipeline https://github.com/pranitmathur06/CourtVision.git
 cd CourtVision && bash scripts/bootstrap_pod.sh
 ```
 
 ...or do it by hand:
 
 ```bash
-git clone -b feat/v1-pipeline https://github.com/pronton1234/CourtVision.git
+git clone -b feat/v1-pipeline https://github.com/pranitmathur06/CourtVision.git
 cd CourtVision && python3 -m venv .venv
 ./.venv/bin/python -m pip install -e ".[dev]"
 ```

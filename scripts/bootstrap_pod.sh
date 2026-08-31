@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # One command to paste into a fresh RunPod web terminal.
 #
-#   bash <(curl -sSL https://raw.githubusercontent.com/pronton1234/CourtVision/feat/v1-pipeline/scripts/bootstrap_pod.sh)
+#   bash <(curl -sSL https://raw.githubusercontent.com/pranitmathur06/CourtVision/feat/v1-pipeline/scripts/bootstrap_pod.sh)
 #
 # ...or, since the repo may be private, clone first and run it locally:
 #
-#   git clone -b feat/v1-pipeline https://github.com/pronton1234/CourtVision.git
+#   git clone -b feat/v1-pipeline https://github.com/pranitmathur06/CourtVision.git
 #   cd CourtVision && bash scripts/bootstrap_pod.sh
 #
 # Installs into the image's EXISTING Python rather than a fresh venv. RunPod's
@@ -42,7 +42,7 @@ esac
 
 if [ ! -f pyproject.toml ]; then
   say "Cloning"
-  git clone -b "$REPO_BRANCH" https://github.com/pronton1234/CourtVision.git \
+  git clone -b "$REPO_BRANCH" https://github.com/pranitmathur06/CourtVision.git \
     || die "clone failed (private repo? use a token or rsync the tree across)"
   cd CourtVision || die "cannot enter CourtVision"
 fi

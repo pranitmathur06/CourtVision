@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CourtVision</title>
+<meta name="description" content="Basketball broadcast in, named play-by-play out — and what nine validation gates say about where it holds up.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+:root{
+  --ink:#12161c; --ink-2:#2b333f; --ink-3:#5d6875;
+  --ground:#f7f8fa; --surface:#ffffff; --line:#dfe3e9;
+  --cyan:#1e7d97; --red:#b8423d; --amber:#a8741a;
+  --good:#2f7d5d; --warn:#a8741a; --bad:#b8423d;
+  --display:"Barlow Condensed",ui-sans-serif,system-ui,sans-serif;
+  --body:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --measure:68ch;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ink:#e8ecf2; --ink-2:#b7c0cd; --ink-3:#8592a3;
+    --ground:#12161c; --surface:#1a1f28; --line:#2b333f;
+    --cyan:#5cc0da; --red:#e4726d; --amber:#e0a03a;
+    --good:#5fbf94; --warn:#e0a03a; --bad:#e4726d;
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#e8ecf2; --ink-2:#b7c0cd; --ink-3:#8592a3;
+  --ground:#12161c; --surface:#1a1f28; --line:#2b333f;
+  --cyan:#5cc0da; --red:#e4726d; --amber:#e0a03a;
+  --good:#5fbf94; --warn:#e0a03a; --bad:#e4726d;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:var(--body); font-size:16.5px; line-height:1.65;
+  font-feature-settings:"kern","liga";
+}
+.wrap{max-width:min(96vw,1120px); margin:0 auto; padding:0 24px}
+.col{max-width:var(--measure)}
+a{color:var(--cyan)}
+a:focus-visible,button:focus-visible{outline:2px solid var(--amber); outline-offset:3px; border-radius:2px}
+
+header{padding:88px 0 40px; border-bottom:1px solid var(--line)}
+.eyebrow{
+  font-family:var(--display); text-transform:uppercase; letter-spacing:.14em;
+  font-size:14px; color:var(--ink-3); margin:0 0 14px;
+}
+h1{
+  font-family:var(--display); font-weight:600; font-size:clamp(52px,9vw,88px);
+  line-height:.95; letter-spacing:-.01em; margin:0 0 20px; text-wrap:balance;
+}
+.lede{font-size:20px; line-height:1.55; color:var(--ink-2); margin:0; max-width:60ch}
+.lede strong{color:var(--ink); font-weight:600}
+
+section{padding:56px 0; border-bottom:1px solid var(--line)}
+h2{
+  font-family:var(--display); font-weight:600; font-size:clamp(28px,4vw,38px);
+  line-height:1.1; letter-spacing:-.005em; margin:0 0 8px; text-wrap:balance;
+}
+h3{
+  font-family:var(--display); font-weight:600; font-size:22px; letter-spacing:.01em;
+  margin:34px 0 8px;
+}
+.sub{color:var(--ink-3); margin:0 0 28px; max-width:60ch}
+p{margin:0 0 16px}
+p+p{margin-top:-2px}
+
+figure{margin:0}
+.shot{
+  border:1px solid var(--line); border-radius:3px; overflow:hidden;
+  background:var(--surface); line-height:0;
+}
+.shot img{width:100%; height:auto; display:block}
+figcaption{
+  font-family:var(--mono); font-size:12.5px; color:var(--ink-3);
+  padding:11px 14px; border-top:1px solid var(--line); line-height:1.5;
+}
+.legend{display:flex; flex-wrap:wrap; gap:16px; margin:14px 0 0; padding:0; list-style:none}
+.legend li{display:flex; align-items:center; gap:7px; font-size:13.5px; color:var(--ink-2)}
+.swatch{width:22px; height:3px; border-radius:2px; flex:none}
+
+pre{
+  font-family:var(--mono); font-size:13px; line-height:1.75; margin:0;
+  background:var(--surface); border:1px solid var(--line); border-radius:3px;
+  padding:16px 18px; overflow-x:auto;
+}
+code{font-family:var(--mono); font-size:.92em}
+.k{color:var(--cyan)} .v{color:var(--amber)} .c{color:var(--ink-3)}
+
+.tablewrap{overflow-x:auto; margin:20px 0 0}
+table{border-collapse:collapse; width:100%; min-width:520px; font-size:14.5px}
+caption{
+  text-align:left; font-family:var(--display); text-transform:uppercase;
+  letter-spacing:.12em; font-size:13px; color:var(--ink-3); padding-bottom:10px;
+}
+th,td{padding:9px 14px 9px 0; text-align:left; border-bottom:1px solid var(--line)}
+th{
+  font-family:var(--display); text-transform:uppercase; letter-spacing:.1em;
+  font-size:12.5px; font-weight:500; color:var(--ink-3);
+}
+td.num{font-family:var(--mono); font-variant-numeric:tabular-nums; text-align:right; padding-right:22px}
+th.num{text-align:right; padding-right:22px}
+td.name{font-weight:500}
+.tag{
+  font-family:var(--display); text-transform:uppercase; letter-spacing:.09em;
+  font-size:12px; padding:1px 8px; border-radius:2px; white-space:nowrap;
+  border:1px solid currentColor;
+}
+.tag.ok{color:var(--good)} .tag.mid{color:var(--warn)} .tag.no{color:var(--bad)}
+
+ol.stages{list-style:none; counter-reset:s; margin:24px 0 0; padding:0; display:grid; gap:1px;
+  background:var(--line); border:1px solid var(--line); border-radius:3px; overflow:hidden}
+ol.stages li{
+  counter-increment:s; background:var(--surface); padding:14px 18px;
+  display:grid; grid-template-columns:34px 1fr auto; gap:16px; align-items:baseline;
+}
+ol.stages li::before{
+  content:counter(s); font-family:var(--mono); font-size:12.5px; color:var(--ink-3);
+  font-variant-numeric:tabular-nums;
+}
+.stage-what{font-size:15px}
+.stage-what b{font-weight:600}
+.stage-tech{
+  font-family:var(--mono); font-size:12px; color:var(--ink-3); text-align:right;
+  white-space:nowrap;
+}
+@media (max-width:640px){
+  ol.stages li{grid-template-columns:26px 1fr; gap:10px}
+  .stage-tech{grid-column:2; text-align:left}
+}
+
+.note{
+  border-left:2px solid var(--amber); padding:2px 0 2px 18px; margin:26px 0;
+  color:var(--ink-2); max-width:62ch;
+}
+.note b{color:var(--ink); font-weight:600}
+
+footer{padding:44px 0 72px; color:var(--ink-3); font-size:14px}
+footer a{color:var(--ink-2)}
+@media (prefers-reduced-motion:no-preference){
+  a{transition:color .15s ease}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <p class="eyebrow">Computer vision &middot; NBA broadcast</p>
+    <h1>CourtVision</h1>
+    <p class="lede">Basketball video in, <strong>named play-by-play</strong> out. Nine stages, thirty modules,
+      346 tests &mdash; and eleven validation gates whose job is to say where it doesn't work.</p>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <h2>What it produces</h2>
+    <p class="sub">Eight seconds of a Nuggets possession. Every box, id and label below is inferred from pixels.</p>
+    <figure class="shot">
+      <img src="media/demo.gif" alt="Annotated NBA footage: players in coloured boxes with track ids, the ball-handler highlighted">
+      <figcaption>Boxes coloured by team, numbered by track. The highlighted box is whoever has the ball.</figcaption>
+    </figure>
+    <ul class="legend">
+      <li><span class="swatch" style="background:var(--cyan)"></span>Team A</li>
+      <li><span class="swatch" style="background:var(--red)"></span>Team B</li>
+      <li><span class="swatch" style="background:var(--amber)"></span>In possession</li>
+    </ul>
+
+    <h3>And the log beside it</h3>
+    <pre><span class="c">{</span> <span class="k">"time_s"</span>: <span class="v">4.08</span>, <span class="k">"action"</span>: <span class="v">"steal"</span>,   <span class="k">"team"</span>: <span class="v">"A"</span>, <span class="k">"player_name"</span>: <span class="v">"Conley"</span> <span class="c">}</span>
+<span class="c">{</span> <span class="k">"time_s"</span>: <span class="v">5.68</span>, <span class="k">"action"</span>: <span class="v">"rebound"</span>, <span class="k">"team"</span>: <span class="v">"A"</span>, <span class="k">"player_name"</span>: <span class="v">"Randle"</span> <span class="c">}</span>
+<span class="c">{</span> <span class="k">"time_s"</span>: <span class="v">7.28</span>, <span class="k">"action"</span>: <span class="v">"pass"</span>,    <span class="k">"team"</span>: <span class="v">"B"</span>, <span class="k">"player_name"</span>: <span class="v">"Jokić"</span> <span class="c">}</span></pre>
+    <p class="note">The names come from joining the event timeline against the official play-by-play &mdash;
+      <b>no jersey OCR</b>. When a match isn't confident the event keeps its anonymous track id rather than
+      guessing, and a fabrication guard rejects any name the events don't carry.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Nine stages</h2>
+    <p class="sub">Numbered because it genuinely is a sequence &mdash; each stage consumes the one above it.</p>
+    <ol class="stages">
+      <li><span class="stage-what"><b>Extract</b> frames at 10&nbsp;fps</span><span class="stage-tech">OpenCV</span></li>
+      <li><span class="stage-what"><b>Detect</b> players, ball, rim, ball-handler</span><span class="stage-tech">YOLO11, 4-class fine-tune</span></li>
+      <li><span class="stage-what"><b>Track</b> identities across frames</span><span class="stage-tech">ByteTrack</span></li>
+      <li><span class="stage-what"><b>Assign teams</b> by torso colour</span><span class="stage-tech">k-means in CIELAB</span></li>
+      <li><span class="stage-what"><b>Resolve possession</b> frame by frame</span><span class="stage-tech">geometry + hysteresis</span></li>
+      <li><span class="stage-what"><b>Classify actions</b> in 1.6&nbsp;s windows</span><span class="stage-tech">VideoMAE</span></li>
+      <li><span class="stage-what"><b>Structure events</b>, collapsing repeats</span><span class="stage-tech">possession derivation</span></li>
+      <li><span class="stage-what"><b>Name players</b> from the official feed</span><span class="stage-tech">clock OCR + play-by-play</span></li>
+      <li><span class="stage-what"><b>Narrate</b>, guarded against invention</span><span class="stage-tech">Claude</span></li>
+    </ol>
+    <p class="note">Stage 8 is the one that surprised me. Arbitrary footage has no join key, so the only way to
+      line video up with the official record is <b>the clock on screen</b>. A template reader validates itself
+      on the one thing a game clock always does &mdash; count down &mdash; and passed 96 of 96 consecutive reads.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Where it holds up</h2>
+    <p class="sub">Every number is a count of emitted events against the NBA's own play-by-play for the same
+      game. A ratio of 1.00&times; means the system reported exactly as many as actually happened.</p>
+
+    <div class="tablewrap">
+      <table>
+        <caption>From broadcast video</caption>
+        <thead><tr>
+          <th>Action</th><th class="num">Ratio</th><th>Footage</th><th></th>
+        </tr></thead>
+        <tbody>
+          <tr><td class="name">Shot</td><td class="num">0.94&times;</td><td>141&nbsp;min continuous</td><td><span class="tag ok">holds</span></td></tr>
+          <tr><td class="name">Steal</td><td class="num">1.73&times;</td><td>cut-segmented</td><td><span class="tag ok">holds</span></td></tr>
+          <tr><td class="name">Block</td><td class="num">0.67&times;</td><td>cut-segmented</td><td><span class="tag ok">holds</span></td></tr>
+          <tr><td class="name">Rebound</td><td class="num">4.25&times;</td><td>141&nbsp;min continuous</td><td><span class="tag no">over-reports</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:14px; color:var(--ink-2); max-width:62ch">Each class clears the bar somewhere, but never
+      all at once on one game: shot needs uncut footage, while steal and block were only measurable on
+      joined clips.</p>
+
+    <h3>The ceiling, from tracking data</h3>
+    <p class="sub">Ten full games of 25&nbsp;Hz player coordinates, to answer a different question: is the
+      <em>event logic</em> right when perception is perfect? Precision sits beside every ratio, because a count
+      can be hit by accident.</p>
+    <div class="tablewrap">
+      <table>
+        <caption>Ten games, 2015&ndash;16 SportVU</caption>
+        <thead><tr>
+          <th>Action</th><th class="num">Median</th><th class="num">Precision</th><th class="num">Recall</th><th></th>
+        </tr></thead>
+        <tbody>
+          <tr><td class="name">Shot</td><td class="num">0.78&times;</td><td class="num">0.89</td><td class="num">0.71</td><td><span class="tag ok">solved</span></td></tr>
+          <tr><td class="name">Rebound</td><td class="num">1.20&times;</td><td class="num">0.51</td><td class="num">0.59</td><td><span class="tag ok">sound</span></td></tr>
+          <tr><td class="name">Steal</td><td class="num">1.71&times;</td><td class="num">0.24</td><td class="num">0.35</td><td><span class="tag mid">marginal</span></td></tr>
+          <tr><td class="name">Block</td><td class="num">&mdash;</td><td class="num">&mdash;</td><td class="num">&mdash;</td><td><span class="tag no">not emitted</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">Read the precision column, not the ratio. Steal's <b>count</b> fits, but 0.24 precision means
+      three of four are the wrong moment &mdash; and perfect perception didn't fix it. That makes steal an
+      <b>event-logic</b> problem, not a camera one, and no amount of model training would have found it.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Where it doesn't</h2>
+    <p class="sub">Measured, not hedged.</p>
+    <p><b>Block is below chance from pixels.</b> Separating a block from ordinary play scores &minus;0.170 lift
+      from a player crop &mdash; worse than always guessing. Two geometric routes failed too: blocked shots
+      still reach the rim (median 0.4&nbsp;ft, so they're a <em>subset</em> of shots, not a complement), and a
+      defender at the ball doesn't separate them, because on any shot the shooter is right there.</p>
+    <p><b>A player crop can't contain a rebound.</b> The crop follows the ball-handler; a rebound is the ball
+      coming off a rim that's outside the frame. Separability is +0.042 from the crop against +0.113 from the
+      whole frame &mdash; which is why <code>rebound</code> quietly became the model's label for anything
+      generic, and claimed 82% of a game.</p>
+    <p><b>Steal is barely visual at all.</b> +0.054 lift. It isn't a look; it's a possession change.</p>
+    <p class="note">Those three findings redirected the whole project: these are <b>possession and trajectory
+      events</b>, not visual categories. Deriving steal from possession instead of classifying it took it from
+      33.8&times; over-reporting to 1.73&times;.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Engineering notes</h2>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Item</th><th>Result</th></tr></thead>
+        <tbody>
+          <tr><td class="name">Full-game throughput</td><td>84,589 frames in 47.7&nbsp;min &mdash; 1.76&times; real time, memory flat in clip length</td></tr>
+          <tr><td class="name">Fused CUDA kernel</td><td>Compiles under nvcc 12.8; matches an OpenCV oracle to 0.1456 against a 2.0 tolerance</td></tr>
+          <tr><td class="name">Dual-GPU split</td><td>Verified, and measurably <em>not</em> worth it &mdash; the classifier was never the bottleneck</td></tr>
+          <tr><td class="name">Possession</td><td>9/9 on a human-annotated answer key</td></tr>
+          <tr><td class="name">Dataset confound</td><td>Corpus membership worth +0.010 of label accuracy, down from +0.150</td></tr>
+          <tr><td class="name">Tests</td><td>346, across 30 modules and 11 validation gates</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">The fused kernel measured 1.4&times; faster than the reference on one machine and 1.0&times;
+      on another, same GPU model. It's recorded as <b>not reproducible</b> rather than as a speedup &mdash; the
+      first benchmark ran while training held the GPU at 71%, and a benchmark on a contended GPU isn't one.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>Source, full findings and the validation gates:
+      <a href="https://github.com/pranitmathur06/CourtVision">github.com/pranitmathur06/CourtVision</a></p>
+    <p style="margin:0; font-size:13px">Tracking figures use the public 2015&ndash;16 SportVU release for research
+      only. Broadcast footage is not redistributed.</p>
+  </div>
+</footer>
+
+</body>
+</html>

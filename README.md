@@ -6,6 +6,8 @@ A nine-stage computer-vision pipeline that watches NBA broadcast footage and
 produces timestamped, named, natural-language commentary — detection, tracking,
 team assignment, possession, action recognition, and narration, end to end.
 
+**[Live demo → pranitmathur06.github.io/CourtVision](https://pranitmathur06.github.io/CourtVision/)**
+
 ![CourtVision annotating an NBA possession](docs/media/demo.gif)
 
 Boxes are coloured by team and numbered by track. The **yellow box is whoever has
@@ -28,7 +30,7 @@ python -m scripts.run_pipeline clip.mp4 --out outputs/run
 | | |
 |---|---|
 | **Stack** | PyTorch · YOLO11 · VideoMAE · ByteTrack · OpenCV · scikit-learn · LangGraph · CUDA C++ |
-| **Scale** | ~4,000 lines of library code, 287 tests, 11 validation gates, 112 commits |
+| **Scale** | ~4,500 lines of library code, 346 tests, 11 validation gates, 150 commits |
 | **Throughput** | 84 minutes of video in 47.7 minutes — **1.76× real time** on one RTX 4090 |
 | **Action recognition** | **0.816** across 7 classes on 735 held-out clips (chance 0.143) |
 | **Possession** | 9/9 on a human-annotated answer key |
@@ -146,11 +148,38 @@ pipeline runs on game-length video, and the action model is not yet usable on it
 
 | | |
 |---|---|
-| v1 — pipeline | done, 11 gates, 287 tests |
+| v1 — pipeline | done, 11 gates, 346 tests |
 | v2 — CUDA kernel | compiles, matches an OpenCV oracle; speedup does not reproduce across machines |
 | v2 — dual-GPU split | verified, and measurably *not* worth it — the classifier was never the bottleneck |
 | v3 — player naming | working end to end against the official feed |
 | v3 — play recognition | geometric sets only (pick-and-roll, horns, DHO); coaching set *calls* are a real data gap |
+| tracking ceiling | 10 full games scored from coordinates — shot and rebound hold, steal is marginal, block is not emitted |
+
+---
+
+## The ceiling, from tracking data
+
+Ten full NBA games of 25 Hz player coordinates, scored against official
+play-by-play, asking a question video cannot answer: **is the event logic right
+when perception is perfect?**
+
+| action | median | precision | recall | |
+|---|---|---|---|---|
+| shot | 0.78× | 0.89 | 0.71 | solved |
+| rebound | 1.20× | 0.51 | 0.59 | sound |
+| steal | 1.71× | 0.24 | 0.35 | marginal |
+| block | — | — | — | not emitted |
+
+Read precision, not the ratio. Steal's *count* fits while 0.24 precision means
+three of four are the wrong moment — and perfect perception did not fix it. That
+makes steal an **event-logic** problem rather than a perception one, which no
+amount of model training would have surfaced.
+
+It also settled the direction of the whole project: measured separability against
+ordinary play is +0.042 for rebound from a player crop, +0.054 for steal, and
+**−0.170 for block — below chance**. These are possession and trajectory events,
+not visual categories. Deriving steal from possession instead of classifying it
+took it from 33.8× over-reporting to 1.73×.
 
 ---
 
@@ -160,6 +189,7 @@ pipeline runs on game-length video, and the action model is not yet usable on it
 architecture, every design decision with its measurement, what was tried and
 rejected, and where it breaks.
 
+[Continuous-game accuracy](docs/continuous-game-accuracy.md) ·
 [Full-game findings](docs/full-game-findings.md) ·
 [Model results](docs/v7-gpu-results.md) ·
 [Possession investigation](docs/possession-investigation.md) ·
@@ -172,4 +202,6 @@ rejected, and where it breaks.
 
 Clips and annotations from the **BARD** dataset (Gabriele Giudici, 2025, CC BY
 4.0) and **SpaceJam**; detector training data from **basketball-player-detection-3**
-on Roboflow Universe (CC BY 4.0). Official play-by-play via `stats.nba.com`.
+on Roboflow Universe (CC BY 4.0). Official play-by-play via `stats.nba.com`. Tracking figures use the public
+2015–16 SportVU release for research only; neither it nor broadcast footage is
+redistributed here.
