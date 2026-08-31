@@ -288,3 +288,51 @@ it has almost nothing to attach to. Block is not separable at all.
 Shot and steal each meet the bar, on different footage. Both on one continuous
 game is a single run away and needs a game file. Rebound follows shot by
 construction; block needs a signal that does not exist in a ball-handler crop.
+
+
+---
+
+# Round five: cutting at camera changes
+
+Broadcast video is cut constantly, and the pipeline slid a 16-frame window
+straight across those cuts — each such window holding two unrelated scenes.
+`shot_boundaries.py` finds cuts by mean absolute difference on a 32x18
+thumbnail (a cut changes nearly every pixel at once; play, however fast, does
+not) and `classify_windows` now plans windows inside segments.
+
+On correct-speed footage, truth scoped to the 123 clips present:
+
+    action    emitted   truth   ratio    bar
+    steal          19      11   1.73x    met
+    block           2       3   0.67x    met
+    shot            9      97   0.09x
+    rebound         3      48   0.06x
+    other         127      49   2.59x
+
+**Block enters tolerance for the first time**, from 0.00x. Steal holds at 1.73x
+against 33.8x when it was classified. Two of five classes now meet the bar in
+the same run on the same footage.
+
+## Shot is the remaining blocker, and rebound is downstream of it
+
+Shot finds 9 of 97 here. The same checkpoint finds 246 of 262 on a continuous
+broadcast, so this is the footage and not the model: 123 clips joined end to
+end give segments about nine seconds long, and possession resolves on 56% of
+frames because tracking restarts at every join. Rebound is defined as
+possession resolving after a shot, so with 9 shots it has nothing to attach to
+and follows shot down.
+
+That is one problem, not two, and it does not reproduce on uncut video.
+
+## Standing
+
+    action    best measured   footage
+    shot              0.94x   continuous broadcast
+    steal             1.73x   cut-segmented clips, derived
+    block             0.67x   cut-segmented clips
+    rebound           4.25x   continuous broadcast, classified
+
+Three of four classes have now met the bar somewhere; none of the four fails
+for a reason that is still unknown. What has never been possible is measuring
+them together on one continuous game, which needs a game file the pipeline can
+open.
