@@ -17,6 +17,7 @@ from courtvision.config import Config
 from courtvision.detection import load_pipeline_detector
 from courtvision.device import resolve_device
 from courtvision.enrichment import align, enforce_identity_consistency, plays_for_clip
+from courtvision.derived_events import derive
 from courtvision.events import build_events
 from courtvision.extraction import extract_frames
 from courtvision.framestore import FrameStore
@@ -34,7 +35,8 @@ BARD_METADATA = Path("data/labeled/bard_meta/dataset.csv")
 
 def run_pipeline(clip_path: str, out_dir: str, config: Config,
                  narrate: bool = True, prior_strength: float = 0.0,
-                 render: bool = True) -> dict:
+                 render: bool = True,
+                 derive_possession_events: bool = False) -> dict:
     device = resolve_device()
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -90,6 +92,18 @@ def run_pipeline(clip_path: str, out_dir: str, config: Config,
     # Stage 7: event structuring.
     start = time.perf_counter()
     events = build_events(windows, holders, teams)
+    if derive_possession_events:
+        # Steal and rebound are possession events, not looks. Separating them
+        # from ordinary play by appearance gives +0.054 and +0.113 of lift;
+        # block is BELOW chance. Possession, by contrast, is 9/9 on the answer
+        # key and shots land at 0.94x of the official count, so derive the two
+        # that follow from those rather than recognising them.
+        kept = [e for e in events if e.action not in ("steal", "rebound")]
+        shots = [e for e in events if e.action == "shot"]
+        derived = derive([f.time_s for f in frames], holders, teams, shots)
+        events = sorted(kept + derived, key=lambda e: e.time_s)
+        print(f"  stage 7a: derived {len(derived)} possession events "
+              f"(steal/rebound) from {len(shots)} shots")
     timings["7 events"] = time.perf_counter() - start
     print(f"  stage 7: {len(events)} events")
 
@@ -158,6 +172,9 @@ def main() -> int:
     parser.add_argument("--out", default="outputs/run", help="output directory")
     parser.add_argument("--prior-strength", type=float, default=0.0,
                         help="correct the train/serve prior mismatch; 0 disables")
+    parser.add_argument("--derive-possession", action="store_true",
+                        help="build steal/rebound from the possession timeline "
+                             "instead of the action classifier")
     parser.add_argument("--no-render", action="store_true",
                         help="skip the annotated video (28%% of runtime)")
     parser.add_argument("--no-narrate", action="store_true",
@@ -175,7 +192,8 @@ def main() -> int:
     summary = run_pipeline(args.clip, args.out, Config(),
                            narrate=not args.no_narrate,
                            prior_strength=args.prior_strength,
-                           render=not args.no_render)
+                           render=not args.no_render,
+                           derive_possession_events=args.derive_possession)
     print(f"\n{summary}")
     return 0
 
