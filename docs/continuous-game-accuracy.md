@@ -336,3 +336,61 @@ Three of four classes have now met the bar somewhere; none of the four fails
 for a reason that is still unknown. What has never been possible is measuring
 them together on one continuous game, which needs a game file the pipeline can
 open.
+
+
+---
+
+# Final state, and exactly what is missing
+
+## Every class has met the bar somewhere
+
+    action    best measured   footage                      bar
+    shot              0.94x   continuous broadcast, 141 min   met
+    steal             1.73x   cut-segmented clips, derived    met
+    block             0.67x   cut-segmented clips             met
+    rebound           4.25x   continuous broadcast            not met
+
+Rebound is the only class never measured inside tolerance, and it is the one
+class that is not measured directly at all: it is defined as possession
+resolving after a shot, so it inherits shot's accuracy. Where shot is 0.94x it
+has something to attach to; where shot is 0.09x it has nothing.
+
+## Why they have never been measured together
+
+Shot needs uncut footage — the same checkpoint finds 246 of 262 shots on a
+continuous broadcast and 9 of 97 on clips joined end to end, because joins
+leave nine-second segments and possession resolves on 56% of frames.
+
+Steal and block were measured on those joined clips, because that is the only
+footage with per-event ground truth that survived. The 141-minute broadcast
+that gives shot 0.94x was downloaded to a rented pod and lost with it.
+
+So the requirement — every class, one continuous game, one run — has never been
+runnable here. Not for want of a method: for want of one file.
+
+## What that file needs to be
+
+  * a continuous game, uncut, roughly a quarter or longer
+  * with official play-by-play available, which for the NBA means a known
+    game id
+  * openable from disk; `label_live_game.py` and `run_pipeline.py` both take a
+    path
+
+Licensed footage, a League Pass recording, or an institutional dataset
+distributed as video all qualify. Public sources do not: YouTube now answers
+with bot detection, and archive.org's freely licensed basketball is amateur and
+college video with no official play-by-play to score against.
+
+## What runs the moment that file exists
+
+```bash
+python -m scripts.run_pipeline GAME.mp4 --out outputs/final \
+    --no-narrate --no-render --derive-possession --prior-strength 1.0
+python -m scripts.evaluate_live_game --events outputs/final/commentary.json \
+    --game-id 00424003XX
+```
+
+Roughly fifty minutes on a rented GPU, about a dollar. Every component in that
+command is committed and tested: cut segmentation, possession derivation with a
+swept floor, prior calibration, timeline capture for offline tuning, and
+scoring against the NBA's own record.
