@@ -22,6 +22,7 @@ from courtvision.events import build_events
 from courtvision.extraction import extract_frames
 from courtvision.framestore import FrameStore
 from courtvision.possession import possession_timeline
+from courtvision.shot_boundaries import cut_frames, segments
 from courtvision.render import render_video, write_log
 from courtvision.team_assignment import assign_teams, collect_samples
 from courtvision.tracking import PlayerTracker

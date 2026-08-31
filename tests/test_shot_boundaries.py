@@ -63,3 +63,19 @@ def test_windows_are_planned_inside_segments_only():
     for a, b in planned:
         assert any(s <= a and b < e for s, e in segs), \
             f"window ({a},{b}) crosses a segment boundary"
+
+
+def test_run_pipeline_imports_cleanly():
+    """A missing import only surfaced 20 minutes into a paid GPU run.
+
+    ast.parse checks syntax, not names, so the module looked fine locally while
+    `cut_frames` was never imported and the run died at stage 5b after
+    detection and tracking had already been paid for.
+    """
+    import sys
+
+    sys.path.insert(0, "scripts")
+    import run_pipeline
+
+    for name in ("cut_frames", "segments", "derive", "build_events"):
+        assert hasattr(run_pipeline, name), f"run_pipeline is missing {name}"
