@@ -247,3 +247,17 @@ def test_build_templates_handles_white_on_dark():
         dark[8:28, x:x + 12] = 255
     templates = build_templates(dark, "636")
     assert set(templates) == {"6", "3"}
+
+
+def test_each_broadcast_names_the_video_its_anchors_were_read_from():
+    """Anchors are (fraction, value) from ONE recording and do not transfer.
+
+    Fraction 0.28 is 8:13 in one game and something else in the next, which
+    surfaced as "segmented 0 clock digits but was told 3" while the crop was
+    perfectly correct.
+    """
+    from scripts.label_live_game import BROADCASTS
+
+    for name, profile in BROADCASTS.items():
+        assert profile.get("anchor_video"), (
+            f"{name}: anchors must name the video they were read from")

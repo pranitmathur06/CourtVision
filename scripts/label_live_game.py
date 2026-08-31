@@ -31,17 +31,24 @@ import numpy as np
 # cover only the digits in that one reading and read 1 frame in 60; several
 # frames spread across the game cover enough of 0-9 to read four in five.
 #
-# `anchors` are (fraction through the video, digits with no colon). Readings
-# under a minute are skipped: broadcasts switch to a decimal "56.9" there, which
-# is a different format rather than a different value.
+# `anchors` are (fraction through the video, digits with no colon) read from
+# ONE video — `anchor_video`. A fraction only names a clock value in the video
+# it was read from, so anchors do not transfer between games even on the same
+# network: fraction 0.28 is 8:13 in one game and something else in the next.
+# The GLYPHS do transfer, because a network draws the same digits all season,
+# so templates are learned once per broadcast from its anchor video and reused.
+# Readings under a minute are skipped: broadcasts switch to a decimal "56.9"
+# there, which is a different format rather than a different value.
 BROADCASTS = {
     "tnt": {
         "roi": (598, 634, 1098, 1170),
+        "anchor_video": "/workspace/game.mp4",
         "anchors": [(0.12, "150"), (0.18, "1118"), (0.24, "655"), (0.30, "251"),
                     (0.60, "835"), (0.66, "500"), (0.72, "104")],
     },
     "espn": {
         "roi": (632, 668, 812, 912),
+        "anchor_video": "/workspace/game_0042400311.mp4",
         "anchors": [(0.10, "636"), (0.28, "813"), (0.34, "420"),
                     (0.52, "840"), (0.58, "552")],
     },
@@ -60,12 +67,19 @@ PERIOD_SECONDS = 12 * 60
 
 
 def build_broadcast_templates(video: str, profile: dict):
-    """Learn this broadcast's digits from frames whose clock value is known."""
+    """Learn this broadcast's digits from frames whose clock value is known.
+
+    Always from the profile's anchor video, never from the video being
+    labelled: the anchors name clock values at particular fractions of one
+    specific recording. Reading them off a different game produced
+    "segmented 0 clock digits but was told 3" — the crop was fine, the frame
+    simply did not show that value.
+    """
     import cv2
 
     from courtvision.scoreboard import build_templates_from_many
 
-    cap = cv2.VideoCapture(video)
+    cap = cv2.VideoCapture(profile.get("anchor_video") or video)
     total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     top, bottom, left, right = profile["roi"]
     pairs = []
