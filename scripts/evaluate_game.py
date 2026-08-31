@@ -35,12 +35,26 @@ TRUTH_MAP = {
 }
 
 
-def truth_counts(metadata_csv: str, game: str) -> collections.Counter:
+def truth_counts(metadata_csv: str, game: str,
+                 clips: int | None = None) -> collections.Counter:
+    """Actions in this game — or in the first `clips` of it.
+
+    A video assembled from part of a game must be scored against that part. The
+    local footage held 123 of the game's 268 clips while this counted all 268,
+    so every ratio came out against roughly twice the truth present: steal read
+    2.39x when it was 5.2x, and shot read 0.12x when it was 0.27x. A denominator
+    that quietly covers more than the video does flatters over-emission and
+    punishes under-emission.
+    """
     counts: collections.Counter = collections.Counter()
+    seen = 0
     with open(metadata_csv) as handle:
         for row in csv.DictReader(handle, delimiter=";"):
             if game not in row["urls"]:
                 continue
+            seen += 1
+            if clips is not None and seen > clips:
+                break
             try:
                 annotations = ast.literal_eval(row["actions"])
             except (ValueError, SyntaxError):
@@ -57,11 +71,14 @@ def main() -> int:
     parser.add_argument("--events", default="outputs/quarter/commentary.json")
     parser.add_argument("--game", default="chi-vs-tor-0022401223")
     parser.add_argument("--metadata", default="data/labeled/bard_meta/dataset_paths.csv")
+    parser.add_argument("--clips", type=int, default=None,
+                        help="score against only the first N clips of the game, "
+                             "when the video was assembled from part of it")
     parser.add_argument("--max-ratio", type=float, default=2.0,
                         help="worst tolerated over- or under-emission")
     args = parser.parse_args()
 
-    truth = truth_counts(args.metadata, args.game)
+    truth = truth_counts(args.metadata, args.game, args.clips)
     if not truth:
         print(f"FAIL — no ground truth for {args.game}")
         return 1

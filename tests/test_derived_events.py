@@ -101,3 +101,26 @@ def test_training_counts_missing_does_not_crash_inference(tmp_path, monkeypatch)
     assert _training_counts() is None
     os.makedirs("data/labeled/actions/shot")
     assert _training_counts() == {"shot": 0}
+
+
+def test_truth_is_scoped_to_the_clips_actually_in_the_video(tmp_path):
+    """A video built from part of a game must be scored against that part.
+
+    The local footage held 123 of a game's 268 clips while the scorer counted
+    all 268, so every ratio came out against roughly twice the truth present:
+    steal was reported at 2.39x when it was 5.38x. A denominator covering more
+    than the video flatters over-emission and punishes under-emission.
+    """
+    import sys
+
+    sys.path.insert(0, "scripts")
+    from evaluate_game import truth_counts
+
+    csv_path = tmp_path / "meta.csv"
+    rows = ["urls;actions"]
+    for i in range(10):
+        rows.append(f"g1/{i}.mp4;[{{'action': 'Steal'}}]")
+    csv_path.write_text("\n".join(rows))
+
+    assert truth_counts(str(csv_path), "g1")["steal"] == 10
+    assert truth_counts(str(csv_path), "g1", clips=4)["steal"] == 4

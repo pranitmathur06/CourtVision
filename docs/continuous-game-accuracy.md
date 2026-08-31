@@ -137,8 +137,14 @@ change is mostly noise. Swept against BARD's labels, derived steals against the
             5.0        65         3.5x
             8.0        26         1.4x
 
-**Steal: 33.8x from the classifier, 2.39x derived at the 6 s default.** A 14x
-improvement, and the first time that class has been anywhere near usable.
+**Correction.** That 2.39x was wrong. The video was assembled from 123 of the
+game's 268 clips while the scorer counted truth across all 268, so every ratio
+on this footage was measured against roughly twice the truth actually present.
+Scoped correctly, derived steal on these clips is **5.38x**, not 2.39x, and
+shot is 0.27x rather than 0.12x. `evaluate_game --clips N` now scopes it.
+
+The live-game figures below are unaffected: those score a full 141-minute
+broadcast against the official play-by-play for that whole game.
 
 `run_pipeline` now writes the possession timeline beside the events, so this
 threshold is swept offline in seconds rather than an hour per setting.
