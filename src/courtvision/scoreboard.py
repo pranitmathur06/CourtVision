@@ -104,8 +104,13 @@ def build_templates(roi: np.ndarray, reading: str) -> dict[str, np.ndarray]:
 
     `reading` is the digits in order, e.g. "1059" for 10:59. Every network draws
     its own scoreboard, so templates do not transfer between broadcasts.
+
+    Polarity is normalised here for the same reason `read_clock` does it: ESPN
+    draws white on dark, and without this the segmenter found zero digits in a
+    crop that plainly shows 6:36 — reported as "check the crop", which sent me
+    looking at coordinates that were already correct.
     """
-    glyphs = clock_glyphs(roi)
+    glyphs = clock_glyphs(normalise_polarity(roi))
     if len(glyphs) != len(reading):
         raise ValueError(
             f"segmented {len(glyphs)} clock digits but was told {len(reading)}: "

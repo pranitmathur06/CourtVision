@@ -202,3 +202,48 @@ def test_a_small_upward_jump_is_a_misread_not_a_period():
         kept.append(seconds)
     assert kept == [500, 498, 495], "a 7-second jump up must be dropped"
     assert period == 1
+
+
+def test_every_mapped_game_has_a_broadcast_profile():
+    """A missing profile silently falls back to TNT's crop and reads nothing.
+
+    That is exactly what happened on the first ESPN game: 0 clock samples, and
+    the failure looked like "this broadcast has no scoreboard" rather than
+    "we cropped the wrong part of the screen".
+    """
+    from scripts.label_live_game import BROADCASTS, GAME_BROADCAST
+
+    for game_id, name in GAME_BROADCAST.items():
+        assert name in BROADCASTS, f"{game_id} maps to unknown broadcast {name}"
+
+
+def test_broadcast_profiles_are_well_formed():
+    from scripts.label_live_game import BROADCASTS
+
+    for name, profile in BROADCASTS.items():
+        top, bottom, left, right = profile["roi"]
+        assert bottom > top and right > left, f"{name} has an empty crop"
+        assert len(profile["anchors"]) >= 3, (
+            f"{name}: templates from one or two frames cover too few digits; "
+            "the first attempt read 1 frame in 60")
+        for _, digits in profile["anchors"]:
+            assert digits.isdigit(), f"{name}: anchors carry digits, no colon"
+            assert 3 <= len(digits) <= 4
+
+
+def test_build_templates_handles_white_on_dark():
+    """The builder must normalise polarity like the reader does.
+
+    read_clock was fixed for white-on-dark but build_templates was not, so an
+    ESPN crop that plainly shows 6:36 raised "segmented 0 clock digits" — a
+    message that blames the crop coordinates, which were correct.
+    """
+    import numpy as np
+
+    from courtvision.scoreboard import build_templates
+
+    dark = np.zeros((36, 96, 3), np.uint8)
+    for i, x in enumerate((8, 30, 52)):
+        dark[8:28, x:x + 12] = 255
+    templates = build_templates(dark, "636")
+    assert set(templates) == {"6", "3"}

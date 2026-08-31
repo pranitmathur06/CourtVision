@@ -26,13 +26,62 @@ from pathlib import Path
 
 import numpy as np
 
-CLOCK_ROI = (598, 634, 1098, 1170)      # top, bottom, left, right
+# Every network draws its own scoreboard, so the clock crop and the frames used
+# to learn its digits are per broadcast. Templates built from a single frame
+# cover only the digits in that one reading and read 1 frame in 60; several
+# frames spread across the game cover enough of 0-9 to read four in five.
+#
+# `anchors` are (fraction through the video, digits with no colon). Readings
+# under a minute are skipped: broadcasts switch to a decimal "56.9" there, which
+# is a different format rather than a different value.
+BROADCASTS = {
+    "tnt": {
+        "roi": (598, 634, 1098, 1170),
+        "anchors": [(0.12, "150"), (0.18, "1118"), (0.24, "655"), (0.30, "251"),
+                    (0.60, "835"), (0.66, "500"), (0.72, "104")],
+    },
+    "espn": {
+        "roi": (632, 668, 812, 912),
+        "anchors": [(0.10, "636"), (0.28, "813"), (0.34, "420"),
+                    (0.52, "840"), (0.58, "552")],
+    },
+}
+GAME_BROADCAST = {
+    "0042400301": "tnt",
+    "0042400302": "tnt",
+    "0042400311": "espn",
+    "0042400312": "espn",
+    "0042400313": "espn",
+}
+CLOCK_ROI = BROADCASTS["tnt"]["roi"]     # default
 N_FRAMES = 16
 SIZE = 224
 PERIOD_SECONDS = 12 * 60
 
 
-def read_clock_track(video: str, templates, sample_every_s: float = 2.0):
+def build_broadcast_templates(video: str, profile: dict):
+    """Learn this broadcast's digits from frames whose clock value is known."""
+    import cv2
+
+    from courtvision.scoreboard import build_templates_from_many
+
+    cap = cv2.VideoCapture(video)
+    total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    top, bottom, left, right = profile["roi"]
+    pairs = []
+    for fraction, digits in profile["anchors"]:
+        cap.set(cv2.CAP_PROP_POS_FRAMES, int(total * fraction))
+        ok, frame = cap.read()
+        if ok:
+            pairs.append((frame[top:bottom, left:right], digits))
+    cap.release()
+    if not pairs:
+        raise ValueError("no anchor frames could be read")
+    return build_templates_from_many(pairs)
+
+
+def read_clock_track(video: str, templates, sample_every_s: float = 2.0,
+                     roi: tuple[int, int, int, int] | None = None):
     """[(frame_index, period, clock_seconds)] wherever the clock is legible."""
     import cv2
 
@@ -42,7 +91,7 @@ def read_clock_track(video: str, templates, sample_every_s: float = 2.0):
     total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
     step = max(int(fps * sample_every_s), 1)
-    top, bottom, left, right = CLOCK_ROI
+    top, bottom, left, right = roi or CLOCK_ROI
 
     track: list[tuple[int, int, int]] = []
     period, previous, dropped = 1, None, 0
@@ -156,17 +205,19 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--video", default="/workspace/game.mp4")
     parser.add_argument("--game-id", default="0042400301")
-    parser.add_argument("--templates", default="/workspace/templates.json")
+    parser.add_argument("--broadcast", default=None,
+                        help="scoreboard profile; inferred from --game-id if unset")
     parser.add_argument("--crop-out", default="data/live/actions")
     parser.add_argument("--full-out", default="data/live/rim")
     parser.add_argument("--backgrounds", type=int, default=700)
     args = parser.parse_args()
 
-    templates = {k: np.array(v, dtype=np.uint8)
-                 for k, v in json.loads(Path(args.templates).read_text()).items()}
-    print(f"  templates for {sorted(templates)}", flush=True)
+    name = args.broadcast or GAME_BROADCAST.get(args.game_id, "tnt")
+    profile = BROADCASTS[name]
+    templates = build_broadcast_templates(args.video, profile)
+    print(f"  broadcast {name}: templates for {sorted(templates)}", flush=True)
 
-    track, fps = read_clock_track(args.video, templates)
+    track, fps = read_clock_track(args.video, templates, roi=profile["roi"])
     periods = sorted({p for _, p, _ in track})
     print(f"  clock read at {len(track)} sample points, periods {periods}", flush=True)
     if len(track) < 200:
