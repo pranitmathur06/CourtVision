@@ -261,12 +261,15 @@ def main() -> int:
         start = frame - (N_FRAMES * stride) // 2
         event_frames.append(frame)
         action = play.action
+        # Filenames carry the game id: without it a second game's windows
+        # overwrite the first's, and three games of background collapsed to one.
+        stem = f"live_{args.game_id}_{i:05d}"
         if write_window(cap, start, stride, crop_root / action,
-                        f"live_{i:05d}", detector, full_frame=False):
+                        stem, detector, full_frame=False):
             written[action] += 1
         if action in ("rebound", "block", "shot"):
             write_window(cap, start, stride, full_root / action,
-                         f"live_{i:05d}", detector, full_frame=True)
+                         stem, detector, full_frame=True)
 
     # Background: far from every aligned event.
     total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -285,10 +288,12 @@ def main() -> int:
         if near < guard:
             continue
         if write_window(cap, int(c) - (N_FRAMES * stride) // 2, stride,
-                        crop_root / "background", f"live_bg_{made:05d}",
+                        crop_root / "background",
+                        f"live_bg_{args.game_id}_{made:05d}",
                         detector, full_frame=False):
             write_window(cap, int(c) - (N_FRAMES * stride) // 2, stride,
-                         full_root / "background", f"live_bg_{made:05d}",
+                         full_root / "background",
+                         f"live_bg_{args.game_id}_{made:05d}",
                          detector, full_frame=True)
             made += 1
     cap.release()
