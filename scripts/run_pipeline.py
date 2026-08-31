@@ -143,6 +143,15 @@ def run_pipeline(clip_path: str, out_dir: str, config: Config,
         # the run exists to be scored rather than watched.
         print("  stage 9: render skipped")
     write_log(events, lines, str(log_path))
+    # The possession timeline, so derivation can be tuned without paying for
+    # detection and tracking again — they are 38% of a full-game run.
+    import json as _json
+    (out / "timeline.json").write_text(_json.dumps({
+        "times": [f.time_s for f in frames],
+        "holders": list(holders),
+        "teams": {str(k): v for k, v in teams.items()},
+        "shots": [e.time_s for e in events if e.action == "shot"],
+    }))
     timings["9 render"] = time.perf_counter() - start
     print(f"  stage 9: wrote {video_path} and {log_path}")
 

@@ -43,12 +43,27 @@ class Possession:
 
 # A shot's outcome resolves within a couple of seconds of the attempt.
 SHOT_WINDOW_S = 3.0
-# Ignore possession flickers shorter than this; they are tracker noise.
-MIN_POSSESSION_S = 0.6
+# Ignore possession flickers shorter than this. Track ids restart at every
+# broadcast cut — a full game yields 14,640 of them — so a bare team change is
+# mostly tracker noise. Swept against BARD's own labels for one game, counting
+# derived steals against the 18 real ones:
+#
+#     min_seconds   derived   steal ratio
+#             0.6       377        20.4x
+#             3.0        98         5.3x
+#             5.0        65         3.5x
+#             8.0        26         1.4x
+#
+# An NBA possession averages about fourteen seconds, so a six-second floor
+# discards flickers while keeping real possessions. It is deliberately below
+# the 8.0 that scored best on that footage: those were concatenated clips
+# averaging 18.8 s, which truncates possessions and flatters a high threshold.
+MIN_POSSESSION_S = 6.0
 
 
 def possessions(times: Sequence[float], holders: Sequence[int | None],
-                teams: dict[int, str]) -> list[Possession]:
+                teams: dict[int, str],
+                min_seconds: float = MIN_POSSESSION_S) -> list[Possession]:
     """Collapse a per-frame holder timeline into team possessions."""
     spans: list[Possession] = []
     for time_s, holder in zip(times, holders):
@@ -59,11 +74,12 @@ def possessions(times: Sequence[float], holders: Sequence[int | None],
             spans[-1] = Possession(team, spans[-1].track_id, spans[-1].start_s, time_s)
         else:
             spans.append(Possession(team, holder, time_s, time_s))
-    return [s for s in spans if s.end_s - s.start_s >= MIN_POSSESSION_S]
+    return [s for s in spans if s.end_s - s.start_s >= min_seconds]
 
 
 def derive(times: Sequence[float], holders: Sequence[int | None],
-           teams: dict[int, str], shots: Sequence[Event]) -> list[Event]:
+           teams: dict[int, str], shots: Sequence[Event],
+           min_seconds: float = MIN_POSSESSION_S) -> list[Event]:
     """Steals and rebounds from possession changes, anchored on shots.
 
     A change of team within `SHOT_WINDOW_S` after a shot is a rebound: the
@@ -72,7 +88,7 @@ def derive(times: Sequence[float], holders: Sequence[int | None],
     """
     shot_times = sorted(s.time_s for s in shots)
     out: list[Event] = []
-    spans = possessions(times, holders, teams)
+    spans = possessions(times, holders, teams, min_seconds)
     for previous, current in zip(spans, spans[1:]):
         if previous.team == current.team:
             continue
