@@ -155,3 +155,44 @@ should move rebound with it, and that needs game video.
 Block should probably not be emitted at all until something separates it. A
 class the model scores below chance on is noise, and reporting it is worse than
 staying quiet.
+
+
+## Derivation measured on the live game itself
+
+The sweep above was scored against concatenated BARD clips, which is the wrong
+footage — the model is out of domain there and detects shots at 0.12x. Applying
+the same derivation to the **live 141-minute broadcast**, reconstructing the
+possession timeline from that run's own team-labelled events (3,015 of 3,538, a
+1.6 s median gap):
+
+    floor   derived   rebound   steal   steal ratio
+      3.0       162         3     159        12.2x
+      6.0        88         2      86         6.6x
+      8.0        70         3      67         5.2x
+     16.0        50         1      49         3.8x
+
+    classifier on the same game: steal 33.8x
+
+**Steal on the real benchmark: 33.8x -> 6.6x at the default floor**, and 3.8x if
+the floor is pushed to sixteen seconds. Not within the 2x tolerance, but five
+times closer than classification managed, and on the footage that counts.
+
+Two things hold it back, both identified rather than guessed:
+
+  * **Rebound stays at 0.02x** because the saved run detected 70 shots against
+    262 official (0.27x). An earlier configuration reached 246 shots (0.94x) —
+    combining that model with this derivation is the obvious next run, and
+    needs the game video.
+  * **The timeline was reconstructed from events**, not read from the pipeline.
+    Events are already de-duplicated and sparse, so this understates what the
+    per-frame timeline would give. `run_pipeline` now saves the real one.
+
+## Where accuracy stands on a full continuous game
+
+    shot      0.94x   best configuration measured
+    steal     6.6x    derived, was 33.8x classified
+    rebound   4.25x   classified; derivation blocked on shot detection
+    block     0.36x   below chance to classify; should not be emitted
+
+Shot is there. Steal moved an order of magnitude and is not there yet. Rebound
+and block are not.
