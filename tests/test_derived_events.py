@@ -83,3 +83,21 @@ def test_the_default_floor_is_long_enough_to_survive_track_churn():
 
     assert MIN_POSSESSION_S >= 5.0, "a short floor turns tracker noise into events"
     assert MIN_POSSESSION_S <= 10.0, "an NBA possession averages about 14 s"
+
+
+def test_training_counts_missing_does_not_crash_inference(tmp_path, monkeypatch):
+    """A deployed pipeline has no training set, and must not need one.
+
+    Reading it unguarded killed a 20-minute run at stage 6 with a
+    FileNotFoundError, after detection and tracking had already been paid for.
+    """
+    import os
+    import sys
+
+    sys.path.insert(0, "scripts")
+    from run_pipeline import _training_counts
+
+    monkeypatch.chdir(tmp_path)
+    assert _training_counts() is None
+    os.makedirs("data/labeled/actions/shot")
+    assert _training_counts() == {"shot": 0}

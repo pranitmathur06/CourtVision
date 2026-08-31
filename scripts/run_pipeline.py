@@ -33,6 +33,22 @@ ACTION_MODEL = Path("checkpoints/action_classifier")
 BARD_METADATA = Path("data/labeled/bard_meta/dataset.csv")
 
 
+def _training_counts() -> dict[str, int] | None:
+    """Clips per class, or None when the training set is not on this machine.
+
+    Inference does not need the training data, and a deployed pipeline will not
+    have it. Reading it unguarded crashed a whole 20-minute run at stage 6 with
+    a FileNotFoundError on data/labeled/actions — after detection and tracking
+    had already been paid for.
+    """
+    directory = Path("data/labeled/actions")
+    if not directory.is_dir():
+        return None
+    counts = {d.name: len(list(d.glob("*.mp4")))
+              for d in directory.iterdir() if d.is_dir()}
+    return counts or None
+
+
 def run_pipeline(clip_path: str, out_dir: str, config: Config,
                  narrate: bool = True, prior_strength: float = 0.0,
                  render: bool = True,
@@ -80,11 +96,12 @@ def run_pipeline(clip_path: str, out_dir: str, config: Config,
     # action; a game is ~90% ordinary play. Left uncorrected the classifier
     # emitted 7.6x the official event volume. The shift is per class and
     # additive in log space, so overwhelming evidence is untouched.
-    train_counts = {d.name: len(list(d.glob("*.mp4")))
-                    for d in Path("data/labeled/actions").iterdir() if d.is_dir()}
+    train_counts = _training_counts()
+    if prior_strength and train_counts is None:
+        print("  note: no training set here, so the prior shift is skipped")
     classifier = VideoMaeClassifier(str(ACTION_MODEL), device,
                                     prior_strength=prior_strength,
-                                    train_counts=train_counts or None)
+                                    train_counts=train_counts)
     windows = classify_windows(images, frames, classifier, config, holders)
     timings["6 action classification"] = time.perf_counter() - start
     print(f"  stage 6: {len(windows)} action windows classified")
