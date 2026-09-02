@@ -130,7 +130,26 @@ vocabulary is 18 classes:
 > jump ball
 
 Annotation is 25 fps **action tubes** — per-frame boxes with precise temporal
-boundaries inside longer clips, so background frames come for free.
+boundaries. Clips average 750 frames (~30 s) and action segments average 24
+frames (~1 s), so within a clip there is roughly 29 s of non-action per
+labelled second.
+
+**Correction to an earlier claim in this document: that is not the same as
+full-game negatives.** The authors state they "manually cut into 800 clips per
+sport ... intervals with only background scenes are discarded, and the
+highlights of competitions are selected". MultiSports is highlight-selected at
+the clip level, exactly like BARD. Its within-clip negatives are real and
+in-domain, and they help with the "everything near the basket looks like an
+event" failure — but they do not represent a full game's scene distribution
+(bringing the ball up, dead balls, free-throw line-ups, timeouts). The serving
+prior problem is *not* solved by this dataset.
+
+Scale is also modest: 800 basketball clips ≈ 6.7 hours, and the per-category
+instance counts across the dataset follow a long tail from **3 to 3,477**.
+Basketball's share of 37,701 total instances spread over 18 categories means
+rare classes such as `block` are plausibly in the low hundreds — enough to
+re-align the crop, not enough on its own to rescue a class measured below
+chance.
 
 Why this one matters more than its size suggests, against measurements already
 in this repo:
