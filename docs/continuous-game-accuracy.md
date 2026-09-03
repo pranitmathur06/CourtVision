@@ -1258,3 +1258,56 @@ So the recommendation inverts for one component and holds for the other:
 The gap between the simulated figure and the measured one is the whole lesson of
 this page: every synthetic validation here assumed a ball position that the
 detector does not currently provide.
+
+## Round twelve: selection fixed on real video, and a sample-size lesson
+
+The end-to-end failure was a SELECTION problem, and selecting by path rather
+than by score is free. Measured on game `0022401223`, same window and scorer:
+
+    argmax  @ conf 0.05    P 0.121  R 0.923  F1 0.214
+    argmax  @ conf 0.35    P 0.357  R 0.385  F1 0.370
+    Viterbi @ conf 0.05    P 0.257  R 0.692  F1 0.375
+    Viterbi @ conf 0.35    P 0.438  R 0.538  F1 0.483
+
+That last figure was **noise**. It came from a window holding 13 official field
+goals, where one event moves recall by 0.077. Re-measured over the full 38
+minutes — 56 official field goals, 4.3x the sample — the same configuration
+gives **F1 0.358**, and the best configuration is a different one:
+
+    conf 0.02, move_weight 0.02, radius 45 px, over 56 official FGA
+      tol 3 s   P 0.355  R 0.679  F1 0.466
+      tol 5 s   P 0.411  R 0.786  F1 0.540
+      tol 8 s   P 0.458  R 0.875  F1 0.601
+
+The bigger sample also reversed a conclusion: **pruning candidates hurts.** The
+small window said discard everything below 0.35; over a full game it is better
+to keep every candidate at 0.02 and let the path search choose. Tuning on 13
+events was fitting noise, which is worth recording because the temptation to
+report 0.483 was real.
+
+## The shape of the remaining error
+
+    recall     0.679   two thirds of shots are found
+    precision  0.355   107 detections for 56 real shots
+
+The pipeline is not blind; it **over-fires about 2:1**. That is a false-positive
+problem, and it traces to the same root as before — a mean of 14.3 ball
+candidates per frame, of which one is the ball.
+
+That makes the next step specific rather than speculative. Hard negatives are
+the standard fix for precision, and the Viterbi produces them at no cost: the
+box on the chosen trajectory is a positive, and the candidates it rejected in
+that same frame are negatives, on in-domain broadcast footage. The prediction
+to test is narrow: **precision should rise from 0.355 while recall holds near
+0.68.** If it does not, the detector was not the limit.
+
+Caveat on everything above: best-of-45 configurations on ONE game. It needs
+held-out footage before any of it is settled.
+
+## Method note: cache the detections
+
+Every experiment here re-ran detection over the video, at roughly half an hour
+per configuration. Caching detections once and sweeping offline turned 45
+configurations from about twenty-two hours into under a minute. The cache also
+made the sample-size error visible, because widening the window from 10 minutes
+to 38 stopped being an expensive decision.
