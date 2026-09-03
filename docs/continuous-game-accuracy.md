@@ -1412,3 +1412,52 @@ is missing, and they are the only ones that can move recall.
 Cost so far, for a negative result: $0.72 and about an hour. The detector
 improvement is real and banked in `checkpoints/ball_student.pt`; it is simply
 not the constraint.
+
+## Round fifteen: resolution does not rescue it either
+
+Ball recall was the constraint, and the ball is ~25 px, so inference resolution
+was the obvious free lever. It moves detection rate substantially:
+
+    imgsz 1280 (trained)   ball found in 0.733 of frames, 1.33 candidates
+    imgsz 1600             0.833                          1.87
+    imgsz 1920             0.850                          2.39
+    imgsz 2560             0.892                          4.17
+
+**And it does not move shot detection at all.** Re-running the full pipeline at
+1920: F1 0.407 at ±3 s, recall 0.411 — identical to 1280. Only the looser
+tolerances improve (±5 s 0.513 -> 0.549, ±8 s 0.655 -> 0.673).
+
+That distinction is the finding: **overall ball coverage is not ball coverage at
+the rim during a shot.** The frames higher resolution recovers are ordinary
+play. At the moment that matters the ball is at its fastest, most motion-blurred
+and most occluded — by the net, the backboard, the shooter's hands — and no
+amount of upscaling recovers a ball that is smeared across the frame or behind
+the rim.
+
+## Final standing on shot detection
+
+    config                                     P       R      F1(±3s)
+    original detector + path selection       0.355   0.679    0.466
+    student @1280                            0.404   0.411    0.407
+    student @1920                            0.404   0.411    0.407
+    union of both detectors                  0.325   0.661    0.435
+
+**The original detector with path selection remains the best configuration at
+the primary tolerance.** The student is better at ±8 s (0.673 vs 0.601), so it
+is finding shots but placing them less precisely in time.
+
+The $0.72 bought a genuinely better detector — 14.28 candidates per frame down
+to 1.50 — and the knowledge that a better detector is not what this needs. Both
+are worth having; only one was expected.
+
+## What would actually move it
+
+Labels on the frames that matter, which are not the frames a precision-selected
+teacher supplies and not the frames higher resolution recovers. They are the
+~1-2 seconds around each shot: ball leaving the hand, at the apex, at the rim.
+About 56 shots per game at 10 fps and ±1.5 s is roughly 1,700 frames per game,
+and they are exactly the hard ones.
+
+That is a well-posed labelling task and a small one. It is also the first point
+in this investigation where hand-labelling is clearly the cheapest path rather
+than the fallback.
