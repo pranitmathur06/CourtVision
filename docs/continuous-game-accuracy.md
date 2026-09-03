@@ -1367,3 +1367,48 @@ is to be fast enough for the pipeline AND to find the ball on the ~80% of
 frames the teacher misses. A high val mAP would only prove imitation, so the
 result that counts is the downstream one — shot F1 on real video, against the
 0.466 that path-selection reached.
+
+## Round fourteen: the student detector, and why it did not help
+
+Trained `yolo11s` on the 2,865 teacher labels (4090, ~50 min, $0.72). It works
+as a detector: **ball candidates per frame fell from 14.28 to 1.50**, and
+precision rose at every tolerance. It did not help end to end.
+
+Same 56 official field goals, same scorer, ±3 s:
+
+    config                        P       R      F1
+    original detector           0.355   0.679   0.466
+    student only                0.404   0.411   0.407
+    union of both candidates    0.325   0.661   0.435
+
+At ±8 s the student is ahead (0.655 vs 0.601), but ±3 s was the metric named
+before the run and it is a regression.
+
+**The prediction was "precision rises, recall holds near 0.68". Precision rose.
+Recall did not hold — it fell to 0.411 — and that was the half that mattered.**
+
+The reason is worth keeping. The Viterbi path search was ALREADY solving
+candidate purity: given fourteen candidates containing the true ball, it found
+the ball 68% of the time. Purity was not the binding constraint. **Ball recall
+was**, and the student inherited the teacher's blind spots — `yolo11x` fires on
+only ~20% of frames, so frames where it saw nothing became frames the student
+never learned from. A cleaner detector that sees the ball less often is worse
+here, because nothing downstream can select a ball that was never detected.
+
+Unioning both detectors' candidates restores recall (0.661) and gives the
+precision back (0.325), landing between the two and still below baseline.
+
+## What this implies for the next attempt
+
+The label set must cover the frames the teacher MISSED, which are exactly the
+hard ones: motion blur, occlusion, the ball against a red jersey. A teacher
+selected for precision cannot supply them by construction.
+
+That makes hand-labelling well-targeted for the first time. Not 300 random
+frames — 300 frames sampled where the teacher found nothing and the possession
+timeline says the ball must be somewhere. Those are the examples the detector
+is missing, and they are the only ones that can move recall.
+
+Cost so far, for a negative result: $0.72 and about an hour. The detector
+improvement is real and banked in `checkpoints/ball_student.pt`; it is simply
+not the constraint.
