@@ -1057,3 +1057,68 @@ neither is written, and the assembled system has never executed.
 **Retraining the action classifier addresses none of this.** That conclusion has
 survived eight rounds of measurement and is the one thing here worth acting on
 immediately.
+
+## Round nine: the height estimator was built, and it fails
+
+The previous section called ±4 ft "a lenient bar a ballistic fit should
+comfortably beat". That was a guess, and it was wrong. `ball_height.py` now
+exists and is measured against ground truth — SportVU's own ball z, projected
+through the REAL broadcast camera recovered from `quarter.mp4`, with
+detector-scale pixel noise added:
+
+    sliding-window fit, whole game
+      height error ft   median 8.15   p90 14.51
+      within +-4 ft     0.274
+      ball above 8 ft   median 3.62 ft, within 4 ft 0.532
+
+    anchored at the release position, genuine flight segments only
+      height error ft   median 11.26  p90 104.01
+      within +-4 ft     0.294
+      worst per flight  median 21.18 ft
+
+Anchoring the floor position and restricting to flight made it **worse**, not
+better. Two implementations, both far outside the bar. Ball height from one
+camera is hard — it is why Hawk-Eye uses several calibrated ones — and the
+physics constraint is weaker than it sounds: over the third of a second a
+window spans, a parabola and a straight line through the same pixels are nearly
+indistinguishable, and depth is exactly the direction the camera cannot see.
+
+**This invalidates the assumption under rounds four through eight.** Every
+precision figure there fed `shot_detection` a ball height. Tracking data
+supplied it for free; video does not, and now there is direct evidence it is
+not cheap to recover.
+
+## What might rescue it, untested
+
+Two routes avoid the estimator rather than improving it, and both look more
+promising than a third fitting attempt:
+
+  * **Makes need no height at all.** That was the whole point of the scoreboard
+    lever: a basket is a score change. Height entered only through `makes`, and
+    the scoreboard replaces it.
+  * **Attempts might not need height either.** The rim is DETECTED in the image
+    and the ball is detected in the image, so "the ball approached the rim" is
+    measurable in pixels with no 3D anywhere. The 8 ft floor exists to separate
+    a shot from a ball carried under the basket; in image space that needs a
+    different discriminator, not necessarily a harder one.
+
+Both are redesigns of `shot_detection`, neither is written, and neither is
+measured. Until one is, the honest statement is that **the pipeline has no way
+to detect a shot attempt from broadcast video** other than the action
+classifier that was measured at 0.10x-0.94x.
+
+## Position after nine rounds
+
+    every component that EXISTS, measured on the real broadcast:
+      ball detection 0.991, court registration 0.88 (rim error 0.5 px),
+      clock located and gated (0.84 recoverable, dead ball 0.478 of wall time)
+
+    components that DO NOT exist:
+      ball height from video   -- built twice, fails the bar badly
+      score reading            -- needs one rectangle per broadcast profile
+      shot attempts without height -- the plausible redesign, unwritten
+
+The measured ceiling on event coverage (0.751) and the finding that steal and
+block are not recoverable from possession geometry both stand. So does the
+conclusion that has survived every round: **retraining the action classifier
+addresses none of this.**
