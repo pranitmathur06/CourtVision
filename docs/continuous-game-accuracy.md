@@ -808,3 +808,39 @@ bootstrap already uses. That is not built.
 
 So score-change detection is demonstrated in principle on real footage and is
 not yet a working component.
+
+## The reader after widening the search: clock yes, score no
+
+`candidate_rois` grew from 308 boxes of one shape to 15,052 across three
+heights and four widths at a finer step, with a cheap glyph-count prune so the
+cost stays bearable. On the real broadcast that changed the clock result
+outright:
+
+    before the fix   locate_clock -> None
+    tick rule fixed  locate_clock -> the SHOT clock
+    grid widened     locate_clock -> roi (571, 607, 230, 315), ticks 42/89
+
+That box is the game clock, reading **9:50** — within a few pixels of the crop
+found by hand. So clock localisation now works on real footage, where it
+previously returned nothing at all. Digit bootstrapping is still weak: it
+learns only `0` and `9`, the wrap pair that anchors the alphabet, and does not
+propagate labels to the rest.
+
+**Score localisation does not work.** Three attempts, each failing differently
+and each worth recording:
+
+  * A 1-3 glyph band returned the clock's minutes digit, which changes about
+    once a minute and sits squarely in a score's rate band. Requiring two
+    digits fixes that specific confusion.
+  * Sorting candidates by ascending rate ranks the most STATIC regions first,
+    so a team abbreviation whose segmentation flickers -- "CHI" -- outranked
+    every real score. Ranking by descending rate is correct and is now what the
+    code does.
+  * A score only ever increases, so its appearance should never repeat, while
+    flickering text alternates between two. Applied to real footage that
+    rejected all 167 candidates rather than narrowing them: compression makes
+    every crop wobble, so at a 12x8 signature everything eventually "returns".
+    The function is kept and documented, not wired in.
+
+So the position is honest but unfinished: **the clock is read, the score is
+not**, and the score is the half the make/miss lever actually needs.
