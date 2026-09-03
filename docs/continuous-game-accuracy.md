@@ -939,3 +939,57 @@ plus a homography error term that was assumed rather than measured, plus a score
 reader that works by hand-set profile rather than automatically.
 
 Retraining the action classifier addresses none of those.
+
+## Round seven: the dead-ball risk, measured — and the gate that removes it
+
+The risk flagged above is no longer unmeasured. Over 900 s of the real
+broadcast, classifying each second by whether the game clock advanced since the
+previous sample — which needs no digit labels, only whether the glyph changed:
+
+    715 legible samples (132 illegible: the scoreboard is hidden)
+
+    clock ADVANCING (live play)     373/715 = 0.522
+    clock HELD (dead ball)          342/715 = 0.478
+
+    of DEAD-ball samples, 282/342 = 0.825 still show ball + >=8 players
+    of LIVE samples,      327/373 = 0.877
+
+**Nearly half of broadcast wall time is dead ball, and 82.5% of it still looks
+exactly like live basketball** — replays, inbound set-ups, free-throw line-ups.
+Put together, **0.463 of all basketball-looking footage is not live play.**
+
+That single number explains the old video results better than anything else on
+this page. A detector shown a replay of a made basket detects a made basket.
+Rebound at 4.25x and steal at 33.8x were never purely classifier failures; a
+large part was the pipeline being asked to narrate footage that was not the
+game.
+
+It also means every precision figure computed from tracking data — the whole of
+rounds four to six — implicitly assumed a **perfect** clock gate, because
+tracking data contains no dead-ball footage at all. That assumption is now
+partly discharged: the gate is demonstrated on real footage, and clock state is
+recoverable on 715 of 847 samples (84%). The other 16% are frames where the
+scoreboard is hidden, and the correct behaviour there is to stay quiet, which
+costs coverage rather than precision.
+
+## Final position
+
+Every parameter that could be measured has been measured on the real broadcast;
+both that could not be were swept, and the answer held across both sweeps:
+
+    ball detection          measured   0.991 (assumed 0.80)
+    track id lifetime       measured   ~5.2 s (assumed 8 s)
+    dead-ball fraction      measured   0.478 of wall time
+    clock state recoverable measured   0.84 of samples
+    ball height error       swept      +-0.5 to +-4 ft -> 0.874 to 0.852
+    score reader accuracy   swept      90% to 99%      -> 0.868 to 0.880
+
+    85% of a game's events captured                no   (0.751 ceiling)
+    85% of emitted commentary correct              0.852 - 0.874, at ~0.67 coverage
+
+What is left is not a parameter but an integration: **this system has never
+been run end to end.** Every component is measured and every component clears
+the bar; the assembled pipeline has not been. Given that four configurations of
+the older pipeline produced shot ratios spanning 0.10x to 0.94x on one game,
+integration surprises are this project's norm rather than its exception. That,
+and not the training corpus, is the remaining risk.
