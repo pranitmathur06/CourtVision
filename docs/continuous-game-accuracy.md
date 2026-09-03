@@ -1181,3 +1181,80 @@ floor plane to know an attempt happened.
 The height estimator stays in the tree with its failure documented, because the
 useful result is that it is not needed, and the next person to reach for one
 should know it was tried.
+
+---
+
+# Round eleven: it was run end to end, and it fails
+
+Game `0022401223` (TOR vs CHI, 2024-12-16), identified from the scoreboard in
+the footage: at Q3 4:49 the official score is CHI 79, TOR 71, and the frame at
+video t=900 s reads 4:38. Ten minutes of video, detections from
+`checkpoints/detector.pt`, shots from pixel proximity of the detected ball to
+the detected rim, gated on the clock advancing, mapped to game time by
+integrating live seconds from that anchor, scored against official play-by-play.
+
+    ball_conf 0.05 (the pipeline default)
+      ball present 0.993, rim 0.824, clock advancing 227/600
+      99 shots detected against 13 official FGA in the window
+      tol 3s: P 0.121  R 0.923  F1 0.214
+
+    ball_conf 0.35
+      ball present 0.390
+      14 shots detected against 13 official
+      tol 3s: P 0.357  R 0.385  F1 0.370
+      tol 8s: P 0.500  R 0.538  F1 0.519
+
+**Against F1 0.885 for the same detector on projected SportVU coordinates.**
+
+## Why every simulation on this page was optimistic
+
+The simulations fed `shot_detection` SportVU's ball position and called it "the
+ball". A real detector is a different object:
+
+    ball detections per frame   mean 14.23, max 37
+    frames with more than one   0.990
+    ball confidence             median 0.050, p90 0.193
+
+There is one ball. The pipeline takes the highest-confidence box out of about
+fourteen candidates, and at a 0.05 threshold it is frequently wrong. Raising the
+threshold to 0.35 removes most of the false candidates and the count lands
+almost exactly — 14 detected against 13 official — but only half of those are at
+the right moment, which is the "a count can be hit by accident" failure this
+document already warned about in another context.
+
+**This also retracts a number reported in round six.** "Ball detection 0.991"
+measured whether ANY ball box existed in a frame, not whether it was the ball.
+As a quality metric it was meaningless, and it made the degradation model look
+better calibrated than it was.
+
+## The correction that matters
+
+Ten rounds of this document say retraining addresses nothing. That is right
+about the **action classifier** and wrong as a general statement. The binding
+constraint on video is now measured, and it is the **ball detector**: 14 false
+candidates per frame at 0.05, and only 39% of frames with any ball at 0.35.
+
+That IS a training-data problem, and the data exists. `docs/datasets.md` lists
+DeepSportRadar, whose challenge is ball localisation specifically, and SportsMOT,
+which is ungated and carries ball tracks across 80 basketball sequences.
+
+So the recommendation inverts for one component and holds for the other:
+
+    action classifier   do not retrain -- steal and block are not visual, and
+                        the ceiling with perfect perception is 0.751
+    ball detector       RETRAIN -- it is the measured bottleneck on video, and
+                        labelled data for it is already identified and reachable
+
+## Honest state
+
+    85% of a game's events captured                      no  (0.751 ceiling)
+    85% emitted-commentary precision, simulated          0.852 - 0.874
+    85% emitted-commentary precision, REAL VIDEO         not close: shot F1
+                                                         0.37 at +-3 s, 0.52 at
+                                                         +-8 s, and shots are
+                                                         the input everything
+                                                         else is built on
+
+The gap between the simulated figure and the measured one is the whole lesson of
+this page: every synthetic validation here assumed a ball position that the
+detector does not currently provide.
