@@ -459,3 +459,97 @@ steal. That is worth knowing before more model training: no perception
 improvement will fix steal, because steal does not fail from perception here.
 Block needs a different signal entirely — it is below chance from pixels and
 undetectable from trajectory.
+
+
+---
+
+# Round four: the ceiling, measured as accuracy rather than as counts
+
+## Why the old numbers read better than they were
+
+`evaluate_live_game.py` compares **counts**: `ratio = got / want`. Nothing in it
+matches a detection to the moment it claims. So "shot 0.94x" never meant 94% of
+shots were found — it meant the totals agreed. Across four configurations on the
+same 141-minute game, shot ran 0.37x, 0.10x, 0.94x, 0.27x. Reporting the 0.94
+was reporting the best of four draws.
+
+`run_tracking_game.py` does match temporally, and that is the number worth
+having. Reproduced here on twelve 2015-16 games at ±3 s:
+
+    action   median x  precision  recall     F1
+    shot        0.76x       0.89    0.71   0.79
+    rebound     1.20x       0.50    0.59   0.55
+    steal       1.43x       0.25    0.34   0.29
+    block           —          —       —      —
+
+Weighted by how often each actually occurs in an NBA game (≈169 field goals, 44
+free throws, 88 rebounds, 16 steals, 10 blocks), that is an **event-weighted F1
+of 0.658** — with the ball's true 3D position and stable player ids handed to
+the system. Video cannot beat it.
+
+## Three things were being measured wrong
+
+**Free throws were scored as field goals.** `nba_feed` maps `Free Throw` to
+`shot`. Free throws are taken with the clock stopped, and everything here is
+indexed on game time, so a pair of free throws lands on one timestamp: 36
+attempts collapse to 19 distinct times. Nearest-unused matching therefore caps
+free-throw recall at 0.53 by construction. Frame coverage is fine (median 30
+frames within ±1.5 s of each), so this is the metric, not the data. Scored
+apart, field goals alone were already **P 0.883 / R 0.797** rather than 0.71.
+
+**Every class sits 1.4 s early.** Median offset of detection minus official
+timestamp: shot −1.40 s, rebound −1.47 s, steal −1.27 s. The same shift on all
+three is a clock convention between SportVU and the human scorer, not error,
+and at a 3 s tolerance it was eating margin on every class.
+
+**An eighth of official rebounds are undetectable by anything.** 51 of 429 are
+*team* rebounds — the ball goes out of bounds off a miss and no player ever
+possesses it. No possession-change detector can see them, so they belong in
+their own class rather than silently capping recall at 0.88.
+
+## Two real defects, both found by measurement
+
+**`derive` called the inbound after a made basket a rebound.** It treated any
+possession change within 3 s of a shot as a board, and about half of field goals
+go in. A shot that scores passes through a narrow cylinder at the rim and one
+that misses does not — measured on 616 attempts, median 0.33 ft for makes
+against 2.04 ft for misses. A 1.0 ft cylinder keeps 93% of makes at 0.86
+precision. Suppressing those took rebound precision **0.50 → 0.78**.
+
+**Offensive rebounds could never be emitted at all.** `possessions` collapses
+the timeline by TEAM, so a board that keeps the ball with the same side is not a
+change and never appears. That is about a quarter of rebounds — a hard recall
+ceiling near 0.75 regardless of perception. `rebounds()` now works the PLAYER
+timeline: the first player to hold the ball after a miss got it, whichever side
+he is on.
+
+## Where the ceiling actually is
+
+    class        P       R      F1   per game
+    fieldgoal  0.949   0.815   0.877      169
+    freethrow  0.987   0.556   0.711       44
+    rebound    0.766   0.731   0.748       88
+    steal      0.256   0.366   0.301       16
+    block          —       —   0.000       10
+
+    EVENT-WEIGHTED F1: 0.765   (was 0.658)
+
+Shot thresholds were swept fitting on six games and validating on the six held
+out, so the sweep did not pick its own test set: held-out field-goal F1 moved
+0.849 → 0.858. Marginal, and recall stays near 0.79 whatever the thresholds —
+the missing fifth is airballs, shots blocked before the ball approaches, and
+stretches where the ball is not tracked.
+
+## What this settles
+
+**85% end-to-end is above the ceiling.** 0.765 is what the event logic achieves
+when perception is perfect and free. Every remaining lever is small: free throws
+need a wall-clock index rather than a game-clock one (worth perhaps +0.02),
+rebound has maybe +0.02 left, steal stays near 0.30 for the reason established
+in round three, and block is still not emitted. An honest optimistic ceiling is
+**0.80**, and any real vision stack lands below it.
+
+So retraining the classifier cannot deliver 85% on a full game. The constraint
+is not the training corpus and not the camera — it is that steal and block are
+not recoverable from possession geometry, and free throws are not addressable on
+a game-clock timeline. Those are architecture, not data.

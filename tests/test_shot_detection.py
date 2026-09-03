@@ -8,9 +8,9 @@ with a peak >= 8 ft.
 
 import math
 
-from courtvision.shot_detection import (MIN_PEAK_HEIGHT_FT, RIMS,
+from courtvision.shot_detection import (MIN_PEAK_HEIGHT_FT, RIMS, makes,
                                         rim_distance, shots)
-from courtvision.types import BALL, PLAYER, Box, Frame, Track
+from courtvision.types import BALL, PLAYER, Box, Event, Frame, Track
 
 
 def _frame(index, t, ball_xy, ball_z_unused=None, players=()):
@@ -81,3 +81,44 @@ def test_missing_ball_frames_do_not_crash():
     frames, zs = _arc((25.0, 25.0), RIMS[0], peak_z=13.0)
     frames[5] = Frame(5, frames[5].time_s, tuple())
     assert len(shots(frames, zs)) == 1
+
+
+def _descent(through_xy, t0=0.0, dt=0.04):
+    """A ball falling from 12 ft to 8 ft, passing `through_xy` at hoop height."""
+    frames, zs = [], []
+    for i in range(9):
+        z = 12.0 - 0.5 * i                      # crosses 10.0 exactly at i=4
+        frames.append(_frame(i, t0 + i * dt, through_xy))
+        zs.append(z)
+    return frames, zs
+
+
+def test_a_ball_through_the_hoop_is_a_make():
+    rim = RIMS[0]
+    frames, zs = _descent(rim)
+    shot = Event(time_s=frames[4].time_s, track_id=None, team=None,
+                 action="shot", possession_change=False)
+    assert makes(frames, zs, [shot]) == [shot.time_s]
+
+
+def test_a_ball_that_clangs_off_the_rim_is_not_a_make():
+    """Three feet from the centre at hoop height is a miss, not a basket."""
+    rim = RIMS[0]
+    frames, zs = _descent((rim[0] + 3.0, rim[1]))
+    shot = Event(time_s=frames[4].time_s, track_id=None, team=None,
+                 action="shot", possession_change=False)
+    assert makes(frames, zs, [shot]) == []
+
+
+def test_the_crossing_point_is_interpolated_not_sampled():
+    """At 10 Hz the ball moves over a foot between samples, so taking the
+    nearer sample instead of the crossing would call makes misses."""
+    rim = RIMS[0]
+    frames, zs = [], []
+    for i in range(4):
+        # straddles hoop height between i=1 (z=11) and i=2 (z=9)
+        frames.append(_frame(i, i * 0.1, (rim[0] - 1.5 + i * 1.5, rim[1])))
+        zs.append(13.0 - 2.0 * i)
+    shot = Event(time_s=0.15, track_id=None, team=None, action="shot",
+                 possession_change=False)
+    assert makes(frames, zs, [shot]) == [0.15]

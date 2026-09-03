@@ -49,9 +49,10 @@ def score(predicted: list[float], truth: list[float], tolerance: float = 3.0):
 
 def run_one(path: Path, target_hz: float = 10.0) -> dict:
     from courtvision.config import Config
-    from courtvision.derived_events import derive
+    from courtvision.derived_events import derive, rebounds as derive_rebounds
     from courtvision.nba_feed import fetch_game_plays
     from courtvision.possession import possession_timeline
+    from courtvision.shot_detection import makes as detect_makes
     from courtvision.shot_detection import shots as detect_shots
     from courtvision.tracking_data import elapsed_seconds, load_game
 
@@ -59,6 +60,7 @@ def run_one(path: Path, target_hz: float = 10.0) -> dict:
     times = [f.time_s for f in game.frames]
 
     shot_events = detect_shots(game.frames, game.ball_z)
+    made_times = detect_makes(game.frames, game.ball_z, shot_events)
     config = replace(Config(), possession_max_norm_dist=POSSESSION_MAX_NORM_DIST)
     raw = possession_timeline(game.frames, config)
     holders = [
@@ -73,8 +75,12 @@ def run_one(path: Path, target_hz: float = 10.0) -> dict:
         for track in frame.players():
             positions.setdefault(track.track_id, {})[key] = track.box.center
 
+    made_set = set(made_times)
+    missed = [s.time_s for s in shot_events if s.time_s not in made_set]
     derived = derive(times, holders, game.teams, shot_events,
-                     min_seconds=1.0, positions=positions)
+                     min_seconds=1.0, positions=positions,
+                     made_times=made_times)
+    derived += derive_rebounds(times, holders, game.teams, missed)
     events = sorted(list(shot_events) + derived, key=lambda e: e.time_s)
 
     plays = fetch_game_plays(game.game_id)

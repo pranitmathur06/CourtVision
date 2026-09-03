@@ -11,7 +11,8 @@ barely separable either way, which is why it emitted 33.8x the official count
 however it was trained. These are possession events, so derive them.
 """
 
-from courtvision.derived_events import MIN_POSSESSION_S, derive, possessions
+from courtvision.derived_events import (MIN_POSSESSION_S, derive,
+                                        possessions, rebounds)
 from courtvision.types import Event
 
 
@@ -31,11 +32,45 @@ def _timeline(pattern):
     return times, holders
 
 
-def test_possession_change_after_a_shot_is_a_rebound():
+def test_derive_leaves_a_change_after_a_shot_to_the_rebound_detector():
+    """`derive` owns steals only. A change after a shot is a rebound, and
+    rebounds are found on the PLAYER timeline so offensive boards are visible;
+    emitting one here too would double-count every defensive rebound."""
     times, holders = _timeline([(1, 100), (2, 100)])
     events = derive(times, holders, {1: "A", 2: "B"}, [_shot(9.0)])
+    assert events == []
+
+
+def test_the_first_player_to_hold_the_ball_after_a_miss_rebounded_it():
+    times, holders = _timeline([(1, 100), (2, 100)])
+    events = rebounds(times, holders, {1: "A", 2: "B"}, [9.5])
     assert [e.action for e in events] == ["rebound"]
-    assert events[0].team == "B"
+    assert events[0].team == "B" and events[0].track_id == 2
+
+
+def test_an_offensive_rebound_is_found_even_though_the_team_never_changes():
+    """The whole reason rebounds moved off the team timeline: `possessions`
+    collapses same-team spans, so an offensive board is invisible there."""
+    times, holders = _timeline([(1, 100), (3, 100)])
+    teams = {1: "A", 3: "A"}
+    assert derive(times, holders, teams, [_shot(9.0)]) == []
+    events = rebounds(times, holders, teams, [9.5])
+    assert [e.action for e in events] == ["rebound"]
+    assert events[0].team == "A" and events[0].track_id == 3
+
+
+def test_a_made_basket_is_not_a_rebound():
+    """The inbound after a make changes possession; it is not a board."""
+    times, holders = _timeline([(1, 100), (2, 100)])
+    events = derive(times, holders, {1: "A", 2: "B"}, [_shot(9.0)],
+                    made_times=[9.0])
+    assert events == []
+
+
+def test_one_rebound_per_miss_even_if_the_ball_moves_again():
+    times, holders = _timeline([(1, 60), (2, 60), (3, 60)])
+    events = rebounds(times, holders, {1: "A", 2: "B", 3: "B"}, [5.5])
+    assert len(events) == 1
 
 
 def test_possession_change_with_no_shot_behind_it_is_a_steal():

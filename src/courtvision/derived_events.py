@@ -94,18 +94,77 @@ def possessions(times: Sequence[float], holders: Sequence[int | None],
 MAX_HANDOFF_FT = 15.0
 
 
+# A rebound is the first player to establish possession after a miss — and
+# `possessions` above cannot see it, because it collapses the timeline by TEAM.
+# An offensive rebound keeps the ball with the same team, so the span simply
+# continues and no change is ever emitted. Offensive boards are about a quarter
+# of all rebounds, which put a hard ceiling near 0.75 on recall no matter how
+# good perception was.
+#
+# So rebounds are found on the PLAYER timeline instead: after a missed shot,
+# the first player to hold the ball for `min_hold_s` got the board, whichever
+# side he is on.
+REBOUND_WINDOW_S = 4.0
+MIN_HOLD_S = 0.5
+HOLD_GAP_S = 1.0
+
+
+def _player_spans(times: Sequence[float], holders: Sequence[int | None],
+                  min_hold_s: float, gap_s: float) -> list[tuple[int, float, float]]:
+    """Contiguous stretches of one player holding the ball, bridging short gaps."""
+    spans: list[list] = []
+    for time_s, holder in zip(times, holders):
+        if holder is None:
+            continue
+        if spans and spans[-1][0] == holder and time_s - spans[-1][2] <= gap_s:
+            spans[-1][2] = time_s
+        else:
+            spans.append([holder, time_s, time_s])
+    return [(h, a, b) for h, a, b in spans if b - a >= min_hold_s]
+
+
+def rebounds(times: Sequence[float], holders: Sequence[int | None],
+             teams: dict[int, str], missed_times: Sequence[float],
+             window_s: float = REBOUND_WINDOW_S,
+             min_hold_s: float = MIN_HOLD_S,
+             gap_s: float = HOLD_GAP_S) -> list[Event]:
+    """One rebound per missed shot: the first player to establish possession."""
+    spans = _player_spans(times, holders, min_hold_s, gap_s)
+    out: list[Event] = []
+    claimed: set[int] = set()
+    for shot_time in sorted(missed_times):
+        for index, (holder, start, _end) in enumerate(spans):
+            if index in claimed or start <= shot_time:
+                continue
+            if start - shot_time > window_s:
+                break
+            claimed.add(index)
+            out.append(Event(time_s=start, track_id=holder,
+                             team=teams.get(holder), action="rebound",
+                             possession_change=True))
+            break
+    return sorted(out, key=lambda e: e.time_s)
+
+
 def derive(times: Sequence[float], holders: Sequence[int | None],
            teams: dict[int, str], shots: Sequence[Event],
            min_seconds: float = MIN_POSSESSION_S,
            positions: dict[int, dict[float, tuple[float, float]]] | None = None,
-           max_handoff_ft: float = MAX_HANDOFF_FT) -> list[Event]:
+           max_handoff_ft: float = MAX_HANDOFF_FT,
+           made_times: Sequence[float] = ()) -> list[Event]:
     """Steals and rebounds from possession changes, anchored on shots.
 
-    A change of team within `SHOT_WINDOW_S` after a shot is a rebound: the
-    attempt went up and the other side collected it. A change with no shot
+    A change of team within `SHOT_WINDOW_S` after a MISSED shot is a rebound:
+    the attempt went up and the other side collected it. A change with no shot
     behind it is a steal or a turnover — possession lost without an attempt.
+
+    A change after a MADE shot is neither. It is the inbound that follows a
+    basket, and emitting it as a rebound was roughly half of all rebounds this
+    produced, since about half of field goals go in. `made_times` comes from
+    `shot_detection.makes`; leaving it empty restores the old behaviour.
     """
     shot_times = sorted(s.time_s for s in shots)
+    made = sorted(made_times)
     out: list[Event] = []
     spans = possessions(times, holders, teams, min_seconds)
     for previous, current in zip(spans, spans[1:]):
@@ -113,6 +172,10 @@ def derive(times: Sequence[float], holders: Sequence[int | None],
             continue
         changed_at = current.start_s
         recent_shot = any(0.0 <= changed_at - t <= SHOT_WINDOW_S for t in shot_times)
+        if recent_shot:
+            continue          # rebounds come from `rebounds` on the player timeline
+        if any(0.0 <= changed_at - t <= SHOT_WINDOW_S for t in made):
+            continue                     # the inbound after a basket, not a rebound
         if not recent_shot and positions is not None:
             # No shot behind it, so this is a steal or a turnover. A steal is
             # the short handover; drop the long ones.
