@@ -689,3 +689,89 @@ this scorer on one continuous game and check the real drop against the
 simulated one above. If the measured drop matches the OPTIMISTIC row, a
 precision-first configuration ships around 0.82. If it matches REALISTIC, it
 ships around 0.73.
+
+---
+
+# Round five: the scoreboard closes the vision gap
+
+## The previous degradation was unfair in one way and too kind in another
+
+Two objections to round four's simulation, both tested rather than argued.
+
+**Arc fitting is real but small.** Independent Gaussian noise on ball height per
+frame is close to a worst case for a quantity that is physically a parabola. A
+local quadratic fit recovers 0.730 → 0.745. Worth having, not a rescue.
+
+**"Systematic homography error cancels" was wrong.** It came out slightly worse
+than iid noise (0.734 against 0.745). The reasoning was that ball and rim map
+through the same warp so a shared bias cancels — but `RIMS` are hardcoded court
+constants, not detected, so a ball bias does not cancel at all.
+
+## The scoreboard recovers the entire gap
+
+A made basket is a score change. It is read, not inferred. Held-out six games,
+drop-steal policy, realistic vision (height ±2 ft, homography ±1 ft, ball
+missing 20%, cuts every 8 s):
+
+    configuration                              PRECISION   coverage
+    realistic vision, makes from geometry          0.734      0.674
+      + scoreboard read 90% correct                0.868      0.655
+      + scoreboard read 95% correct                0.875      0.663
+      + scoreboard read 99% correct                0.880      0.671
+    harsh vision z3 xy1.5 drop30 + scoreboard 95%  0.883      0.606
+    perfect coordinates, makes from geometry       0.879      0.701
+
+Two things worth stating plainly. **Even at 90% score-reading accuracy it clears
+0.85**, so the lever does not need a perfect reader. And it is *robust to vision
+quality* — harsher perception barely moves precision, only coverage. That is the
+whole point: ball height is what a single camera cannot measure, and the
+make/miss cylinder was built on it, with rebound built on that in turn. One bad
+measurement was poisoning two classes. Replacing it with two digits changing
+decouples precision from perception entirely.
+
+## The reader now works on a real broadcast, for the first time
+
+`autoscoreboard` had never been run on real footage — only synthetic
+scoreboards. On a real TSN broadcast it returned nothing at all, and the cause
+was a single wrong assumption: `ticks >= seen - 2` demands the clock advance on
+every sampled second. **A game clock advances only during live play, roughly a
+third of broadcast wall time.** Measured on that broadcast, the correctly
+aligned clock ticks 13 times in 37 legible samples — a rate of 0.35, which the
+old rule rejected along with every other region.
+
+Rate still discriminates, which is what matters: a box offset left reads the
+tens-of-seconds digit and ticks at 0.23, one in ten. Ranking by rate with a 0.25
+floor prefers the correctly aligned box. With that change the module locates a
+ticking digit region on real footage and `bootstrap_templates` learns six digit
+templates unsupervised.
+
+**It locked onto the shot clock rather than the game clock.** Both tick during
+live play and both read as 3-4 glyphs, so the current criteria cannot separate
+them. Discriminating them is straightforward and not yet done — a game clock is
+MM:SS and falls monotonically across a period, a shot clock resets to 24
+constantly.
+
+Note also that the lever needs the **score**, not the clock. Score reading is an
+easier problem than clock reading — it changes rarely and increases
+monotonically, which is as strong a bootstrap constraint as the clock's descent
+— but it is not implemented.
+
+## Where this leaves the question
+
+    reading                                             result
+    85% of a game's events captured                     no  — 0.751 ceiling
+    85% of emitted commentary correct, perfect coords   yes — 0.879
+    85% of emitted commentary correct, realistic vision yes — 0.868 to 0.883,
+                                                        but only with the
+                                                        scoreboard, at ~0.65
+                                                        coverage, and with steal
+                                                        and block suppressed
+
+The architecture that reaches 85% is **vision for shot timing, the scoreboard
+for outcomes**, reporting field goals, free throws and rebounds and staying
+quiet about steal and block.
+
+What is still unproven: the numbers above simulate perception rather than
+measure it, score reading is not built, and coverage is about two thirds. Those
+are engineering tasks with known shapes, not open research — which is a very
+different position from where round four left this.

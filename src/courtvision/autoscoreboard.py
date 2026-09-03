@@ -27,6 +27,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
+# A clock ticks only while play is live -- about a third of wall time.
+MIN_TICK_RATE = 0.25
 MIN_GLYPHS = 3
 MAX_GLYPHS = 4
 
@@ -87,8 +89,21 @@ def locate_clock(frames: list[np.ndarray]) -> ClockLocation | None:
                 ticks += 1
             last = signature
         # Needs to read as digits most of the time AND actually be counting.
-        if seen >= max(4, len(frames) // 2) and ticks >= seen - 2:
-            if best is None or ticks > best.ticks:
+        #
+        # It must NOT require a tick every sampled second. A game clock advances
+        # only during live play, which is roughly a third of broadcast wall time
+        # -- dead balls, fouls, free throws and timeouts all hold it. Measured on
+        # a real TSN broadcast, the correctly aligned clock ticks 13 times in 37
+        # legible samples (0.35); demanding `ticks >= seen - 2` rejected it and
+        # every other region, which is why this module found nothing on real
+        # footage while passing on synthetic scoreboards that always tick.
+        #
+        # Rate still discriminates, which is the part that matters: a box offset
+        # left reads the TENS-of-seconds digit and ticks at 0.23, one in ten, so
+        # ranking by rate prefers the correctly aligned box.
+        if seen >= max(4, len(frames) // 2) and ticks >= MIN_TICK_RATE * seen:
+            rate = ticks / seen
+            if best is None or rate > best.ticks / max(best.samples, 1):
                 best = ClockLocation((top, bottom, left, right), ticks, seen)
     return best
 
