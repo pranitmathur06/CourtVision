@@ -553,3 +553,37 @@ So retraining the classifier cannot deliver 85% on a full game. The constraint
 is not the training corpus and not the camera — it is that steal and block are
 not recoverable from possession geometry, and free throws are not addressable on
 a game-clock timeline. Those are architecture, not data.
+
+## Held out, and two corrections to the paragraph above
+
+The 0.765 above is measured on all twelve games, six of which the shot
+thresholds were fitted on. Scored only on the six **held out**, with per-class
+clock offsets also fitted on the other six:
+
+    class          P       R      F1   per game
+    fieldgoal    0.944   0.787   0.859      169
+    freethrow    1.000   0.539   0.701       44
+    rebound      0.755   0.706   0.730       88
+    steal        0.305   0.362   0.331       16
+    block            —       —   0.000       10
+
+    EVENT-WEIGHTED F1 (held out): 0.751
+
+**Per-class clock offsets are worth nothing.** Free throws really do sit at a
+different offset from live play (−0.7 s against −1.4 s), but correcting it moved
+the held-out score from 0.750 to 0.751. The offset is a real property of the
+data and not a usable lever.
+
+**The free-throw guess was wrong.** The hypothesis was that resampling onto a
+game-time grid discards the free throw itself, since the clock is frozen. It
+does not: FT windows carry a median of 40 distinct ball positions, exactly as
+field-goal windows do. The footage is there. Free-throw recall is limited
+because only about 55% of free-throw stoppages have any rim approach detected
+near them at all — the geometry is marginal, with median ball-to-rim distance
+running to 3.2 ft against a 4.0 ft threshold.
+
+So the earlier estimate that free throws were worth +0.02 was optimistic by
+about twentyfold, and the honest optimistic ceiling is nearer **0.78** than
+0.80. The conclusion does not move: **0.75 held out is what this architecture
+reaches when perception is perfect and free**, and 85% end-to-end on video is
+not reachable from there.
