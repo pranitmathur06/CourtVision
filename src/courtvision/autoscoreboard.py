@@ -108,6 +108,75 @@ def locate_clock(frames: list[np.ndarray]) -> ClockLocation | None:
     return best
 
 
+# The make/miss lever does not need the score's VALUE, only the fact that it
+# changed: a shot that scores is followed within a second or two by the score
+# ticking up. That is change detection on a small region, not OCR, and it is
+# far more robust than reading digits.
+#
+# Score and clock are told apart by how often they change. Sampled at 1 Hz on a
+# real broadcast the game clock's last glyph changes about 0.35 of the time (it
+# only advances during live play) and the shot clock similarly; a team's score
+# changes roughly every thirtieth sample. Static text -- team abbreviations,
+# the network bug -- reads as glyphs but never changes at all, so a rate floor
+# excludes it.
+MIN_SCORE_RATE = 0.01
+MAX_SCORE_RATE = 0.20
+
+
+def locate_scores(frames: list[np.ndarray],
+                  min_rate: float = MIN_SCORE_RATE,
+                  max_rate: float = MAX_SCORE_RATE) -> list[ClockLocation]:
+    """Regions that read as digits and change rarely -- the two team scores.
+
+    `frames` should be about one second apart. Returns the candidates by
+    increasing change rate; a scoreboard shows two, one per team.
+    """
+    from courtvision.scoreboard import clock_glyphs, normalise_polarity
+
+    if len(frames) < 8:
+        return []
+    height, width = frames[0].shape[:2]
+    found: list[ClockLocation] = []
+    for top, bottom, left, right in candidate_rois(height, width):
+        last: np.ndarray | None = None
+        changes, seen = 0, 0
+        for frame in frames:
+            glyphs = clock_glyphs(normalise_polarity(frame[top:bottom, left:right]))
+            if not 1 <= len(glyphs) <= 3:
+                last = None
+                continue
+            seen += 1
+            signature = _glyph_signature(glyphs[-1].image)
+            if last is not None and not _same(signature, last):
+                changes += 1
+            last = signature
+        if seen < max(6, len(frames) * 3 // 4):
+            continue
+        rate = changes / seen
+        if min_rate <= rate <= max_rate:
+            found.append(ClockLocation((top, bottom, left, right), changes, seen))
+    return sorted(found, key=lambda c: c.ticks / max(c.samples, 1))
+
+
+def score_change_times(frames: list[np.ndarray], times: list[float],
+                       roi: tuple[int, int, int, int]) -> list[float]:
+    """When the digits in `roi` changed. One entry per change, at its time."""
+    from courtvision.scoreboard import clock_glyphs, normalise_polarity
+
+    top, bottom, left, right = roi
+    out: list[float] = []
+    last: np.ndarray | None = None
+    for frame, time_s in zip(frames, times):
+        glyphs = clock_glyphs(normalise_polarity(frame[top:bottom, left:right]))
+        if not 1 <= len(glyphs) <= 3:
+            continue
+        signature = _glyph_signature(glyphs[-1].image)
+        if last is not None and not _same(signature, last):
+            out.append(time_s)
+        last = signature
+    return out
+
+
 def bootstrap_templates(frames: list[np.ndarray],
                         roi: tuple[int, int, int, int]) -> dict[str, np.ndarray]:
     """Learn digit templates from a one-second-per-frame run, unsupervised.

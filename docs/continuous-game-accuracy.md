@@ -775,3 +775,36 @@ What is still unproven: the numbers above simulate perception rather than
 measure it, score reading is not built, and coverage is about two thirds. Those
 are engineering tasks with known shapes, not open research — which is a very
 different position from where round four left this.
+
+## Score-change detection, and what it still cannot do
+
+The make/miss lever does not need the score's VALUE, only the fact that it
+changed — a shot that scores is followed within a second or two by the score
+ticking up. That is change detection on a small region, not OCR.
+
+Score and clock separate cleanly by how often they change. On the real TSN
+broadcast, sampled at 1 Hz:
+
+    game clock / shot clock   change rate 0.35
+    team score                change rate 0.022 - 0.035
+
+`locate_scores` finds 23 candidate regions on that footage inside a 0.01-0.20
+band, and over t=180..900 s — during which Toronto went from 29 to 71, about
+nineteen scoring events — the best candidates report 11 to 18 changes. The right
+order of magnitude.
+
+**It is not finished, and two limits are worth stating precisely.**
+
+The ROI grid is too coarse to isolate the digits. Inspecting the winning crop
+shows a team logo and two partial digits rather than a score, which is the same
+defect that stopped `locate_clock`: `candidate_rois` steps 40 px horizontally
+with a fixed 110 px box, so a clean frame around a two-digit score exists only
+by luck. The counts above may therefore be partly coincidence.
+
+And **rate alone cannot separate a score from a clock's minutes digit**, which
+also changes about once a minute. Distinguishing them needs the constraint that
+a score only ever increases — the mirror of the descent constraint the clock
+bootstrap already uses. That is not built.
+
+So score-change detection is demonstrated in principle on real footage and is
+not yet a working component.
