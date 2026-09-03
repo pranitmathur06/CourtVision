@@ -1311,3 +1311,59 @@ per configuration. Caching detections once and sweeping offline turned 45
 configurations from about twenty-two hours into under a minute. The cache also
 made the sample-size error visible, because widening the window from 10 minutes
 to 38 stopped being an expensive decision.
+
+## Round thirteen: where ball labels can and cannot come from
+
+Selection by trajectory fixed part of the video failure, so the next idea was to
+turn those selections into training labels: the chosen box a positive, the ~14
+rejected candidates in the same frame negatives. It sounded free.
+
+**It does not work, and the reason is worth keeping.** Rendered forty of the
+resulting labels and counted: **12 of 40 were the ball.** A smoothness prior
+cannot separate a ball from a HEAD, because heads move smoothly too — more
+smoothly than a ball. Nor does geometry: at 720p both are ~25 px near-square
+blobs, and a size filter only took candidates from 14.3 to 8.3 per frame.
+Colour helped (30% -> a sample that looked like 60%) and a head-region
+rejection using player boxes did not help further. Every filter cost recall
+(0.949 -> 0.77 -> 0.695) and none reached usable purity.
+
+Two process notes, both mistakes:
+
+  * The purity estimates from EIGHT tiles ran 3/8, 5/8, 4/8 and looked like
+    differences between filters. They were noise. Only the 40-tile count
+    settled it, and it settled it at 30%, below the most pessimistic of the
+    small samples.
+  * The keep-rate statistics looked healthy at every stage. Nothing but looking
+    at the images revealed that the labels were heads.
+
+## What did work: a teacher that is useless at inference
+
+`config.py` already recorded that stock COCO `sports ball` on yolo11x reaches
+0.652 confidence where the fine-tuned nano model peaks at 0.116, and dismissed
+it because it "never worked well enough for possession". That dismissal was
+correct **for inference** — measured here, it fires on only 8-21% of frames.
+
+But nobody had asked whether it was good enough as a LABEL SOURCE, where low
+recall costs nothing: it runs once, offline, and only its confident detections
+are kept. Measured purity on 40 sampled crops:
+
+    yolo11x COCO sports-ball                       ~80%   (32/40)
+    ... plus an orange gate (hue 3-20, sat >= 110) ~97%   (39/40)
+
+The teacher's characteristic error is yellow-green **shoes** — a different
+object class, which colour separates cleanly. That is the structural difference
+from the Viterbi labels, whose errors were heads, which no filter separated.
+
+Yield over the 38-minute broadcast: **2,865 labels**, 2,366 train / 499 val,
+split by time so the val tail's neighbouring frames are unseen. Only
+teacher-positive frames are written: a frame where the teacher saw nothing is
+not evidence of no ball, and writing it empty would teach the student to miss.
+Within each kept frame the single box is the positive and the entire rest of
+the image — heads, shoes, court markings — is the negative, which is exactly
+the hard-negative signal the student needs.
+
+The student is `yolo11s` at 1280 px. The point is not to match the teacher: it
+is to be fast enough for the pipeline AND to find the ball on the ~80% of
+frames the teacher misses. A high val mAP would only prove imitation, so the
+result that counts is the downstream one — shot F1 on real video, against the
+0.466 that path-selection reached.
