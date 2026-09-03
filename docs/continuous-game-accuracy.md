@@ -633,3 +633,59 @@ So the honest position is:
 The cheapest way to close the remaining uncertainty is not a retrain. It is to
 run the existing vision stack against this same scorer on one continuous game
 and measure the drop.
+
+## The vision gap, measured by degrading the perfect coordinates
+
+The objection to everything above is fair: it all assumes perception the camera
+cannot give. That gap does not need a GPU to size. Take the true coordinates and
+corrupt them the way a broadcast pipeline does — no depth, so ball height is
+estimated; homography error in x/y; the ball lost behind bodies; track ids
+restarting at every cut — then re-measure. Held-out six games, drop-steal policy:
+
+    perception                                PRECISION   coverage
+    perfect (tracking data)                       0.879      0.701
+    ball height +-1 ft                            0.851      0.638
+    ball height +-2 ft                            0.812      0.627
+    ball height +-3 ft (no depth)                 0.788      0.630
+    ball xy +-1 ft (homography)                   0.798      0.703
+    ball missing 20% (occlusion)                  0.812      0.707
+    ball missing 40%                              0.778      0.707
+    track ids restart every 8 s (cuts)            0.875      0.704
+    REALISTIC  z2 xy1 drop20 cuts8                0.730      0.668
+    OPTIMISTIC z1 xy0.5 drop10 cuts20             0.817      0.659
+
+Three things fall out.
+
+**Ball height dominates.** It is the one quantity a single broadcast camera
+cannot measure, and it is what both shot detection and the make/miss cylinder
+are built on. At ±3 ft — which is what estimating height without depth looks
+like — precision falls to 0.788 on its own.
+
+**Track-id churn barely matters** (0.875). That is worth knowing: it says the
+player-timeline rebound detector is robust to broadcast cuts, which the old
+team-timeline design was not. The 14,640 spurious ids in one game were a
+problem for the architecture that has now been replaced.
+
+**Nothing reaches 0.85 once perception is realistic.** Tightening the rebound
+policy buys a little headroom — hold 2.5 s with a 2.5 s window gives precision
+0.895 — but at coverage 0.598, and that is measured with perfect perception.
+Applied on top of optimistic vision it lands near 0.83.
+
+## Conclusion
+
+    reading                                        result
+    85% of a game's events captured                no  — ceiling 0.751
+    85% of emitted commentary correct, perfect      yes — 0.879
+    85% of emitted commentary correct, real vision  no  — 0.73 to 0.82
+
+Confidence that this architecture reaches 85% end-to-end on full NBA broadcast
+video: **low, and now measured rather than guessed.** The binding constraints
+are that a single camera cannot see ball height, and that steal and block are
+not recoverable from possession geometry at all. Neither is a training-data
+problem, so retraining the classifier does not address either one.
+
+The honest next step is the cheap one: run the existing vision stack against
+this scorer on one continuous game and check the real drop against the
+simulated one above. If the measured drop matches the OPTIMISTIC row, a
+precision-first configuration ships around 0.82. If it matches REALISTIC, it
+ships around 0.73.
