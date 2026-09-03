@@ -167,6 +167,12 @@ MAX_SCORE_RATE = 0.20
 # to read either.
 MIN_SCORE_GLYPHS = 2
 MAX_SCORE_GLYPHS = 3
+# A score HOLDS. Sampled at 1 Hz it sits unchanged for tens of seconds between
+# baskets, while text whose segmentation is unstable alternates every few
+# frames. Both can land in the same average rate, so the rate band alone let a
+# flickering team abbreviation outrank every real score; run length is what
+# tells them apart.
+MIN_SCORE_RUN = 8
 
 
 def _never_returns(frames, roi, tolerance: float = 0.12) -> bool:
@@ -215,11 +221,19 @@ def _never_returns(frames, roi, tolerance: float = 0.12) -> bool:
 
 def locate_scores(frames: list[np.ndarray],
                   min_rate: float = MIN_SCORE_RATE,
-                  max_rate: float = MAX_SCORE_RATE) -> list[ClockLocation]:
+                  max_rate: float = MAX_SCORE_RATE,
+                  near: tuple[int, int, int, int] | None = None,
+                  within_px: int = 260,
+                  min_run: int = MIN_SCORE_RUN) -> list[ClockLocation]:
     """Regions that read as digits and change rarely -- the two team scores.
 
-    `frames` should be about one second apart. Returns the candidates by
-    increasing change rate; a scoreboard shows two, one per team.
+    `frames` should be about one second apart. Pass `near` -- the clock's roi,
+    which `locate_clock` finds reliably -- to search only the scoreboard
+    graphic instead of the whole lower third. The scores sit on the same panel
+    as the clock, within a couple of hundred pixels, so searching everywhere
+    was never necessary and let unrelated text compete.
+
+    Returns candidates by decreasing change rate.
     """
     from courtvision.scoreboard import clock_glyphs, normalise_polarity
 
@@ -228,11 +242,19 @@ def locate_scores(frames: list[np.ndarray],
     height, width = frames[0].shape[:2]
     found: list[ClockLocation] = []
     for top, bottom, left, right in candidate_rois(height, width):
+        if near is not None:
+            near_y = (near[0] + near[1]) / 2
+            near_x = (near[2] + near[3]) / 2
+            if (abs((top + bottom) / 2 - near_y) > within_px
+                    or abs((left + right) / 2 - near_x) > within_px):
+                continue
         if not _reads_as_digits(frames, (top, bottom, left, right),
                                 MIN_SCORE_GLYPHS, MAX_SCORE_GLYPHS):
             continue
         last: np.ndarray | None = None
         changes, seen = 0, 0
+        runs: list[int] = []
+        run = 0
         for frame in frames:
             glyphs = clock_glyphs(normalise_polarity(frame[top:bottom, left:right]))
             if not MIN_SCORE_GLYPHS <= len(glyphs) <= MAX_SCORE_GLYPHS:
@@ -242,10 +264,17 @@ def locate_scores(frames: list[np.ndarray],
             signature = _glyph_signature(glyphs[-1].image)
             if last is not None and not _same(signature, last):
                 changes += 1
+                runs.append(run)
+                run = 1
+            else:
+                run += 1
             last = signature
+        runs.append(run)
         if seen < max(6, len(frames) * 3 // 4):
             continue
         rate = changes / seen
+        if runs and sorted(runs)[len(runs) // 2] < min_run:
+            continue        # flickers rather than holding -- text, not a score
         if min_rate <= rate <= max_rate:
             found.append(ClockLocation((top, bottom, left, right), changes, seen))
     # Most changes first. Sorting the other way ranks the most STATIC regions

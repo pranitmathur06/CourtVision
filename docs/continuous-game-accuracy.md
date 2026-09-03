@@ -844,3 +844,40 @@ and each worth recording:
 
 So the position is honest but unfinished: **the clock is read, the score is
 not**, and the score is the half the make/miss lever actually needs.
+
+## Automatic score localisation failed five ways — and does not need to succeed
+
+Anchoring the search to the clock's neighbourhood and adding a run-length test
+(a score HOLDS for tens of seconds; unstable text alternates every few frames)
+still did not isolate it: the surviving candidates change 71-96 times across a
+span in which Toronto scored about nineteen times. Five distinct approaches,
+all failing:
+
+    1-3 glyphs                 returns the clock's MINUTES digit
+    ascending-rate ranking     returns static text ("CHI") above every score
+    never-returns constraint   rejects all 167 candidates (compression wobble)
+    two-digit floor            necessary, not sufficient
+    clock-neighbourhood + run  candidates still change 4x too often
+
+Glyph segmentation on compressed broadcast footage is simply not a reliable way
+to pick a two-digit number out of a graphic, and more sweeps of the same
+machinery are unlikely to change that.
+
+**But the project does not depend on solving it.** `scripts/label_live_game.py`
+already carries per-broadcast profiles — a hand-specified `roi` plus a few
+anchor readings — and that mechanism works: **96 of 96 consecutive clock reads
+descend and 81% of frames are legible** across two networks. Reading the score
+the same way means adding one more rectangle per profile. The rectangle for
+this TSN broadcast took a minute to find by eye, and the clock's own automatic
+result landed within a few pixels of the hand-found box.
+
+So the honest split is:
+
+  * **Score reading for a known broadcast: a small extension of a mechanism
+    that already works.** This is what the make/miss lever actually needs.
+  * **Score reading for an arbitrary unseen broadcast: unsolved**, and it is a
+    convenience rather than a blocker.
+
+That distinction matters for the confidence question. The lever that takes
+precision from 0.734 to 0.87 needs a rectangle per network, not a research
+result.
