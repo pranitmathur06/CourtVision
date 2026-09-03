@@ -1122,3 +1122,62 @@ The measured ceiling on event coverage (0.751) and the finding that steal and
 block are not recoverable from possession geometry both stand. So does the
 conclusion that has survived every round: **retraining the action classifier
 addresses none of this.**
+
+## Round ten: shots without height — the dependency is removable
+
+The height estimator failed, so the question became whether height is needed at
+all. It is not. The rim is DETECTED in the image and so is the ball, so "the
+ball approached the rim" is a pixel measurement. Validated the same way: SportVU
+ball projected through the real broadcast camera, 2 px noise, scored against
+that game's official play-by-play, six games.
+
+Scored against shots at the modelled end only (the synthetic setup has one
+basket, so far-end attempts are in the truth set but undetectable and cap recall
+near 0.5):
+
+    radius px      P       R      F1
+        30      0.915   0.857   0.885
+        50      0.864   0.897   0.880
+        70      0.781   0.907   0.840
+
+    the 3D version, given TRUE ball height:
+                0.949   0.815   0.877
+
+**Image space matches the height-based detector — F1 0.885 against 0.877 — with
+better recall and slightly worse precision.** The pixel "rise" test turned out
+to be unnecessary: proximity alone is the signal, and requiring a rise only cost
+recall.
+
+So the architecture no longer needs ball height anywhere:
+
+    shot attempts   pixel distance from the detected ball to the detected rim
+    made or missed  the score changes on the scoreboard
+    rebounds        first player to hold the ball after a miss
+    steals          suppressed -- 0.30 F1 even with perfect perception
+    blocks          suppressed -- below chance from pixels
+
+That also removes the dependency on court registration for shot detection: rim
+and ball are both in image coordinates, so nothing has to be projected onto a
+floor plane to know an attempt happened.
+
+## Position after ten rounds
+
+    measured on the real broadcast
+      ball detection            0.991
+      court registration        0.88 of frames, rim error 0.5 px
+      clock located and gated   0.84 recoverable, dead ball 0.478 of wall time
+      track id lifetime         ~5.2 s
+
+    measured against official play-by-play
+      event coverage ceiling    0.751  (perfect perception)
+      emitted-commentary        0.852 - 0.874
+      shots in image space      F1 0.885, no height required
+
+    not built
+      score reading   -- one rectangle per broadcast profile; the same
+                         mechanism reads the clock at 96/96 monotonic
+      the assembled pipeline has never executed
+
+The height estimator stays in the tree with its failure documented, because the
+useful result is that it is not needed, and the next person to reach for one
+should know it was tried.
