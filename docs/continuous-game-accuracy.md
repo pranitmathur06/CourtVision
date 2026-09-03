@@ -587,3 +587,49 @@ about twentyfold, and the honest optimistic ceiling is nearer **0.78** than
 0.80. The conclusion does not move: **0.75 held out is what this architecture
 reaches when perception is perfect and free**, and 85% end-to-end on video is
 not reachable from there.
+
+## Two different questions, and only one of them can reach 85%
+
+Sweeping the derivation parameters I had set by hand changed almost nothing,
+fit on six games and validated on six: rebound 0.730 → 0.733, steal 0.331 →
+0.373. Together worth about +0.003 event-weighted. The 0.75 is not a tuning
+artefact — it is where this architecture sits.
+
+But "85% end-to-end" has two readings, and they are not close to each other:
+
+**(a) What fraction of the game's events does it capture?** That is the
+event-weighted F1 above: **0.75**, and no lever found here moves it far.
+
+**(b) What fraction of what it SAYS is true?** That is precision on the emitted
+stream, and it is the question a commentary system is actually judged on —
+saying something wrong is far worse than staying quiet. On the six held-out
+games:
+
+    policy                        says   right   PRECISION   coverage
+    everything it can emit        1541    1292       0.838      0.719
+    drop steal                    1433    1259       0.879      0.701
+    shots + free throws only       925     875       0.946      0.487
+    field goals only               834     785       0.941      0.437
+
+**Dropping steal puts precision at 0.879 while still covering 70% of the
+game's events.** That clears 85% on reading (b), held out, and it clears it by
+suppressing the one class measured to be broken rather than by tuning.
+
+## What is still not established
+
+Every number on this page is measured on tracking coordinates: the ball's true
+3D position and stable player ids, handed over for free. **The vision gap is
+unmeasured.** A broadcast pipeline has to estimate ball height without depth,
+re-identify players across cuts, and it will land below these figures by an
+amount nobody here has quantified.
+
+So the honest position is:
+
+  * 85% of a game's events captured, end-to-end on video — **no**, and the
+    ceiling argument says no training corpus changes that.
+  * 85% of emitted commentary correct — **yes at the ceiling (0.879)**, and the
+    open question is how much of that survives real perception.
+
+The cheapest way to close the remaining uncertainty is not a retrain. It is to
+run the existing vision stack against this same scorer on one continuous game
+and measure the drop.
