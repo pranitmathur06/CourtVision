@@ -881,3 +881,61 @@ So the honest split is:
 That distinction matters for the confidence question. The lever that takes
 precision from 0.734 to 0.87 needs a rectangle per network, not a research
 result.
+
+## Round six: perception measured rather than assumed
+
+The degradation model guessed at its parameters. Two of them are measurable
+directly, by running the shipped detector and tracker over the real broadcast —
+150 s at 10 fps on `checkpoints/detector.pt`:
+
+    parameter              simulated        MEASURED
+    ball dropout           0.20 / 0.30      0.009   (ball found in 1486/1500)
+    track id lifetime      8 s              ~5.2 s  (263 ids, 9 players, 150 s)
+    players per frame      —                median 9 (10 on court)
+
+Both guesses were wrong, in opposite directions. Ball detection is far better
+than assumed — the ball is found in **99.1%** of frames, not 80% — while ids
+churn somewhat faster than the 8 s modelled. Ball HEIGHT error stays unmeasured,
+because nothing here provides depth ground truth, so it is swept instead:
+
+    ball height error    makes from geometry    makes from scoreboard (95%)
+    +-0.5 ft                   0.738                  0.874   (cov 0.669)
+    +-1.0 ft                   0.739                  0.874   (cov 0.670)
+    +-2.0 ft                   0.736                  0.872   (cov 0.666)
+    +-3.0 ft                   0.730                  0.862   (cov 0.668)
+    +-4.0 ft                   0.719                  0.852   (cov 0.668)
+
+**The scoreboard path stays above 0.85 across the entire sweep**, including
+±4 ft, which is worse than any plausible height estimator. The result is robust
+to the one parameter that could not be measured, which is a much stronger
+position than a single point estimate.
+
+## The risk that none of these numbers can see
+
+Every figure on this page comes from tracking data, and **tracking data contains
+no dead-ball footage at all**. Broadcast video does: replays, timeouts, warmups,
+free-throw line-ups, commercials. That is the single largest source of false
+positives on real video — it is what drove rebound to 4.25x and steal to 33.8x
+in the earlier video runs — and no simulation built on tracking coordinates can
+exhibit it.
+
+The mitigation exists and is untested: the game clock gates live play, and
+`locate_clock` now reads that clock on real footage. But "untested" is the
+operative word, and it is why the honest confidence is not higher.
+
+## Final position
+
+    reading                                                  result
+    85% of a game's events captured                          no  (0.751 ceiling)
+    85% of emitted commentary correct, measured perception    0.852 - 0.874
+      ... with makes from geometry instead of the scoreboard  0.719 - 0.739
+
+Confidence that this architecture delivers 85% of emitted commentary correct on
+a full NBA broadcast: **high but not certain — roughly three in four.** Every
+parameter that could be measured has been, and every one that could not has
+been swept, with the answer staying above the bar throughout. What remains is
+replays and dead-ball footage, unmodelled and unmitigated in these numbers,
+plus a homography error term that was assumed rather than measured, plus a score
+reader that works by hand-set profile rather than automatically.
+
+Retraining the action classifier addresses none of those.
