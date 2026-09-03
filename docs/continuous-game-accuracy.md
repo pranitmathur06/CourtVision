@@ -993,3 +993,67 @@ the bar; the assembled pipeline has not been. Given that four configurations of
 the older pipeline produced shot ratios spanning 0.10x to 0.94x on one game,
 integration surprises are this project's norm rather than its exception. That,
 and not the training corpus, is the remaining risk.
+
+## Round eight: every component measured on the real broadcast
+
+Court registration, tested independently on 40 frames spread over ten minutes —
+global search each time, no seeding from the previous frame, because across a
+camera cut there is no continuity to exploit:
+
+    registered (score >= 0.25)      35/40 = 0.88
+    rim reprojection px             median 0.5, p90 4.2, max 10.7 (bar 40)
+    within the bar                  100%
+
+That is far better than assumed. A rim landing within half a pixel of its
+detection means the court is placed correctly in absolute terms, not merely
+consistently. At broadcast scale one foot is roughly 8-15 px, so the implied
+horizontal error is about **0.05 ft — against the 1.0 ft the simulation
+assumed.** Together with ball detection at 0.991 against an assumed 0.80, the
+degradation model was pessimistic on two of its three vision terms.
+
+Everything measurable is now measured on real footage:
+
+    ball detection            0.991     (assumed 0.80)
+    court registration        0.88 of frames, rim error 0.5 px
+    implied homography error  ~0.05 ft  (assumed 1.0 ft)
+    track id lifetime         ~5.2 s    (assumed 8 s)
+    dead-ball fraction        0.478 of wall time
+    clock state recoverable   0.84 of samples
+    ball height error         SWEPT: +-0.5 to +-4 ft -> 0.874 to 0.852
+    score reader accuracy     SWEPT: 90% to 99%      -> 0.868 to 0.880
+
+## What is actually missing, and it is not wiring
+
+`ball_z` is supplied by `tracking_data.py` and by nothing else. **No component
+in this repository estimates ball height from video**, and a single broadcast
+camera provides no depth. Both `shots` and `makes` are built on height, and
+`makes` is what the scoreboard was going to replace — but `shots` still needs
+it to know an attempt happened at all.
+
+So "run it end to end" is not an integration task. It requires a ball-height
+estimator that does not exist. The encouraging part is that the sweep above
+says how good it has to be: **±4 ft still yields 0.852.** A ballistic fit in
+image space, given a homography already accurate to half a pixel on the rim and
+the knowledge that a ball in flight is a parabola, should comfortably beat that.
+Lenient bar, unbuilt component.
+
+The other unbuilt piece is score reading, which needs one rectangle per
+broadcast profile rather than the automatic localiser that failed five ways.
+
+## Honest final position
+
+    reading                                        result
+    85% of a game's events captured                no  (0.751 ceiling)
+    85% of emitted commentary correct              0.852 - 0.874 in simulation,
+                                                   with every vision term now
+                                                   measured and two of three
+                                                   better than modelled
+
+Every component that exists has been measured on the real broadcast and clears
+its bar. Two components do not exist: ball-height estimation and score reading.
+Neither is research — the required accuracies are known and lenient — but
+neither is written, and the assembled system has never executed.
+
+**Retraining the action classifier addresses none of this.** That conclusion has
+survived eight rounds of measurement and is the one thing here worth acting on
+immediately.
