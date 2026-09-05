@@ -1796,3 +1796,67 @@ repeatedly. COCO pose transfers because a human body is a human body, unlike a
 
 That makes the block question answerable for the first time: wrist height
 against ball height, and whether a defender's wrist crosses the ball's path.
+
+# Round twenty-one: the ceiling, and what the scoreboard still had left
+
+## Two claims of mine, both wrong
+
+By the end of round twenty I had concluded that the remaining error was
+perception -- that the event logic was sound and only the ball detector was
+failing. That was an assertion, never a measurement. The tracking data makes it
+measurable: SportVU gives 25 Hz, stable player ids, court feet and a real ball
+height, which is perception with the errors removed. Twelve games, scored the
+same way as the video:
+
+    action     emitted  official   P       R       F1
+    shot          1919      2564   0.942   0.692   0.798
+    rebound       1058      1295   0.811   0.662   0.732
+    steal          247       168   0.236   0.333   0.271
+
+Read at face value that says the event logic cannot reach the bar even with
+perfect inputs, and I said so. That was the second wrong claim. `nba_feed` maps
+`"Free Throw" -> "shot"`, so rim-approach geometry was being scored against
+field goals AND free throws pooled together. Split:
+
+    truth set          P       R       F1
+    field goals      0.876   0.824   0.859      <- clears 85%
+    free throws      0.080   0.288   0.125
+    pooled           0.939   0.677   0.797
+
+The event logic is fine. **On field goals it reaches 0.859 with clean
+perception.** Free throws are 20% of attempts and geometry scores 0.125 on them
+-- the detector fires once on a two-shot sequence, not once per attempt -- and
+that alone dragged the pooled figure below the bar.
+
+So the honest gap for vision on field goals is 0.740 measured on broadcast
+against a 0.859 ceiling: about twelve points, and those twelve points ARE
+perception. Not the six I claimed from the pooled number, and not the zero the
+"logic is broken" reading implied.
+
+## The scoreboard had three more classes in it
+
+A score change carries its own event type in the size of the jump. The reader
+was already emitting the change; nothing was reading the magnitude. On the
+uncut broadcast, no ball detection anywhere in the path:
+
+    class          pred  official     P       R       F1
+    3pt make         21        22   1.000   0.955   0.977
+    2pt make         41        42   0.951   0.929   0.940
+    any make         99       108   0.960   0.880   0.918
+    free throw       37        44   0.946   0.795   0.864
+
+Four classes over the bar, from a sensor that was already built. Free throws
+are the point: geometry gets 0.125 on them and the scoreboard gets 0.864,
+because a made free throw is a +1 and nothing else in basketball is.
+
+## The rule this project keeps rediscovering
+
+Observed beats derived, every time it is available. The scoreboard reaches
+0.918 on makes while flawless tracking data reaches 0.859 on field goals --
+the observed sensor beats the ceiling of the derived one. Three detector
+trainings, the resolution sweep and the hybrid rim filter all tried to improve
+a derivation when the answer was to find a sensor that states the event
+outright.
+
+What still has no sensor: misses (0.663), rebounds (0.507 on video against a
+0.732 ceiling), steal (0.271 even on tracking), block (suppressed).
