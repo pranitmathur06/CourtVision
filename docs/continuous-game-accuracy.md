@@ -1997,3 +1997,47 @@ Propagated frames hold 0.514 against line pixels propagation never looks at --
 it matches background texture -- where a from-scratch search across the game
 medians 0.242. And it costs 21 ms against 17 s. The chain carries real geometry;
 it was starved of anchors, not broken.
+
+## The fix: stop searching, solve
+
+Every attempt above tried to make the six-parameter camera search work. Drawing
+its output ended that: the projected court was a blob about a fifth of true
+size, sitting on the wrong basket, while scoring 0.5 on line evidence. The
+objective has deep wrong minima and the score cannot tell them from the answer,
+so budget, bounds, seeds and priors are all beside the point.
+
+An NBA lane is a painted rectangle with exact corners -- (17,0) (33,0) on the
+baseline, (17,19) (33,19) on the free-throw line. Four correspondences
+determine a homography outright.
+
+                              search      key
+    frames registered          28.3%     85.7%
+    players on the court       75.0%     94.6%
+
+Both details that make it work came from looking at frames:
+
+  * the paint is blue and so is the crowd, so a colour mask leaks into the
+    stands and the contour comes back with eight or nine corners -- the key is
+    on WOOD and the crowd is not;
+  * corner ORDER decides right versus flipped end for end, and the rim settles
+    it, so `order_key_corners` returns None without a rim rather than guess.
+
+## What this round cost, and what it should have cost
+
+Five ideas were generated from theory and all of them failed or were neutral:
+the full-court model (0.242 -> 0.220), the fixed-rig constraint (87% -> 10.5%),
+the rim in the objective (47.8% -> 8.7%), and two smaller ones. Everything that
+moved came from an external check instead:
+
+    reading the code    exclude_boxes accepted and dropped; maxiter 120 used
+                        for a 6-dof search against an explicit warning
+    looking at frames   40% of the broadcast is not the court; the main camera
+                        is framed on half a court; the key is a clean quad
+    an outside sensor   the rim found a wrong-basket lock on 100% of frames
+                        that coverage, line evidence and two of my own ideas
+                        had all missed
+
+The line score deserves its own note. It rose from 0.346 to 0.502 in the same
+change that drove players-on-court DOWN from 82.8% to 63.6%. A metric that
+moves opposite to correctness is worse than no metric, and it is the reason
+this took as long as it did.
