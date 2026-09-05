@@ -145,3 +145,23 @@ def test_has_court_gates_on_the_measured_threshold():
     from courtvision.court_tracking import has_court
     assert has_court(_hsv_image(15, 120, 200))
     assert not has_court(_hsv_image(110, 200, 200))
+
+
+def test_propagate_stops_when_verification_fails():
+    cv2 = pytest.importorskip("cv2")
+    base = _textured(11)
+    images = [base]
+    for step in range(1, 5):
+        images.append(cv2.warpPerspective(
+            base, np.array([[1.0, 0, 4.0 * step], [0, 1.0, 0], [0, 0, 1.0]]),
+            (base.shape[1], base.shape[0])))
+    # Accept the first hop, then refuse: the chain must not continue past it.
+    seen = []
+
+    def verify(index, matrix):
+        seen.append(index)
+        return index <= 1
+
+    out = propagate(images, {0: np.eye(3)}, verify=verify)
+    assert set(out) == {0, 1}
+    assert 2 in seen, "verification should have been offered the failing frame"

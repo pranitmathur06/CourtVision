@@ -120,13 +120,23 @@ def propagate(images: Sequence[np.ndarray],
               solved: dict[int, np.ndarray],
               cuts: Sequence[int] = (),
               boxes: dict[int, np.ndarray] | None = None,
-              max_chain: int = MAX_CHAIN) -> dict[int, np.ndarray]:
+              max_chain: int = MAX_CHAIN,
+              verify=None) -> dict[int, np.ndarray]:
     """Extend `solved` court-from-image matrices to neighbouring frames.
 
     `solved` maps frame index -> the 3x3 taking IMAGE coordinates to COURT
     coordinates. Returns a new dict containing the originals plus every frame
     reached by a chain of pairwise homographies that stayed inside one camera
     segment and inside `max_chain` hops.
+
+    `verify(index, matrix) -> bool` is checked at every hop and the chain stops
+    the moment it fails. Pass one. `cuts` is a weak guard on real footage: on a
+    120-second broadcast window the thumbnail-difference detector fired on
+    nothing at all, and the difference measured AT true camera changes (median
+    0.028) was actually LOWER than during ordinary play (0.031) -- at a third of
+    a second between samples a cut is indistinguishable from a fast pan. So the
+    cut list cannot be trusted to bound a chain, and evidence at each frame has
+    to do that job instead.
     """
     if not solved:
         return {}
@@ -153,6 +163,8 @@ def propagate(images: Sequence[np.ndarray],
                     break
                 carried = carried @ hop
                 if not np.isfinite(carried).all():
+                    break
+                if verify is not None and not verify(nxt, carried):
                     break
                 # A later anchor may already have reached this frame in fewer
                 # hops; keep whichever chain is shorter by visiting in order.

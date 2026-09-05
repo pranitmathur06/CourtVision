@@ -37,6 +37,9 @@ from courtvision.court_tracking import (estimate_rig, has_court,  # noqa: E402
 from courtvision.shot_boundaries import cut_frames  # noqa: E402
 
 MIN_SCORE = 0.30
+# A propagated frame is held to a lower bar than a solved one: it only has to
+# remain consistent with the lines, not to have been found from them.
+VERIFY_SCORE = 0.20
 
 
 def read_frames(video: str, start_s: float, duration_s: float, stride: int):
@@ -98,8 +101,16 @@ def main() -> int:
         print("FAIL — no frame in this window shows the court")
         return 1
     boxes = detect_people(images)
-    cuts = cut_frames(images)
-    print(f"  {len(cuts)} camera cuts")
+    # cut_frames is not usable here. On this window it fired on nothing, and the
+    # thumbnail difference measured AT true camera changes (median 0.028) was
+    # LOWER than during ordinary play (0.031) -- at a third of a second between
+    # samples a cut looks exactly like a fast pan. What IS exact is the court
+    # gate: a court -> non-court transition is a camera change by definition.
+    court_set = set(court)
+    cuts = [i for i in range(1, len(images))
+            if (i in court_set) != (i - 1 in court_set)]
+    print(f"  {len(cuts)} camera changes from court transitions"
+          f" ({len(cut_frames(images))} from thumbnail differences)")
 
     rig = None
     if args.rig and Path(args.rig).exists():
@@ -140,8 +151,27 @@ def main() -> int:
     print(f"  anchors solved: {len(solved)}/{len(anchors)} = {anchor_rate:.1%}"
           f"  ({(time.time()-start)/max(len(anchors),1):.1f}s each)")
 
+    # Verify every hop against the frame's OWN line evidence, which propagation
+    # never uses -- it matches background texture. A chain that has drifted onto
+    # the wrong court stops here rather than filling the gap with fiction.
+    maps: dict[int, np.ndarray] = {}
+
+    def line_map(index: int) -> np.ndarray:
+        if index not in maps:
+            maps[index] = line_distance_map(images[index], boxes.get(index))
+        return maps[index]
+
+    def verify(index: int, matrix: np.ndarray) -> bool:
+        if index not in court_set:
+            return False
+        try:
+            court_to_image = np.linalg.inv(matrix)
+        except np.linalg.LinAlgError:
+            return False
+        return score_homography(court_to_image, line_map(index)) >= VERIFY_SCORE
+
     start = time.time()
-    full = propagate(images, solved, cuts=cuts, boxes=boxes)
+    full = propagate(images, solved, cuts=cuts, boxes=boxes, verify=verify)
     # A propagated frame is only meaningful if it shows court; chains can run a
     # few hops into a close-up before the matcher gives up.
     full = {i: m for i, m in full.items() if i in set(court)}
