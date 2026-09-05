@@ -286,3 +286,57 @@ def has_court(image: np.ndarray,
     court must be refused even when the search reports a confident score.
     """
     return wood_fraction(image) >= min_fraction
+
+
+# ---------------------------------------------------------------------------
+# Absolute position, for frames that only have a plane homography.
+#
+# The rim is the strongest absolute anchor -- its 3D position is known exactly
+# -- but projecting it needs the full camera, because at 10 ft it is off the
+# court plane. A propagated frame carries only the 2D court homography, so the
+# rim cannot gate it.
+#
+# What CAN gate it is the players. A court that has slid sideways still explains
+# the lines, and still scores well; it cannot put ten basketball players inside
+# a 94 x 50 ft rectangle. Measured on registrations that all passed the line
+# gate at 0.346-0.373 median: 17% of players landed off the court entirely, with
+# x reaching -27 and 76 ft on a floor that is 0 to 50.
+
+COURT_MARGIN_FT = 15.0      # benches, photographers and inbounders stand off it
+MAX_OFF_COURT_SHARE = 0.25
+
+
+def players_on_court(court_to_image_inverse: np.ndarray,
+                     feet_px: np.ndarray,
+                     margin_ft: float = COURT_MARGIN_FT) -> float:
+    """Share of detected feet that land on the floor under this homography.
+
+    `feet_px` is (N, 2) image coordinates of the bottom-centre of each player
+    box. Returns 0.0 when nothing projects, which callers must treat as a
+    failure rather than as "no evidence against".
+    """
+    if feet_px is None or len(feet_px) == 0:
+        return 0.0
+    homogeneous = np.hstack([np.asarray(feet_px, dtype=float),
+                             np.ones((len(feet_px), 1))])
+    projected = homogeneous @ court_to_image_inverse.T
+    w = projected[:, 2]
+    valid = np.abs(w) > 1e-9
+    if not valid.any():
+        return 0.0
+    court = projected[valid, :2] / w[valid, None]
+    from courtvision.court_lines import COURT_LENGTH_FT
+    from courtvision.court import COURT_WIDTH
+
+    inside = ((court[:, 0] >= -margin_ft)
+              & (court[:, 0] <= COURT_WIDTH + margin_ft)
+              & (court[:, 1] >= -margin_ft)
+              & (court[:, 1] <= COURT_LENGTH_FT + margin_ft))
+    return float(inside.mean())
+
+
+def plausible_positions(court_to_image_inverse: np.ndarray,
+                        feet_px: np.ndarray,
+                        max_off_share: float = MAX_OFF_COURT_SHARE) -> bool:
+    """Whether a homography places players somewhere a player can stand."""
+    return players_on_court(court_to_image_inverse, feet_px) >= 1.0 - max_off_share

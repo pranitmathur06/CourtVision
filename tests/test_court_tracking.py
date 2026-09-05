@@ -165,3 +165,29 @@ def test_propagate_stops_when_verification_fails():
     out = propagate(images, {0: np.eye(3)}, verify=verify)
     assert set(out) == {0, 1}
     assert 2 in seen, "verification should have been offered the failing frame"
+
+
+def test_players_on_court_accepts_an_identity_mapping():
+    from courtvision.court_tracking import players_on_court
+    feet = np.array([[10.0, 20.0], [25.0, 40.0], [45.0, 80.0]])
+    assert players_on_court(np.eye(3), feet) == 1.0
+
+
+def test_players_on_court_rejects_a_slid_court():
+    from courtvision.court_tracking import players_on_court
+    # A court shifted 200 ft sideways still explains lines but strands everyone.
+    slid = np.array([[1.0, 0.0, 200.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]])
+    feet = np.array([[10.0, 20.0], [25.0, 40.0], [45.0, 80.0]])
+    assert players_on_court(slid, feet) == 0.0
+
+
+def test_plausible_positions_gates_on_the_share():
+    from courtvision.court_tracking import plausible_positions
+    feet = np.array([[10.0, 20.0], [25.0, 40.0], [45.0, 80.0], [300.0, 300.0]])
+    assert plausible_positions(np.eye(3), feet)          # 3 of 4 on court
+    assert not plausible_positions(np.eye(3), np.array([[300.0, 300.0]]))
+
+
+def test_players_on_court_with_no_detections_is_a_failure():
+    from courtvision.court_tracking import players_on_court
+    assert players_on_court(np.eye(3), np.empty((0, 2))) == 0.0
