@@ -33,7 +33,8 @@ from courtvision.court_lines import (homography_from_camera,  # noqa: E402
                                      line_distance_map, score_homography,
                                      search_camera)
 from courtvision.court_tracking import (estimate_rig, has_court,  # noqa: E402
-                                        propagate, rig_bounds, wood_fraction)
+                                        plausible_positions, propagate,
+                                        rig_bounds, wood_fraction)
 from courtvision.shot_boundaries import cut_frames  # noqa: E402
 
 MIN_SCORE = 0.30
@@ -146,6 +147,12 @@ def main() -> int:
         rig = np.array(json.loads(Path(args.rig).read_text())["rig"])
         print(f"  rig from cache: x={rig[0]:.1f} y={rig[1]:.1f} z={rig[2]:.1f}")
 
+    def feet_of(index: int) -> np.ndarray:
+        found = boxes.get(index)
+        if found is None or len(found) == 0:
+            return np.empty((0, 2))
+        return np.stack([(found[:, 0] + found[:, 2]) / 2, found[:, 3]], axis=1)
+
     anchors = court[::args.anchor_every]
     if rig is None and args.anchor_dof == 3:
         start = time.time()
@@ -173,14 +180,28 @@ def main() -> int:
     start = time.time()
     solved: dict[int, np.ndarray] = {}
     for index in anchors:
+        # rim_px is deliberately NOT passed. With it, search_camera optimises
+        # 0.5*line + 0.5*rim_agreement but still RETURNS the line-only score,
+        # so solutions trade line score away and are then rejected by the
+        # line-score gate: anchors fell from 47.8% to 8.7%. The half-court model
+        # also has a single basket while the broadcast shows both, so a detected
+        # rim is the wrong basket about half the time.
+        #
+        # Absolute position is instead enforced AFTER the search, by where the
+        # solution puts the players -- a court slid sideways still explains the
+        # lines but cannot put ten players inside 94 x 50 ft.
         found, score = search_camera(
             images[index], seed=0, max_iterations=iterations, bounds=bounds,
-            rim_px=rim_px_for(index), exclude_boxes=boxes.get(index))
+            rim_px=None, exclude_boxes=boxes.get(index))
         if found is None or score < MIN_SCORE:
             continue
         matrix = homography_from_camera(found, images[index].shape[:2])
-        if matrix is not None:
-            solved[index] = np.linalg.inv(matrix)
+        if matrix is None:
+            continue
+        inverse = np.linalg.inv(matrix)
+        if not plausible_positions(inverse, feet_of(index)):
+            continue
+        solved[index] = inverse
     anchor_rate = len(solved) / max(len(anchors), 1)
     print(f"  anchors solved: {len(solved)}/{len(anchors)} = {anchor_rate:.1%}"
           f"  ({(time.time()-start)/max(len(anchors),1):.1f}s each)")
@@ -202,7 +223,10 @@ def main() -> int:
             court_to_image = np.linalg.inv(matrix)
         except np.linalg.LinAlgError:
             return False
-        return score_homography(court_to_image, line_map(index)) >= VERIFY_SCORE
+        if score_homography(court_to_image, line_map(index)) < VERIFY_SCORE:
+            return False
+        # Lines alone cannot see a court that has slid; players can.
+        return plausible_positions(matrix, feet_of(index))
 
     start = time.time()
     full = propagate(images, solved, cuts=cuts, boxes=boxes, verify=verify)
