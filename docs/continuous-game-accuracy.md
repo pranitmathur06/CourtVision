@@ -1601,3 +1601,57 @@ Two routes, and the cheap one first:
     should work where it failed for the ball.
 
 The second is the durable fix and needs more full games either way.
+
+## Round eighteen: the ball tracker was hurting shot detection
+
+The Viterbi ball selection built in round twelve optimises for smooth motion.
+**A shot is the fastest the ball ever moves**, so at the moment that matters the
+path search prefers something slower and closer to the previous frame -- usually
+a player or a static false positive.
+
+Measured at the 157 official shot moments on the uncut broadcast:
+
+    tracked ball, distance to rim    median 181 px
+    NEAREST RAW CANDIDATE            median  69 px
+
+The right ball was among the detector's candidates and the tracker was choosing
+a different one. Dropping it for shot detection alone:
+
+    Viterbi-picked ball        P 0.386  R 0.172  F1 0.238
+    nearest raw candidate      P 0.251  R 0.427  F1 0.316
+
+Recall **more than doubled**. The tracker is still correct for possession, which
+needs continuity; it was simply wrong for the one event defined by not being
+smooth.
+
+Two further filters, each from basketball structure rather than tuning:
+
+  * **a shot travels.** Far, then near, then far again. A detection parked near
+    the basket -- a rebound scrum, a held ball -- never approaches. Requiring a
+    300 px approach and a matching recede.
+  * **one attempt per possession.** The shot clock is 24 s, so two genuine
+    attempts 1.5 s apart is nearly impossible while shot-then-rebound is
+    routine. Merging within 12 s.
+
+    + approach/recede + merge gap    P 0.318  R 0.561  F1 0.406  (in-sample)
+
+## Held out, because 108 configurations on 157 events is not a measurement
+
+Tuned on the first half, reported on the second half it never saw:
+
+    tol 3 s:  P 0.311   R 0.545   F1 0.396
+    tol 5 s:  P 0.326   R 0.571   F1 0.415
+    tol 8 s:  P 0.370   R 0.649   F1 0.472
+
+In-sample was 0.472 against 0.396 held out -- the usual 0.08 of optimism, and
+the reason the split exists.
+
+## Session trajectory on the uncut broadcast
+
+    0.238   Viterbi-picked ball
+    0.316   nearest raw candidate        recall doubled
+    0.354   + approach requirement
+    0.406   + merge gap                  (in-sample)
+    0.396   + recede requirement         HELD OUT
+
+Every gain came from removing something wrong in the logic, not from data.

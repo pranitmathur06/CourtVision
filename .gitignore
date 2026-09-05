@@ -12,3 +12,5 @@ yolo*.pt
 data/labeled/actions_spare/
 data/tracking/
 runs/
+data/games/
+data/labeling/
