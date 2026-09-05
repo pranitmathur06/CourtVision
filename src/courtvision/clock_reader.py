@@ -71,11 +71,14 @@ def _symbol(glyph: np.ndarray, centroids: np.ndarray,
 # wide, so those digits vanish entirely and the clock reads as a single digit.
 # Segmenting here instead, and splitting any blob whose width says it holds more
 # than one digit, keeps them.
+# Tuned for the clock. The SCORE on the same bar is set larger -- ~21 px per
+# digit against the clock's 15 -- so a two-digit score shreds into three or
+# four boxes at this width. Callers reading a different field pass their own.
 DIGIT_WIDTH = 15
 MIN_DIGIT_HEIGHT = 10
 
 
-def _digit_boxes(strip: np.ndarray):
+def _digit_boxes(strip: np.ndarray, digit_width: int = DIGIT_WIDTH):
     """Digit crops as (x, y, w, h, image), splitting blobs that merged two.
 
     The image returned is BINARY with the ink white, because that is how the
@@ -94,7 +97,7 @@ def _digit_boxes(strip: np.ndarray):
         x, y, w, h, area = stats[index]
         if h < MIN_DIGIT_HEIGHT or area < 12:
             continue
-        parts = max(1, round(w / DIGIT_WIDTH))
+        parts = max(1, round(w / digit_width))
         for part in range(parts):
             px = x + part * w // parts
             pw = w // parts

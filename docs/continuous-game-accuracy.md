@@ -1655,3 +1655,66 @@ the reason the split exists.
     0.396   + recede requirement         HELD OUT
 
 Every gain came from removing something wrong in the logic, not from data.
+
+---
+
+# Round nineteen: the scoreboard was the answer the whole time
+
+## The result
+
+Scoring events detected by watching the score change, on the uncut broadcast
+(game 0042400407), scored against official play-by-play:
+
+    99 observed score changes vs 108 official scoring events (made FG + made FT)
+
+    tol 3 s:  P 0.859   R 0.787   F1 0.821
+    tol 5 s:  P 0.960   R 0.880   F1 0.918
+
+**F1 0.918.** For comparison, the vision path on the same broadcast, after a
+session of fixes, reaches 0.396 held out.
+
+## Why it is so much easier
+
+Every other approach here tried to INFER a shot from a 26 px ball travelling at
+its fastest, through the most occluded moment in the game -- net, backboard,
+hands. The broadcast meanwhile DISPLAYS the outcome: two digits change, in a
+fixed rectangle, in a fixed font, at a known moment. Reading them needs no
+tracking, no homography, no ball at all.
+
+The reader was already 90% built. `clock_reader` supplies the digit
+segmentation and the merged-digit splitting; the score needed only its own
+templates and a wider `digit_width` -- the score is set at ~21 px per digit
+against the clock's 15, so the clock's splitter shredded a two-digit score into
+three or four boxes.
+
+## It validates itself
+
+A score never falls. Any downward reading is therefore a misread, and can be
+discarded without any ground truth:
+
+    both scores read on   64.8% of samples (the rest: scoreboard hidden)
+    upward changes         103
+    impossible (downward)   11   -> a 2% error rate, measured with no labels
+
+That is a property worth more than the accuracy figure: the component knows
+when it is wrong.
+
+## What it does and does not cover
+
+It detects **scoring events** -- made field goals and made free throws. It says
+nothing about a MISS, because a miss changes nothing on the board. So:
+
+    made shots + made FTs    the scoreboard, F1 0.918
+    missed shots             still needs the vision path, F1 0.396
+    rebounds                 follow from misses
+    steals, blocks           suppressed
+
+Of the game's 157 field goal attempts, 64 were made; with free throws, 108 of
+the game's scoring events are now observed rather than inferred.
+
+## The lesson
+
+The pipeline spent its whole life trying to recover from pixels a fact the
+broadcast puts on screen in 40 px digits. The measured ceiling for inferring
+events from perfect ball and player positions was 0.751; reading the scoreboard
+beats it, because it is not inference at all.
