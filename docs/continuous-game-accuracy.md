@@ -1860,3 +1860,68 @@ outright.
 
 What still has no sensor: misses (0.663), rebounds (0.507 on video against a
 0.732 ceiling), steal (0.271 even on tracking), block (suppressed).
+
+# Round twenty-two: sensors for the rest, and a feature that was an artifact
+
+## The clock stopping is a sensor nobody was reading
+
+Game time only stops for a dead ball. The clock is already read per frame, so
+stoppages are free. Raw stalls over-segment -- one foul produces a whistle stall
+plus a stall between each free throw -- so they must be merged first:
+
+    merge  stoppages   fouls: P      R      F1
+      raw        149          0.289  0.915  0.439
+        4s        74          0.568  0.894  0.694
+        8s        67          0.537  0.766  0.632
+       20s        53          0.509  0.574  0.540
+
+At a 4-second merge, **fouls reach F1 0.694** where they previously had no
+sensor at all. Gating on a free throw within 8s gives P 0.960 at R 0.511: when
+a stoppage is followed by a +1, it is a foul essentially every time. Note the
+gate FAILED on unmerged stalls (F1 0.439 -> 0.417) because half of all raw
+stalls sit near a free throw; it only works once a stoppage is one object.
+
+## Shot context: validate the release or measure nothing
+
+The product question is why a shot was good, not that it went in. That needs
+the shooter's situation at RELEASE. The first two attempts got the release
+wrong and the error was invisible in the output -- both produced plausible
+tables.
+
+The check that caught it: an official 3PT attempt must measure beyond 22 ft.
+
+    walk back from the logged shot time      3PT median  8.8 ft   22% beyond arc  FAIL
+    same, requiring the ball be held low     3PT median  8.8 ft   22% beyond arc  FAIL
+    find the arc's height peak, then the
+      last held frame before it              3PT median 24.5 ft   96% beyond arc  PASS
+
+The cause: the NBA logs a play AFTER it resolves, so at the recorded timestamp
+the ball is often already low and rebounded. Walking back from it stops on the
+first held frame, which is the rebounder under the basket. Every shot therefore
+measured ~8 ft from the rim and the "shooter" was whoever stood at the rim.
+
+## The defender feature was the artifact
+
+With the wrong release, nearest-defender distance looked like a clean monotone
+predictor -- 0.266 FG% at 0-2 ft rising to 0.513 at 10+ ft, and openness inside
+8 ft "worth" +0.360. It was measuring congestion under the basket at rebound
+time. With the release correct it vanishes:
+
+    defender at release   0-2ft 0.383   2-4ft 0.378   4-6ft 0.449
+                          6-8ft 0.387  8-10ft 0.419   10+ft 0.300   (n=30)
+
+No signal at 558 shots across four games. That contradicts published NBA
+work, so the likely reading is that four games is underpowered here, not that
+defender distance does not matter -- but it is not measured, and it is not
+being claimed.
+
+What DID appear once the release was right, monotone across four bins:
+
+    catch and shoot  <0.35s held   n= 32   FG% 0.594
+    quick            0.35-1.0s     n=201   FG% 0.433
+    a beat           1.0-2.5s      n=159   FG% 0.358
+    worked for it    >2.5s         n=166   FG% 0.349
+
+Holding the ball is worth -0.245 FG% from catch-and-shoot to iso. That is the
+first real shot-quality feature in this project, and it survives a release
+check that two earlier versions failed.
