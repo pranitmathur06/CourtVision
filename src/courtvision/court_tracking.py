@@ -401,3 +401,58 @@ def right_basket(court_to_image: np.ndarray,
         return False
     offset = basket_offset_px(court_to_image, rim_px)
     return offset is not None and abs(offset) <= tolerance_px
+
+
+# A court has 180-degree rotational symmetry about centre court. That symmetry
+# is exactly why the fitter cannot tell the two halves apart -- and it is also
+# the repair, because a fit that landed on the far half already describes the
+# camera correctly. Only the LABELLING of court coordinates is rotated.
+#
+# Measured on fits that were 100% on the wrong basket:
+#
+#     run             as fitted                 rotated 180
+#     reg6      941 px,   0.0% within 150   297 px,  29.5%
+#     reg7      857 px,   0.0%               97 px, 100.0%
+#     first     825 px,   0.0%               79 px,  63.6%
+#
+# No new search: the rotation is a 3x3, and the rim says which of the two
+# orientations is the real one.
+
+
+def court_rotation() -> np.ndarray:
+    """(x, y) -> (COURT_WIDTH - x, COURT_LENGTH - y), as a 3x3 on court feet."""
+    from courtvision.court import COURT_WIDTH
+    from courtvision.court_lines import COURT_LENGTH_FT
+
+    return np.array([[-1.0, 0.0, COURT_WIDTH],
+                     [0.0, -1.0, COURT_LENGTH_FT],
+                     [0.0, 0.0, 1.0]])
+
+
+def orient_to_rim(court_from_image: np.ndarray,
+                  rim_px: tuple[float, float] | None,
+                  tolerance_px: float = MAX_BASKET_OFFSET_PX
+                  ) -> np.ndarray | None:
+    """Return `court_from_image` in the orientation the detected rim agrees with.
+
+    Tries the fit as-is and rotated 180 degrees, and returns whichever puts the
+    model's basket nearer the rim -- or None when neither is within tolerance,
+    because a fit whose basket cannot be identified must not be trusted with
+    player coordinates.
+    """
+    if rim_px is None:
+        return None
+    rotation = court_rotation()
+    candidates = []
+    for matrix in (court_from_image, rotation @ court_from_image):
+        try:
+            court_to_image = np.linalg.inv(matrix)
+        except np.linalg.LinAlgError:
+            continue
+        offset = basket_offset_px(court_to_image, rim_px)
+        if offset is not None:
+            candidates.append((abs(offset), matrix))
+    if not candidates:
+        return None
+    offset, matrix = min(candidates, key=lambda pair: pair[0])
+    return matrix if offset <= tolerance_px else None

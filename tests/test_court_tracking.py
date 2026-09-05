@@ -214,3 +214,62 @@ def test_right_basket_is_false_without_a_rim():
     from courtvision.court_tracking import right_basket
     # Unverifiable is not the same as fine.
     assert not right_basket(np.eye(3), None)
+
+
+def test_court_rotation_is_its_own_inverse():
+    from courtvision.court_tracking import court_rotation
+    rotation = court_rotation()
+    assert np.allclose(rotation @ rotation, np.eye(3))
+
+
+def test_court_rotation_maps_one_basket_onto_the_other():
+    from courtvision.court_tracking import court_rotation
+    from courtvision.court import BASKET, COURT_WIDTH
+    from courtvision.court_lines import COURT_LENGTH_FT
+    near = np.array([BASKET[0], BASKET[1], 1.0])
+    far = court_rotation() @ near
+    assert np.allclose(far[:2], [COURT_WIDTH - BASKET[0],
+                                 COURT_LENGTH_FT - BASKET[1]])
+
+
+# The basket sits on the court centreline (x = 25) and the rotation maps
+# x -> 50 - x, so in COURT space its x is unchanged. Only a projection that
+# sends court LENGTH to image WIDTH separates the two baskets horizontally --
+# which is what a sideline broadcast camera does, and why the ~900 px split
+# shows up on real footage. A test using an identity mapping is degenerate.
+_SIDELINE = np.array([[0.0, 10.0, 0.0],     # image x from court y
+                      [10.0, 0.0, 0.0],     # image y from court x
+                      [0.0, 0.0, 1.0]])
+
+
+def _rim_pixel_for(court_to_image, basket_xy):
+    point = court_to_image @ np.array([basket_xy[0], basket_xy[1], 1.0])
+    return (point[0] / point[2], point[1] / point[2])
+
+
+def test_orient_to_rim_recovers_a_rotated_fit():
+    from courtvision.court_tracking import court_rotation, orient_to_rim
+    from courtvision.court import BASKET
+
+    correct = np.linalg.inv(_SIDELINE)                 # image -> court
+    rim = _rim_pixel_for(_SIDELINE, BASKET)
+    rotated = court_rotation() @ correct               # the wrong-basket fit
+    fixed = orient_to_rim(rotated, rim)
+    assert fixed is not None
+    assert np.allclose(fixed, correct)
+
+
+def test_orient_to_rim_keeps_an_already_correct_fit():
+    from courtvision.court_tracking import orient_to_rim
+    from courtvision.court import BASKET
+
+    correct = np.linalg.inv(_SIDELINE)
+    rim = _rim_pixel_for(_SIDELINE, BASKET)
+    fixed = orient_to_rim(correct, rim)
+    assert fixed is not None and np.allclose(fixed, correct)
+
+
+def test_orient_to_rim_refuses_when_neither_orientation_fits():
+    from courtvision.court_tracking import orient_to_rim
+    assert orient_to_rim(np.linalg.inv(_SIDELINE), (9000.0, 9000.0)) is None
+    assert orient_to_rim(np.linalg.inv(_SIDELINE), None) is None
