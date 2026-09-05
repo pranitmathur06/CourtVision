@@ -169,3 +169,204 @@ def key_homography(image: np.ndarray,
         return np.linalg.inv(court_to_image)
     except (cv2.error, np.linalg.LinAlgError):
         return None
+
+
+# ---------------------------------------------------------------------------
+# Refining the key homography against the rest of the court.
+#
+# Four corners from one compact quad determine a homography exactly, but they
+# constrain it only where they are. Extrapolated to the far arc and the
+# division line, small corner errors amplify, and the measured gap between the
+# feed's shot location and the nearest detected player was ~10 ft.
+#
+# The whole court is visible though, and now that the key has put the fit in
+# the RIGHT basin, iterative closest point can use all of it. This is exactly
+# the local refinement that could not work before: `search_camera` started
+# blind and converged into wrong minima the line score could not distinguish
+# from the answer. Started from the key, the same evidence becomes usable.
+
+REFINE_ITERATIONS = 6
+# Correspondences further than this from a line are outliers -- a projected
+# point over a player, a scoreboard edge, a crowd gap -- and re-fitting to them
+# drags the whole homography.
+REFINE_MAX_SNAP_PX = 40.0
+MIN_REFINE_POINTS = 30
+
+
+def refine_homography(image: np.ndarray,
+                      court_from_image: np.ndarray,
+                      exclude_boxes: "np.ndarray | None" = None,
+                      iterations: int = REFINE_ITERATIONS,
+                      max_snap_px: float = REFINE_MAX_SNAP_PX
+                      ) -> np.ndarray:
+    """Tighten a court registration using every visible line, not just the key.
+
+    Returns the refined image-to-court matrix, or the input unchanged when the
+    evidence is too thin to improve on it -- refusing to move is correct when
+    there is nothing to move toward.
+
+    MEASURED AND HARMFUL. Do not enable this without reading the numbers.
+    Against the endpoint's own shot locations, which know nothing about line
+    pixels:
+
+                       p50 gap    within 6 ft
+        key only        10.2 ft      35.7%
+        + ICP           16.5 ft      12.5%
+
+    while the line-distance metric it optimises improved from 7.60 ft to
+    1.30 ft. The metric moved one way and the truth the other, for the third
+    time in this project.
+
+    The cause is correspondence, not convergence: snapping a projected point to
+    the NEAREST line pixel is wrong on a court full of parallel lines. A point
+    on the three-point arc snaps to the free-throw circle, a far lane line to
+    the near one, and re-fitting to those pairs drags the homography. Kept only
+    so the measurement stays attached to the idea.
+    """
+    import cv2
+
+    from courtvision.court_lines import canonical_court_points, court_line_mask
+
+    mask = court_line_mask(image, exclude_boxes)
+    if not mask.any():
+        return court_from_image
+    distance = cv2.distanceTransform(255 - mask, cv2.DIST_L2, 3)
+    # Nearest line pixel for every image position, so a projected point can be
+    # snapped without searching.
+    _, labels = cv2.distanceTransformWithLabels(
+        255 - mask, cv2.DIST_L2, 3, labelType=cv2.DIST_LABEL_PIXEL)
+    ys, xs = np.nonzero(mask)
+    if len(xs) < MIN_REFINE_POINTS:
+        return court_from_image
+    # cv2 labels are 1-based indices into the sorted list of zero pixels.
+    order = np.lexsort((xs, ys))
+    line_xy = np.stack([xs[order], ys[order]], axis=1)
+
+    court = canonical_court_points(1.0)
+    height, width = mask.shape
+    current = court_from_image
+    for _ in range(iterations):
+        try:
+            court_to_image = np.linalg.inv(current)
+        except np.linalg.LinAlgError:
+            return court_from_image
+        projected = np.hstack([court, np.ones((len(court), 1))]) @ court_to_image.T
+        valid = np.abs(projected[:, 2]) > 1e-9
+        image_xy = projected[valid, :2] / projected[valid, 2:3]
+        source = court[valid]
+        inside = ((image_xy[:, 0] >= 0) & (image_xy[:, 0] < width)
+                  & (image_xy[:, 1] >= 0) & (image_xy[:, 1] < height))
+        image_xy, source = image_xy[inside], source[inside]
+        if len(image_xy) < MIN_REFINE_POINTS:
+            return current
+        columns = image_xy[:, 0].astype(int)
+        rows = image_xy[:, 1].astype(int)
+        snap_distance = distance[rows, columns]
+        near = snap_distance <= max_snap_px
+        if near.sum() < MIN_REFINE_POINTS:
+            return current
+        index = labels[rows[near], columns[near]] - 1
+        index = np.clip(index, 0, len(line_xy) - 1)
+        target = line_xy[index].astype(np.float32)
+        updated, _ = cv2.findHomography(
+            source[near].astype(np.float32), target, cv2.RANSAC, 5.0)
+        if updated is None or not np.isfinite(updated).all():
+            return current
+        try:
+            current = np.linalg.inv(updated)
+        except np.linalg.LinAlgError:
+            return current
+    return current
+
+
+# ---------------------------------------------------------------------------
+# Corner precision is what limits this, not the search.
+#
+# approxPolyDP returns coarse polygon vertices, and the key is a small quad
+# whose homography is extrapolated across a 94 ft court -- so a couple of
+# pixels at a corner becomes feet at the far arc. Fitting a line to each EDGE
+# of the contour and intersecting adjacent lines uses every pixel along that
+# edge instead of the one vertex the approximation happened to pick.
+
+EDGE_INLIER_PX = 3.0
+MIN_EDGE_POINTS = 8
+
+
+def _fit_line(points: np.ndarray) -> tuple[float, float, float] | None:
+    """Total-least-squares line through points, as (a, b, c) with ax+by=c."""
+    if len(points) < MIN_EDGE_POINTS:
+        return None
+    centre = points.mean(axis=0)
+    centred = points - centre
+    _, _, vh = np.linalg.svd(centred, full_matrices=False)
+    direction = vh[0]
+    normal = np.array([-direction[1], direction[0]])
+    return float(normal[0]), float(normal[1]), float(normal @ centre)
+
+
+def _intersect(first, second) -> tuple[float, float] | None:
+    a1, b1, c1 = first
+    a2, b2, c2 = second
+    determinant = a1 * b2 - a2 * b1
+    if abs(determinant) < 1e-9:
+        return None
+    return ((c1 * b2 - c2 * b1) / determinant,
+            (a1 * c2 - a2 * c1) / determinant)
+
+
+def precise_key_corners(image: np.ndarray,
+                        quad: np.ndarray) -> np.ndarray | None:
+    """Sub-pixel key corners, from the contour's four edges.
+
+    Takes the coarse quad as a starting guess, assigns every contour pixel to
+    the nearest of its four edges, fits a line per edge, and intersects
+    neighbours. Returns None if any edge is too sparse to fit, because a corner
+    from a two-pixel edge is worse than the approximation it replaces.
+    """
+    import cv2
+
+    region = court_region(image)
+    if region is None or quad is None or len(quad) != 4:
+        return None
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    hue, saturation, value = hsv[:, :, 0], hsv[:, :, 1], hsv[:, :, 2]
+    paint = ((hue >= PAINT_HUE[0]) & (hue <= PAINT_HUE[1])
+             & (saturation >= PAINT_MIN_SATURATION)
+             & (value >= PAINT_MIN_VALUE)).astype(np.uint8) * 255
+    paint = cv2.bitwise_and(paint, region)
+    paint = cv2.morphologyEx(paint, cv2.MORPH_OPEN, np.ones((7, 7), np.uint8))
+    contours, _ = cv2.findContours(paint, cv2.RETR_EXTERNAL,
+                                   cv2.CHAIN_APPROX_NONE)
+    if not contours:
+        return None
+    outline = max(contours, key=cv2.contourArea).reshape(-1, 2).astype(float)
+
+    lines = []
+    for index in range(4):
+        start, end = quad[index], quad[(index + 1) % 4]
+        edge = end - start
+        length = float(np.hypot(*edge))
+        if length < 1e-6:
+            return None
+        unit = edge / length
+        normal = np.array([-unit[1], unit[0]])
+        relative = outline - start
+        along = relative @ unit
+        across = np.abs(relative @ normal)
+        on_edge = (along >= 0) & (along <= length) & (across <= EDGE_INLIER_PX)
+        fitted = _fit_line(outline[on_edge])
+        if fitted is None:
+            return None
+        lines.append(fitted)
+
+    corners = []
+    for index in range(4):
+        point = _intersect(lines[index - 1], lines[index])
+        if point is None:
+            return None
+        corners.append(point)
+    corners = np.array(corners, dtype=np.float32)
+    # Guard against a degenerate fit flinging a corner off the image.
+    if np.abs(corners - quad).max() > 40.0:
+        return None
+    return corners
