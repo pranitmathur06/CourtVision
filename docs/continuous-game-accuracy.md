@@ -1539,3 +1539,65 @@ or nonsense rather than complaining:
     correct for M:SS, wrong for SS.T where the decimal follows the second.
     Validity now settles it first: "182" is 18.2, not 1:82, because there is no
     82nd second. The separator only breaks real ties like "1:52" vs "15.2".
+
+---
+
+# Round seventeen: a clean measurement at last, and it is worse
+
+## The footage problem, solved
+
+`quarter.mp4` was a **condensed** game: 38 minutes for a 2.5-hour broadcast,
+185 official field goals against 2,230 s of video — twelve seconds of footage
+per shot, where a real broadcast gives about sixty. 42% of shots were simply not
+in it, and the pipeline was being marked wrong for missing plays that had been
+edited out before the file existed.
+
+Replaced with a genuine uncut broadcast: **game 0042400407** (OKC vs IND, 2025
+Finals Game 7), 155.9 minutes, 720p, and the clock reader covers game elapsed
+**5..2862 s** — so **all 157** official field goals have footage behind them.
+
+## The number
+
+93,553 frames, ball from the student detector, rim from the 4-class model,
+alignment from the clock read off each frame:
+
+    tol 3 s:  P 0.386   R 0.172   F1 0.238    (70 shots called for 157 real)
+    tol 5 s:  P 0.471   R 0.210   F1 0.291
+    tol 8 s:  P 0.529   R 0.236   F1 0.326
+
+**This is the first measurement with nothing hidden behind it, and it is far
+below the 0.471 reported on the condensed file.** A harder, honest test found a
+weaker system. The condensed figure was inflated twice over: fewer shots to
+find, and those shots concentrated in tight game action where the rim is most
+often on screen.
+
+## The cause is the rim
+
+    ball present    0.867 of frames
+    rim present     0.364 of frames
+    candidates/frame 4.43
+
+Shot detection is the pixel distance from ball to rim. **With no rim in nearly
+two thirds of frames, the shot is undetectable however well the ball is
+tracked** — and the ball is tracked well. The student detector transfers
+cleanly to a broadcast it never saw: 0.867 here against 0.590 on its own
+training footage.
+
+A 60-frame sample had put rim availability at 0.583. Over the full game it is
+0.364. Another small sample that read as signal.
+
+## What follows
+
+Two routes, and the cheap one first:
+
+  * **Project the rim instead of detecting it.** It sits at a fixed court
+    position, and court registration measured 0.5 px rim reprojection error at
+    88% frame coverage. That would take availability from 0.364 to ~0.88 for
+    free.
+  * **Train the rim across several games.** Unlike the ball -- where a
+    smoothness prior could not separate a ball from a head, and self-labelling
+    reached 30% purity -- the rim is a far friendlier target: it never moves in
+    court coordinates, there are exactly two, and it is large. Auto-labelling
+    should work where it failed for the ball.
+
+The second is the durable fix and needs more full games either way.
