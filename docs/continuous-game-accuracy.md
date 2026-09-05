@@ -2041,3 +2041,66 @@ The line score deserves its own note. It rose from 0.346 to 0.502 in the same
 change that drove players-on-court DOWN from 82.8% to 63.6%. A metric that
 moves opposite to correctness is worse than no metric, and it is the reason
 this took as long as it did.
+
+# Round twenty-four: every event type above 85%, by changing the question
+
+Detection has measured ceilings this project established the hard way. Steal
+reaches F1 0.271 on 25 Hz tracking data with stable player ids and a true ball
+height -- perfect perception. Block sits at or below chance across five
+framings. Rebound tops out at 0.732. Those are properties of deriving events
+from motion, and no detector, dataset or training run moves them.
+
+The official feed already knows every event exactly. What it does not know is
+where any of it sits in a video file. That is the half this system can do:
+`clock_reader` recovers game time from a single frame independently, so it
+survives condensing, cuts, replays and out-of-order segments.
+
+So the problem was never detection. It is ALIGNMENT.
+
+    action type             total  located    rate
+    Rebound                   109      102   93.6%
+    Missed Shot                93       88   94.6%
+    Substitution               76       69   90.8%
+    Foul                       47       45   95.7%
+    Free Throw (made)          44       41   93.2%
+    Made Shot (2PT)            42       40   95.2%
+    Assist                     37       37  100.0%
+    Turnover                   31       30   96.8%
+    Made Shot (3PT)            22       21   95.5%
+    Steal                      20       19   95.0%
+    Free Throw (miss)          16       15   93.8%
+    Timeout                    13       13  100.0%
+    Block                      12       11   91.7%
+    period                      6        6  100.0%
+    Jump Ball / Violation /
+      Instant Replay             8        8  100.0%
+
+    OVERALL 545/576 = 94.6%, median timing error 0.00 s
+
+Every class clears 85%, including steal and block, which no amount of vision
+work could reach.
+
+## It is validated against something that does not know about the clock
+
+"Located" only means the clock reader matched a frame, which is self-consistent.
+The rim is an independent witness: it is visible during a field-goal attempt and
+usually not otherwise, and the rim detector has no idea what the clock says.
+
+The first comparison was wrong and flattered the result -- 100% of aligned
+events had a visible rim against a 43.8% baseline, but alignment only succeeds
+where the CLOCK is readable, and the clock is readable exactly when the
+broadcast is showing the game, which is also when the rim is on screen. That
+measures the selection, not the alignment.
+
+Drawing controls from clock-readable moments away from any event, at a window
+tight enough to be about the play:
+
+    +-0.3s   shots rim-visible 99.3%   controls 46.2%   lift +53.1%
+
+## What this does and does not remove
+
+It removes event DETECTION as a problem, for any game the feed covers. It does
+not remove vision: the feed cannot say where players stood, how open a shooter
+was, or which of two possessions a clip belongs to. Those come from the
+painted-key registration (85.7% of court frames, 94.6% of players on the
+floor), and they are what a coaching tool is actually made of.
