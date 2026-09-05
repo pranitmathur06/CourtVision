@@ -83,6 +83,8 @@ def main() -> int:
     parser.add_argument("--anchor-every", type=int, default=12,
                         help="samples between SOLVED anchors")
     parser.add_argument("--rig", help="JSON with a cached rig, to skip stage 1")
+    parser.add_argument("--rim-detections",
+                        help="JSON of cached rim detections, to anchor position")
     parser.add_argument("--anchor-dof", type=int, default=6, choices=(3, 6),
                         help="6 searches the full camera; 3 pins the rig. "
                              "Measured: 6-dof solved 87%% of anchors, 3-dof "
@@ -118,6 +120,27 @@ def main() -> int:
     print(f"  {len(cuts)} camera changes from court transitions"
           f" ({len(cut_frames(images))} from thumbnail differences)")
 
+    # The rim is the one landmark whose 3D position is known exactly
+    # (25, 5.25, 10 ft). Court lines alone leave the whole court free to slide:
+    # court_lines records a line-only fit putting the rim 174 px -- about ten
+    # feet -- from where the detector found it, while still scoring well.
+    rim_by_time: dict[float, tuple[float, float]] = {}
+    if args.rim_detections and Path(args.rim_detections).exists():
+        for row in json.loads(Path(args.rim_detections).read_text())["frames"]:
+            if row.get("rim"):
+                best = max(row["rim"], key=lambda r: r[2])
+                rim_by_time[round(row["t"], 1)] = (best[0], best[1])
+        print(f"  {len(rim_by_time)} frames carry a rim detection")
+
+    def rim_px_for(index: int):
+        if not rim_by_time:
+            return None
+        t = round(args.start + index * args.stride / fps, 1)
+        for probe in (t, round(t + 0.1, 1), round(t - 0.1, 1)):
+            if probe in rim_by_time:
+                return rim_by_time[probe]
+        return None
+
     rig = None
     if args.rig and Path(args.rig).exists():
         rig = np.array(json.loads(Path(args.rig).read_text())["rig"])
@@ -142,12 +165,17 @@ def main() -> int:
               f" x={rig[0]:.1f} y={rig[1]:.1f} z={rig[2]:.1f}")
 
     bounds = rig_bounds(rig) if args.anchor_dof == 3 else None
+    # A free 6-dof search needs its full budget. search_registration's own
+    # docstring: at maxiter 25 and 60 it returns 0.198 and 0.229 against a true
+    # camera's 0.888 -- "a cheap run is not a fast answer, it is a wrong one".
+    # Running 6-dof at 120 scored 47.8% of anchors where 250 scored 87%.
+    iterations = 120 if args.anchor_dof == 3 else 250
     start = time.time()
     solved: dict[int, np.ndarray] = {}
     for index in anchors:
         found, score = search_camera(
-            images[index], seed=0, max_iterations=120, bounds=bounds,
-            rim_px=None, exclude_boxes=boxes.get(index))
+            images[index], seed=0, max_iterations=iterations, bounds=bounds,
+            rim_px=rim_px_for(index), exclude_boxes=boxes.get(index))
         if found is None or score < MIN_SCORE:
             continue
         matrix = homography_from_camera(found, images[index].shape[:2])
