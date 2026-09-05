@@ -100,3 +100,48 @@ def test_max_chain_bounds_the_drift():
             (base.shape[1], base.shape[0])))
     out = propagate(images, {0: np.eye(3)}, max_chain=2)
     assert set(out) == {0, 1, 2}
+
+
+def test_estimate_rig_falls_back_when_nothing_clears_the_threshold():
+    from courtvision.court_tracking import estimate_rig
+    # Real broadcast scores sat entirely between 0.30 and 0.45; refusing to fix
+    # the rig there wasted a 943-second search.
+    params = [np.array([50.0 + i, -20.0, 40.0, 25.0, 20.0, 1500.0])
+              for i in range(9)]
+    rig = estimate_rig(params, [0.33] * 9, min_score=0.45)
+    assert rig is not None
+    assert 49.0 <= rig[0] <= 58.0
+
+
+def test_estimate_rig_still_needs_a_minimum_of_frames():
+    from courtvision.court_tracking import estimate_rig
+    assert estimate_rig([np.zeros(6)] * 2, [0.9] * 2) is None
+
+
+def _hsv_image(hue: int, saturation: int, value: int, size: int = 60):
+    cv2 = pytest.importorskip("cv2")
+    hsv = np.zeros((size, size, 3), dtype=np.uint8)
+    hsv[:, :, 0], hsv[:, :, 1], hsv[:, :, 2] = hue, saturation, value
+    return cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+
+
+def test_wood_fraction_sees_a_hardwood_floor():
+    from courtvision.court_tracking import wood_fraction
+    assert wood_fraction(_hsv_image(15, 120, 200)) > 0.95
+
+
+def test_wood_fraction_rejects_a_dark_crowd():
+    from courtvision.court_tracking import wood_fraction
+    # A crowd shot measured 0.012; darkness alone must disqualify it.
+    assert wood_fraction(_hsv_image(15, 120, 20)) < 0.05
+
+
+def test_wood_fraction_rejects_blue_seating():
+    from courtvision.court_tracking import wood_fraction
+    assert wood_fraction(_hsv_image(110, 200, 200)) < 0.05
+
+
+def test_has_court_gates_on_the_measured_threshold():
+    from courtvision.court_tracking import has_court
+    assert has_court(_hsv_image(15, 120, 200))
+    assert not has_court(_hsv_image(110, 200, 200))

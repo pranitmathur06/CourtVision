@@ -193,10 +193,20 @@ def estimate_rig(params: Sequence[np.ndarray],
     one. The best-scoring frame is still one sample of a noisy objective, and a
     rig fixed to its error would push that error into every frame afterwards.
     """
-    good = [np.asarray(p, dtype=float)[:3]
-            for p, s in zip(params, scores) if s >= min_score]
-    if len(good) < RIG_MIN_FRAMES:
+    pairs = [(float(s), np.asarray(p, dtype=float)[:3])
+             for p, s in zip(params, scores) if p is not None]
+    if len(pairs) < RIG_MIN_FRAMES:
         return None
+    good = [p for s, p in pairs if s >= min_score]
+    if len(good) < RIG_MIN_FRAMES:
+        # `min_score` is a guess about a noisy objective, not a law. On real
+        # broadcast the whole distribution can sit below it while the solutions
+        # are still consistent -- an early run scored 20 of 23 frames between
+        # 0.30 and 0.45 and refused to fix the rig at all. Fall back to the
+        # best available frames; the median still rejects the outliers, and the
+        # caller can see the spread to judge whether the rig is real.
+        pairs.sort(key=lambda x: -x[0])
+        good = [p for _, p in pairs[:max(RIG_MIN_FRAMES, len(pairs) // 3)]]
     return np.median(np.vstack(good), axis=0)
 
 
@@ -214,3 +224,53 @@ def rig_bounds(rig: np.ndarray,
         out.append((max(lo, centre - slack), min(hi, centre + slack)))
     out.extend(base[3:])
     return out
+
+
+# ---------------------------------------------------------------------------
+# Refusing frames that contain no court.
+#
+# Roughly 40% of a broadcast is not the floor at all: crowd reactions, bench
+# close-ups, replays, graphics. No homography exists for those frames, so
+# "coverage over all frames" was never the right denominator.
+#
+# Worse, the line-alignment score cannot reject them on its own. A close-up of
+# a spectator's face scored 0.302 against a 0.30 accept threshold -- dark
+# clothing and seat edges make line-like structure anywhere, and with almost no
+# court visible the model only has to explain a handful of pixels. Accepting
+# that frame does not merely waste a search; it places players on a court that
+# is not in the picture, which is worse than reporting nothing.
+#
+# Hardwood is the signal the score lacks. Measured on frames classified by eye:
+#
+#     court wide shots   0.224 - 0.343
+#     tight close-up     0.179
+#     under-basket       0.161
+#     crowd              0.012
+#     a fan's face       0.036
+
+WOOD_HUE = (5, 30)          # warm, in OpenCV's 0-180 hue scale
+WOOD_MIN_SATURATION = 40
+WOOD_MIN_VALUE = 90
+MIN_WOOD_FRACTION = 0.20
+
+
+def wood_fraction(image: np.ndarray) -> float:
+    """Share of the frame that looks like a hardwood floor."""
+    import cv2
+
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    hue, saturation, value = hsv[:, :, 0], hsv[:, :, 1], hsv[:, :, 2]
+    wood = ((hue >= WOOD_HUE[0]) & (hue <= WOOD_HUE[1])
+            & (saturation >= WOOD_MIN_SATURATION) & (value >= WOOD_MIN_VALUE))
+    return float(wood.mean())
+
+
+def has_court(image: np.ndarray,
+              min_fraction: float = MIN_WOOD_FRACTION) -> bool:
+    """Whether this frame shows enough floor for a registration to mean anything.
+
+    Deliberately a gate BEFORE the search rather than a check after it: the
+    search costs ~15 s a frame and this costs a millisecond, and a frame with no
+    court must be refused even when the search reports a confident score.
+    """
+    return wood_fraction(image) >= min_fraction
