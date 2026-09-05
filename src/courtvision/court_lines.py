@@ -124,6 +124,63 @@ def canonical_court_points(step_ft: float = 1.0) -> np.ndarray:
     return np.vstack(pieces)
 
 
+COURT_LENGTH_FT = 94.0
+CENTRE_CIRCLE_RADIUS_FT = 6.0
+
+
+def canonical_full_court_points(step_ft: float = 1.0) -> np.ndarray:
+    """Points along the painted lines of a FULL court, in feet.
+
+    `canonical_court_points` models one half: 50 x 47 ft, one basket, one arc,
+    one lane. A broadcast wide shot routinely shows past midcourt and often the
+    whole floor, and `score_homography` weighs COVERAGE -- the share of detected
+    line pixels the model accounts for. Lines belonging to the far half cannot
+    be explained by a half-court model at all, so coverage is capped by the
+    model rather than by the fit, and the harmonic mean drags the whole score
+    down with it. Real broadcast frames scored 0.30-0.45 here where a true
+    camera scores 0.888 against a synthetic court that fits the model exactly.
+
+    So this mirrors every half-court feature about mid-court and adds the two
+    markings a half-court model has no way to express: the division line and the
+    centre circle.
+
+    MEASURED, AND IT DOES NOT HELP. On eight frames spread across a real
+    broadcast, scored the same way with the same budget:
+
+        half-court model   median 0.242   >= 0.30 on 25%
+        full-court model   median 0.220   >= 0.30 on 25%
+
+    The reasoning above was sound about the scoring function and wrong about
+    the video. The main camera is zoomed to roughly HALF the court -- one
+    basket, one arc, one lane fill the frame -- so the far-half lines the model
+    gains are usually not in the picture, while the wider aim bounds it needs
+    make the search harder. Kept, defaulted off, because the argument is worth
+    preserving next to the measurement that refutes it: look at the frames
+    before theorising about the pixels.
+    """
+    half = canonical_court_points(step_ft)
+    mirrored = np.column_stack([half[:, 0], COURT_LENGTH_FT - half[:, 1]])
+
+    def segment(a, b):
+        n = max(int(np.hypot(b[0] - a[0], b[1] - a[1]) / step_ft), 2)
+        return np.stack([np.linspace(a[0], b[0], n),
+                         np.linspace(a[1], b[1], n)], axis=1)
+
+    middle = COURT_LENGTH_FT / 2.0
+    pieces = [half, mirrored]
+    # Sidelines across the middle, which neither half covers on its own.
+    pieces.append(segment((0.0, HALF_COURT_LENGTH),
+                          (0.0, COURT_LENGTH_FT - HALF_COURT_LENGTH)))
+    pieces.append(segment((COURT_WIDTH, HALF_COURT_LENGTH),
+                          (COURT_WIDTH, COURT_LENGTH_FT - HALF_COURT_LENGTH)))
+    pieces.append(segment((0.0, middle), (COURT_WIDTH, middle)))   # division line
+    angles = np.linspace(0, 2 * np.pi, 90)
+    pieces.append(np.stack([
+        COURT_WIDTH / 2 + CENTRE_CIRCLE_RADIUS_FT * np.cos(angles),
+        middle + CENTRE_CIRCLE_RADIUS_FT * np.sin(angles)], axis=1))
+    return np.vstack(pieces)
+
+
 def alignment_score(
     image_to_court: np.ndarray, image: np.ndarray, tolerance_px: float = 6.0
 ) -> float:
@@ -336,6 +393,17 @@ DEFAULT_CAMERA_BOUNDS = [
     (700.0, 3200.0),    # focal length, pixels
 ]
 
+# With a full-court model the camera may be aimed anywhere down the floor, not
+# just into the near half, so the aim point has to be free to travel to 94 ft.
+FULL_COURT_CAMERA_BOUNDS = [
+    (-60.0, 110.0),
+    (-80.0, 120.0),
+    (12.0, 80.0),
+    (5.0, 45.0),
+    (0.0, 94.0),
+    (700.0, 3200.0),
+]
+
 
 def search_registration(
     image: np.ndarray,
@@ -403,6 +471,7 @@ def search_camera(
     rim_px: tuple[float, float] | None = None,
     rim_weight: float = 0.5,
     exclude_boxes: "np.ndarray | None" = None,
+    full_court: bool = False,
 ) -> tuple[np.ndarray | None, float]:
     """As `search_registration`, but returns the 6 CAMERA PARAMETERS.
 
@@ -423,11 +492,15 @@ def search_camera(
     """
     from scipy.optimize import differential_evolution
 
-    distance_map = line_distance_map(image)
+    # exclude_boxes was accepted and then dropped here, so every caller that
+    # masked players -- validate_registration, analyze_plays, every experiment
+    # -- was silently searching against a mask full of jerseys and limbs.
+    distance_map = line_distance_map(image, exclude_boxes)
     if not np.isfinite(distance_map).any():
         return None, 0.0
-    points = canonical_court_points()
-    line_pixels = sample_line_pixels(image)
+    points = (canonical_full_court_points() if full_court
+              else canonical_court_points())
+    line_pixels = sample_line_pixels(image, exclude_boxes=exclude_boxes)
     if len(line_pixels) == 0:
         return None, 0.0
     shape = image.shape[:2]
