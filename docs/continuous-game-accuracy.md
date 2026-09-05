@@ -1925,3 +1925,75 @@ What DID appear once the release was right, monotone across four bins:
 Holding the ball is worth -0.245 FG% from catch-and-shoot to iso. That is the
 first real shot-quality feature in this project, and it survives a release
 check that two earlier versions failed.
+
+# Round twenty-three: the homography was never mostly an algorithm problem
+
+## "43% coverage" was measuring the broadcast
+
+Sampling 400 frames across a full uncut broadcast and asking only whether the
+frame contains a floor:
+
+    hardwood fraction   p10 0.018   median 0.193   p90 0.290
+    wood >= 0.20 on 46% of frames, >= 0.16 on 57%
+
+The rest is crowd reaction, bench close-up, replay and graphics. There is no
+homography for a shot of a spectator's face. Coverage over ALL frames was the
+wrong denominator, and the long-standing 43% figure was roughly measuring how
+much of a basketball broadcast shows basketball.
+
+Worse, the line score cannot reject those frames. A close-up of a fan scored
+**0.302** against a 0.30 accept threshold: dark clothing and seat edges make
+line-like structure, and with no court visible the model only has to explain a
+handful of pixels. That is not a wasted search, it is players placed on a court
+that is not in the picture. `wood_fraction`/`has_court` gate on hardwood
+instead, measured against frames classified by eye -- court views 0.224-0.343,
+close-up 0.179, crowd 0.012, a fan's face 0.036 -- and run before the search,
+at a millisecond against 15 seconds.
+
+## Two guards that were not guarding
+
+**`search_camera` accepted `exclude_boxes` and never used it.** Both
+`line_distance_map` and `sample_line_pixels` were called without the mask, so
+every caller that masked players was searching a line mask full of jerseys and
+limbs -- defeating the fix `court_line_mask`'s own docstring describes.
+
+**Cut detection never fires.** Using court -> non-court transitions as ground
+truth on a 120-second window at 3 fps:
+
+    thumbnail difference AT true cuts   median 0.0277
+    thumbnail difference elsewhere      median 0.0307
+    cuts at the 0.28 threshold          0
+    best F1 over every threshold        0.24
+
+The difference at a real cut is LOWER than during ordinary play; at a third of
+a second between samples a cut looks like a fast pan. `propagate` had been
+running with an empty cut list while appearing bounded. Replaced by court-gate
+transitions plus a `verify` callback checked at every hop.
+
+## The rig is real, and pinning to it is still wrong
+
+The solved rig (x -37.8, y 86.5, z 27.8 ft) looked physically implausible --
+39 ft past half court, and pinned at 96% of its bound. The rim settles it: its
+3D position is known exactly and a detector found it independently, and
+sweeping pan/tilt/zoom at that position projects it to a **median 7 px** of the
+detection (min 2). The rig is correct; the intuition about where cameras belong
+was not.
+
+But constraining the search to it made registration far worse:
+
+    6-dof search, free camera        87% of anchors solved
+    3-dof pinned to the rig +-1 ft   10.5% of anchors solved
+
+Not every frame showing hardwood is the same camera. Baseline and corner views
+show plenty of floor, and one rig rejects them outright. The saving in search
+space is not worth the frames it discards.
+
+## What propagation is actually worth
+
+    anchor frames       n= 2   median line evidence 0.573   100% >= 0.30
+    propagated frames   n=21   median line evidence 0.514    81% >= 0.30
+
+Propagated frames hold 0.514 against line pixels propagation never looks at --
+it matches background texture -- where a from-scratch search across the game
+medians 0.242. And it costs 21 ms against 17 s. The chain carries real geometry;
+it was starved of anchors, not broken.

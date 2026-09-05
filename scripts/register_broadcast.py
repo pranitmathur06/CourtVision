@@ -83,6 +83,12 @@ def main() -> int:
     parser.add_argument("--anchor-every", type=int, default=12,
                         help="samples between SOLVED anchors")
     parser.add_argument("--rig", help="JSON with a cached rig, to skip stage 1")
+    parser.add_argument("--anchor-dof", type=int, default=6, choices=(3, 6),
+                        help="6 searches the full camera; 3 pins the rig. "
+                             "Measured: 6-dof solved 87%% of anchors, 3-dof "
+                             "pinned to a 1 ft rig box solved 10.5%% -- not "
+                             "every court frame is the same camera, so one rig "
+                             "rejects the baseline and corner views outright.")
     parser.add_argument("--out", default="outputs/registration.json")
     args = parser.parse_args()
 
@@ -118,7 +124,7 @@ def main() -> int:
         print(f"  rig from cache: x={rig[0]:.1f} y={rig[1]:.1f} z={rig[2]:.1f}")
 
     anchors = court[::args.anchor_every]
-    if rig is None:
+    if rig is None and args.anchor_dof == 3:
         start = time.time()
         params, scores = [], []
         for index in anchors:
@@ -135,7 +141,7 @@ def main() -> int:
         print(f"  rig solved from {len(params)} frames in {time.time()-start:.0f}s:"
               f" x={rig[0]:.1f} y={rig[1]:.1f} z={rig[2]:.1f}")
 
-    bounds = rig_bounds(rig)
+    bounds = rig_bounds(rig) if args.anchor_dof == 3 else None
     start = time.time()
     solved: dict[int, np.ndarray] = {}
     for index in anchors:
@@ -205,7 +211,8 @@ def main() -> int:
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps({
-        "rig": rig.tolist(), "stride": args.stride, "start_s": args.start,
+        "rig": None if rig is None else rig.tolist(),
+        "stride": args.stride, "start_s": args.start,
         "fps": fps, "coverage": coverage, "anchor_rate": anchor_rate,
         "line_evidence": {k: v for k, v in groups.items()},
         "matrices": {str(i): full[i].tolist() for i in sorted(full)},
