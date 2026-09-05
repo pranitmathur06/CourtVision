@@ -340,3 +340,64 @@ def plausible_positions(court_to_image_inverse: np.ndarray,
                         max_off_share: float = MAX_OFF_COURT_SHARE) -> bool:
     """Whether a homography places players somewhere a player can stand."""
     return players_on_court(court_to_image_inverse, feet_px) >= 1.0 - max_off_share
+
+
+# ---------------------------------------------------------------------------
+# Which basket is this?
+#
+# A basketball court is symmetric. The far lane is a 16 ft lane with a
+# free-throw circle and so is the near one, so a half-court model can explain
+# the FAR half's lines perfectly while sitting 47 ft from where it belongs.
+# Every line lands and the score is high; the court is simply in the wrong
+# place. The line score cannot see this, by construction.
+#
+# Measured on every registration this pipeline produced for one broadcast --
+# three separate runs, 44+ frames each carrying an independent rim detection:
+#
+#     projected basket-floor vs detected rim, horizontal
+#         within 120 px    0.0%
+#         beyond 400 px  100.0%
+#         p10 -887 px, p50 +892 px, p90 +1038 px
+#
+# Bimodal at roughly plus and minus 900 px on a 1280 px frame: the two-basket
+# signature. The vertical offset was a consistent ~+195 px, about right for a
+# rim 10 ft above its floor point, so scale and tilt were fine. The fits were
+# translated onto the wrong basket, not wrong in general.
+#
+# The rim resolves it. Its position is known exactly and a detector finds it
+# independently, so it is the one piece of evidence that says WHICH basket --
+# used as an accept/reject test, never blended into the objective, where it
+# merely trades against line score (measured: anchors 47.8% -> 8.7%).
+
+MAX_BASKET_OFFSET_PX = 150.0
+
+
+def basket_offset_px(court_to_image: np.ndarray,
+                     rim_px: tuple[float, float]) -> float | None:
+    """Horizontal pixels between the model's basket and the detected rim.
+
+    Compares the FLOOR point under the basket with the rim itself, so a
+    vertical difference is expected -- the rim is 10 ft up. Horizontal
+    agreement is what identifies the basket.
+    """
+    from courtvision.court import BASKET
+
+    projected = court_to_image @ np.array([BASKET[0], BASKET[1], 1.0])
+    if abs(projected[2]) < 1e-9 or not np.isfinite(projected).all():
+        return None
+    return float(projected[0] / projected[2] - rim_px[0])
+
+
+def right_basket(court_to_image: np.ndarray,
+                 rim_px: tuple[float, float] | None,
+                 tolerance_px: float = MAX_BASKET_OFFSET_PX) -> bool:
+    """Whether this fit is on the basket the detector actually sees.
+
+    With no rim detected the question cannot be answered, and the honest answer
+    is False: a frame whose basket is unverifiable should not be trusted with
+    player coordinates.
+    """
+    if rim_px is None:
+        return False
+    offset = basket_offset_px(court_to_image, rim_px)
+    return offset is not None and abs(offset) <= tolerance_px

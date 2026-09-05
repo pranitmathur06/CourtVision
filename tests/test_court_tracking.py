@@ -191,3 +191,26 @@ def test_plausible_positions_gates_on_the_share():
 def test_players_on_court_with_no_detections_is_a_failure():
     from courtvision.court_tracking import players_on_court
     assert players_on_court(np.eye(3), np.empty((0, 2))) == 0.0
+
+
+def test_basket_offset_is_zero_for_a_perfect_fit():
+    from courtvision.court_tracking import basket_offset_px
+    from courtvision.court import BASKET
+    # Identity: the basket's floor point projects to its own court coordinates.
+    offset = basket_offset_px(np.eye(3), (BASKET[0], BASKET[1]))
+    assert abs(offset) < 1e-6
+
+
+def test_right_basket_rejects_a_fit_on_the_other_half():
+    from courtvision.court_tracking import right_basket
+    from courtvision.court import BASKET
+    # The measured failure: the model lands ~900 px from the detected rim.
+    shifted = np.array([[1.0, 0.0, 900.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]])
+    assert not right_basket(shifted, (BASKET[0], BASKET[1]))
+    assert right_basket(np.eye(3), (BASKET[0], BASKET[1]))
+
+
+def test_right_basket_is_false_without_a_rim():
+    from courtvision.court_tracking import right_basket
+    # Unverifiable is not the same as fine.
+    assert not right_basket(np.eye(3), None)
