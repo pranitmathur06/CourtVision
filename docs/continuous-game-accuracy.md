@@ -1461,3 +1461,81 @@ and they are exactly the hard ones.
 That is a well-posed labelling task and a small one. It is also the first point
 in this investigation where hand-labelling is clearly the cheapest path rather
 than the fallback.
+
+---
+
+# Round sixteen: the scorer was wrong, and it had been wrong all along
+
+## What broke
+
+Video time was mapped to game time by anchoring on one known clock value and
+counting seconds where the clock was seen to advance. That is only valid for a
+continuous live broadcast. `quarter.mp4` is a **condensed game**: between video
+60 s and 900 s the game clock moves about 1,100 s while 840 wall seconds pass,
+and tick counting cannot represent that, because it can add at most one second
+of game time per second of video. It is also not chronological — at video
+2200 s the scoreboard reads **1st 2:54**, earlier than everything before it.
+
+The mapping put the footage at game elapsed **1546..2391**. It actually spans
+**52..2864** — the whole game. Every event was matched against the wrong moment.
+
+It was found by accident. Building the labelling tool put a frame on screen
+with a legible scoreboard, and the clock on it disagreed with the mapping.
+
+## Every end-to-end number this session was affected
+
+    reported earlier   0.214 -> 0.375 -> 0.466 -> 0.407 -> 0.435
+    all scored against 56 official field goals in the wrong third of the game
+
+Corrected, against the **180** official field goals the footage really covers,
+using a clock READ from each frame:
+
+    config                    P       R      F1(±3s)   F1(±8s)
+    original detector       0.521   0.350    0.419      0.498
+    student @1280           0.611   0.383    0.471      0.560
+    student @1920           0.580   0.383    0.462      0.542
+
+**Two conclusions reverse.**
+
+The baseline was never 0.466; it is **0.419**. The old figure flattered itself
+by scoring 121 detections against 56 truth events instead of 180, which
+inflated recall to 0.679 when it is really 0.350.
+
+And the trained student, reported as a regression, is the **best configuration**
+— better precision AND better recall than the detector it replaced, at every
+tolerance. The $0.72 bought a real improvement that a broken scorer hid. Higher
+inference resolution is not needed: 1280 beats 1920.
+
+It also explains the anomaly that had no explanation: recall sat at exactly
+0.411 through every change of model, resolution and threshold. That is the
+signature of a scoring fault, not a perception limit, and it should have been
+read as one.
+
+## The reader
+
+`clock_reader.py` reads period and clock from each frame independently, so it
+is immune to condensing, cuts, replays and out-of-order segments. Across the
+whole video:
+
+    frames read                        94.9% (2112/2225)
+    periods seen                       Q1 437, Q2 419, Q3 575, Q4 681
+    consecutive steps within [0,2]s    94.4%
+    clock running backwards            0.7%
+
+Five bugs stood between the idea and that result, each of which returned None
+or nonsense rather than complaining:
+
+  * **one alphabet for two fonts.** The period text is smaller than the clock;
+    a template fitted to the clock matches the period's "2" at distance 0.30
+    and the clock's at 0.03. Two template sets are required.
+  * **`clock_glyphs` keeps only the tallest cluster**, which is right when the
+    period and clock share a crop and wrong for a clock-only crop.
+  * **touching digits.** "2:44" binarises into one blob for the "44", which the
+    shared segmenter drops for being too wide — losing both digits and reading
+    the clock as "2". Blobs are now split on expected digit width.
+  * **polarity.** Templates are binary with white ink; crops taken from the
+    grey strip matched nothing at all.
+  * **the separator test looked in the wrong gap** — after the first digit,
+    correct for M:SS, wrong for SS.T where the decimal follows the second.
+    Validity now settles it first: "182" is 18.2, not 1:82, because there is no
+    82nd second. The separator only breaks real ties like "1:52" vs "15.2".
