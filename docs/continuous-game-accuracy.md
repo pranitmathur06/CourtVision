@@ -1718,3 +1718,81 @@ The pipeline spent its whole life trying to recover from pixels a fact the
 broadcast puts on screen in 40 px digits. The measured ceiling for inferring
 events from perfect ball and player positions was 0.751; reading the scoreboard
 beats it, because it is not inference at all.
+
+---
+
+# Round twenty: block, steal, and what the scoreboard still had to give
+
+## The shot clock
+
+Reading it needed one correction: the first bootstrap assumed it ticks once per
+VIDEO second. It ticks once per GAME second, and the game clock stops for every
+whistle, so the labels were wrong wherever play was dead and the templates were
+poisoned. Rebuilt from frames read by eye:
+
+    read rate                27.2% -> 63.0%
+    resets to ~24                0 -> 197
+    consecutive -1 steps      16.4% -> 43.7%
+
+43.7% is right, not low: sampling is once per video second and the game clock
+only runs about half of that. **197 resets to 24 is a possession-change count**
+-- a game has roughly 200 -- which falls out of the scoreboard for free.
+
+## Block: five framings, all noise
+
+Every test below ran on SportVU tracking -- exact ball and player positions, no
+perception error. If a signal is not there, video cannot recover it.
+
+    appearance classifier                     -0.170  (below chance)
+    "a blocked shot never reaches the rim"    false: median 0.4 ft from it
+    "a defender is near a high ball"          none: 1.1 ft vs 0.8 ft
+    ballistic residual, all phases            +0.07
+    ascent residual + defender + apex gain    +0.073
+
+The ascent test was the fair one -- earlier versions took the largest arc
+departure anywhere in +-25 frames, which swept in rim bounces and rebounds and
+swamped the block. Restricted to the rise, blocks do deviate more (7.38 ft
+against 5.35) but not enough to separate.
+
+One hypothesis died outright: **apex gain runs the wrong way.** Blocked shots
+gain MORE height (3.38 ft against 2.95), because a block deflects the ball
+rather than truncating it. "The ball never leaves his hand" is not what a block
+looks like in the data.
+
+**What none of these had is REACH.** Every one used player centres -- a dot on
+the floor. A defender is 0.71 ft from the ball on ordinary shots and 0.87 ft on
+blocks, so proximity was never the discriminator; an arm above the ball is, and
+tracking data has no limbs. Block is not disproved, it is untested with pose.
+
+## Steal: the first positive result
+
+    rule: opponent gap OPENS >= 2 ft AND ball speed >= 8 ft/s
+      steals 0.49   controls 0.15   lift +0.336
+
+Five times anything block produced. The discriminating feature is not what was
+expected:
+
+    opponent gap change   steal -2.90 ft (opens)   control +0.53 ft
+    jerk                  steal 236               control 235   (useless)
+
+A steal is **not an abrupt snatch** -- jerk is identical to ordinary play. It is
+the ball DEPARTING its handler: the nearest-opponent distance inverts because
+who holds the ball flips. That is a possession-change signature with a
+kinematic confirmation, which is why 400 appearance clips never worked.
+
+## Pose works on broadcast, and needs no dataset
+
+`yolo11x-pose` off the shelf, on the uncut broadcast:
+
+    people per frame          14-27  (10 on court plus bench and officials)
+    wrist keypoint confidence median 0.84, 66.8% above 0.5
+
+Wrists are the hardest keypoint and they are usable. Every basketball pose
+dataset found has a domain problem -- TrackID3x3 is 3x3, DeepSportLab is a
+fixed arena camera, SportsPose and Human3.6M are laboratories -- and training
+on any of them would recreate the train/serve gap that has cost this project
+repeatedly. COCO pose transfers because a human body is a human body, unlike a
+26 px ball that looks like a head.
+
+That makes the block question answerable for the first time: wrist height
+against ball height, and whether a defender's wrist crosses the ball's path.
