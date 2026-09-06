@@ -159,3 +159,39 @@ def test_on_court_everyone_lists_both_teams():
     from courtvision.jersey import OnCourt
     court = OnCourt({"IND": ["A B"], "OKC": ["C D"]})
     assert sorted(court.everyone()) == ["A B", "C D"]
+
+
+# --- the trained reader ----------------------------------------------------
+
+def test_digit_patches_finds_two_digits_in_a_rendered_number():
+    cv2 = pytest.importorskip("cv2")
+    from courtvision.digit_net import digit_patches
+    canvas = np.zeros((60, 90, 3), dtype=np.uint8)
+    cv2.putText(canvas, "43", (12, 46), cv2.FONT_HERSHEY_SIMPLEX, 1.4,
+                (255, 255, 255), 3)
+    assert len(digit_patches(canvas)) == 2
+
+
+def test_digit_patches_returns_nothing_for_a_blank_crop():
+    pytest.importorskip("cv2")
+    from courtvision.digit_net import digit_patches
+    assert digit_patches(np.zeros((60, 90, 3), dtype=np.uint8)) == []
+
+
+def test_digit_patches_survives_an_empty_input():
+    from courtvision.digit_net import digit_patches
+    assert digit_patches(None) == []
+
+
+def test_square_patch_pads_rather_than_stretching():
+    """A tall thin '1' must stay tall and thin, or it reads as something else."""
+    pytest.importorskip("cv2")
+    from courtvision.digit_net import _square_patch, GLYPH_PX
+    gray = np.zeros((40, 40), dtype=np.float32)
+    gray[5:35, 18:22] = 1.0
+    out = _square_patch(gray, 18, 5, 4, 30)
+    assert out.shape == (GLYPH_PX, GLYPH_PX)
+    lit = np.argwhere(out > out.mean() + out.std())
+    width = np.ptp(lit[:, 1]) if len(lit) else 0
+    height = np.ptp(lit[:, 0]) if len(lit) else 0
+    assert width < height, "the stroke must not be stretched to fill the square"

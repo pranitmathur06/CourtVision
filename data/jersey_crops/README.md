@@ -257,3 +257,92 @@ crops and broke others.
 That is where this stops: 82% precision at 31% coverage, eleven answered
 appearances, across eight annotation rounds and roughly ten distinct reader
 designs.
+
+
+## Correction: every "per appearance" number above is unsound
+
+The evaluations above group crops by shot window and call each group one
+appearance, on the belief that a shot window follows a single player. It does
+not. Checked directly:
+
+    shot groups with more than one hand-labelled number: 22 of 49
+
+The crop collector drifts between offsets, so a "group" often holds two or
+three different players. Majority-voting inside one and scoring it against one
+arbitrary member's label measures nothing. The 78%, 82% and 85% figures above
+are all that metric, and none of them means what it says.
+
+A CROP is unambiguous, so that is the unit from here. Rescored per crop, the
+nearest-neighbour reader is better than its own headline claimed:
+
+    margin  answered  coverage  correct  precision
+      0.10        32      25%       21        66%
+      0.15        19      15%       15        79%
+      0.20        15      12%       15       100%
+
+The mixed grouping had been *hurting* it.
+
+
+## The reader that works: trained on SVHN, not on our own labels
+
+Every reader above learned from the hand-labelled crops themselves -- about 130
+digit instances. That is a training set two orders of magnitude too small, and
+it forced leave-one-out contortions to keep near-duplicate frames out of the
+pool.
+
+SVHN is 73k real-world digits under exactly the conditions that break a jersey
+read: low resolution, motion blur, odd fonts, both polarities, distractor
+digits crowding the sides. A five-layer CNN trained on it, with augmentation
+that simulates the broadcast (downsample-and-restore blur, random polarity,
+contrast and brightness jitter), reaches **92.4%** on SVHN's own held-out
+digits under that same degradation.
+
+Blob FINDING is unchanged, merged-digit split and all. Only the description of
+each blob changed: a grayscale patch padded to a square, which is what SVHN
+teaches, rather than a binary silhouette.
+
+    SVHN classifier, scored per crop on the 130 hand labels
+      floor  answered  coverage  correct  precision
+       0.50        44      34%       36        82%
+       0.70        32      25%       29        91%
+       0.80        25      19%       24        96%
+       0.90        18      14%       17        94%
+
+At a given precision it roughly doubles coverage: 25% coverage at 91%, where
+nearest-neighbour gives 66% at the same coverage.
+
+## Choosing the floor without inflating the answer
+
+Reading a floor off that table is how the 86% and the 92-94% earlier in this
+file were manufactured; both dissolved. Two defences were used instead.
+
+**Pre-registered.** 0.90 was chosen from SVHN's own held-out digits before any
+jersey number was computed. It gives **94% on 18 answers at 14% coverage**.
+
+**Cross-validated.** Split the crops into two halves BY SHOT GROUP -- so a
+near-duplicate of a selection crop cannot land in the test half -- pick the
+lowest floor reaching 90% on one half, score the other, then swap and pool.
+Every crop is scored by a floor chosen without it.
+
+    fold 0: floor 0.65 chosen on the other half -> 10/12
+    fold 1: floor 0.70 chosen on the other half -> 19/21
+
+    cross-validated: 29/33 = 88% precision at 25% coverage
+    95% interval 77% to 99%
+
+**88% at 25% coverage** is the honest headline: above the 85% bar on a point
+estimate, on nearly triple the sample the previous best rested on, with the
+threshold never chosen on the data it is scored against. The interval still
+reaches below 85%, so 33 answers do not *prove* the bar is cleared -- but
+unlike every earlier number here, nothing about how it was obtained is inflating
+it. The shipped default floor is 0.68, the average of the two selected.
+
+Coverage, not precision, is now the limit. Three quarters of crops get no
+answer, which is why `JerseyVoter` accumulates over a track rather than
+trusting a frame.
+
+    the whole arc, per crop
+      rendered templates                     8%
+      easyocr                               17%
+      nearest neighbour over 130 labels     66% at 25% coverage
+      CNN trained on SVHN                   88% at 25% coverage

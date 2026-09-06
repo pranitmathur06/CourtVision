@@ -1,9 +1,14 @@
-"""Read jersey numbers, and turn them into names by voting over a track.
+"""Turn jersey numbers into names by voting over a track.
 
-A single frame is a bad witness. Measured on a 720p broadcast, one crop yields
-a number about 16% of the time, and a sixth of those are not on either roster
--- players turn, arms cross the chest, and the number blurs. No amount of
-preprocessing fixes a player facing away.
+The READER lives in `courtvision.digit_net`; this module is the layer above it.
+A general scene-text reader (`read_number` below) was the first attempt and is
+kept for comparison, but it answers on 17% of crops and is wrong often enough
+to be unusable alone. The trained digit classifier replaced it.
+
+A single frame is a bad witness either way. Measured on 130 hand-labelled
+broadcast crops, the good reader answers on a quarter of them and is right 88%
+of the time when it does -- players turn, arms cross the chest, and the number
+blurs. No amount of preprocessing fixes a player facing away.
 
 But a player stays on the floor for a whole possession, so the same track
 offers dozens of chances. Voting over a track converts a weak per-frame reader
