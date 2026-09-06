@@ -2421,3 +2421,58 @@ play label in any feed, so the naming accuracy is unmeasured, and the remaining
 1.3x looseness cannot be attributed without one. Hand labels rendered from
 tracking coordinates are the next step -- unlike broadcast crops, a 2D plot of
 a possession is unambiguous to label.
+
+## Play detection, finally measured
+
+No feed carries a per-possession play label, so ground truth had to be made.
+On broadcast that is hopeless; on tracking coordinates a possession drawn as a
+2D plot -- ten dots, exact positions, the paths they took -- is legible enough
+to label by eye.
+
+Two rules kept the labels honest. The detector's answer was never drawn on the
+panel, because seeing "pick_and_roll" printed before deciding would make the
+labels agree with the detector by construction -- the same circularity that
+made the auto-generated jersey labels worthless. And half the panels were
+moments the detector fired on, half moments it did not, because labelling only
+its own firings measures precision and calls it accuracy.
+
+A first sample of 16 panels gave precision 75% and recall 86%, and both false
+positives were the same thing: two players running past each other in
+transition, which satisfies every other test -- they were far apart, they came
+together, one carried on. What was missing is that a screen is SET. The
+screener plants and takes the contact.
+
+Adding that (screener under 4 ft/s, expressed as a speed so it does not change
+meaning with the sample rate) took a game from 260 screen actions to 156:
+on-ball 63 against a real 60-80, off-ball 93 against 80-100.
+
+The synthetic fixtures in `test_plays.py` had to be corrected to accept it.
+They moved screeners 2 ft per 0.1 s -- 20 ft/s, about double a human sprint --
+so no plausible "the screener is stationary" rule could have passed them. A
+detector tuned to accept those trajectories is tuned to accept transition
+run-bys.
+
+### The result, and a lesson about sample size
+
+Sixteen fresh panels, labelled blind after the rule was added, gave 88%
+precision and 88% recall. Twelve more panels took it to:
+
+    screen present or absent, 28 panels
+      true positives 10   false positives 4   misses 2   agreed empty 12
+      precision 71%   (10/14, 95% 48-95%)
+      recall    83%   (10/12, 95% 62-100%)
+      none / on-ball / off-ball, exact   21/28 = 75%
+
+The 88/88 was noise. Twelve extra panels added three false positives and one
+miss, and the interval at n=16 was wide enough to contain all of it. Reporting
+the 88 would have been the same mistake as every inflated number earlier in
+this file, arrived at honestly rather than by threshold-shopping.
+
+**Play detection does not meet the 85% bar. It is at 71% precision and 83%
+recall**, on 28 hand-labelled panels, and the bound is wide.
+
+All four false positives are off-ball, and three are two attackers passing
+close without either of them screening. The on-ball side did not produce a
+single false positive in the sample. That is the next thing to fix, and it
+needs more labels before any change to it can be believed -- at n=28 the
+interval is 48-95%, which cannot distinguish a fix from noise.

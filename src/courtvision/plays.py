@@ -36,6 +36,40 @@ SCREEN_SEPARATION_FT = 9.0     # how far apart they must have been before it
 ROLL_GAIN_FT = 6.0             # ground the screener makes toward the rim
 POP_GAIN_FT = 4.0              # ground the screener gives up, moving out
 WINDOW_FRAMES = 12             # how long after contact the outcome is judged
+# A screen is SET: the screener plants and takes the contact. Two players
+# running past each other in transition satisfy every other test here -- they
+# were far apart, they came together, one of them carried on -- and both of the
+# false positives in the first hand-labelled sample were exactly that. A
+# planted screener covers almost no ground while the contact happens.
+# In feet per second, so the rule does not change meaning with the sample rate.
+# A player jogs at 8 and sprints past 15; a screener taking contact is under 4.
+SCREENER_MAX_SPEED_FTS = 4.0
+SCREENER_SETTLE_FRAMES = 2
+
+
+def _is_planted(
+    positions: list[dict[int, tuple[float, float]]],
+    times: list[float],
+    index: int,
+    screener: int,
+) -> bool:
+    """Whether the screener was holding still as the contact happened."""
+    here = positions[index].get(screener)
+    if here is None:
+        return False
+    for back in range(1, SCREENER_SETTLE_FRAMES + 1):
+        step = index - back
+        if step < 0:
+            break
+        there = positions[step].get(screener)
+        if there is None:
+            continue
+        elapsed = abs(times[index] - times[step])
+        if elapsed <= 0:
+            continue
+        if _distance(here, there) / elapsed > SCREENER_MAX_SPEED_FTS:
+            return False
+    return True
 
 
 @dataclass(frozen=True)
@@ -116,6 +150,8 @@ def detect_screens(
             if not approached:
                 continue
 
+            if not _is_planted(positions, times, index, other):
+                continue
             outcome = _classify_outcome(positions, handlers, index, handler, other)
             if outcome is None:
                 continue
@@ -197,8 +233,10 @@ def detect_off_ball_screens(
                                   positions[index - back][b]) >= SCREEN_SEPARATION_FT
                     for back in range(1, min(WINDOW_FRAMES, index) + 1)
                 ):
-                    claimed.add(pair)
                     screener, cutter = _screener_and_cutter(positions, index, a, b)
+                    if not _is_planted(positions, times, index, screener):
+                        continue
+                    claimed.add(pair)
                     name, evidence = classify_off_ball_screen(
                         positions, handlers, index, cutter=cutter,
                         screener=screener)

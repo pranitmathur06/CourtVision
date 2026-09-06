@@ -21,8 +21,8 @@ def test_pick_and_roll():
     """Screener arrives, then cuts to the rim while the handler uses the space."""
     handler = [(25, 30), (25, 28), (25, 26), (25, 25), (24, 24),
                (22, 23), (20, 22), (18, 21), (17, 20), (16, 19)]
-    screener = [(25, 18), (25, 20), (25, 22), (25, 24), (25, 21),
-                (25, 17), (25, 13), (25, 10), (25, 8), (25, 7)]
+    screener = [(25, 19), (25, 22), (25, 24), (25, 24), (25, 24),
+                (25, 21), (25, 17), (25, 13), (25, 10), (25, 7)]
     plays = detect_screens(*sequence(handler, screener))
     assert [p.name for p in plays] == ["pick_and_roll"]
     assert plays[0].screener_id == 2 and plays[0].handler_id == 1
@@ -33,8 +33,8 @@ def test_pick_and_pop():
     """Same screen, but the screener steps out beyond the arc instead."""
     handler = [(25, 30), (25, 28), (25, 26), (25, 25), (24, 24),
                (22, 23), (20, 22), (18, 21), (17, 20), (16, 19)]
-    screener = [(25, 18), (25, 20), (25, 22), (25, 24), (26, 27),
-                (27, 30), (28, 33), (29, 35), (30, 36), (30, 37)]
+    screener = [(25, 19), (25, 22), (25, 24), (25, 24), (25, 24),
+                (26, 27), (27, 30), (28, 33), (29, 35), (30, 37)]
     plays = detect_screens(*sequence(handler, screener))
     assert [p.name for p in plays] == ["pick_and_pop"]
     assert "beyond the arc" in plays[0].evidence
@@ -44,9 +44,9 @@ def test_dribble_handoff_is_not_called_a_pick_and_roll():
     """If the ball changes hands at contact it is a hand-off, whatever follows."""
     handler = [(25, 30), (25, 28), (25, 26), (25, 25), (24, 24),
                (22, 23), (20, 22), (18, 21), (17, 20), (16, 19)]
-    screener = [(25, 18), (25, 20), (25, 22), (25, 24), (25, 21),
-                (25, 17), (25, 13), (25, 10), (25, 8), (25, 7)]
-    handlers = [1, 1, 1, 1, 2, 2, 2, 2, 2, 2]        # ball moves to the screener
+    screener = [(25, 19), (25, 22), (25, 24), (25, 24), (25, 24),
+                (25, 21), (25, 17), (25, 13), (25, 10), (25, 7)]
+    handlers = [1, 1, 1, 1, 1, 2, 2, 2, 2, 2]        # ball moves to the screener
     plays = detect_screens(*sequence(handler, screener, handler_by_frame=handlers))
     assert [p.name for p in plays] == ["dribble_handoff"]
 
@@ -67,8 +67,8 @@ def test_players_standing_together_all_along_are_not_a_screen():
 def test_a_screen_is_reported_once_not_every_frame():
     handler = [(25, 30), (25, 27), (25, 25), (25, 24), (25, 24),
                (25, 24), (24, 23), (23, 22), (22, 21), (21, 20)]
-    screener = [(25, 18), (25, 21), (25, 23), (25, 24), (25, 22),
-                (25, 18), (25, 14), (25, 11), (25, 9), (25, 7)]
+    screener = [(25, 19), (25, 22), (25, 24), (25, 24), (25, 24),
+                (25, 20), (25, 16), (25, 12), (25, 9), (25, 7)]
     plays = detect_screens(*sequence(handler, screener))
     assert len(plays) == 1
 
@@ -96,10 +96,11 @@ def test_no_handler_means_no_ball_screen():
 
 
 def test_off_ball_screen_between_two_non_handlers():
+    # The screener (2) is planted; the cutter (3) runs to him.
     positions = [
-        {1: (25, 30), 2: (5, 25), 3: (5, 8)},
-        {1: (25, 29), 2: (5, 20), 3: (5, 12)},
-        {1: (25, 28), 2: (5, 16), 3: (5, 15)},
+        {1: (25, 30), 2: (5, 16), 3: (5, 4)},
+        {1: (25, 29), 2: (5, 16), 3: (5, 9)},
+        {1: (25, 28), 2: (5, 16), 3: (5, 14)},
     ]
     plays = detect_off_ball_screens(positions, [1, 1, 1], [0.0, 0.1, 0.2])
     assert [p.name for p in plays] == ["off_ball_screen"]
@@ -114,8 +115,8 @@ def test_mismatched_input_lengths_are_rejected():
 def test_play_str_is_readable():
     handler = [(25, 30), (25, 27), (25, 25), (25, 24), (24, 23),
                (22, 22), (20, 21), (18, 20), (17, 19), (16, 18)]
-    screener = [(25, 18), (25, 21), (25, 23), (25, 24), (25, 21),
-                (25, 17), (25, 13), (25, 10), (25, 8), (25, 7)]
+    screener = [(25, 19), (25, 22), (25, 24), (25, 24), (25, 24),
+                (25, 20), (25, 16), (25, 12), (25, 9), (25, 7)]
     play = detect_screens(*sequence(handler, screener))[0]
     assert "2 screens for 1" in str(play)
 
@@ -134,10 +135,10 @@ def test_spain_pick_and_roll():
     # 1 handles, 2 screens then rolls to the rim, 3 back-screens 2 mid-roll.
     handler = [(25, 30), (25, 28), (25, 26), (25, 25), (24, 24),
                (22, 23), (20, 22), (18, 21), (17, 20), (16, 19)]
-    screener = [(25, 18), (25, 20), (25, 22), (25, 24), (25, 21),
-                (25, 17), (25, 13), (25, 10), (25, 8), (25, 7)]
-    third = [(40, 8), (40, 9), (39, 10), (38, 11), (36, 12),
-             (33, 13), (29, 13), (26, 12), (25, 11), (25, 9)]
+    screener = [(25, 19), (25, 22), (25, 24), (25, 24), (25, 24),
+                (25, 21), (25, 17), (25, 13), (25, 10), (25, 7)]
+    third = [(40, 8), (39, 10), (37, 11), (34, 12), (31, 12),
+             (28, 12), (26, 12), (26, 12), (26, 12), (26, 12)]
     positions, handlers, times = _frames(
         {1: handler, 2: screener, 3: third}, [1] * 10)
 
@@ -155,8 +156,8 @@ def test_plain_pick_and_roll_is_not_called_spain():
 
     handler = [(25, 30), (25, 28), (25, 26), (25, 25), (24, 24),
                (22, 23), (20, 22), (18, 21), (17, 20), (16, 19)]
-    screener = [(25, 18), (25, 20), (25, 22), (25, 24), (25, 21),
-                (25, 17), (25, 13), (25, 10), (25, 8), (25, 7)]
+    screener = [(25, 19), (25, 22), (25, 24), (25, 24), (25, 24),
+                (25, 21), (25, 17), (25, 13), (25, 10), (25, 7)]
     far = [(45, 5)] * 10
     positions, handlers, times = _frames({1: handler, 2: screener, 3: far}, [1] * 10)
 
@@ -169,10 +170,10 @@ def test_double_drag_two_screeners_for_one_handler():
 
     handler = [(25, 34), (25, 32), (25, 30), (25, 29), (25, 28),
                (25, 27), (25, 26), (25, 25), (25, 24), (25, 23)]
-    first = [(25, 20), (25, 24), (25, 29), (25, 28), (25, 18),
-             (25, 14), (25, 11), (25, 9), (25, 8), (25, 8)]
-    second = [(38, 20), (36, 21), (33, 23), (30, 24), (28, 25),
-              (25, 26), (25, 24), (25, 18), (25, 13), (25, 9)]
+    first = [(25, 22), (25, 26), (25, 28), (25, 28), (25, 28),
+             (25, 18), (25, 14), (25, 11), (25, 9), (25, 8)]
+    second = [(38, 20), (35, 22), (31, 24), (28, 26), (25, 26),
+              (25, 26), (25, 26), (25, 22), (25, 16), (25, 10)]
     positions, handlers, times = _frames(
         {1: handler, 2: first, 3: second}, [1] * 10)
 
@@ -185,10 +186,10 @@ def test_sets_are_ordered_in_time():
 
     handler = [(25, 34), (25, 32), (25, 30), (25, 29), (25, 28),
                (25, 27), (25, 26), (25, 25), (25, 24), (25, 23)]
-    first = [(25, 20), (25, 24), (25, 29), (25, 28), (25, 18),
-             (25, 14), (25, 11), (25, 9), (25, 8), (25, 8)]
-    second = [(38, 20), (36, 21), (33, 23), (30, 24), (28, 25),
-              (25, 26), (25, 24), (25, 18), (25, 13), (25, 9)]
+    first = [(25, 22), (25, 26), (25, 28), (25, 28), (25, 28),
+             (25, 18), (25, 14), (25, 11), (25, 9), (25, 8)]
+    second = [(38, 20), (35, 22), (31, 24), (28, 26), (25, 26),
+              (25, 26), (25, 26), (25, 22), (25, 16), (25, 10)]
     positions, handlers, times = _frames(
         {1: handler, 2: first, 3: second}, [1] * 10)
     sets = detect_sets(positions, handlers, times)
