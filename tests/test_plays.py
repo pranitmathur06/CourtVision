@@ -341,8 +341,14 @@ def test_a_half_court_walk_up_is_not_transition():
                              [i * 0.1 for i in range(10)]) == []
 
 
-def test_transition_needs_the_same_handler_throughout():
-    """A possession change is not one player pushing the ball."""
+def test_a_pass_does_not_end_a_break_but_a_turnover_does():
+    """This test used to assert the opposite, and that was the bug.
+
+    A break begins with an outlet pass and often ends with a different player
+    finishing, so refusing to follow the ball across a handler change threw
+    away the clearest examples of transition. What must end it is the other
+    TEAM getting the ball, which needs the team split to see.
+    """
     from courtvision.plays import detect_transition
 
     path = [(25.0, 40.0), (25.0, 34.0), (25.0, 28.0), (25.0, 22.0),
@@ -350,8 +356,17 @@ def test_transition_needs_the_same_handler_throughout():
             (25.0, 6.0), (25.0, 6.0)]
     positions = [{1: p, 2: p} for p in path]
     handlers = [1, 1, 1, 2, 2, 2, 2, 2, 2, 2]      # ball changes hands mid-run
-    assert detect_transition(positions, handlers,
-                             [i * 0.1 for i in range(10)]) == []
+    times = [i * 0.1 for i in range(10)]
+
+    # 1 passes to team-mate 2: still one break.
+    teammates = [{1, 2} for _ in range(10)]
+    assert [p.name for p in detect_transition(positions, handlers, times,
+                                              offense=teammates)] == ["transition"]
+
+    # The same ball movement, but 2 is an opponent: a turnover, not a break.
+    opponents = [{1} for _ in range(10)]
+    assert detect_transition(positions, handlers, times,
+                             offense=opponents) == []
 
 
 def test_stagger_is_two_screeners_for_one_cutter():

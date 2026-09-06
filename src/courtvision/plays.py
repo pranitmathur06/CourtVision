@@ -354,42 +354,79 @@ def detect_transition(
     gain_ft: float = TRANSITION_GAIN_FT,
     speed_ft_s: float = TRANSITION_SPEED_FT_S,
     window_s: float = TRANSITION_WINDOW_S,
+    rim: tuple[float, float] | None = None,
+    offense: "list[set[int]] | None" = None,
 ) -> list[Play]:
     """The ball advancing at speed — a break, not a walk-up.
 
-    Transition is one of the largest play-type categories in basketball
-    analytics and is purely geometric: the ball covers ground toward the rim
-    quickly. Both terms are measurable, so no labels are needed.
+    Transition is one of the largest play-type categories in basketball and is
+    purely geometric: the ball covers ground toward the rim quickly. Both terms
+    are measurable, so no labels are needed to DEFINE it — though the shot
+    clock supplies labels to score it, which is how the two faults below were
+    found. Scored against those labels this detector managed F1 0.15 before
+    they were fixed.
 
-    A half-court set walks the ball up at a few feet per second and covers
-    little ground once it arrives. A break covers most of the visible court in
-    a couple of seconds. The thresholds separate those, and anything between is
-    left unnamed rather than forced into one.
+    `rim` is which basket the offense attacks. It matters: `BASKET` names one
+    end, so on full-court coordinates every possession going the other way was
+    measured as retreating from the rim, and half of all breaks were invisible.
+    The default keeps the old behaviour for callers whose positions are already
+    oriented.
+
+    The ball is followed across CHANGES OF HANDLER. A break begins with an
+    outlet pass and often ends with a different player finishing, so requiring
+    one handler throughout — which this did — threw away the clearest examples
+    of the thing it was looking for. A pass is not a change of possession; a
+    TURNOVER is, and `offense` is how the two are told apart. Without it any
+    handler change is followed, which is wrong at a steal and is the price of
+    not knowing the teams.
     """
+    target = np.array(rim if rim is not None else BASKET, dtype=float)
+
+    def to_rim(spot) -> float:
+        return float(np.hypot(spot[0] - target[0], spot[1] - target[1]))
+
+    def carried(index, attacking):
+        """Where the ball is at `index`, or None if the other team has it."""
+        holder = handlers[index]
+        if holder is None:
+            return None
+        if attacking is not None and holder not in attacking:
+            return False            # possession lost; distinct from "in flight"
+        return positions[index].get(holder)
+
     plays: list[Play] = []
-    claimed: set[int] = set()
+    claimed_until = -1.0
 
     for start in range(len(positions)):
-        handler = handlers[start]
-        if handler is None or handler in claimed or handler not in positions[start]:
+        if times[start] < claimed_until:
             continue
-        began = distance_to_basket_ft([positions[start][handler]])[0]
+        attacking = offense[start] if offense is not None else None
+        began = carried(start, attacking)
+        if began is None or began is False:
+            continue
+        best = None
         for end in range(start + 1, len(positions)):
-            if handlers[end] != handler or handler not in positions[end]:
-                break
             elapsed = times[end] - times[start]
             if elapsed <= 0:
                 continue
-            gained = began - distance_to_basket_ft([positions[end][handler]])[0]
-            if gained >= gain_ft and gained / elapsed >= speed_ft_s:
-                claimed.add(handler)
-                plays.append(Play(
-                    "transition", times[start], handler, handler,
-                    f"ball advanced {gained:.0f} ft toward the rim in "
-                    f"{elapsed:.1f}s"))
-                break
             if elapsed > window_s:
                 break
+            here = carried(end, attacking)
+            if here is False:
+                break                   # the other team has it now
+            if here is None:
+                continue                # in flight; the ball is still advancing
+            gained = to_rim(began) - to_rim(here)
+            if gained >= gain_ft and gained / elapsed >= speed_ft_s:
+                best = (gained, elapsed, handlers[start], handlers[end])
+                break
+        if best is None:
+            continue
+        gained, elapsed, first, last = best
+        claimed_until = times[start] + window_s
+        plays.append(Play(
+            "transition", times[start], first, last,
+            f"ball advanced {gained:.0f} ft toward the rim in {elapsed:.1f}s"))
     return plays
 
 
