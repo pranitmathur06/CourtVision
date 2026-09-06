@@ -2476,3 +2476,65 @@ close without either of them screening. The on-ball side did not produce a
 single false positive in the sample. That is the next thing to fix, and it
 needs more labels before any change to it can be believed -- at n=28 the
 interval is 48-95%, which cannot distinguish a fix from noise.
+
+## The play measurement does not survive a stricter protocol
+
+The 71% precision above credited the detector whenever a screen was visible
+somewhere in the panel. But the detector does not claim "a screen happened
+here" -- it names two specific players. Scoring it on the looser question
+counts a firing on the wrong pair as correct.
+
+Re-run with the pair as the unit -- every sampled moment shows the two
+offensive players who come closest, drawn across four instants, chosen by
+proximity and never by whether the detector fired -- on 18 close pairs:
+
+    tp 1   fp 5   fn 1   tn 11
+    precision 17% (1/6)      recall 50% (1/2)
+
+The same detector, the same game, the same labeller. The difference is entirely
+in what counts as a hit.
+
+### Why this is reported rather than fixed
+
+Three things have to be true before any of these numbers means something, and
+only the first is:
+
+  * **The detector is measurable.** It is, on tracking coordinates.
+  * **The labels are reliable.** They are not. Adjudicating the panel
+    disagreements found one labelled "no screen" that plainly held one -- the
+    pair had simply been missed among ten players and their paths. Errors in
+    the other direction are equally likely and were not looked for, since
+    hunting only for errors that favour the detector biases the result upward.
+  * **The labelling criterion is the real definition.** It is not. The rule
+    used here -- converge from about nine feet, one player planted, then part
+    -- is a reasonable reading, but a screen set from seven feet is still a
+    screen, and the threshold was chosen by eye. Most of the five pair-level
+    false positives are rejections on exactly that margin.
+
+So the honest statement is not that play detection is 17% or 71%, but that
+**it cannot be certified against ground truth this project can currently
+produce.** The bottleneck is the labels, not the detector.
+
+### What does hold up
+
+One check needs no labels at all, and it passes. Counts per game against what a
+real NBA game contains:
+
+    on-ball screens      63    real 60-80
+    off-ball screens     93    real 80-100
+    total               156    real ~150
+
+Three separate corrections moved it there -- the missing ball handler, the
+opponent pairing, and the planted-screener rule -- and each moved it toward the
+real figure from a different direction. That is weak evidence, being a
+distribution rather than a per-play score, but it is evidence that did not come
+from anybody's eye.
+
+### What would settle it
+
+Synergy play-type data gives per-player season totals by category
+(PRBallHandler, PRRollMan, Handoff, OffScreen, Cut). It is not per-possession,
+so it cannot score a single detection, but it can score a PLAYER: a big whose
+season is 30% roll-man should be detected rolling far more often than a guard
+who is 2%. That is a real external check on the naming, it needs no hand
+labels, and it is the next thing worth building.
