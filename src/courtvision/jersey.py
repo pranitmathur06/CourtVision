@@ -169,3 +169,103 @@ def roster_from_endpoint(team_ids_and_codes, season: str) -> dict:
             number = str(raw).lstrip("0") or "0"
             roster[number] = (code, row[name_at])
     return roster
+
+
+# ---------------------------------------------------------------------------
+# Who is actually on the floor.
+#
+# Reading a number from 720p broadcast is weak -- 16% of crops, and voting over
+# a track is limited by how long a track survives. But naming a player does not
+# require reading 28 possible numbers. The feed says exactly who is out there:
+# the box score gives five starters a side, and every substitution is logged as
+# "SUB: <in> FOR <out>". Applying them in order maintains the on-court five.
+#
+# That turns identification into a FIVE-way assignment per team, which a weak
+# reader can break ties in even when it cannot solve the problem alone.
+#
+# Live caveat, which is the whole reason this is kept separate from the reader:
+# substitutions arrive on the feed like everything else, so a live system is
+# behind by however long the feed lags. Starters are known before tip-off; the
+# five drifts from truth until the first substitution arrives.
+
+SUB_PATTERN = None
+
+
+def parse_substitution(description: str) -> tuple[str, str] | None:
+    """('player coming in', 'player going out') from a substitution line."""
+    import re
+
+    global SUB_PATTERN
+    if SUB_PATTERN is None:
+        SUB_PATTERN = re.compile(r"SUB:\s*(.+?)\s+FOR\s+(.+?)\s*$",
+                                 re.IGNORECASE)
+    matched = SUB_PATTERN.match((description or "").strip())
+    if not matched:
+        return None
+    return matched.group(1).strip(), matched.group(2).strip()
+
+
+class OnCourt:
+    """The five players per team currently on the floor.
+
+    Names are matched on the family name the play-by-play uses, which is what
+    substitution lines carry. A substitution naming somebody not currently on
+    the floor is applied anyway -- the feed is the authority, and refusing it
+    would leave the five permanently wrong after one missed event.
+    """
+
+    def __init__(self, starters: dict[str, list[str]]):
+        """`starters` maps team code -> five player names."""
+        self.teams = {team: list(names) for team, names in starters.items()}
+
+    def substitute(self, coming_in: str, going_out: str) -> bool:
+        """Apply one substitution. True when a team was actually changed."""
+        for team, names in self.teams.items():
+            for index, name in enumerate(names):
+                if name.split()[-1].lower() == going_out.split()[-1].lower():
+                    names[index] = coming_in
+                    return True
+        return False
+
+    def candidates(self, team: str) -> list[str]:
+        """The five names a detected player on this team could be."""
+        return list(self.teams.get(team, []))
+
+    def everyone(self) -> list[str]:
+        out = []
+        for names in self.teams.values():
+            out.extend(names)
+        return out
+
+
+def on_court_timeline(actions, starters: dict[str, list[str]]):
+    """[(elapsed_s, {team: [five names]})] across a game.
+
+    Built by replaying substitutions over the starting fives, so the five is
+    exact wherever the feed is -- the uncertainty is in WHEN, not who, and that
+    is the alignment problem solved elsewhere.
+    """
+    import re
+
+    from courtvision.event_alignment import elapsed_seconds
+
+    clock = re.compile(r"PT(\d+)M([\d.]+)S")
+    state = OnCourt(starters)
+    timeline = [(0.0, {team: list(names)
+                       for team, names in state.teams.items()})]
+    for action in actions:
+        if (action.get("actionType") or "").strip() != "Substitution":
+            continue
+        matched = clock.fullmatch((action.get("clock") or "").strip())
+        period = action.get("period")
+        if not matched or period is None:
+            continue
+        moment = elapsed_seconds(
+            period, int(matched.group(1)) * 60 + float(matched.group(2)))
+        parsed = parse_substitution(action.get("description") or "")
+        if parsed is None:
+            continue
+        if state.substitute(*parsed):
+            timeline.append((moment, {team: list(names)
+                                      for team, names in state.teams.items()}))
+    return timeline

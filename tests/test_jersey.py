@@ -117,3 +117,45 @@ def test_verdict_confidence_rule():
     assert Verdict(1, "43", "P", "IND", votes=3, runner_up=1).confident
     assert not Verdict(1, "43", "P", "IND", votes=3, runner_up=2).confident
     assert not Verdict(1, "43", "P", "IND", votes=2, runner_up=0).confident
+
+
+def test_parse_substitution_reads_the_feed_format():
+    from courtvision.jersey import parse_substitution
+    assert parse_substitution("SUB: Caruso FOR Holmgren") == ("Caruso", "Holmgren")
+    assert parse_substitution("SUB: T.J. McConnell FOR Tyrese Haliburton") == (
+        "T.J. McConnell", "Tyrese Haliburton")
+    assert parse_substitution("Nesmith REBOUND (Off:0 Def:1)") is None
+    assert parse_substitution("") is None
+
+
+def test_on_court_applies_a_substitution():
+    from courtvision.jersey import OnCourt
+    court = OnCourt({"IND": ["Tyrese Haliburton", "Pascal Siakam",
+                             "Myles Turner", "Andrew Nembhard",
+                             "Aaron Nesmith"]})
+    assert court.substitute("T.J. McConnell", "Haliburton")
+    names = court.candidates("IND")
+    assert "T.J. McConnell" in names and "Tyrese Haliburton" not in names
+    assert len(names) == 5, "five on the floor, always"
+
+
+def test_on_court_matches_on_family_name():
+    from courtvision.jersey import OnCourt
+    court = OnCourt({"OKC": ["Chet Holmgren", "Jalen Williams", "Luguentz Dort",
+                             "Isaiah Hartenstein",
+                             "Shai Gilgeous-Alexander"]})
+    # The feed logs substitutions by family name alone.
+    assert court.substitute("Alex Caruso", "Holmgren")
+    assert "Alex Caruso" in court.candidates("OKC")
+
+
+def test_on_court_reports_an_unmatched_substitution():
+    from courtvision.jersey import OnCourt
+    court = OnCourt({"IND": ["Pascal Siakam"]})
+    assert not court.substitute("Somebody", "NotOnFloor")
+
+
+def test_on_court_everyone_lists_both_teams():
+    from courtvision.jersey import OnCourt
+    court = OnCourt({"IND": ["A B"], "OKC": ["C D"]})
+    assert sorted(court.everyone()) == ["A B", "C D"]
