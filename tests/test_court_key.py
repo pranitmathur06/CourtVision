@@ -121,3 +121,43 @@ def test_key_matches_rim_is_false_without_a_rim():
     from courtvision.court_key import key_matches_rim
     quad = np.array([[0.0, 0.0], [10.0, 0.0], [10.0, 10.0], [0.0, 10.0]])
     assert not key_matches_rim(quad, None)
+
+
+def _floor_with_paint(hue: int, size=(300, 400)):
+    """Hardwood with a key painted at a given hue."""
+    cv2 = pytest.importorskip("cv2")
+    hsv = np.zeros((size[0], size[1], 3), dtype=np.uint8)
+    hsv[:, :, 0], hsv[:, :, 1], hsv[:, :, 2] = 15, 120, 200      # wood
+    hsv[120:260, 150:330, 0] = hue                               # the key
+    hsv[120:260, 150:330, 1] = 200
+    return cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+
+
+def test_detect_paint_hue_finds_a_blue_key():
+    from courtvision.court_key import detect_paint_hue
+    found = detect_paint_hue([_floor_with_paint(110)] * 3)
+    assert found is not None and found[0] <= 110 <= found[1]
+
+
+def test_detect_paint_hue_finds_a_RED_key():
+    from courtvision.court_key import detect_paint_hue
+    # The arena that broke the hardcoded range: 10% of frames became 87%.
+    found = detect_paint_hue([_floor_with_paint(174)] * 3)
+    assert found is not None and found[0] <= 174 <= found[1]
+
+
+def test_detect_paint_hue_ignores_the_wooden_floor():
+    from courtvision.court_key import detect_paint_hue
+    cv2 = pytest.importorskip("cv2")
+    hsv = np.zeros((300, 400, 3), dtype=np.uint8)
+    hsv[:, :, 0], hsv[:, :, 1], hsv[:, :, 2] = 15, 120, 200
+    bare = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+    # Wood is hue 15 and must never be mistaken for paint.
+    assert detect_paint_hue([bare] * 3) is None
+
+
+def test_key_quad_uses_a_calibrated_hue():
+    from courtvision.court_key import key_quad
+    red = _floor_with_paint(174)
+    assert key_quad(red) is None, "the default blue range must miss red paint"
+    assert key_quad(red, None, (160, 179)) is not None

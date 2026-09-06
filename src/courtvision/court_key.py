@@ -54,9 +54,16 @@ KEY_COURT_CORNERS = np.array([
     [LANE_LEFT_X, FREE_THROW_LINE_Y],
 ], dtype=np.float32)
 
-# The painted key's hue. Wide enough for broadcast colour grading, and paired
-# with a saturation floor that ordinary shadowed hardwood never reaches.
+# The painted key's hue. This DEFAULT is one arena's blue and must not be
+# trusted anywhere else -- measured across four broadcasts, three paint the key
+# at hue 107-113 and one paints it 174, where this range finds the key on 10%
+# of court frames instead of 97%. `detect_paint_hue` calibrates it from the
+# video; the constant is only a fallback for when calibration fails.
 PAINT_HUE = (95, 125)
+# Half-width of the calibrated hue window.
+PAINT_HUE_TOLERANCE = 15
+# Hues within this of 0/180 wrap, and red paint sits exactly there.
+HUE_WRAP = 180
 PAINT_MIN_SATURATION = 90
 PAINT_MIN_VALUE = 90
 MIN_PAINT_AREA_PX = 3000
@@ -104,7 +111,8 @@ def court_region(image: np.ndarray) -> np.ndarray | None:
 
 
 def key_quad(image: np.ndarray,
-             exclude_boxes: "np.ndarray | None" = None) -> np.ndarray | None:
+             exclude_boxes: "np.ndarray | None" = None,
+             paint_hue: "tuple[int, int] | None" = None) -> np.ndarray | None:
     """The painted key's four image corners, unordered, or None.
 
     `exclude_boxes` are detected people. One team here wears the same blue as
@@ -118,7 +126,8 @@ def key_quad(image: np.ndarray,
         return None
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     hue, saturation, value = hsv[:, :, 0], hsv[:, :, 1], hsv[:, :, 2]
-    paint = ((hue >= PAINT_HUE[0]) & (hue <= PAINT_HUE[1])
+    low, high = paint_hue if paint_hue is not None else PAINT_HUE
+    paint = ((hue >= low) & (hue <= high)
              & (saturation >= PAINT_MIN_SATURATION)
              & (value >= PAINT_MIN_VALUE)).astype(np.uint8) * 255
     paint = cv2.bitwise_and(paint, region)
@@ -174,7 +183,8 @@ def order_key_corners(quad: np.ndarray,
 
 def key_homography(image: np.ndarray,
                    rim_px: tuple[float, float] | None,
-                   exclude_boxes: "np.ndarray | None" = None
+                   exclude_boxes: "np.ndarray | None" = None,
+                   paint_hue: "tuple[int, int] | None" = None
                    ) -> np.ndarray | None:
     """Image-to-court homography from the painted key, or None.
 
@@ -184,7 +194,7 @@ def key_homography(image: np.ndarray,
     """
     import cv2
 
-    quad = key_quad(image, exclude_boxes)
+    quad = key_quad(image, exclude_boxes, paint_hue)
     ordered = order_key_corners(quad, rim_px)
     if ordered is None:
         return None
@@ -354,7 +364,8 @@ def precise_key_corners(image: np.ndarray,
         return None
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     hue, saturation, value = hsv[:, :, 0], hsv[:, :, 1], hsv[:, :, 2]
-    paint = ((hue >= PAINT_HUE[0]) & (hue <= PAINT_HUE[1])
+    low, high = paint_hue if paint_hue is not None else PAINT_HUE
+    paint = ((hue >= low) & (hue <= high)
              & (saturation >= PAINT_MIN_SATURATION)
              & (value >= PAINT_MIN_VALUE)).astype(np.uint8) * 255
     paint = cv2.bitwise_and(paint, region)
@@ -451,3 +462,48 @@ def key_matches_rim(quad: np.ndarray,
     """Whether this key and this rim plausibly belong to the same basket."""
     distance = key_rim_distance(quad, rim_px)
     return distance is not None and distance <= max_px
+
+
+def detect_paint_hue(images: "list[np.ndarray]",
+                     tolerance: int = PAINT_HUE_TOLERANCE
+                     ) -> "tuple[int, int] | None":
+    """Calibrate the key's colour from the video itself.
+
+    Every arena paints its own key. Measured across four broadcasts, three sit
+    at hue 107-113 and one at 174, and a range fixed on the first finds the
+    fourth's key on 10% of court frames instead of 97%.
+
+    Takes the dominant saturated hue inside the court region -- the key is the
+    largest strongly-coloured area on a wooden floor. Returns None when no such
+    colour is found, so a caller can fall back rather than register against
+    whatever happened to be reddest.
+    """
+    import cv2
+
+    from courtvision.court_tracking import has_court
+
+    counts = np.zeros(HUE_WRAP, dtype=np.int64)
+    for image in images:
+        if not has_court(image):
+            continue
+        region = court_region(image)
+        if region is None:
+            continue
+        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        strong = ((region > 0)
+                  & (hsv[:, :, 1] >= PAINT_MIN_SATURATION)
+                  & (hsv[:, :, 2] >= PAINT_MIN_VALUE))
+        if strong.sum() < 500:
+            continue
+        counts += np.bincount(hsv[:, :, 0][strong].ravel(),
+                              minlength=HUE_WRAP)[:HUE_WRAP]
+    if counts.sum() < 5000:
+        return None
+    # Wooden floors are hue 5-30 and dominate any court; exclude them so the
+    # paint is what is left.
+    searchable = counts.copy()
+    searchable[:35] = 0
+    if searchable.sum() < 1000:
+        return None
+    peak = int(np.argmax(searchable))
+    return (max(0, peak - tolerance), min(HUE_WRAP - 1, peak + tolerance))
