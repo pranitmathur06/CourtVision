@@ -2739,3 +2739,44 @@ It says nothing about screens, which still have no trustworthy labels, or about
 transition, which sits at F1 0.37. And it inherits the broadcast limitation
 recorded in round twenty-six: measured on tracking coordinates, it does not
 measure the vision stack.
+
+## Tightening it: a confidence gate, cross-validated
+
+87% on 227 events had a 95% interval of 83-92%, whose lower bound sits under
+the bar. Two things could close that, and the error analysis said which: wrong
+attributions have a passer who held the ball for a median of **0.2 s against
+0.7 s** for correct ones. A tenth of a second is not a pass; it is the tracker
+resolving a contested moment badly.
+
+The first use of that signal was backwards. Stepping OVER such a blip to take
+the man before him raised coverage from 43% to 58% and dropped accuracy from
+86% to 81%, because the events it newly resolves are exactly the contested
+ones. Declining to answer is the right trade, and the same one the jersey
+reader makes: a wrong attribution is worse than none.
+
+Accuracy then rises monotonically with the requirement, which is what a real
+confidence signal looks like rather than noise:
+
+    hold required   coverage   accuracy     (fitting games 0-5)
+      0.0 s            43%        86%
+      0.2 s            37%        87%
+      0.3 s            30%        92%
+      0.5 s            25%        94%
+
+The threshold is chosen by a rule fixed before any held-out game was scored --
+the lowest requirement reaching 90% on the fitting half -- and each fold is
+reported on the half that did not choose it:
+
+    chose 0.3s on games 0-5     reported on games 6-11    76/85 = 89%
+    chose 0.5s on games 6-11    reported on games 0-5     61/65 = 94%
+
+    pooled held-out   137/150 = 91%   (95% 87% to 96%)
+
+**91%, with the interval's lower bound at 87%.** This is the first play-side
+number in this project to clear 85% with confidence rather than on a point
+estimate, and every event in it was scored by a threshold chosen without it.
+The shipped default is 0.4 s, the mean of the two the folds selected.
+
+Coverage is 29% of assisted baskets. That is the deliberate half of the design;
+the involuntary half is that SportVU events are windows around plays, so the
+scorer is often not in the tracking window at all.

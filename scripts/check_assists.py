@@ -31,6 +31,19 @@ from courtvision.tracking_data import load_game
 # has already collected the ball out of the net -- which is what made the first
 # version of this pick a passer from the other team.
 IN_FLIGHT_Z_FT = 9.0
+# A player who "held" the ball for a tenth of a second did not pass it; that is
+# the tracker resolving a contested moment badly. Wrong attributions show a
+# median hold of 0.2 s against 0.7 s for correct ones.
+#
+# Stepping OVER such a blip and taking the man before him was tried first and
+# is worse: coverage rose from 43% to 58% and accuracy fell from 86% to 81%,
+# because the events it newly resolves are the contested ones. Declining to
+# answer is the right trade, and the same one the jersey reader makes -- a
+# wrong attribution is worse than no attribution.
+# The two folds chose 0.3 s and 0.5 s independently; 0.4 is the mean, the same
+# way the jersey reader ships the mean of its two selected floors.
+MIN_HOLD_S = 0.4
+_min_hold = MIN_HOLD_S
 
 SAMPLE_HZ = 10.0
 # How far back from the logged shot time to look for the shooter. The feed's
@@ -90,13 +103,25 @@ def passer_given_scorer(game, index: int, scorer, teams, ball_z):
             break
     if release is None:
         return None
-    for step in range(release, floor, -1):
+    step = release
+    while step > floor:
         held = game.frames[step].handler()
         if held is None or held.track_id == scorer:
+            step -= 1
             continue
-        if teams.get(held.track_id) != teams.get(scorer):
+        # How long this player kept it, walking back through his own frames.
+        candidate = held.track_id
+        end = step
+        while step > floor:
+            earlier = game.frames[step - 1].handler()
+            if earlier is None or earlier.track_id != candidate:
+                break
+            step -= 1
+        if (end - step + 1) / SAMPLE_HZ < _min_hold:
+            return None               # too brief to be a pass; decline
+        if teams.get(candidate) != teams.get(scorer):
             return None               # the ball came from the other team
-        return held.track_id
+        return candidate
     return None
 
 
@@ -145,8 +170,15 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("games", nargs="*")
     parser.add_argument("--limit", type=int, default=6)
+    parser.add_argument("--skip", type=int, default=0,
+                        help="games to skip, for reporting on a held-out set")
+    parser.add_argument("--min-hold", type=float, default=MIN_HOLD_S,
+                        help="shortest believable hold, in seconds")
     args = parser.parse_args()
-    paths = (args.games or sorted(glob.glob("data/tracking/*.json")))[:args.limit]
+    global _min_hold
+    _min_hold = args.min_hold
+    paths = (args.games or sorted(glob.glob("data/tracking/*.json")))
+    paths = paths[args.skip:args.skip + args.limit]
 
     total_baskets = 0
     scored = right = missing = 0
