@@ -37,7 +37,16 @@ CONTACT_FT = 5.0
 # Elbow: where the free-throw line meets the lane.
 ELBOW_X = ((COURT_WIDTH - 16.0) / 2, (COURT_WIDTH + 16.0) / 2)
 ELBOW_TOLERANCE_FT = 6.0
-CORNER_TOLERANCE_FT = 8.0
+# The corner is a REGION, not a point: the corner three sits a few feet inside
+# the sideline and up to about fourteen from the baseline. At eight feet this
+# found corner spacing on 2% of possessions, which is not basketball.
+CORNER_TOLERANCE_FT = 14.0
+# When to read a formation. Measured rather than chosen: corner spacing climbs
+# from 11% of sets at 20 s on the shot clock to about a third by 16-14 s and
+# then flattens, and the offense's width does the same (31 ft to 33 ft, then
+# flat). Before that the ball has arrived but the other four have not spaced,
+# and a formation rule reads an offense that does not exist yet.
+SET_AT_SHOT_CLOCK_S = 14.0
 
 
 def derivatives(track: np.ndarray, hz: float) -> dict[str, np.ndarray]:

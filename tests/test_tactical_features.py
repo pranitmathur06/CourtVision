@@ -93,5 +93,5 @@ def test_a_flat_set_is_not_horns():
 def test_corners_are_baseline_and_sideline_together():
     """A player on the wing is near a sideline but is not in the corner."""
     wing = np.array([[3.0, 25.0]])
-    assert in_corners(wing) == 0
+    assert in_corners(wing) == 0   # 25 ft up the sideline is the wing
     assert in_corners(np.array([[3.0, 4.0]])) == 1
