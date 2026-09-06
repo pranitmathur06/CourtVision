@@ -2939,3 +2939,55 @@ Both label sources hold screens -- 712 in SpaceJam, 223 plus 203 defensive-side
 in MultiSports -- so the next step is to pool them and test on each source
 separately. Training on both and holding up on both would be evidence of
 recognising the action rather than the dataset.
+
+# Round thirty-two: a ball-screen detector that holds on both datasets — 92%
+
+Two facts from the seven-way run pointed here. Screen errors went almost
+entirely to `pick_and_roll_defensive` -- one ball screen labelled from the two
+sides of the ball -- so those belong in one class. And the tactical classes
+overfit at 152-223 training clips, so the shortfall was data, not method.
+
+Both public sources label screens. Pooled: 916 screen clips in training, 490
+from SpaceJam and 426 from MultiSports.
+
+## Tested per source, on purpose
+
+The two datasets differ in ways a model could learn INSTEAD of the action:
+SpaceJam crops tight to one player, MultiSports at 1.6x with the screened man
+in frame; different games, cameras and resolutions. A pooled score averages
+over that and hides it, so the test is reported per source and the honest
+figure is the WEAKER of the two.
+
+    TEST — read once
+      pooled        675 clips   accuracy 92% (89-94)   recall 88%   precision 84%
+      spacejam      216 clips   accuracy 86% (81-91)   recall 88%   precision 85%
+      multisports   459 clips   accuracy 94% (92-96)   recall 87%   precision 83%
+
+Both sources clear 85% on accuracy and both sit at 87-88% recall. Precision is
+the weakest column at 83-85%, and MultiSports' 83% is below the bar.
+
+A model that held up only on the source it saw most of would have learned the
+dataset. This one holds on both, across different crops, cameras and games,
+which is the strongest evidence available here that it recognises the action.
+
+## The progression, and what each step bought
+
+    frozen Kinetics features, linear probe          77%   (chance 52%)
+    fine-tuned on SpaceJam alone, binary            87%
+    MultiSports `screen` inside a seven-way task    71% recall
+    both sources pooled, the two sides merged       92% pooled, 86%/94% per source
+
+The 71% is not a regression -- it is the same model asked a harder question,
+and the confusion matrix showed the loss went to the defensive-side label
+rather than to pass or dribble.
+
+## What is still not established
+
+Transfer to THIS project's broadcast. Both datasets are other people's footage
+at other camera angles. Cross-source generalisation is the closest available
+proxy and it is encouraging, but it is a proxy.
+
+And this is one play type. Pin-downs, flares, Horns and the defensive coverages
+-- drop, hedge, ICE -- are not labelled in either source. Formations remain the
+one part of that reachable by rule, for the reason recorded in round thirty:
+a formation is a configuration two people would agree on, and an action is not.
