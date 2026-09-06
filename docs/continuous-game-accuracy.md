@@ -2104,3 +2104,59 @@ not remove vision: the feed cannot say where players stood, how open a shooter
 was, or which of two possessions a clip belongs to. Those come from the
 painted-key registration (85.7% of court frames, 94.6% of players on the
 floor), and they are what a coaching tool is actually made of.
+
+# Round twenty-five: jersey OCR cannot reach 85%, and the reason is not OCR
+
+## The reader is fine; association is the wall
+
+Per-crop reading improved with a sweep of crop geometry and preprocessing:
+
+    first attempt    8.6% of crops read, 66.7% on a roster   =  5.7% useful
+    after sweep     16.2%                84.6%               = 13.7% useful
+
+That is enough. A player tracked through a 20-second possession at 5 fps gives
+about 100 frames, roughly 50 of them with him large enough to read, so ~8 reads
+at 16% -- about 7 correct against 1 wrong, which votes cleanly. The roster makes
+it stronger still: only 28 numbers exist in a game, so most misreads are simply
+dropped.
+
+So the requirement is not a better reader. It is a track that survives a
+possession.
+
+## Four tracking approaches, four failures
+
+                              tracks   median life   could gather 3 votes
+    ByteTrack, image space       463       1.4 s            0.0%
+    court coordinates            432       0.0 s            0.0%
+    ORB motion compensation      834       0.8 s            0.7%
+    the same at 15 fps           502       0.4 s            7.4%
+
+Ten players produce 463 identities in 300 seconds. Each failure had its own
+cause, and they are worth separating:
+
+  * ByteTrack matches raw image coordinates, and this camera pans hard enough
+    that a stationary player appears to sprint.
+  * Court coordinates remove camera motion exactly -- and need a registration
+    on every frame. The strict key-rim gate that delivers 1.72 ft positions
+    registers only 113 of 818 court frames, so the tracks starve. The accuracy
+    gate and the tracking requirement pull directly against each other.
+  * ORB compensation removes camera motion without any registration, and worked
+    -- motion was estimated on 741 of 818 frames -- but tracks still broke,
+    because the detector loses players intermittently and players occlude each
+    other.
+  * Raising the frame rate to 15 fps helped tenfold and is still not close.
+
+At 7.4% of tracks votable, roughly a third of player-time sits inside a track
+long enough to name. 85% is not reachable from there.
+
+## What is true instead
+
+Identity does not need reading at all for a recorded game. The feed names the
+shooter of every shot, and the box score plus all 76 substitution events
+maintain the on-court five exactly -- so the candidates are five per team, not
+28, and every event already carries its player's name.
+
+What is genuinely missing is naming the OTHER nine players during a possession,
+live, without the feed. That needs one of: a higher-resolution source, a
+jersey-number model trained on this domain rather than a general scene-text
+reader, or a re-identification model that survives occlusion. Not a threshold.
