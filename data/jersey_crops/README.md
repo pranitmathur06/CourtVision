@@ -77,3 +77,45 @@ circle -- it only moves it.
 That leaves human annotation as the only trustworthy source, which is why the
 72 labels here were read by eye, and why reaching 85% is a data-collection
 project rather than a modelling one.
+
+
+## Refusing uncertain crops helps, and how much depends on honest evaluation
+
+Extraction, not classification, is the weak step. Visualising what the
+classifier receives shows the split plainly: about half the crops yield a crisp,
+obviously readable silhouette (22, 33, 8, 9, 23, 0 come out clean) and the rest
+yield thin streaks or scattered fragments.
+
+Hand-designed quality gates did not separate those. An ink-fraction gate
+rejected 3 of 72 crops and moved accuracy from 36% to 38%. The classifier's own
+confidence does separate them:
+
+    keep by MARGIN over runner-up      n     accuracy
+    all                               59        36%
+    top 50%                           29        52%
+    top 25%                           14        86%
+
+That 86% is NOT the honest number. The threshold was chosen as a percentile of
+the same fourteen samples it was scored on. Re-run with a FIXED threshold, and
+evaluated per player appearance rather than per crop -- which is the unit a
+product uses -- it becomes:
+
+    margin floor   answered   coverage   precision
+        0.00          34        100%        29%
+        0.15          11         32%        64%
+        0.20           8         24%        62%
+
+So the defensible figure is about 64% precision at 32% coverage, not 86%.
+
+## Where jersey reading stands
+
+    rendered templates                        8%
+    easyocr, modal answer                    17%
+    whole-crop nearest neighbour             23%
+    localised digits, grey                   36%
+    silhouette + digit-count prior           36%
+    + confidence gating, honest evaluation   64% at 32% coverage
+
+Real progress -- eightfold over the starting point -- and still short of 85%.
+Refusing to answer is what buys the accuracy, so the remaining gap is coverage
+as much as precision.
