@@ -2160,3 +2160,44 @@ What is genuinely missing is naming the OTHER nine players during a possession,
 live, without the feed. That needs one of: a higher-resolution source, a
 jersey-number model trained on this domain rather than a general scene-text
 reader, or a re-identification model that survives occlusion. Not a threshold.
+
+## The bind, measured four ways
+
+Naming a player from the video needs two things at once, and they want opposite
+settings of the same gate.
+
+    strict key-rim gate (1.72 ft positions)
+        433 of 519 court frames rejected
+        60 shots -> 2 names produced -> 0 correct
+        2% coverage, 0% precision
+
+    loose gate (positions degrade to several feet)
+        632 of 653 court frames kept
+        60 shots -> 17 names produced -> 2 correct
+        28% coverage, 12% precision
+
+The strict gate identifies WHICH detected player is the shooter but leaves
+almost no frames to read. The loose gate leaves plenty of frames and then reads
+the wrong player, because the shooter can no longer be picked out reliably. The
+funnel says so directly: of 51 successful reads under the loose gate, 25
+returned numbers of players who were not on the floor at all.
+
+Per-crop reading is not the limit either way -- it measured 18.1% here, matching
+the 16% swept earlier. The limits are that the shooter is often not one of the
+nearest players to camera, so his digits are smaller than the best case, and
+that picking him out at all requires the accuracy that costs the frames.
+
+## What would actually clear 85%
+
+Not a threshold. One of:
+
+  * a higher-resolution source, since 720p puts the digits near 50 px;
+  * a jersey-number model trained on this domain instead of a general
+    scene-text reader -- and its training data can be generated automatically,
+    because every aligned shot labels the shooter's crop with a number the
+    roster already knows;
+  * a re-identification model that survives occlusion, which would make the
+    long tracks that voting needs.
+
+Until one of those exists, identity comes from the feed, which knows it exactly
+for every event, and the tactical layer stays anonymous by design.
