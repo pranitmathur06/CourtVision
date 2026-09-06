@@ -2588,3 +2588,87 @@ game -- an expert pass over a few hundred possessions -- or a published labelled
 dataset. Neither exists in this project. Every remaining route measured here
 either lacks a null, lacks a sample, or scores a looser question than the one
 the detector answers.
+
+# Round twenty-seven: transition, the one play type with real labels
+
+## Why this one is different
+
+Every other play type ran aground on the same thing: no feed says whether a
+possession contained a screen, so the labels had to come from a person looking
+at dots, and that person proved unreliable. Transition is different. The shot
+clock states exactly how long a possession ran, the detector never sees it, and
+there are about 1,900 labelled possessions across twelve games. Thresholds are
+fitted on six games and reported on six the fit never saw.
+
+## Getting the labels right took three corrections
+
+None of them was a modelling choice; each was found by checking the output
+against what basketball looks like.
+
+  * Splitting a possession at the first frame the other team touched the ball
+    produced **390 possessions a game against a real 200** -- every deflection
+    and contested rebound became one. Requiring a second and a half of
+    sustained control gives 203 and 202 in two games, median length 13.8 s.
+  * Reading the clock at a possession's last frame read a reset that had
+    already happened: a made basket resets to 24 the instant it drops, so half
+    of all possessions came back unlabelled. The MINIMUM reading across the
+    possession is how far the clock actually ran down.
+  * Reading it on arrival in the frontcourt labelled two thirds of possessions
+    "early", because crossing half court takes a few seconds in any offense.
+    Transition is about finishing early, not arriving early.
+
+The labels then read 8-12% transition, which is the shape the sport has. That
+imbalance also means accuracy is worthless as a score: **always answering
+half-court gives 88% and detects nothing**, so everything below is F1 on the
+transition class.
+
+## Two faults that made half of all breaks invisible
+
+`distance_to_basket_ft` measures to `BASKET`, which names ONE end of the court.
+On full-court coordinates every possession attacking the far rim was measured
+as retreating, so half of all breaks could not be detected at any threshold.
+
+And the detector stopped the moment the handler changed -- but a break begins
+with an outlet pass and often ends with a different player finishing. A test
+asserted this behaviour, `test_transition_needs_the_same_handler_throughout`,
+and its fixture put both players at identical coordinates so it could not tell
+a pass from a steal in the first place.
+
+## The results, and a leak caught before it was reported
+
+    threshold rule, before either fault was fixed      F1 0.15
+    threshold rule, after both                         F1 0.32
+    logistic model over possession geometry            F1 0.57   <- leaked
+    the same model, first four seconds only            F1 0.37
+
+The 0.57 was the model reading the label back to itself. Its dominant feature
+was POSSESSION LENGTH, weighted more than twice as hard as anything else -- and
+the label is "the possession ended within seven seconds". Length is a near-copy
+of the answer.
+
+The constraint the task should have carried from the start is that only the
+OPENING of a possession may be looked at. Predicting whether a possession will
+finish inside seven seconds from its first four is a prediction; measuring it
+over the whole possession is a restatement. With that imposed the model scores
+**F1 0.37 held out** -- precision 37%, recall 38% -- barely ahead of the single
+threshold rule.
+
+## What that says
+
+Transition does not reach 85% either, and the reason looks intrinsic rather
+than fixable. The label is "the offense finished early"; the evidence is "the
+ball was pushed". A team can push the length of the floor in four seconds and
+then run twelve more seconds of offense, and no feature of the opening
+distinguishes that from a break that ends in a layup. The two events are
+correlated, not the same, and F1 0.37 is roughly what that correlation supports.
+
+So the honest position on plays, across every route tried:
+
+    screens, counts per game        on-ball 76 (real 60-80), off-ball 99 (80-100)
+    screens, panel hand labels      71% -- but scores a looser question
+    screens, pair hand labels       17% on six firings
+    screens, Synergy roles          73% against a 60% null
+    transition, shot clock          F1 0.37 held out
+
+The counts are the only check that passes, and they are a distribution rather
+than a per-play score. Nothing here supports 85%.
