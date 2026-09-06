@@ -343,6 +343,7 @@ RESCREEN_WINDOW_S = 2.5
 
 TRANSITION_GAIN_FT = 25.0      # ground the ball must make toward the rim
 TRANSITION_SPEED_FT_S = 12.0   # and how fast, to be a break rather than a walk-up
+TRANSITION_WINDOW_S = 4.0      # how long the advance is allowed to take
 STAGGER_WINDOW_S = 2.0
 
 
@@ -350,6 +351,9 @@ def detect_transition(
     positions: list[dict[int, tuple[float, float]]],
     handlers: list[int | None],
     times: list[float],
+    gain_ft: float = TRANSITION_GAIN_FT,
+    speed_ft_s: float = TRANSITION_SPEED_FT_S,
+    window_s: float = TRANSITION_WINDOW_S,
 ) -> list[Play]:
     """The ball advancing at speed — a break, not a walk-up.
 
@@ -377,14 +381,14 @@ def detect_transition(
             if elapsed <= 0:
                 continue
             gained = began - distance_to_basket_ft([positions[end][handler]])[0]
-            if gained >= TRANSITION_GAIN_FT and gained / elapsed >= TRANSITION_SPEED_FT_S:
+            if gained >= gain_ft and gained / elapsed >= speed_ft_s:
                 claimed.add(handler)
                 plays.append(Play(
                     "transition", times[start], handler, handler,
                     f"ball advanced {gained:.0f} ft toward the rim in "
                     f"{elapsed:.1f}s"))
                 break
-            if elapsed > 4.0:
+            if elapsed > window_s:
                 break
     return plays
 

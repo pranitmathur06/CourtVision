@@ -67,6 +67,7 @@ class TrackingGame:
     periods: list[int]
     game_clocks: list[float]
     ball_z: list[float]
+    shot_clocks: list[float]
 
     def __len__(self) -> int:
         return len(self.frames)
@@ -194,6 +195,7 @@ def load_game(path: str | Path, target_hz: float | None = 10.0) -> TrackingGame:
     periods: list[int] = []
     clocks: list[float] = []
     ball_z: list[float] = []
+    shot_clocks: list[float] = []
     for index, moment in enumerate(ordered):
         period, _stamp, game_clock = moment[0], moment[1], moment[2]
         positions = moment[5]
@@ -218,6 +220,11 @@ def load_game(path: str | Path, target_hz: float | None = 10.0) -> TrackingGame:
         clocks.append(float(game_clock))
         ball = next((e for e in positions if len(e) >= 5 and e[0] == -1), None)
         ball_z.append(float(ball[4]) if ball else math.nan)
+        # The shot clock is the only exact statement of how long a possession
+        # has been running, which makes it ground truth for transition. It is
+        # None near a period end, where the game clock is the binding one.
+        raw = moment[3] if len(moment) > 3 else None
+        shot_clocks.append(float(raw) if raw is not None else math.nan)
 
     return TrackingGame(
         game_id=str(payload.get("gameid", "")),
@@ -227,5 +234,6 @@ def load_game(path: str | Path, target_hz: float | None = 10.0) -> TrackingGame:
         names=names,
         periods=periods,
         game_clocks=clocks,
+        shot_clocks=shot_clocks,
         ball_z=ball_z,
     )

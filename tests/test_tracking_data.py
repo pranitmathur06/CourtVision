@@ -164,3 +164,32 @@ def test_the_handler_is_still_counted_among_the_players(tmp_path):
     moment = _moment(1, 1000, 700.0, ball_xy=(20.5, 20.5), ball_z=3.0)
     game = load_game(_game([_event([moment])], tmp_path), target_hz=None)
     assert len(game.frames[0].players()) == 2
+
+
+# --- the shot clock --------------------------------------------------------
+#
+# The only exact statement of how long a possession has been running, and so
+# the only ground truth this project has for an offensive play type. It is
+# absent near a period end, where the game clock binds instead.
+
+def test_shot_clock_is_carried_through(tmp_path):
+    moment = _moment(1, 1000, 700.0)          # the helper sets it to 12.0
+    game = load_game(_game([_event([moment])], tmp_path), target_hz=None)
+    assert game.shot_clocks == [12.0]
+
+
+def test_a_missing_shot_clock_becomes_nan_not_zero(tmp_path):
+    """None must not read as 'no time left'; it means 'not running'."""
+    moment = _moment(1, 1000, 700.0)
+    moment[3] = None
+    game = load_game(_game([_event([moment])], tmp_path), target_hz=None)
+    assert math.isnan(game.shot_clocks[0])
+
+
+def test_shot_clocks_line_up_with_frames(tmp_path):
+    moments = [_moment(1, 1000 + i * 40, 700.0 - i) for i in range(4)]
+    for i, moment in enumerate(moments):
+        moment[3] = 24.0 - i
+    game = load_game(_game([_event(moments)], tmp_path), target_hz=None)
+    assert len(game.shot_clocks) == len(game.frames)
+    assert game.shot_clocks == [24.0, 23.0, 22.0, 21.0]

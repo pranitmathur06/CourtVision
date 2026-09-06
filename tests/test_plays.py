@@ -423,3 +423,23 @@ def test_defenders_converging_are_not_an_off_ball_screen():
     offense = [{1} for _ in range(10)]
     assert detect_off_ball_screens(positions, [1] * 10, times, offense) == []
     assert detect_off_ball_screens(positions, [1] * 10, times) != []
+
+
+def test_transition_thresholds_are_arguments_not_only_constants():
+    """They had to become arguments to be fitted honestly.
+
+    The defaults were set to pass synthetic fixtures and fire on 6 of 1172 real
+    possessions. Sweeping them needs them passable; the module constants stay
+    as the defaults so existing callers are unaffected.
+    """
+    from courtvision.plays import detect_transition
+
+    # A walk-up: 12 ft of ground in 0.9 s, nowhere near the default 25 ft.
+    handler = [(25, 40), (25, 38), (25, 36), (25, 34), (25, 32),
+               (25, 30), (25, 28), (25, 28), (25, 28), (25, 28)]
+    positions = [{1: p} for p in handler]
+    times = [i * 0.1 for i in range(10)]
+    assert detect_transition(positions, [1] * 10, times) == []
+    loose = detect_transition(positions, [1] * 10, times,
+                              gain_ft=10.0, speed_ft_s=4.0, window_s=4.0)
+    assert [p.name for p in loose] == ["transition"]
