@@ -2780,3 +2780,47 @@ The shipped default is 0.4 s, the mean of the two the folds selected.
 Coverage is 29% of assisted baskets. That is the deliberate half of the design;
 the involuntary half is that SportVU events are windows around plays, so the
 scorer is often not in the tracking window at all.
+
+# Round twenty-nine: rebounds do not attribute, and why assists do
+
+Rebounds have the same exact per-event ground truth as assists -- the feed
+credits a rebounder by name, about 97 a game, the largest label set available --
+so the same anchored method was applied. It does not work.
+
+    first sustained holder after the logged moment      43%
+    longest holder in a window straddling the moment    45%
+    first holder after the ball comes off the rim       47%
+    the same with ball-velocity matching                46%
+    the same at 25 Hz instead of 10                     45%
+
+The ceiling is not much higher than the result. The credited rebounder holds
+the ball **anywhere in a seven-second window only 72% of the time**, so more
+than a quarter of rebounds cannot be attributed by this route at all.
+
+The reason is specific and it explains why assists behave differently. Ball
+possession is derived from proximity, and a rebound is a scramble: several
+players are within arm's reach of the ball at once, which is exactly the
+condition proximity cannot resolve. A pass has a clear giver and a clear
+receiver separated in space and time, and that is why the same machinery
+reaches 91% there.
+
+Two ideas that sounded right and were not:
+
+  * **Longest hold in the window.** After a defensive rebound the ball is
+    outletted at once to a guard who dribbles for several seconds, so the
+    longest hold is the guard, not the rebounder.
+  * **Velocity matching** -- a held ball travels with its holder, a ball merely
+    passing near somebody does not. Physically true, and it changed nothing:
+    46% against 47%, with coverage falling from 85% to 74%.
+
+## The per-event scorecard
+
+    assists, who made the pass       91%   (cross-validated, 137/150)
+    rebounds, who secured it         47%   (ceiling 72%)
+    screens                          not labellable by this project
+    transition                       F1 0.37
+
+What separates the first line from the rest is not the method, which is the
+same in each case. It is whether the moment being attributed has one obvious
+owner. A pass does. A scramble does not, a screen is a judgement, and a
+transition is a property of a possession rather than an act.
