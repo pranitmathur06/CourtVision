@@ -200,3 +200,40 @@ Final honest state of jersey reading:
 Roughly tenfold over the start, and short of 85%. The next real gain is digit
 SEGMENTATION on curved fabric, which is a vision problem in its own right
 rather than a threshold or a bigger label set.
+
+
+## Final state, eight annotation rounds
+
+104 labels read by eye. Splitting merged digits -- the fix clock_reader already
+uses, where two touching glyphs binarise as one blob -- took usable crops from
+55% to 68%.
+
+    labels   precision   coverage
+      80        78%         35%
+      94        82%         32%
+     104        82%         31%
+
+Plateaued at 82% precision on eleven answered appearances. At that sample size
+82% is 9 of 11, and 85% is not distinguishable from it -- one more correct
+answer would read as 91%. The honest statement is that the point estimate is
+82% and the measurement cannot resolve the difference from 85%.
+
+Constraining the reading to a roster number, which sounded obviously right --
+nobody wears "39" -- measured WORSE, 73% against 82%, because forcing validity
+overrides the digit evidence when the classifier is correct but the combination
+is uncommon.
+
+## The whole arc
+
+    rendered templates                     8%
+    easyocr                               17%
+    whole-crop nearest neighbour          23%
+    localised digits, whole number        36%
+    whole number + confidence gating      64% at 32% coverage
+    per digit + confidence gating         78% at 35% coverage
+    + splitting merged digits             82% at 31% coverage
+    + roster constraint                   73%   (worse, reverted)
+
+Tenfold over the start. What remains is digit segmentation on curved fabric --
+still rejecting a third of crops -- and enough labels to measure past the noise
+floor. Both are real work; neither is a threshold.
