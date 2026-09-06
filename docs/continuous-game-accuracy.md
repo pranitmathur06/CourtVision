@@ -2201,3 +2201,49 @@ Not a threshold. One of:
 
 Until one of those exists, identity comes from the feed, which knows it exactly
 for every event, and the tactical layer stays anonymous by design.
+
+## The reader, isolated from everything else
+
+Every earlier number confounded reading with shooter identification, gating and
+voting. This one does not. At the release frame under the strict gate, the
+player at the feed's shot location is the named shooter and the roster gives
+his number, so the crop's answer is known:
+
+    11 crops with a known correct number, box height p50 156 px
+
+    right number      0   =  0.0%
+    wrong number      5   = 45.5%
+    nothing           6   = 54.5%
+
+Zero, against a 10% floor for guessing among the ten players on court. The
+crops are not small -- 156 px is a well-sized player -- so resolution is not
+the whole story.
+
+The reason is WHICH MOMENT. At the release a shooter has his arms above his
+head, is turned toward the basket, and is motion-blurred. The number is least
+visible exactly when the event happens. Validating on shooters is therefore the
+worst case for a reader, and it is also the case the product needs.
+
+Reading him at some other moment requires linking that read forward to the
+shot, which is the tracking that measured 1.4 s median life. The two halves
+fail in a way that cannot be composed.
+
+## Five measurements, one conclusion
+
+    track voting, ByteTrack          0.0% of tracks could vote
+    track voting, court space        0.0%
+    event pooling, strict gate       2.0% coverage,  0.0% precision
+    event pooling, loose gate       28.3% coverage, 11.8% precision
+    dense sampling, strict gate     15.6% coverage, 14.3% precision
+    the reader alone, known answer   0.0% correct on 11 labelled crops
+
+General-purpose OCR does not read NBA jersey numbers on 720p broadcast. This is
+not a threshold that needs tuning.
+
+## The labelled data this produced
+
+The validation harness is worth more than the result. Every aligned shot pairs
+a jersey crop with the number the roster already knows, with no annotation by
+anyone -- and it works on all four broadcasts. That is the training set for a
+domain-specific digit model, which is the honest route to 85%, alongside a
+higher-resolution source and a re-identification model that survives occlusion.
