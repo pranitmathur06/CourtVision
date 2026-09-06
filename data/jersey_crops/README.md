@@ -140,3 +140,35 @@ The percentile threshold picks up shadows, seams and chest logos, and the
 "modal colour is the kit" assumption fails whenever a crop carries much
 background. Kept as a recorded negative: the cleaner examples were not
 representative of the set.
+
+
+## Classify DIGITS, not numbers
+
+Treating "43" as its own class wastes the labels: fifteen classes, about four
+examples each, and accuracy that did not move when the set doubled. But 43 is a
+4 and a 3, and 22 is two 2s. The same 72 labels give 48 digit instances across
+ten classes, and digit recognition is the better-posed problem -- ten shapes
+rather than an open set of combinations.
+
+    per digit, all                          50%   (whole-number: 36%)
+    per digit, top 50% by margin            75%
+    per digit, top 35% by margin            94%
+
+Reconstructing the whole number needs every digit right, so those do not carry
+over directly. End to end, fixed thresholds, per player appearance:
+
+    margin   answered   coverage   precision
+     0.00       24        100%        42%
+     0.15       11         46%        73%
+     0.20        9         38%        78%
+     0.25        2          8%       100%   (n=2, meaningless)
+
+78% at 38% coverage, against 64% for whole-number classification.
+
+## Why more labels are now worth collecting
+
+Whole-number classification was flat from 39 to 72 labels because each label
+added one example to a fifteen-class problem. Per-digit turns each label into
+one or two examples across ten classes, so the same annotation effort is worth
+several times more. The scaling that stalled before should not stall here --
+which makes annotation the productive path again rather than a last resort.
