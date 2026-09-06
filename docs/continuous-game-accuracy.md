@@ -2672,3 +2672,70 @@ So the honest position on plays, across every route tried:
 
 The counts are the only check that passes, and they are a distribution rather
 than a per-play score. Nothing here supports 85%.
+
+# Round twenty-eight: the passer who created the basket — 87%
+
+## Why this one could be measured when the others could not
+
+Every earlier play-side attempt lacked per-event ground truth. No feed says
+whether a possession held a screen, so the labels had to come from a person
+looking at dots, and that person was demonstrably unreliable. The shot-clock
+labels for transition describe a possession rather than an action.
+
+Assists are different. The play-by-play credits an assister by name on every
+assisted basket — "Vucevic 19' Jump Shot (2 PTS) (Payton 1 AST)" — and tracking
+data carries the same game clock. All 54 assisted baskets in the first game
+aligned at **zero** clock offset. The detector never sees the credited name.
+
+## Two faults, and what they cost
+
+**The handler had no memory.** Marking the nearest player to the ball frame by
+frame is right most of the time and catastrophically wrong the rest: a defender
+an inch nearer for a tenth of a second takes the ball off the man dribbling it.
+On assisted baskets the player holding it before the shooter came back as an
+**opponent 31 times in 54**. A handover margin — you keep the ball until
+somebody is clearly nearer — fixed it.
+
+**Walking back from a basket lands on the wrong possession.** At the logged
+moment the ball is already through the net and in the hands of whoever
+collected it. The ball's HEIGHT marks the shot: step back over the frames where
+it was above head height, and the shooter is the last man to hold it before
+that.
+
+    29%   as first written
+    66%   after stepping over the shot arc
+    74%   after giving the handler memory
+
+## Anchoring, not conditioning
+
+At that point the measurement said "93% when the shooter is identified
+correctly". That number is worthless: it is scored only on the possessions
+where the tracking was already unambiguous, which is a selection of the easy
+ones. It is the same shape as every inflated number in this file.
+
+The feed names the scorer on every basket, so the honest version anchors on
+that name and is scored on **every** event. It is also how the product works:
+the endpoint supplies the event, vision supplies who did what.
+
+    ANCHORED on the feed's scorer, twelve games
+      resolved on 227 of 515 assisted baskets (44%)
+      passer matches the credited assister  198/227 = 87%   (95% 83-92%)
+
+**87% on 227 events with exact per-event labels.** The point estimate clears the
+bar and the interval reaches a little below it, which is the same standing as
+the jersey reader's 88%.
+
+Coverage is 44% because SportVU events are windows around plays, so the scorer
+is often not in the tracking window at all. That is a property of this dataset,
+not of the method.
+
+## What this does and does not settle
+
+It settles one offensive action: given that a basket was scored, who created it.
+That is a real film-study primitive and the first play-side capability here to
+reach the bar on a measurement with nothing wrong in it.
+
+It says nothing about screens, which still have no trustworthy labels, or about
+transition, which sits at F1 0.37. And it inherits the broadcast limitation
+recorded in round twenty-six: measured on tracking coordinates, it does not
+measure the vision stack.

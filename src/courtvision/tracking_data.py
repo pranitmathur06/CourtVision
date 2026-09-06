@@ -55,6 +55,12 @@ BALL_TRACK_ID = -1
 # height above which the ball has left somebody's hands.
 HOLD_REACH_FT = 4.0
 HOLD_MAX_Z_FT = 8.0
+# How much nearer the closest player must be than the next closest before the
+# ball is taken off the current holder. Without it the handler flips to
+# whichever defender happens to be marginally nearer for a frame, and the
+# sequence of holders through a possession becomes uninterpretable: on assisted
+# baskets the player before the shooter came back as an OPPONENT 31 times in 54.
+HANDOVER_MARGIN_FT = 1.2
 
 
 @dataclass(frozen=True)
@@ -89,6 +95,54 @@ def elapsed_seconds(period: int, game_clock: float) -> float:
         return before + (PERIOD_LENGTH_S - game_clock)
     before = 4 * PERIOD_LENGTH_S + (period - 5) * 300.0
     return before + (300.0 - game_clock)
+
+
+def _smooth_handlers(frames, ball_xy, ball_z):
+    """Assign the handler with memory, so it does not flip between teams.
+
+    Marking the nearest player to the ball frame by frame is right most of the
+    time and catastrophically wrong the rest: a defender a few inches nearer
+    for a tenth of a second takes the ball off the man dribbling it, and the
+    sequence of holders through a possession -- which is what a pass, a screen
+    and a break are all read from -- becomes noise. Once a player has the ball
+    he keeps it until somebody is clearly nearer.
+    """
+    out: list[Frame] = []
+    current: int | None = None
+    for frame, spot, height in zip(frames, ball_xy, ball_z):
+        holder = None
+        if spot is not None and not (math.isnan(height) or height > HOLD_MAX_Z_FT):
+            ranked = []
+            for track in frame.tracks:
+                if track.label == BALL:
+                    continue
+                x = (track.box.x1 + track.box.x2) / 2
+                gap = math.hypot(x - spot[0], track.box.y2 - spot[1])
+                ranked.append((gap, track.track_id))
+            ranked.sort()
+            if ranked and ranked[0][0] < HOLD_REACH_FT:
+                nearest, runner_up = ranked[0], (ranked[1] if len(ranked) > 1
+                                                 else (float("inf"), None))
+                keeping = next((g for g, t in ranked if t == current), None)
+                if (current is not None and keeping is not None
+                        and keeping < HOLD_REACH_FT
+                        and keeping - nearest[0] < HANDOVER_MARGIN_FT):
+                    holder = current
+                elif nearest[0] + HANDOVER_MARGIN_FT <= runner_up[0]:
+                    holder = nearest[1]
+                elif current is None:
+                    holder = nearest[1]
+        current = holder if holder is not None else current
+        tracks = []
+        for track in frame.tracks:
+            if holder is not None and track.track_id == holder and track.label == PLAYER:
+                tracks.append(Track(track.track_id, track.box, HANDLER, track.conf))
+            elif track.label == HANDLER:
+                tracks.append(Track(track.track_id, track.box, PLAYER, track.conf))
+            else:
+                tracks.append(track)
+        out.append(Frame(frame.index, frame.time_s, tuple(tracks)))
+    return out
 
 
 def _mark_handler(tracks: list[Track], positions) -> list[Track]:
@@ -192,6 +246,7 @@ def load_game(path: str | Path, target_hz: float | None = 10.0) -> TrackingGame:
         ordered = kept
 
     frames: list[Frame] = []
+    ball_xy: list[tuple[float, float] | None] = []
     periods: list[int] = []
     clocks: list[float] = []
     ball_z: list[float] = []
@@ -212,10 +267,14 @@ def load_game(path: str | Path, target_hz: float | None = 10.0) -> TrackingGame:
                 tracks.append(Track(int(player_id),
                                     _box(x, y, PLAYER_HEIGHT_FT, PLAYER_WIDTH_FT),
                                     PLAYER, 1.0))
+        ball_entry = next((e for e in positions
+                           if len(e) >= 5 and e[0] == -1), None)
         if not tracks:
             continue
-        tracks = _mark_handler(tracks, positions)
-        frames.append(Frame(index, elapsed_seconds(period, game_clock), tuple(tracks)))
+        frames.append(Frame(index, elapsed_seconds(period, game_clock),
+                            tuple(tracks)))
+        ball_xy.append((float(ball_entry[2]), float(ball_entry[3]))
+                       if ball_entry else None)
         periods.append(int(period))
         clocks.append(float(game_clock))
         ball = next((e for e in positions if len(e) >= 5 and e[0] == -1), None)
@@ -225,6 +284,8 @@ def load_game(path: str | Path, target_hz: float | None = 10.0) -> TrackingGame:
         # None near a period end, where the game clock is the binding one.
         raw = moment[3] if len(moment) > 3 else None
         shot_clocks.append(float(raw) if raw is not None else math.nan)
+
+    frames = _smooth_handlers(frames, ball_xy, ball_z)
 
     return TrackingGame(
         game_id=str(payload.get("gameid", "")),
