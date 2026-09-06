@@ -237,3 +237,23 @@ is uncommon.
 Tenfold over the start. What remains is digit segmentation on curved fabric --
 still rejecting a third of crops -- and enough labels to measure past the noise
 floor. Both are real work; neither is a threshold.
+
+
+## Extraction failures, diagnosed and mostly not recoverable
+
+Of 104 labelled crops, 33 are rejected because the blob count disagrees with
+the label:
+
+    label 2d, found 1 : 12   merged digits the splitter missed
+    label 1d, found 2 :  9   a spurious blob beside the number
+    label 1d, found 0 :  7   nothing found
+    label 2d, found 0 :  5   nothing found
+
+Targeting the first two -- lowering the split threshold from w>h to w>0.85h,
+and discarding blobs far less substantial than their neighbour -- was NEUTRAL:
+usable went 68% to 67% and precision stayed at 82%. Each change fixed some
+crops and broke others.
+
+That is where this stops: 82% precision at 31% coverage, eleven answered
+appearances, across eight annotation rounds and roughly ten distinct reader
+designs.
