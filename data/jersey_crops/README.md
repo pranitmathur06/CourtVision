@@ -172,3 +172,31 @@ added one example to a fifteen-class problem. Per-digit turns each label into
 one or two examples across ten classes, so the same annotation effort is worth
 several times more. The scaling that stalled before should not stall here --
 which makes annotation the productive path again rather than a last resort.
+
+
+## Where it stopped, and why
+
+80 labels over six annotation rounds. Adding the last eight moved nothing:
+
+    72 labels   78% precision at 38% coverage
+    80 labels   78% precision at 35% coverage
+
+Per-digit scaling did not rescue it, and the run says why: only 44 of 80 crops
+are usable, because extraction is rejected whenever the blob count disagrees
+with the label's digit count. Extraction, not label volume, is the wall -- the
+same conclusion the silhouette pictures reached, and it survived both attempts
+to fix it (colour segmentation measured worse, ink-fraction gating moved 36% to
+38%).
+
+Final honest state of jersey reading:
+
+    rendered templates                    8%
+    easyocr                              17%
+    whole-crop nearest neighbour         23%
+    localised digits, whole number       36%
+    whole number + confidence gating     64% at 32% coverage
+    per digit + confidence gating        78% at 35% coverage
+
+Roughly tenfold over the start, and short of 85%. The next real gain is digit
+SEGMENTATION on curved fabric, which is a vision problem in its own right
+rather than a threshold or a bigger label set.
