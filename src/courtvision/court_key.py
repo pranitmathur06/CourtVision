@@ -90,12 +90,27 @@ def court_region(image: np.ndarray) -> np.ndarray | None:
     if cv2.contourArea(biggest) < MIN_WOOD_AREA_PX:
         return None
     region = np.zeros(wood.shape, np.uint8)
+    # The CONVEX HULL, and it is load-bearing. The key reaches the baseline, so
+    # it is a NOTCH in the wooden region rather than an enclosed hole, and
+    # filling the outer contour therefore leaves it out. Switching to the plain
+    # contour looked like a clean fix -- skin tone falls in the hardwood hue
+    # range, so spectators register as wood and the hull stretches over them --
+    # and measured much worse: registrations fell 61 -> 27 and the gap to the
+    # endpoint's shot spot rose 6.8 -> 13.1 ft at the rim. The hull bridges the
+    # notch; the crowd it also swallows is harmless, because the key is still
+    # the largest paint-coloured blob inside it.
     cv2.drawContours(region, [cv2.convexHull(biggest)], -1, 255, -1)
     return region
 
 
-def key_quad(image: np.ndarray) -> np.ndarray | None:
-    """The painted key's four image corners, unordered, or None."""
+def key_quad(image: np.ndarray,
+             exclude_boxes: "np.ndarray | None" = None) -> np.ndarray | None:
+    """The painted key's four image corners, unordered, or None.
+
+    `exclude_boxes` are detected people. One team here wears the same blue as
+    the paint, so a player standing in the key merges with it and drags the
+    contour -- and the corners are what the whole registration rests on.
+    """
     import cv2
 
     region = court_region(image)
@@ -107,6 +122,14 @@ def key_quad(image: np.ndarray) -> np.ndarray | None:
              & (saturation >= PAINT_MIN_SATURATION)
              & (value >= PAINT_MIN_VALUE)).astype(np.uint8) * 255
     paint = cv2.bitwise_and(paint, region)
+    # exclude_boxes is accepted and deliberately NOT applied to the paint mask.
+    # One team wears the paint's colour, so masking players out seems obviously
+    # right -- and measured much worse: cutting their boxes leaves bites in the
+    # key that morphological closing cannot restore, distorting the very corners
+    # the registration rests on. Gap to the endpoint's shot spot went 6.8 -> 16.4
+    # ft at the rim and 11.7 -> 25.7 ft on threes, and registrations fell from
+    # 61 to 22. The contour is robust to a player standing in the key; it is not
+    # robust to a hole punched in it.
     paint = cv2.morphologyEx(paint, cv2.MORPH_OPEN, np.ones((7, 7), np.uint8))
     paint = cv2.morphologyEx(paint, cv2.MORPH_CLOSE, np.ones((15, 15), np.uint8))
     contours, _ = cv2.findContours(paint, cv2.RETR_EXTERNAL,
@@ -150,7 +173,8 @@ def order_key_corners(quad: np.ndarray,
 
 
 def key_homography(image: np.ndarray,
-                   rim_px: tuple[float, float] | None
+                   rim_px: tuple[float, float] | None,
+                   exclude_boxes: "np.ndarray | None" = None
                    ) -> np.ndarray | None:
     """Image-to-court homography from the painted key, or None.
 
@@ -160,7 +184,7 @@ def key_homography(image: np.ndarray,
     """
     import cv2
 
-    quad = key_quad(image)
+    quad = key_quad(image, exclude_boxes)
     ordered = order_key_corners(quad, rim_px)
     if ordered is None:
         return None
@@ -370,3 +394,60 @@ def precise_key_corners(image: np.ndarray,
     if np.abs(corners - quad).max() > 40.0:
         return None
     return corners
+
+
+# ---------------------------------------------------------------------------
+# Rejecting a key that cannot support a registration.
+#
+# Geometry at the basket measures p50 2.34 ft but p75 5.56 and p90 9.82: good
+# on most frames, badly wrong on a minority. For a tool that tells a player
+# where he should have been, a wrong court is worse than no court, so the tail
+# must be refused rather than averaged in.
+#
+# Four hand-built guesses at what marks a bad frame all failed -- ICP
+# refinement, masking players out of the paint, filling the contour instead of
+# its hull, and a quad gate on border/convexity/angles (coverage 89.8% -> 50.4%
+# for no accuracy gain at all). So the predictor was measured instead, by
+# correlating candidate signals against the basket-to-rim error in feet:
+#
+#     distance from key centre to rim   |r| 0.45   <- strongest
+#     quad area                         |r| 0.35
+#     hardwood fraction                 |r| 0.34
+#     pixels per foot                   |r| 0.12
+#     rim confidence                    |r| 0.11
+#
+# By tercile of that distance: 1.80 ft, 2.65 ft, 6.98 ft, with the share within
+# 3 ft falling 68% -> 63% -> 21%. It is physically meaningful rather than
+# fitted: when the key's centre sits far from the rim in the image, the key and
+# the rim belong to DIFFERENT baskets, and pairing them registers the court
+# against a correspondence that was never true.
+
+# 220 px, not the looser 280 or 340. Measured on basket-to-rim error in feet:
+#
+#     gate            coverage   p50     p75     within 3 ft
+#     none              92.3%   2.84    6.65      50.7%
+#     <= 280 px         76.4%   2.61    4.61      57.9%
+#     <= 220 px         18.5%   1.72    2.43      79.1%
+#
+# Per-frame coverage collapses, and that is the wrong denominator: analysis is
+# anchored to EVENTS, and a caller searching a few frames either side of one
+# only needs a single frame to pass. Accuracy per accepted frame is what cannot
+# be recovered later.
+MAX_KEY_TO_RIM_PX = 220.0
+
+
+def key_rim_distance(quad: np.ndarray,
+                     rim_px: tuple[float, float] | None) -> float | None:
+    """Pixels from the key's centre to the detected rim."""
+    if quad is None or len(quad) != 4 or rim_px is None:
+        return None
+    centre = np.asarray(quad, dtype=float).mean(axis=0)
+    return float(np.hypot(centre[0] - rim_px[0], centre[1] - rim_px[1]))
+
+
+def key_matches_rim(quad: np.ndarray,
+                    rim_px: tuple[float, float] | None,
+                    max_px: float = MAX_KEY_TO_RIM_PX) -> bool:
+    """Whether this key and this rim plausibly belong to the same basket."""
+    distance = key_rim_distance(quad, rim_px)
+    return distance is not None and distance <= max_px

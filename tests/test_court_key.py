@@ -94,3 +94,30 @@ def test_key_homography_is_none_on_a_frame_with_no_court():
     hsv[:, :, 0], hsv[:, :, 1], hsv[:, :, 2] = 110, 200, 60      # all crowd
     crowd = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
     assert key_homography(crowd, (300.0, 340.0)) is None
+
+
+def test_key_rim_distance_measures_from_the_quad_centre():
+    from courtvision.court_key import key_rim_distance
+    quad = np.array([[0.0, 0.0], [10.0, 0.0], [10.0, 10.0], [0.0, 10.0]])
+    assert key_rim_distance(quad, (5.0, 5.0)) == 0.0
+    assert key_rim_distance(quad, (5.0, 15.0)) == 10.0
+
+
+def test_key_rim_distance_is_none_without_a_rim():
+    from courtvision.court_key import key_rim_distance
+    quad = np.array([[0.0, 0.0], [10.0, 0.0], [10.0, 10.0], [0.0, 10.0]])
+    assert key_rim_distance(quad, None) is None
+
+
+def test_key_matches_rim_rejects_the_other_basket():
+    from courtvision.court_key import key_matches_rim
+    quad = np.array([[0.0, 0.0], [10.0, 0.0], [10.0, 10.0], [0.0, 10.0]])
+    # A rim 600 px away belongs to the far basket, not this key.
+    assert not key_matches_rim(quad, (605.0, 5.0))
+    assert key_matches_rim(quad, (100.0, 5.0))
+
+
+def test_key_matches_rim_is_false_without_a_rim():
+    from courtvision.court_key import key_matches_rim
+    quad = np.array([[0.0, 0.0], [10.0, 0.0], [10.0, 10.0], [0.0, 10.0]])
+    assert not key_matches_rim(quad, None)
