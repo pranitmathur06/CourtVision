@@ -52,3 +52,28 @@ probably a trained model rather than nearest neighbour on top of that.
 Note 00 and 0 are DISTINCT classes here. Mathurin wears 00 and Haliburton
 wears 0; the obvious `lstrip("0")` normalisation merges two different players
 and was a real bug in an earlier version of this work.
+
+
+## Both automatic labelling routes were measured, and both fail
+
+**Nearest player to a shot location.** Before the release the nearest player to
+where the shot will be taken is usually somebody else. About nine in ten labels
+disagreed with the visible jersey.
+
+**Nearest player to the free-throw line.** This looked airtight -- the shooter
+stands alone at a FIXED court position while the other nine are along the lane,
+so no association is being inferred. It fails anyway, and the reason is worth
+recording: the camera is frequently not showing the line at the moment the feed
+timestamps the attempt. It cuts to a replay, a bench reaction, or another
+angle, and the homography then places whoever happens to be in frame at those
+court coordinates. Of 24 crops inspected, roughly 2 labels were right; the set
+included a referee wearing 58 and a person in yellow who is not a player.
+
+The two routes fail for one underlying reason. Producing a label requires
+knowing which detected person is a given player, which is precisely what the
+labels exist to establish. Anchoring to a different event does not escape the
+circle -- it only moves it.
+
+That leaves human annotation as the only trustworthy source, which is why the
+72 labels here were read by eye, and why reaching 85% is a data-collection
+project rather than a modelling one.
