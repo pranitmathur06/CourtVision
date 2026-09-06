@@ -14,6 +14,18 @@ and never who was where. A coaching tool may say "the nearest defender was
 Team assignment is by SIDE OF BALL, not by jersey colour: the five players
 nearest the basket being attacked are treated as the defense. That is an
 approximation and is stated as one wherever it matters.
+
+CALLERS MUST DETECT AT conf 0.25, NOT HIGHER. Splitting five-and-five requires
+most of the ten to be found, and the detector's threshold decides that:
+
+    conf 0.35    6 players on court    8% of frames reach 8
+    conf 0.25    9 players on court   75%
+    conf 0.15   14 players on court  100%   (referees and false positives)
+
+Run at 0.35 first, this layer reported a 13.9 ft median nearest defender
+against a real 4-5 ft, called 42 of 61 shots open, and inverted the
+open-versus-contested relationship -- all downstream of splitting five-and-five
+when only six people had been found.
 """
 
 from __future__ import annotations
