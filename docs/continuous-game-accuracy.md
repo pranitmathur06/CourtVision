@@ -2879,3 +2879,63 @@ player from a fixed pool of games; a screen is a relationship, and a crop that
 excludes the man being screened is a good reason to expect the 87% to be
 conservative AND a good reason not to assume it survives on other footage. The
 MultiSports run that follows uses a wider crop for exactly that reason.
+
+# Round thirty-one: seven classes on film — the tactical ones fall short
+
+MultiSports annotates the specific player performing an action, frame by frame,
+on 720p broadcast footage, and covers the defensive side that nothing else
+labels. 3,035 clips were cut at a 1.6x crop -- wider than SpaceJam's, because a
+screen is a RELATIONSHIP and a crop that excludes the man being screened cannot
+show one -- and split by video so no two tubes from a possession straddle it.
+
+    class                      n   recall  precision
+    screen                    45     71%      68%
+    pick_and_roll_defensive   42     50%      64%
+    sag                       40     57%      53%
+    drive                     52     40%      88%
+    interfere_shot            74     91%      91%
+    pass                     103     95%      91%
+    dribble                  103     87%      69%
+
+    overall 77%;  the five PLAY classes alone 65%  (chance 14%)
+
+The easy classes are at 87-95%, so the pipeline works. The tactical ones are
+50-71%, and that is the finding.
+
+## More training will not fix it
+
+Validation peaked at 81% after one epoch and fell to 78% after the next while
+training loss halved. That is overfitting, on 152-223 training clips per
+tactical class: a data-size limit, not a training-length one. Training longer
+here would only have moved the training loss.
+
+## Where the errors go, which is what they mean
+
+    truth \ predicted        screen  pnr_def  sag  drive  interfere  pass  dribble
+    screen                      32      7      3     0       0        2     1
+    pick_and_roll_defensive     10     21      4     1       1        1     4
+    drive                        0      1      3    21       0        0    27
+
+Screen errors land almost entirely on `pick_and_roll_defensive` -- 7 one way,
+10 the other -- which is the same ball screen labelled from the two sides of
+the ball. That is a boundary between labels, not a failure to see the action.
+Merged into a single "ball screen" class:
+
+    recall 80% (95% 72-89%)   precision 88%   on 87 clips
+
+`drive` behaves the same way against `dribble`: 27 of 52 drives are called
+dribbles, and a drive IS a dribble toward the basket. Its 40% recall against
+88% precision says the model rarely says "drive" and is usually right when it
+does -- a threshold artifact rather than blindness.
+
+## What this says about the plan
+
+Screens scored 87% as a binary task on SpaceJam and 71% here. The difference is
+the seven-way discrimination, not screen recognition. Merging the two sides of
+the ball screen recovers most of it, and the remaining gap is training data:
+223 screens is a tenth of what the easy classes have.
+
+Both label sources hold screens -- 712 in SpaceJam, 223 plus 203 defensive-side
+in MultiSports -- so the next step is to pool them and test on each source
+separately. Training on both and holding up on both would be evidence of
+recognising the action rather than the dataset.
