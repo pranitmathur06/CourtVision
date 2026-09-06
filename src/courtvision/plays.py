@@ -61,12 +61,18 @@ def detect_screens(
     positions: list[dict[int, tuple[float, float]]],
     handlers: list[int | None],
     times: list[float],
+    offense: "list[set[int]] | None" = None,
 ) -> list[Play]:
     """Find screen actions across a sequence of frames.
 
     `positions[i]` maps track id to court feet in frame i; `handlers[i]` is the
     track holding the ball, or None. Tracks may appear and vanish — they do,
     constantly — so every lookup tolerates absence.
+
+    `offense[i]` is the set of track ids attacking in frame i. Pass it whenever
+    teams are known: a screen is set BY a teammate, and a defender closing on
+    the handler looks identical to a screener without it. Left None the pairing
+    is unrestricted, which is what a caller with no team split has to accept.
     """
     if not (len(positions) == len(handlers) == len(times)):
         raise ValueError("positions, handlers and times must be the same length")
@@ -85,9 +91,14 @@ def detect_screens(
             continue
         handler_now = positions[index][handler]
 
+        attacking = offense[index] if offense is not None else None
+        if attacking is not None and handler not in attacking:
+            continue
         for other, screener_now in positions[index].items():
             if other == handler or frozenset((handler, other)) in claimed:
                 continue
+            if attacking is not None and other not in attacking:
+                continue    # a defender arriving is pressure, not a screen
             if _distance(handler_now, screener_now) > SCREEN_CONTACT_FT:
                 continue
 
@@ -153,14 +164,26 @@ def detect_off_ball_screens(
     positions: list[dict[int, tuple[float, float]]],
     handlers: list[int | None],
     times: list[float],
+    offense: "list[set[int]] | None" = None,
 ) -> list[Play]:
-    """Screens between two players where NEITHER has the ball."""
+    """Screens between two players where NEITHER has the ball.
+
+    `offense` matters more here than anywhere else. Without it every pair of
+    non-handlers is a candidate, and of the thirty-six pairs among nine
+    non-handlers only six are teammates on offense — the rest are defenders
+    crossing, or an attacker and the man guarding him, who are near each other
+    by definition. Measured on a full game of exact coordinates, dropping the
+    filter is the difference between roughly eighty off-ball screens and six
+    hundred.
+    """
     plays: list[Play] = []
     claimed: set[frozenset[int]] = set()
 
     for index in range(1, len(positions)):
         handler = handlers[index]
-        ids = [t for t in positions[index] if t != handler]
+        attacking = offense[index] if offense is not None else None
+        ids = [t for t in positions[index]
+               if t != handler and (attacking is None or t in attacking)]
         for i, a in enumerate(ids):
             for b in ids[i + 1:]:
                 pair = frozenset((a, b))
@@ -175,16 +198,52 @@ def detect_off_ball_screens(
                     for back in range(1, min(WINDOW_FRAMES, index) + 1)
                 ):
                     claimed.add(pair)
-                    # b is treated as the cutter and a as the screener; the
-                    # direction b takes afterwards is what names the screen.
+                    screener, cutter = _screener_and_cutter(positions, index, a, b)
                     name, evidence = classify_off_ball_screen(
-                        positions, handlers, index, cutter=b, screener=a)
-                    plays.append(Play(name, times[index], a, b, evidence))
+                        positions, handlers, index, cutter=cutter,
+                        screener=screener)
+                    plays.append(Play(name, times[index], screener, cutter,
+                                      evidence))
     return plays
 
 
 
 CUTTER_MOVE_FT = 4.0           # how far a cutter must go for a direction to mean anything
+# How far ahead of contact the roles are judged. A screener plants and stays;
+# the cutter is gone.
+ROLE_WINDOW_FRAMES = 8
+
+
+def _screener_and_cutter(
+    positions: list[dict[int, tuple[float, float]]],
+    index: int,
+    first: int,
+    second: int,
+) -> tuple[int, int]:
+    """Which of the two set the screen, and which used it.
+
+    Taking the lower track id as the screener — which this did — gets the roles
+    backwards half the time, and the roles are not cosmetic: every off-ball
+    screen is named by the direction the CUTTER travels, so reversing them
+    turns a pin down into a back screen. Detection was unaffected and the
+    naming was scrambled, which is why a game came back with seven pin downs.
+
+    A screen is set and then left. The screener is whichever of the two has
+    gone LESS far by the end of the window.
+    """
+    def travelled(track: int) -> float:
+        start = positions[index].get(track)
+        if start is None:
+            return 0.0
+        far = 0.0
+        for ahead in range(1, ROLE_WINDOW_FRAMES + 1):
+            step = index + ahead
+            if step < len(positions) and track in positions[step]:
+                far = max(far, _distance(start, positions[step][track]))
+        return far
+
+    return ((first, second) if travelled(first) <= travelled(second)
+            else (second, first))
 
 
 def classify_off_ball_screen(

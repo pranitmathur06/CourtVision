@@ -2395,3 +2395,29 @@ report:
 are roughly five times too loose, and pin-downs -- one of the most common
 actions in the sport -- come back nine times, so the off-ball naming is wrong
 as well. Both are now measurable, which they were not an hour ago.
+
+## Two definition bugs, found by running on exact coordinates
+
+**Screens were being detected between opponents.** `detect_off_ball_screens`
+considered every pair of non-handlers. Among nine non-handlers that is
+thirty-six pairs, of which six are teammates on offense; the rest are two
+defenders crossing, or an attacker and the man guarding him, who are close to
+each other by definition. Passing the attacking five in:
+
+    944 screen actions  ->  260
+
+On-ball is now 131 against a real 90-110, and off-ball 129 against 80-100 --
+about 1.3x too loose rather than 6x.
+
+**Roles were assigned by track id.** The lower id was taken as the screener and
+the higher as the cutter, which is right half the time by luck. The roles are
+not cosmetic: every off-ball screen is named by the direction the CUTTER
+travels, so reversing them turns a pin down into a back screen. A screen is set
+and then left, so the screener is whichever of the two travels less afterwards.
+That moved 27 previously-unnamed screens into real names.
+
+What is NOT yet known is whether the names are right. There is no per-possession
+play label in any feed, so the naming accuracy is unmeasured, and the remaining
+1.3x looseness cannot be attributed without one. Hand labels rendered from
+tracking coordinates are the next step -- unlike broadcast crops, a 2D plot of
+a possession is unambiguous to label.

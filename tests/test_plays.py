@@ -205,8 +205,10 @@ def test_no_screens_means_no_sets():
 def _off_ball(cutter_path, screener_path):
     """Handler parked up top; screener meets the cutter, who then goes somewhere.
 
-    detect_off_ball_screens takes the lower track id as screener and the higher
-    as cutter, so track 3 is the cutter. The pair must be at least
+    Roles are decided by motion, not by track id: the screener is whichever of
+    the two travels LESS after contact, so the stationary path below is always
+    read as the screener and the moving one as the cutter. The pair must be at
+    least
     SCREEN_SEPARATION_FT apart before contact or no screen is detected at all,
     and the cutter must still be moving AFTER contact or there is no direction
     to name.
@@ -379,3 +381,44 @@ def test_one_screener_twice_is_not_a_stagger():
     positions = [{1: handler[i], 2: screener[i], 4: cutter[i]} for i in range(10)]
     assert detect_stagger(positions, [1] * 10,
                           [i * 0.1 for i in range(10)]) == []
+
+
+def test_roles_do_not_depend_on_track_id_order():
+    """The screener is the one who stays; swapping ids must not swap the name.
+
+    Taking the lower id as screener got this backwards half the time, and since
+    every off-ball screen is named by the CUTTER's direction, that turned pin
+    downs into back screens.
+    """
+    from courtvision.plays import detect_off_ball_screens
+
+    stays = [(20.0, 24.0)] * 10
+    runs = [(8.0, 27.0), (12.0, 26.0), (17.0, 25.0), (21.0, 25.0),
+            (21.0, 20.0), (20.0, 16.0), (19.0, 13.0), (18.0, 11.0),
+            (18.0, 10.0), (18.0, 10.0)]
+    handler = [(25.0, 30.0)] * 10
+    times = [i * 0.1 for i in range(10)]
+
+    low_id_stays = [{1: handler[i], 2: stays[i], 3: runs[i]} for i in range(10)]
+    low_id_runs = [{1: handler[i], 2: runs[i], 3: stays[i]} for i in range(10)]
+    first = detect_off_ball_screens(low_id_stays, [1] * 10, times)
+    second = detect_off_ball_screens(low_id_runs, [1] * 10, times)
+    assert [p.name for p in first] == [p.name for p in second] == ["back_screen"]
+    assert first[0].screener_id == 2 and first[0].handler_id == 3
+    assert second[0].screener_id == 3 and second[0].handler_id == 2
+
+
+def test_defenders_converging_are_not_an_off_ball_screen():
+    """Without a team split, every pair of non-handlers is a candidate."""
+    from courtvision.plays import detect_off_ball_screens
+
+    handler = [(25.0, 30.0)] * 10
+    # They start 12 ft apart and close to within touching distance.
+    one = [(8.0 + 1.4 * i, 24.0) for i in range(10)]
+    two = [(20.0, 24.0)] * 10
+    positions = [{1: handler[i], 2: two[i], 3: one[i]} for i in range(10)]
+    times = [i * 0.1 for i in range(10)]
+    # Tracks 2 and 3 defend; only track 1 attacks.
+    offense = [{1} for _ in range(10)]
+    assert detect_off_ball_screens(positions, [1] * 10, times, offense) == []
+    assert detect_off_ball_screens(positions, [1] * 10, times) != []
