@@ -119,3 +119,24 @@ So the defensible figure is about 64% precision at 32% coverage, not 86%.
 Real progress -- eightfold over the starting point -- and still short of 85%.
 Refusing to answer is what buys the accuracy, so the remaining gap is coverage
 as much as precision.
+
+
+## Colour-based extraction: plausible, and measured worse
+
+Grey Otsu thresholds whatever contrast dominates a crop -- jersey against skin,
+jersey against floor -- rather than the number against the shirt, so segmenting
+by colour distance from the KIT looked like the right fix. The kit is the
+torso's modal colour, and digits are the pixels far from it in CIELAB, which
+covers white-on-blue and dark-on-yellow under one rule.
+
+On individual crops it produces visibly cleaner digits. Measured end to end it
+is worse:
+
+                        per crop    per appearance
+    grey Otsu             36%         64% at 32% coverage
+    colour distance       21%         29% at 32% coverage
+
+The percentile threshold picks up shadows, seams and chest logos, and the
+"modal colour is the kit" assumption fails whenever a crop carries much
+background. Kept as a recorded negative: the cleaner examples were not
+representative of the set.
