@@ -2824,3 +2824,58 @@ What separates the first line from the rest is not the method, which is the
 same in each case. It is whether the moment being attributed has one obvious
 owner. A pass does. A scramble does not, a screen is a judgement, and a
 transition is a property of a possession rather than an act.
+
+# Round thirty: screens from film, on labels nobody here wrote — 87%
+
+## The labels existed all along
+
+This file spent several rounds concluding that no trustworthy screen labels
+were available and that screen detection therefore could not be certified.
+That was wrong. SpaceJam labels **712 clips as `pick`** -- a person watched each
+one -- and the archive has been sitting in `data/labeled/` throughout.
+`fetch_spacejam_subset.py` mapped class 7 into "other" alongside walk and run,
+and that mapping was taken at face value instead of being checked against the
+source annotations.
+
+Every screen number reported before this one -- 71%, 17%, 50% -- was scored
+against labels this project made up. This one is not.
+
+## Construction
+
+**Split by SOURCE clip.** SpaceJam ships every clip twice, as `<id>` and
+`<id>_flipped`, mirror images of the same footage. Splitting by clip would put
+a near-duplicate of a training example in the test set. Verified: zero source
+clips appear in both train and test.
+
+**Hard negatives.** The negative pool is drawn from defence, no_action and
+ball-in-hand -- the things a set screen actually resembles -- with `walk` and
+`run` capped at a tenth each. A classifier that separates screens from walking
+has learned nothing.
+
+## Result
+
+    frozen Kinetics features, linear probe      77%
+    fine-tuned, one epoch                       87%
+
+    TEST (216 clips, no mirror of any training clip)
+      accuracy  87%   (95% 82% to 91%)
+      precision 88%   recall 86%
+
+The frozen probe is the useful control: 77% against a 52% chance rate says the
+signal is partly generic motion, and the jump to 87% says most of it is not.
+
+One epoch. Training was stopped early to free the machine, so this is a floor
+rather than a ceiling.
+
+## What it does and does not establish
+
+It runs on **video**, which every other play measurement here does not.
+Assists at 91%, the screen geometry, transition -- all of those need SportVU
+coordinates that exist for 636 historical games and never for the film a coach
+studies. This runs on the film.
+
+It does not establish transfer. SpaceJam clips are tightly cropped to one
+player from a fixed pool of games; a screen is a relationship, and a crop that
+excludes the man being screened is a good reason to expect the 87% to be
+conservative AND a good reason not to assume it survives on other footage. The
+MultiSports run that follows uses a wider crop for exactly that reason.
