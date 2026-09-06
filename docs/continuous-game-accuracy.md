@@ -2538,3 +2538,53 @@ so it cannot score a single detection, but it can score a PLAYER: a big whose
 season is 30% roll-man should be detected rolling far more often than a guard
 who is 2%. That is a real external check on the naming, it needs no hand
 labels, and it is the next thing worth building.
+
+## Synergy as an external check, and the control that deflated it
+
+Synergy reports, per player per 2015-16 season, what share of his offensive
+possessions are PRRollMan, PRBallHandler and OffScreen. That is external to
+everything here and needs no hand labels, so it looked like the way out of the
+labelling problem: given the two players in a detected ball screen, the one who
+rolls for a living should be the screener.
+
+Across twelve tracking games, 899 on-ball and 1137 off-ball detections:
+
+    the detector's screener is the roll man   513/700 = 73%
+    a RANDOM other teammate would be          422/702 = 60%
+
+    off-ball, cutter is the screen user       507/804 = 63%
+
+The control is the whole result. 73% sounds like a finding until you pick a
+different teammate at random and get 60%, because the comparison is against the
+BALL HANDLER, and a ball handler is by definition someone with a high
+PRBallHandler share. Almost anyone else on the floor looks more like a roll man
+than he does. The detector is worth 13 points over a random teammate, not 23
+over a coin flip.
+
+So Synergy does not certify play detection either, and the reason is worth
+keeping: an external metric with a large sample is still worthless without a
+null to measure it against. Every promising number in this project that later
+dissolved had that shape.
+
+## Where play detection actually stands
+
+Four measurements, none supporting 85%:
+
+    counts per game            on-ball 76 (real 60-80), off-ball 99 (80-100)
+    panel-level hand labels    71% precision -- but credits firings on the
+                               wrong pair, so it overstates
+    pair-level hand labels     17% precision (1/6) -- correct unit, tiny sample,
+                               and labels of demonstrated unreliability
+    Synergy role check         73% against a 60% null
+
+The counts are the only check that passes, and it is a distribution rather than
+a per-play score: a detector could produce the right total by making
+compensating errors. That it reaches the right range on six different games,
+after three independent corrections each pushing from a different direction, is
+worth something, but it is not 85% and should not be reported as though it were.
+
+What would settle it is a per-possession play label from someone who knows the
+game -- an expert pass over a few hundred possessions -- or a published labelled
+dataset. Neither exists in this project. Every remaining route measured here
+either lacks a null, lacks a sample, or scores a looser question than the one
+the detector answers.
