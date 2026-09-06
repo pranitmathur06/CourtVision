@@ -97,6 +97,23 @@ def possessions(chunk, teams, clocks):
     return runs
 
 
+def attacked_rim(positions, handlers):
+    """Which basket this possession attacks: the one the ball ends nearer.
+
+    BASKET names one end of the court, so on full-court coordinates a
+    possession going the other way reads as retreating from the rim. Half of
+    all breaks were invisible before this.
+    """
+    spots = [spot[h] for spot, h in zip(positions, handlers)
+             if h is not None and h in spot]
+    if not spots:
+        return (BASKET[1], 25.0)
+    near, far = (BASKET[1], 25.0), (94.0 - BASKET[1], 25.0)
+    x, y = spots[-1]
+    return (near if math.hypot(x - near[0], y - near[1])
+            <= math.hypot(x - far[0], y - far[1]) else far)
+
+
 def truth_of(frames, teams, side, clocks):
     """'early', 'late' or None, from the shot clock when the possession ends.
 
@@ -142,15 +159,20 @@ def main() -> int:
                 if truth is None:
                     skipped += 1
                     continue
-                positions, handlers, times = [], [], []
+                positions, handlers, times, offense = [], [], [], []
                 for frame in frames:
-                    positions.append({t.track_id: ((t.box.x1 + t.box.x2) / 2,
-                                                   t.box.y2)
-                                      for t in frame.tracks if t.label != "ball"})
+                    spot = {t.track_id: ((t.box.x1 + t.box.x2) / 2, t.box.y2)
+                            for t in frame.tracks if t.label != "ball"}
+                    positions.append(spot)
                     held = frame.handler()
                     handlers.append(held.track_id if held else None)
                     times.append(frame.time_s)
-                called = bool(detect_transition(positions, handlers, times))
+                    offense.append({t for t in spot
+                                    if game.teams.get(t) == side})
+                called = bool(detect_transition(positions, handlers, times,
+                                                rim=attacked_rim(positions,
+                                                                 handlers),
+                                                offense=offense))
                 scored += 1
                 if truth == "early":
                     tp += called; fn += not called
