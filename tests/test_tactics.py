@@ -221,3 +221,23 @@ def test_teams_at_returns_none_when_jerseys_do_not_separate():
         positions.append([5.0 + i, 20.0])
     assert teams_at(image, np.array(boxes, dtype=float),
                     np.array(positions)) is None
+
+
+def test_name_shooter_attaches_a_name_when_the_player_is_there():
+    from courtvision.tactics import name_shooter
+    points = np.array([[25.0, 28.0], [10.0, 40.0]])
+    found = name_shooter(points, 0, (26.0, 29.0), "A. Nembhard")
+    assert found["name"] == "A. Nembhard"
+    assert found["gap_to_reported_ft"] < 2.0
+
+
+def test_name_shooter_refuses_when_nobody_is_near_the_reported_spot():
+    from courtvision.tactics import name_shooter
+    points = np.array([[5.0, 80.0]])
+    # Attributing a shot to the wrong player is the one unacceptable error.
+    assert name_shooter(points, 0, (26.0, 29.0), "A. Nembhard") is None
+
+
+def test_name_shooter_needs_a_name():
+    from courtvision.tactics import name_shooter
+    assert name_shooter(np.array([[25.0, 28.0]]), 0, (25.0, 28.0), "") is None

@@ -440,3 +440,46 @@ def teams_at(image: np.ndarray, boxes: np.ndarray, positions: np.ndarray,
              else np.asarray(positions, dtype=float).mean(axis=0))
     one, two = enforce_five(split[0], split[1], focus)
     return offense_first(one, two, ball_spot)
+
+
+# ---------------------------------------------------------------------------
+# Naming players.
+#
+# Jersey OCR was measured on this broadcast and is not usable: of 244 jersey
+# crops, easyocr returned a number on 8.6%, and only 66.7% of those were on
+# either roster -- an effective 5.7% correct, with the single most-read number
+# not belonging to any player in the game. The limit is resolution: 720p
+# source, players about 160 px tall, numbers about 50 px. It would need 1080p+
+# or a digit-specific model, and voting across a track cannot rescue a 5.7%
+# base rate.
+#
+# For a RECORDED game none of that matters, because the feed names the shooter
+# and gives his court location. Pairing that with the release frame attributes
+# a name to a detected player without reading anything.
+#
+# For a LIVE game it does matter, and this is the honest gap: until the feed
+# arrives, players are anonymous. The tactical functions were written to work
+# anonymously for exactly this reason.
+
+
+def name_shooter(positions: np.ndarray, shooter_index: int,
+                 shot_spot, player_name: str,
+                 max_gap_ft: float = 6.0) -> "dict | None":
+    """Attach a fed name to a detected player at the release.
+
+    Returns None when the nearest player is too far from the reported shot
+    location to be the shooter -- attributing an action to the wrong player is
+    the one error a coaching tool cannot make, so distance has to be checked
+    rather than assumed.
+    """
+    positions = np.asarray(positions, dtype=float)
+    if len(positions) <= shooter_index or not player_name:
+        return None
+    spot = np.asarray(shot_spot, dtype=float)
+    where = positions[shooter_index]
+    gap = float(np.hypot(where[0] - spot[0], where[1] - spot[1]))
+    if gap > max_gap_ft:
+        return None
+    return {"name": player_name,
+            "court_xy": [round(float(where[0]), 1), round(float(where[1]), 1)],
+            "gap_to_reported_ft": round(gap, 1)}
