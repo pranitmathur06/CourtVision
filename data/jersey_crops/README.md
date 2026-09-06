@@ -1,6 +1,6 @@
 # Hand-labelled jersey crops
 
-39 player crops from an uncut NBA broadcast, each labelled with the jersey
+72 player crops from an uncut NBA broadcast, each labelled with the jersey
 number a person can read on it. `labels_by_eye.json` maps filename -> number.
 
 ## Why these are labelled by eye
@@ -33,3 +33,22 @@ It is the seed of the training data a domain-specific model needs. Reaching 85%
 requires hundreds to thousands of labelled crops, and this is the format and
 the method: annotation grids of the largest crops, read by eye, ambiguous ones
 skipped rather than guessed.
+
+
+## Scaling measured, not assumed
+
+Labels were added in five annotation rounds and the reader re-scored each time.
+Doubling the set did not move accuracy, though it did widen the lift over
+guessing:
+
+    39 labels, 13 classes    36% correct, majority baseline 33%
+    72 labels, 15 classes    36% correct, majority baseline 23%
+
+Nearest neighbour with about four examples per class is the constraint, not the
+annotation. Reaching 85% needs on the order of 50-100 examples per class --
+750-1500 labels, or 25-50 more rounds of the same manual reading -- and
+probably a trained model rather than nearest neighbour on top of that.
+
+Note 00 and 0 are DISTINCT classes here. Mathurin wears 00 and Haliburton
+wears 0; the obvious `lstrip("0")` normalisation merges two different players
+and was a real bug in an earlier version of this work.
