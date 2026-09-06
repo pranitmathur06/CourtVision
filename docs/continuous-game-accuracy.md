@@ -2247,3 +2247,48 @@ a jersey crop with the number the roster already knows, with no annotation by
 anyone -- and it works on all four broadcasts. That is the training set for a
 domain-specific digit model, which is the honest route to 85%, alongside a
 higher-resolution source and a re-identification model that survives occlusion.
+
+## Two labelling bugs that made earlier jersey numbers meaningless
+
+Both were mine and both mattered.
+
+**The automatic labels were circular.** A crop was paired with the shooter's
+number by taking the player nearest the eventual shot spot, up to 12 ft away,
+two seconds before the shot -- which is usually a DIFFERENT player. Inspecting a
+grid of them, roughly nine in ten labels disagreed with the number visible on
+the jersey. The harness assumed exactly the association it was meant to
+validate, so the earlier "0 of 11" understated the reader rather than condemning
+it.
+
+**The hit criterion was far too lenient.** Reading a crop with four
+preprocessings returns a pile of candidates -- one crop produced fourteen -- and
+scoring a hit when the truth appears ANYWHERE in that pile is not reading. With
+about 28 possible numbers, a shotgun hits often.
+
+## The reader, against labels read by eye
+
+Twenty-four of the largest crops were annotated by hand. Twelve carried a
+number legible to a person; those are the test set, and the score is the modal
+answer, not membership in a candidate pile.
+
+    a person                      12/12 = 100%
+    easyocr, modal answer          2/12 =  17%
+    template matching, rendered    1/12 =   8%
+
+The information is present at 720p -- a person reads every one of them. No
+available reader gets close. Template matching was worth trying because
+clock_reader uses exactly that technique to read the scoreboard at 94.9%, but
+scoreboard glyphs are flat, aligned and uniform, while jersey digits sit on
+curved fabric in a team-specific typeface under stadium light.
+
+## Where this leaves identity
+
+Jersey OCR does not reach 85% and will not without a model trained on this
+domain. Training one needs a labelled set, and the only trustworthy labelling
+route measured here is a person looking at crops -- the automatic route is
+circular. That is a real piece of work, not a threshold.
+
+Identity for recorded games remains exact from the feed, which names every
+event's player, and the on-court five is exact from the box score plus
+substitutions. The tactical layer is anonymous by design and does not need any
+of this.
