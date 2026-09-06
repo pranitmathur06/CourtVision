@@ -37,7 +37,7 @@ import math
 from dataclasses import dataclass
 from pathlib import Path
 
-from courtvision.types import BALL, PLAYER, Box, Frame, Track
+from courtvision.types import BALL, HANDLER, PLAYER, Box, Frame, Track
 
 # Court is 94 x 50 feet; positions are in those units.
 COURT_LENGTH_FT = 94.0
@@ -50,6 +50,11 @@ PLAYER_WIDTH_FT = 2.2
 BALL_SIZE_FT = 0.8
 PERIOD_LENGTH_S = 720.0
 BALL_TRACK_ID = -1
+# The ball is HELD when it is within reach of a player and low enough not to be
+# in flight. Both are physical rather than tuned: an arm's length, and the
+# height above which the ball has left somebody's hands.
+HOLD_REACH_FT = 4.0
+HOLD_MAX_Z_FT = 8.0
 
 
 @dataclass(frozen=True)
@@ -83,6 +88,37 @@ def elapsed_seconds(period: int, game_clock: float) -> float:
         return before + (PERIOD_LENGTH_S - game_clock)
     before = 4 * PERIOD_LENGTH_S + (period - 5) * 300.0
     return before + (300.0 - game_clock)
+
+
+def _mark_handler(tracks: list[Track], positions) -> list[Track]:
+    """Relabel whichever player controls the ball as the HANDLER.
+
+    Without this every downstream consumer of `Frame.handler` gets None, and
+    the on-ball half of play detection silently does nothing -- `detect_screens`
+    reported zero ball screens across an entire game before this existed. The
+    ball's height is what separates a player holding it from a player standing
+    under a pass, so a ball above head height leaves the handler unset.
+    """
+    ball = next((e for e in positions if len(e) >= 5 and e[0] == -1), None)
+    if ball is None:
+        return tracks
+    bx, by, bz = float(ball[2]), float(ball[3]), float(ball[4])
+    if not math.isfinite(bz) or bz > HOLD_MAX_Z_FT:
+        return tracks
+    best, closest = None, HOLD_REACH_FT
+    for position, track in enumerate(tracks):
+        if track.label != PLAYER:
+            continue
+        x = (track.box.x1 + track.box.x2) / 2
+        y = track.box.y2
+        gap = math.hypot(x - bx, y - by)
+        if gap < closest:
+            best, closest = position, gap
+    if best is None:
+        return tracks
+    held = tracks[best]
+    tracks[best] = Track(held.track_id, held.box, HANDLER, held.conf)
+    return tracks
 
 
 def load_game(path: str | Path, target_hz: float | None = 10.0) -> TrackingGame:
@@ -176,6 +212,7 @@ def load_game(path: str | Path, target_hz: float | None = 10.0) -> TrackingGame:
                                     PLAYER, 1.0))
         if not tracks:
             continue
+        tracks = _mark_handler(tracks, positions)
         frames.append(Frame(index, elapsed_seconds(period, game_clock), tuple(tracks)))
         periods.append(int(period))
         clocks.append(float(game_clock))

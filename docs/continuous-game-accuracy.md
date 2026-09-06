@@ -2292,3 +2292,106 @@ Identity for recorded games remains exact from the feed, which names every
 event's player, and the on-court five is exact from the box score plus
 substitutions. The tactical layer is anonymous by design and does not need any
 of this.
+
+# Round twenty-six: play detection needs a registration that survives a play
+
+## What the shot-frame number was hiding
+
+Registration is quoted at 85.7% of court frames and 1.72 ft. Both are true of
+frames chosen AT a shot, where the camera is pointed at a basket and the lane is
+comparatively clear. A play is not a moment, it is six seconds, and sampled
+continuously through the six seconds before each shot the same gate passes 17%.
+
+The rejections are almost all one cause:
+
+    key far from rim      307    79%
+    OK                     63    16%
+    no court               16     4%
+    no rim detection        4     1%
+
+Looking at the frames explains it in one glance. Mid-possession there are five
+players standing in and around the paint, so the painted quad comes back as a
+fragment, a triangle, or a self-intersecting bowtie. The gate is doing its job
+by refusing them.
+
+## Scarce is the smaller problem; the survivors disagree
+
+Two registrations of the same instant can be compared exactly, because camera
+motion between two broadcast frames is recoverable. Measured on the rim, ORB
+alignment is accurate to **0.5 px median** (p90 1.9 px) -- camera motion is not
+a source of error at all. So carrying frame A's registration to frame B and
+comparing with B's own registration measures the REGISTRATIONS.
+
+    gap      n   p50 ft  p75 ft  p90 ft
+    0.2s   122      5.8    17.4    23.6
+    1.0s    70     12.3    22.0    26.7
+    3.0s    20     11.8    16.8    26.7
+
+Two 1.72 ft registrations would disagree by about 2.4 ft. These disagree by 5.8
+ft at a fifth of a second. The gate-passing frames mid-possession are not
+merely rare, they are frequently wrong, which the shot-frame measurement never
+showed.
+
+No property of the quad separates the good from the bad well enough to use:
+
+    side ratio of the worse quad   n     p50 gap   within 3 ft
+      0.00 to 0.20                18      16.0 ft         11%
+      0.20 to 0.35               112      16.3 ft         26%
+      0.35 to 0.50                96       9.7 ft         16%
+      0.50 to 1.00                23       2.7 ft         57%
+
+The last row is the only encouraging one and it holds 9% of the pairs.
+
+## Three ways to get one good registration per possession, all measured
+
+Since alignment is exact, a window does not need 31 registrations. It needs
+ONE, and camera motion carries it everywhere else. Three ways to find that one:
+
+**Consensus.** Warp every candidate into a common frame and keep the largest
+mutually-agreeing cluster -- RANSAC, with camera motion supplying the
+correspondence. 5 of 25 windows produced a consensus at all, and it was no
+better than picking a candidate arbitrarily: nearest player to the feed's shot
+spot p50 10.7 ft consensus against 9.0 ft lone. Too few candidates are right
+for a vote among them to mean anything.
+
+**Anchor at the release and propagate back.** Trust the one frame the feed
+corroborates -- where a detected player really is at the reported shot location
+-- and chain outward. 3 of 18 shots produced an anchor the feed corroborated
+within 5 ft, and those chains reached back a median of 1.4 s before alignment
+failed. Not enough for a six-second play.
+
+**A rim-placement gate.** Proposed, then withdrawn: the rim is ten feet above
+the floor, so a floor homography maps its pixel to where the sight-line meets
+the ground, well beyond the basket. That displacement is geometry, not error,
+and the measurement built on it was meaningless. Recorded because it is exactly
+the kind of plausible test that has to be checked before it is believed.
+
+## Where that leaves offense and defense
+
+Play detection from this broadcast is blocked on registration, not on the play
+definitions. Nothing about screens, rolls or pin-downs is hard to state in court
+feet; there is currently no reliable way to get the court feet for six
+consecutive seconds of a possession.
+
+So the play logic is being developed and measured on SportVU tracking data,
+where coordinates are exact, identities are stable and the ball is known. That
+measures the ceiling -- the definitions -- and says nothing about the vision
+stack, exactly as the tracking-data plan requires it to be reported.
+
+## The first thing that measurement found
+
+`tracking_data` labelled every person PLAYER and nobody HANDLER, so
+`Frame.handler` returned None on every frame and the on-ball half of play
+detection silently did nothing: **zero ball screens across an entire game**. The
+handler is not a guess on exact coordinates -- it is the nearest player to a
+ball that is not in flight -- and with it set on 53% of frames the detectors
+report:
+
+    cross_screen      244    ball_screen       143    back_screen    136
+    off_ball_screen   147    dribble_handoff   108    flare_screen    68
+    pick_and_pop       45    pick_and_roll      44    pin_down         9
+
+944 screen actions in one game against a real figure near 150. The definitions
+are roughly five times too loose, and pin-downs -- one of the most common
+actions in the sport -- come back nine times, so the off-ball naming is wrong
+as well. Both are now measurable, which they were not an hour ago.

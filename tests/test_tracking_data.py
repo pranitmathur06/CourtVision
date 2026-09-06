@@ -129,3 +129,38 @@ def test_a_game_with_no_events_is_rejected(tmp_path):
     path = _game([], tmp_path)
     with pytest.raises(ValueError):
         load_game(path)
+
+
+# --- who holds the ball ----------------------------------------------------
+#
+# The adapter labelled every person PLAYER and nobody HANDLER, so Frame.handler
+# returned None on every frame and the on-ball half of play detection silently
+# did nothing -- zero ball screens across a whole game. These pin the rule.
+
+def test_the_player_within_reach_of_a_low_ball_is_the_handler(tmp_path):
+    from courtvision.types import HANDLER
+    moment = _moment(1, 1000, 700.0, ball_xy=(20.5, 20.5), ball_z=3.0)
+    game = load_game(_game([_event([moment])], tmp_path), target_hz=None)
+    held = game.frames[0].handler()
+    assert held is not None and held.track_id == 100
+    assert held.label == HANDLER
+
+
+def test_a_ball_in_flight_leaves_nobody_holding_it(tmp_path):
+    # Same geometry, but the ball is overhead: a pass or a shot, not a hold.
+    moment = _moment(1, 1000, 700.0, ball_xy=(20.5, 20.5), ball_z=11.0)
+    game = load_game(_game([_event([moment])], tmp_path), target_hz=None)
+    assert game.frames[0].handler() is None
+
+
+def test_a_ball_nobody_is_near_leaves_nobody_holding_it(tmp_path):
+    moment = _moment(1, 1000, 700.0, ball_xy=(47.0, 25.0), ball_z=3.0)
+    game = load_game(_game([_event([moment])], tmp_path), target_hz=None)
+    assert game.frames[0].handler() is None
+
+
+def test_the_handler_is_still_counted_among_the_players(tmp_path):
+    """Relabelling must not remove anyone from the floor."""
+    moment = _moment(1, 1000, 700.0, ball_xy=(20.5, 20.5), ball_z=3.0)
+    game = load_game(_game([_event([moment])], tmp_path), target_hz=None)
+    assert len(game.frames[0].players()) == 2
