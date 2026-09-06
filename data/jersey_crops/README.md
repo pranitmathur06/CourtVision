@@ -346,3 +346,17 @@ trusting a frame.
       easyocr                               17%
       nearest neighbour over 130 labels     66% at 25% coverage
       CNN trained on SVHN                   88% at 25% coverage
+
+
+## Coverage, and what the reader is for
+
+25% of crops is not a shortfall to be apologised for -- it is the design. A
+wrong jersey read attributes a play to the wrong player, which is the one error
+a coaching tool cannot make, so the reader declines three times out of four and
+`JerseyVoter` accumulates over a track instead of trusting a frame.
+
+What that means in practice: a player tracked through a possession offers dozens
+of crops, and at 25% coverage and 88% precision the vote is decided by several
+independent reads rather than one. The limit on naming a player is therefore how
+long a TRACK survives, which is measured separately and is the real constraint --
+not the reader.
