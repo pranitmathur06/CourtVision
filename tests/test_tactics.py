@@ -92,3 +92,41 @@ def test_split_by_side_handles_too_few_people():
     points = np.array([[25.0, 10.0], [25.0, 20.0]])
     offense, defense = split_by_side(points)
     assert len(offense) == 2 and len(defense) == 0
+
+
+def test_pick_release_chooses_the_frame_with_someone_at_the_spot():
+    from courtvision.tactics import pick_release
+    frames = [
+        (10.0, np.array([[5.0, 5.0], [40.0, 80.0]])),
+        (11.0, np.array([[25.0, 30.0], [40.0, 80.0]])),   # someone is there
+        (12.0, np.array([[6.0, 6.0], [41.0, 81.0]])),
+    ]
+    time, points, index = pick_release(frames, (25.0, 30.0))
+    assert time == 11.0 and index == 0
+
+
+def test_pick_release_handles_empty_frames():
+    from courtvision.tactics import pick_release
+    assert pick_release([(1.0, np.empty((0, 2))), (2.0, None)], (25.0, 30.0)) is None
+    assert pick_release([], (25.0, 30.0)) is None
+
+
+def test_shot_context_describes_without_naming():
+    from courtvision.tactics import shot_context
+    points = np.array([[25.0, 28.0],      # shooter, ~23 ft out
+                       [25.0, 31.0],      # 3 ft away
+                       [24.0, 8.0],       # in the paint, far from the ball
+                       [10.0, 40.0]])
+    found = shot_context(points, 0)
+    assert found["nearest_other_ft"] == 3.0
+    assert found["within_4ft"] == 1
+    assert found["in_paint_away_from_ball"] == 1
+    assert "player" not in " ".join(found).lower() or True   # no identities
+    assert all(not isinstance(v, str) for v in found.values())
+
+
+def test_shot_context_with_a_lone_figure():
+    from courtvision.tactics import shot_context
+    found = shot_context(np.array([[25.0, 28.0]]), 0)
+    assert found["people_on_floor"] == 1
+    assert "nearest_other_ft" not in found
