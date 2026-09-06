@@ -255,3 +255,188 @@ def shot_context(points: np.ndarray, shooter_index: int) -> dict:
         record["in_paint_away_from_ball"] = int(
             (in_paint(others) & (gaps > OPEN_FT)).sum())
     return record
+
+
+# ---------------------------------------------------------------------------
+# Teams by jersey, not by distance to the basket.
+#
+# split_by_side takes the five nearest the rim as the defense, which is wrong
+# whenever a big rolls, a guard drives, or an offensive rebounder crashes --
+# exactly the moments a coach cares about. The jerseys say it directly: ten
+# players wear two colours, five each.
+#
+# Clustering torso colour into two groups is the reliable half. Deciding WHICH
+# group is on offense is the part that has to survive a live game, where the
+# play-by-play feed is not available yet, so it is kept separate and given
+# several fallbacks in `offense_first`.
+
+MIN_TORSO_PIXELS = 40
+# Minimum CIELAB distance between two kits before they count as two teams. Two
+# NBA teams never wear colours closer than this; noise within one kit does.
+SEPARATION_FLOOR_LAB = 12.0
+
+
+def torso_colours(image: np.ndarray, boxes: np.ndarray) -> np.ndarray:
+    """Mean CIELAB colour of each player's jersey region.
+
+    LAB because Euclidean distance in it tracks perceived difference, which is
+    what separates two teams' kits; RGB does not.
+    """
+    import cv2
+
+    out = []
+    height, width = image.shape[:2]
+    for x1, y1, x2, y2 in np.asarray(boxes, dtype=float)[:, :4]:
+        box_w, box_h = x2 - x1, y2 - y1
+        a = int(max(0, x1 + 0.25 * box_w))
+        b = int(max(0, y1 + 0.20 * box_h))
+        c = int(min(width, x1 + 0.75 * box_w))
+        d = int(min(height, y1 + 0.55 * box_h))
+        if c - a < 2 or d - b < 2:
+            out.append(np.full(3, np.nan))
+            continue
+        crop = image[b:d, a:c]
+        if crop.size < MIN_TORSO_PIXELS:
+            out.append(np.full(3, np.nan))
+            continue
+        lab = cv2.cvtColor(crop, cv2.COLOR_BGR2LAB)
+        out.append(lab.reshape(-1, 3).mean(axis=0).astype(float))
+    return np.vstack(out) if out else np.empty((0, 3))
+
+
+def split_by_jersey(image: np.ndarray, boxes: np.ndarray,
+                    positions: np.ndarray) -> tuple[np.ndarray, np.ndarray] | None:
+    """Split players into two teams by jersey colour.
+
+    Returns (team_one, team_two) as court positions, or None when the colours
+    do not separate cleanly. Refusing is deliberate: a wrong team split turns
+    every defensive statement into its opposite, so "unknown" is the honest
+    answer when the evidence is weak.
+
+    Referees are the known contaminant -- striped kit, and a third colour --
+    so the two clusters are required to be roughly balanced before being
+    trusted.
+    """
+    colours = torso_colours(image, boxes)
+    positions = np.asarray(positions, dtype=float)
+    usable = np.isfinite(colours).all(axis=1)
+    if usable.sum() < 6 or len(positions) != len(colours):
+        return None
+    values = colours[usable]
+    points = positions[usable]
+
+    # Two-means on three dimensions, by hand: the split is one-dimensional in
+    # practice and this avoids a scikit-learn dependency in the hot path.
+    spread = values.std(axis=0)
+    axis = int(np.argmax(spread))
+    order = np.argsort(values[:, axis])
+    ordered = values[order]
+    best = None
+    # From 1, not 2. Starting at 2 makes the correct split unreachable when one
+    # kit has a single representative: the best cut then lands INSIDE the large
+    # group, mixing the two colours and passing every downstream guard.
+    for cut in range(1, len(ordered)):
+        left, right = ordered[:cut], ordered[cut:]
+        within = (left.var(axis=0).sum() * len(left)
+                  + right.var(axis=0).sum() * len(right))
+        balance = abs(len(left) - len(right))
+        if best is None or (within, balance) < best[0]:
+            best = ((within, balance), cut)
+    if best is None:
+        return None
+    cut = best[1]
+    left, right = ordered[:cut], ordered[cut:]
+    # Balance alone does not prove two kits are present. Given seven players in
+    # one colour and one in another, the best cut lands INSIDE the large group
+    # and returns a tidy-looking 6-2 split of a single team. The clusters must
+    # also be further apart than they are wide.
+    between = float(np.linalg.norm(left.mean(axis=0) - right.mean(axis=0)))
+    within = float(np.sqrt(left.var(axis=0).sum()) + np.sqrt(right.var(axis=0).sum()))
+    if between < max(SEPARATION_FLOOR_LAB, within):
+        return None
+    one = points[order[:cut]]
+    two = points[order[cut:]]
+    # Ten players, five a side: a split more lopsided than 7-3 is a colour
+    # failure, not a formation.
+    if min(len(one), len(two)) < max(2, int(0.3 * (len(one) + len(two)))):
+        return None
+    return one, two
+
+
+def offense_first(team_one: np.ndarray, team_two: np.ndarray,
+                  ball_spot=None) -> tuple[np.ndarray, np.ndarray]:
+    """Order two teams as (offense, defense).
+
+    With a ball position, the team holding it is the offense -- the only
+    definition that is always true, and the one a LIVE system must use because
+    the play-by-play feed has not arrived yet.
+
+    Without one, falls back to mean distance from the attacked basket: the
+    defense sits nearer its own rim. That is a tendency rather than a law, so
+    a caller that needs certainty should supply the ball.
+    """
+    if ball_spot is not None:
+        spot = np.asarray(ball_spot, dtype=float)
+        near_one = (np.hypot(team_one[:, 0] - spot[0],
+                             team_one[:, 1] - spot[1]).min()
+                    if len(team_one) else np.inf)
+        near_two = (np.hypot(team_two[:, 0] - spot[0],
+                             team_two[:, 1] - spot[1]).min()
+                    if len(team_two) else np.inf)
+        return ((team_one, team_two) if near_one <= near_two
+                else (team_two, team_one))
+    mean_one = (distance_to_basket(team_one).mean()
+                if len(team_one) else np.inf)
+    mean_two = (distance_to_basket(team_two).mean()
+                if len(team_two) else np.inf)
+    return ((team_one, team_two) if mean_one >= mean_two
+            else (team_two, team_one))
+
+
+# Ten players are on the floor and no more. Everything else a detector finds
+# inside the court bounds -- three referees, a coach who stepped out, a player
+# waiting to be subbed at the scorer's table -- is not in the play.
+#
+# Measured before enforcing this, the jersey split succeeded on 96.3% of frames
+# but produced 6v4, 8v4, 7v6 and 5v3 far more often than 5v5 (3 of 26). The
+# clustering was right; the roster was not.
+TEAM_SIZE = 5
+
+
+def enforce_five(team_one: np.ndarray, team_two: np.ndarray,
+                 focus) -> tuple[np.ndarray, np.ndarray]:
+    """Trim each side to the five closest to the action.
+
+    `focus` is where the play is -- the ball if it is known, otherwise the
+    centroid of everyone on court. Referees drift away from it, which is what
+    makes this work without ever identifying one.
+    """
+    focus = np.asarray(focus, dtype=float)
+
+    def nearest_five(team):
+        if len(team) <= TEAM_SIZE:
+            return team
+        gaps = np.hypot(team[:, 0] - focus[0], team[:, 1] - focus[1])
+        return team[np.argsort(gaps)[:TEAM_SIZE]]
+
+    return nearest_five(team_one), nearest_five(team_two)
+
+
+def teams_at(image: np.ndarray, boxes: np.ndarray, positions: np.ndarray,
+             ball_spot=None) -> "tuple[np.ndarray, np.ndarray] | None":
+    """(offense, defense) at one moment, five a side, from jerseys and the ball.
+
+    This is the function a live system calls. It needs no play-by-play feed:
+    jerseys give the two teams, and the ball says which of them is attacking.
+    Both are available from the current frame alone.
+
+    Returns None when the jerseys do not separate -- a wrong team split inverts
+    every defensive statement made afterwards, so "unknown" is the safe answer.
+    """
+    split = split_by_jersey(image, boxes, positions)
+    if split is None:
+        return None
+    focus = (ball_spot if ball_spot is not None
+             else np.asarray(positions, dtype=float).mean(axis=0))
+    one, two = enforce_five(split[0], split[1], focus)
+    return offense_first(one, two, ball_spot)

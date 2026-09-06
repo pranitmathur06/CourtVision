@@ -130,3 +130,94 @@ def test_shot_context_with_a_lone_figure():
     found = shot_context(np.array([[25.0, 28.0]]), 0)
     assert found["people_on_floor"] == 1
     assert "nearest_other_ft" not in found
+
+
+def _player_box(x, y, colour, image):
+    """Paint a torso of `colour` into `image` and return its box."""
+    image[y:y + 60, x:x + 30] = colour
+    return [x - 5, y - 12, x + 35, y + 90]
+
+
+def test_split_by_jersey_separates_two_kits():
+    from courtvision.tactics import split_by_jersey
+    image = np.full((300, 400, 3), 120, dtype=np.uint8)
+    boxes, positions = [], []
+    for i in range(4):                       # dark kit
+        boxes.append(_player_box(10 + i * 40, 40, (30, 30, 200), image))
+        positions.append([5.0 + i, 20.0])
+    for i in range(4):                       # light kit
+        boxes.append(_player_box(10 + i * 40, 150, (230, 230, 60), image))
+        positions.append([30.0 + i, 60.0])
+    found = split_by_jersey(image, np.array(boxes, dtype=float),
+                            np.array(positions))
+    assert found is not None
+    one, two = found
+    assert len(one) == 4 and len(two) == 4
+
+
+def test_split_by_jersey_refuses_a_lopsided_split():
+    from courtvision.tactics import split_by_jersey
+    image = np.full((300, 400, 3), 120, dtype=np.uint8)
+    boxes, positions = [], []
+    for i in range(7):                       # all one colour
+        boxes.append(_player_box(10 + i * 45, 40, (40, 40, 210), image))
+        positions.append([5.0 + i, 20.0])
+    boxes.append(_player_box(10, 150, (230, 230, 60), image))
+    positions.append([30.0, 60.0])
+    assert split_by_jersey(image, np.array(boxes, dtype=float),
+                           np.array(positions)) is None
+
+
+def test_split_by_jersey_refuses_too_few_players():
+    from courtvision.tactics import split_by_jersey
+    image = np.full((300, 400, 3), 120, dtype=np.uint8)
+    boxes = [_player_box(10, 40, (30, 30, 200), image)]
+    assert split_by_jersey(image, np.array(boxes, dtype=float),
+                           np.array([[5.0, 20.0]])) is None
+
+
+def test_offense_first_uses_the_ball_when_given():
+    from courtvision.tactics import offense_first
+    near_rim = np.array([[25.0, 8.0], [24.0, 10.0]])
+    out_top = np.array([[25.0, 40.0], [20.0, 42.0]])
+    # The ball is out top, so that team has it regardless of who is nearer the rim.
+    offense, defense = offense_first(near_rim, out_top, ball_spot=(25.0, 41.0))
+    assert np.array_equal(offense, out_top)
+    assert np.array_equal(defense, near_rim)
+
+
+def test_offense_first_falls_back_to_distance_without_a_ball():
+    from courtvision.tactics import offense_first
+    near_rim = np.array([[25.0, 8.0], [24.0, 10.0]])
+    out_top = np.array([[25.0, 40.0], [20.0, 42.0]])
+    offense, defense = offense_first(near_rim, out_top)
+    assert np.array_equal(offense, out_top), "the far team is attacking"
+
+
+def test_enforce_five_keeps_the_players_nearest_the_action():
+    from courtvision.tactics import enforce_five
+    # Six in one colour: five in the play, one referee out of it.
+    team = np.array([[25.0, 20.0], [26.0, 22.0], [24.0, 24.0], [27.0, 19.0],
+                     [23.0, 21.0], [2.0, 90.0]])
+    other = np.array([[25.0, 30.0], [26.0, 32.0]])
+    one, two = enforce_five(team, other, focus=(25.0, 22.0))
+    assert len(one) == 5 and len(two) == 2
+    assert not any(np.allclose(p, [2.0, 90.0]) for p in one), "referee kept"
+
+
+def test_enforce_five_leaves_short_teams_alone():
+    from courtvision.tactics import enforce_five
+    one, two = enforce_five(np.array([[25.0, 20.0]]), np.array([[25.0, 30.0]]),
+                            focus=(25.0, 25.0))
+    assert len(one) == 1 and len(two) == 1
+
+
+def test_teams_at_returns_none_when_jerseys_do_not_separate():
+    from courtvision.tactics import teams_at
+    image = np.full((300, 400, 3), 120, dtype=np.uint8)
+    boxes, positions = [], []
+    for i in range(6):
+        boxes.append(_player_box(10 + i * 50, 40, (40, 40, 210), image))
+        positions.append([5.0 + i, 20.0])
+    assert teams_at(image, np.array(boxes, dtype=float),
+                    np.array(positions)) is None
