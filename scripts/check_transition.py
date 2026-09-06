@@ -29,13 +29,21 @@ from courtvision.plays import detect_transition
 from courtvision.tracking_data import load_game
 
 SAMPLE_HZ = 10.0
-# How near the basket counts as "the offense has arrived".
-ARRIVED_FT = 30.0
-# Shot clock when they arrive. Above the first is a break, below the second is
-# a walk-up; between them nobody agrees, so those possessions are not scored.
+# Shot clock when the possession ENDS -- which is when the shot went up, or
+# the ball was lost. Reading it on arrival in the frontcourt instead labelled
+# two thirds of all possessions "early", because crossing half court takes a
+# few seconds in any offense; transition is about finishing early, not
+# arriving early. Above the first is a break, below the second a half-court
+# set, and between them nobody agrees, so those are not scored.
 EARLY_S = 17.0
 LATE_S = 13.0
-MIN_POSSESSION_FRAMES = 8
+MIN_POSSESSION_FRAMES = 20
+# A team must hold the ball for this long before it counts as a change of
+# possession. Without it every deflection, every pass the tracker briefly
+# assigns to the wrong man, and every rebound in traffic splits a possession in
+# two -- which produced 390 possessions a game against a real 200, and an
+# even split of early and late that basketball does not have.
+MIN_CONTROL_S = 1.5
 
 
 def stretches(game, gap_s: float = 2.0, floor: int = 40):
@@ -52,55 +60,64 @@ def stretches(game, gap_s: float = 2.0, floor: int = 40):
 
 
 def possessions(chunk, teams, clocks):
-    """Split a stretch wherever the controlling TEAM changes."""
+    """Split a stretch where the controlling TEAM changes and keeps the ball.
+
+    Splitting on the first frame the other team touches it turns every
+    deflection and every contested rebound into a possession, and a shot clock
+    read against those fragments means nothing.
+    """
     runs, current, side = [], [], None
+    pending, since = None, None
     for frame in chunk:
         held = frame.handler()
         now = teams.get(held.track_id) if held else None
-        if now is None:
-            current.append(frame)
-            continue
-        if side is not None and now != side:
-            if len(current) >= MIN_POSSESSION_FRAMES:
-                runs.append((side, current))
-            current = []
-        side = now
         current.append(frame)
+        if now is None:
+            continue
+        if side is None:
+            side = now
+            continue
+        if now == side:
+            pending, since = None, None
+            continue
+        if pending != now:
+            pending, since = now, frame.time_s
+            continue
+        if frame.time_s - since < MIN_CONTROL_S:
+            continue
+        # The other team has held it long enough; the possession ended when
+        # they first got it, not now.
+        cut = len(current) - int(MIN_CONTROL_S * SAMPLE_HZ) - 1
+        if cut >= MIN_POSSESSION_FRAMES:
+            runs.append((side, current[:cut]))
+            current = current[cut:]
+        side, pending, since = now, None, None
     if side is not None and len(current) >= MIN_POSSESSION_FRAMES:
         runs.append((side, current))
     return runs
 
 
 def truth_of(frames, teams, side, clocks):
-    """'early', 'late' or None, from the clock when the offense arrives.
+    """'early', 'late' or None, from the shot clock when the possession ends.
 
-    Which basket a team attacks is not recorded anywhere, so it is taken as the
-    one they get closer to during the possession -- a fact about this
-    possession, not an assumption about the half.
+    A possession ends with a shot or a loss of the ball, so the clock at its
+    last frame says how long the offense took. That is what transition means
+    and it is a fact the feed already holds -- the detector never sees it.
     """
-    spots = []
-    for frame in frames:
-        for track in frame.tracks:
-            if track.label == "ball":
-                spots.append(((track.box.x1 + track.box.x2) / 2,
-                              (track.box.y1 + track.box.y2) / 2))
-                break
-    if not spots:
+    # The LOWEST reading, not the last one. A made basket resets the clock to
+    # 24 the instant it drops, so the final frames of a possession often read
+    # like a fresh one; the minimum is how far this possession actually ran
+    # the clock down, and it survives the reset.
+    readings = [clocks[f.index] for f in frames
+                if clocks.get(f.index) is not None
+                and not math.isnan(clocks[f.index])]
+    if not readings:
         return None
-    left = min(math.hypot(x - BASKET[1], y - 25.0) for x, y in spots)
-    right = min(math.hypot(x - (94.0 - BASKET[1]), y - 25.0) for x, y in spots)
-    rim = (BASKET[1], 25.0) if left <= right else (94.0 - BASKET[1], 25.0)
-    for frame, (x, y) in zip(frames, spots):
-        if math.hypot(x - rim[0], y - rim[1]) > ARRIVED_FT:
-            continue
-        clock = clocks.get(frame.index)
-        if clock is None or math.isnan(clock):
-            return None
-        if clock >= EARLY_S:
-            return "early"
-        if clock <= LATE_S:
-            return "late"
-        return None
+    clock = min(readings)
+    if clock >= EARLY_S:
+        return "early"
+    if clock <= LATE_S:
+        return "late"
     return None
 
 
