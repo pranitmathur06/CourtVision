@@ -3129,3 +3129,34 @@ per candidate, dominated by a YOLO pass on every frame of every offset. A few
 hundred candidates would give a real precision figure at the top of the
 ranking, and that is a compute problem with an obvious fix -- batch the
 detector, or track between sparse detections rather than detecting every frame.
+
+## The extractor, made fast enough to measure with
+
+Building candidates cost two minutes each, which put a few hundred out of
+reach. Two optimisations were guessed at and neither helped; profiling settled
+it in one run:
+
+    read the span      0.32 s
+    court check        0.01 s
+    detection         60.11 s      <-- everything
+    camera alignment   5.50 s
+
+Detection was 60 of 66 seconds, at 2.6 s per 1080p frame for yolo11x. `person`
+is the easiest class in COCO and these players are large, so the biggest model
+was buying nothing:
+
+    model     s/frame  speedup  players >=90px  agreement with 11x
+    yolo11x      2.62     1.0x            8.8          --
+    yolo11s      0.41     6.3x            9.0          87%
+    yolo11n      0.16    16.5x            5.9          62%
+
+yolo11s finds slightly MORE large players than yolo11x while running 6.3x
+faster. A missed detection makes the tracker drop the clip rather than take the
+wrong player, so this is a throughput trade rather than an accuracy one.
+Candidates now cost about 18 s: an eightfold speedup, and 220 in an hour.
+
+Half-resolution ORB was tried too. It saved three seconds of sixty-six and
+destabilised the warp -- boxes collapsed to slivers over a few frames and the
+clips came back empty. Reverted, with a size guard added: a snap that changes
+the box height by more than about half is a partial detection or a different
+person, and the clip is dropped.
