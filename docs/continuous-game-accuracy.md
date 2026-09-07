@@ -2991,3 +2991,74 @@ And this is one play type. Pin-downs, flares, Horns and the defensive coverages
 -- drop, hedge, ICE -- are not labelled in either source. Formations remain the
 one part of that reachable by rule, for the reason recorded in round thirty:
 a formation is a configuration two people would agree on, and an action is not.
+
+# Round thirty-three: the screen model does not transfer to our broadcast
+
+The ball-screen detector reaches 92% pooled and 86%/94% per source on SpaceJam
+and MultiSports. Run on this project's own footage it does not work.
+
+    model positives labelled            5
+    of which were really screens        0
+    95% upper bound on precision       45%   -- excludes the 85% bar
+
+One of those five positives (score 0.51) was a SPECTATOR standing behind the
+baseline. That is the clearest single statement of the problem.
+
+## Getting to a fair test took six pipeline fixes, and one remains
+
+None of these were model problems, and every one failed SILENTLY -- producing
+clips that looked reasonable in aggregate and firing rates I described as
+"plausible" while the subject was often not in frame.
+
+  1. **Candidates were near-camera bystanders.** Picking a random detection
+     with a tall box selects whoever is closest to the camera, usually a
+     weak-side player thirty feet from the play. Both training sets are action
+     tubes -- every clip centres on a player DOING something -- so this asked
+     the model about a category it has never seen. Fixed: sample the players
+     nearest the ball.
+  2. **The crop box did not follow the player.** It was carried by ORB, which
+     removes the CAMERA's motion, not the player's, so it slid off anybody who
+     moved -- four frames in six came back empty. A screen is exactly where
+     players move. Fixed: snap to the nearest detection each frame.
+  3. **A third of clips were spectators.** The person detector finds people in
+     the stands, and a box-height filter cannot exclude them because a
+     courtside spectator is as large as a player. Partly fixed by requiring the
+     patch under the feet to be lit floor: court 179-200 in value, crowd 42-126.
+  4. **Officials and staff still pass that filter**, because they stand on the
+     lit floor. Three colour filters were tried and none separated them:
+     saturation puts a grey referee (101) inside the players' range (90-175),
+     and kit-hue fails because this arena's court is painted blue and the crowd
+     wears blue, so the background supplies the kit colour.
+  5. **Identity switches mid-clip.** The nearest-detection snap jumps to the
+     wrong player when two cross, despite a body-height gate.
+  6. **The ball detector marks referees and spectators**, so "sample near the
+     ball" was partly sampling near a bald head. This also makes the ball
+     unusable as labelling context.
+
+After all of that, 30% of extracted clips are still unusable -- non-player or
+broken -- and roughly one moment in four survives every gate.
+
+## What this does and does not mean
+
+It does NOT mean screen recognition failed. That is demonstrated at 86-94%
+across two independent datasets with different cameras, crops and games, and
+the cross-source result rules out learning one dataset.
+
+It means the model is being fed rubbish. A clip whose subject is a spectator,
+or who walks out of frame, or who is swapped for another player halfway
+through, carries no screen for the model to recognise -- and the model, having
+only ever seen well-formed action tubes, answers anyway.
+
+The gap is the extraction pipeline: which player to crop, at which moment,
+keeping the box on him, and knowing he is a player at all. That is ordinary
+engineering with a clear target, not a modelling dead end, and it is now
+enumerated rather than guessed at.
+
+## The honest per-source picture
+
+    SpaceJam test        86%   (216 clips, human labels)
+    MultiSports test     94%   (459 clips, human labels)
+    our broadcast       0/5    (95% upper bound 45%)
+
+Two curated datasets agreeing and the live pipeline failing is the signature of
+a data-delivery problem, not a perception one.
