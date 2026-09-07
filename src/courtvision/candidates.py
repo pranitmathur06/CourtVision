@@ -29,6 +29,58 @@ import numpy as np
 MAX_KIT_DISTANCE_LAB = 26.0
 # A person smaller than this cannot be read.
 MIN_BOX_HEIGHT_PX = 90
+# How far inside the court's visible edge a player's feet must land. The court
+# mask closes over gaps and so spills slightly past the real boundary; eroding
+# it pulls the edge back in. Swept on live frames: at 45 px the survivors
+# average 6.6 a frame, which is what a broadcast camera shows of ten players,
+# while 0 px keeps 8.1 and admits the front row.
+COURT_ERODE_PX = 45
+FEET_ON_COURT_SHARE = 0.45
+
+
+def court_region(image: np.ndarray, erode_px: int = COURT_ERODE_PX):
+    """The largest connected run of floor: wood and painted court together.
+
+    Colour cannot separate players from spectators in this arena -- the crowd
+    wears the home kit's colour, so a fan in a blue shirt clusters with a
+    player in a blue jersey. Position can: a player stands on the floor and a
+    spectator stands beyond its edge.
+    """
+    import cv2
+
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    hue, sat, val = hsv[:, :, 0], hsv[:, :, 1], hsv[:, :, 2]
+    wood = (hue >= 5) & (hue <= 30) & (sat >= 40) & (val >= 110)
+    paint = (hue >= 95) & (hue <= 130) & (sat >= 90) & (val >= 90)
+    mask = ((wood | paint).astype(np.uint8)) * 255
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((25, 25), np.uint8))
+    count, labels, stats, _ = cv2.connectedComponentsWithStats(mask, 8)
+    if count <= 1:
+        return None
+    biggest = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
+    region = (labels == biggest).astype(np.uint8)
+    if erode_px:
+        region = cv2.erode(region, np.ones((erode_px, erode_px), np.uint8))
+    return region
+
+
+def stands_on_court(region: np.ndarray, boxes: np.ndarray) -> np.ndarray:
+    """Mask of the boxes whose feet land inside the court region."""
+    boxes = np.asarray(boxes, dtype=float).reshape(-1, 4)
+    keep = np.zeros(len(boxes), dtype=bool)
+    if region is None:
+        return keep
+    height, width = region.shape[:2]
+    for i, (x1, y1, x2, y2) in enumerate(boxes):
+        span = x2 - x1
+        a, c = int(x1 + 0.25 * span), int(x1 + 0.75 * span)
+        b = int(y2 - 4)
+        d = int(min(height, y2 + 0.10 * (y2 - y1)))
+        a, c = max(0, a), min(width, c)
+        if c - a < 3 or d - b < 2:
+            continue
+        keep[i] = float(region[b:d, a:c].mean()) >= FEET_ON_COURT_SHARE
+    return keep
 
 
 def kit_members(image: np.ndarray, boxes: np.ndarray) -> np.ndarray:

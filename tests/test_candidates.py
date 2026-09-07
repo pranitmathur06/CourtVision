@@ -68,3 +68,40 @@ def test_peak_takes_the_strongest_offset():
     assert peak_score([0.1, 0.9, 0.2]) == pytest.approx(0.9)
     assert peak_score([None, 0.3]) == pytest.approx(0.3)
     assert peak_score([]) == 0.0
+
+
+# --- on the court, not beside it -------------------------------------------
+#
+# Colour cannot separate players from spectators in a "blue out" arena: the
+# crowd wears the home kit, so a fan in a blue shirt clusters with a player in
+# a blue jersey. Position can.
+
+def _court_frame():
+    """A bright floor band across the middle, crowd above and below."""
+    image = np.zeros((400, 600, 3), dtype=np.uint8)
+    image[150:300] = (150, 190, 215)       # wood: warm and bright
+    return image
+
+
+def test_a_player_standing_on_the_floor_is_kept():
+    pytest.importorskip("cv2")
+    from courtvision.candidates import court_region, stands_on_court
+    image = _court_frame()
+    region = court_region(image, erode_px=5)
+    boxes = np.array([[280.0, 120.0, 320.0, 250.0]])   # feet at y=250, on wood
+    assert stands_on_court(region, boxes)[0]
+
+
+def test_someone_beyond_the_edge_is_dropped():
+    pytest.importorskip("cv2")
+    from courtvision.candidates import court_region, stands_on_court
+    image = _court_frame()
+    region = court_region(image, erode_px=5)
+    boxes = np.array([[280.0, 20.0, 320.0, 140.0]])    # feet above the floor
+    assert not stands_on_court(region, boxes)[0]
+
+
+def test_no_court_found_keeps_nobody():
+    pytest.importorskip("cv2")
+    from courtvision.candidates import stands_on_court
+    assert not stands_on_court(None, np.array([[0.0, 0.0, 10.0, 10.0]])).any()

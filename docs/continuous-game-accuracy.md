@@ -3160,3 +3160,33 @@ destabilised the warp -- boxes collapsed to slivers over a few frames and the
 clips came back empty. Reverted, with a size guard added: a snap that changes
 the box height by more than about half is a partial detection or a different
 person, and the clip is dropped.
+
+## Why colour cannot find the players in this arena
+
+The candidate filter clustered torso colour into two kits and kept only
+members, which worked on synthetic frames and failed on the broadcast: a
+labelling sheet came back with three of six clips showing people at the
+sideline. The reason is specific and worth recording -- this is a "blue out"
+crowd, so the spectators wear the home kit's colour, and a fan in a blue shirt
+clusters with a player in a blue jersey. No threshold on that axis separates
+them.
+
+Position does. The court is one large connected region of wood and paint; a
+player stands inside it and a spectator stands beyond its edge. The mask closes
+over gaps and so spills slightly past the true boundary, so it is eroded before
+testing, and the amount was swept rather than guessed:
+
+    erosion   people kept per frame   dropped as off-court
+        0 px                   8.1                     12
+       25 px                   7.1                     29
+       45 px                   6.6                     38
+       65 px                   5.7                     55
+
+A broadcast camera shows six to nine of the ten players, so 45 px is the
+setting that matches the sport.
+
+**Referees remain.** They stand on the court, so position cannot exclude them,
+and colour cannot either for the reason above. Contamination is roughly one
+clip in six and is treated as a known quantity: clips are marked player or
+non-player during labelling, only players train or score, and the rate is
+reported separately rather than folded into the model's error.
