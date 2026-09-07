@@ -3062,3 +3062,70 @@ enumerated rather than guessed at.
 
 Two curated datasets agreeing and the live pipeline failing is the signature of
 a data-delivery problem, not a perception one.
+
+# Round thirty-four: fixing the delivery, not the model
+
+The screen classifier scored 0 of 5 on this broadcast while reaching 86% and
+94% on two public datasets. Everything below is a fault in how clips reached
+it. None required touching the model or the bar.
+
+  1. **Sampling the whole file.** Candidates were drawn uniformly across two
+     hours. The game runs 540-7209 s; the rest is pre-game packages, replay
+     inserts and the trophy ceremony -- one top-ranked "screen" was a Nuggets
+     trophy presentation. No court/ball/kit gate excludes those, because a
+     celebration has a lit floor and people in two colours. Candidates now come
+     from 1-8 s before each of the 149 aligned shots, which is guaranteed live
+     play and where screens concentrate. Acceptance went from 25% to 43%.
+  2. **Bystanders instead of players near the ball.** Both training sets are
+     action tubes centred on a player DOING something; a random tall detection
+     is whoever is nearest the camera, usually a weak-side player thirty feet
+     away.
+  3. **Spectators and officials.** No size or brightness rule excludes them --
+     a courtside spectator is as large as a player and officials stand on the
+     same lit floor. Three colour heuristics failed, one of them because this
+     arena's court is painted blue and the crowd wears blue, so the background
+     supplies the kit colour. What works is cluster membership: the ten players
+     wear two colours and nobody else wears either, so `candidates.kit_members`
+     keeps only members of the two balanced torso-colour clusters and refuses
+     entirely when they do not separate.
+  4. **A crop that did not follow the player.** The box was carried by ORB,
+     which removes the CAMERA's motion and not the player's, so four frames in
+     six came back empty. It now snaps to the nearest detection each frame, and
+     a snap further than 0.6 body-heights drops the clip rather than switching
+     to the wrong player.
+  5. **Clips cut at arbitrary instants.** The training tubes are centred ON the
+     action. A screen lasts about a second inside a fifteen-second possession,
+     so an arbitrary instant shows the approach or the aftermath. Scoring five
+     offsets across +-0.6 s and keeping the peak is ordinary dense action
+     detection; it raised the firing rate from 15% to 30% on identical clips,
+     so this fault alone was costing half the detections.
+
+## What the ranking does now
+
+Eight clips labelled blind, top of the ranking against low-scoring controls:
+
+    score  label        why
+     0.94  engagement   defender engaged with a possible screener
+     0.66  engagement   defender engaged, contact unclear
+     0.47  broken       box empty for half the clip
+     0.03  no           transition run
+     0.03  no           transition run
+     0.00  no           transition run, alone
+     0.00  broken       box drifts off the player
+     0.00  no           shot/rebound, camera flash
+
+The ordering is real: player ENGAGEMENT at the top, open-floor running at the
+bottom, cleanly separated. That is the opposite of the previous run, where the
+top of the ranking held a trophy ceremony and a spectator.
+
+## What is still not established, and why
+
+Two clips at the top is not a measurement. And these stills cannot settle
+whether a congested defensive engagement is a SCREEN -- which is the same
+limit that made this project's own screen labels unusable three times over.
+
+The blocker is now throughput, not method: extraction runs at about two minutes
+per candidate, dominated by a YOLO pass on every frame of every offset. A few
+hundred candidates would give a real precision figure at the top of the
+ranking, and that is a compute problem with an obvious fix -- batch the
+detector, or track between sparse detections rather than detecting every frame.
