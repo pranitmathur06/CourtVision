@@ -3190,3 +3190,62 @@ and colour cannot either for the reason above. Contamination is roughly one
 clip in six and is treated as a known quantity: clips are marked player or
 non-player during labelling, only players train or score, and the rate is
 reported separately rather than folded into the model's error.
+
+# Round thirty-five: labelling a training set is a base-rate problem
+
+Fine-tuning the screen classifier on this broadcast needs positives, and the
+obstacle is not the labelling effort per clip -- it is how few clips contain a
+screen at all.
+
+## Two faults in the labelling instrument, found before trusting it
+
+**Four frames straddle the screen.** Sheets at 0.4 s spacing produced ZERO
+screens across eighteen clips sampled from shot lead-ins, which is not credible
+about the sport. Contact-and-run-off lasts well under a second. At eight frames
+0.18 s apart the same footage shows it, and those eighteen labels were
+discarded rather than used.
+
+**Colour cannot find players here, and position can only half.** Recorded in the
+previous round; the residue is officials, who stand on the court and wear
+neither kit.
+
+## The base rate, measured
+
+Nine clips sampled as a random kit-member near the ball, labelled at eight
+frames against a criterion written before any sheet was seen:
+
+    clear screens 0    unclear 2    clear no 7
+
+At a 5-10% base rate, fifty positives costs six hundred to a thousand labelled
+clips -- five to eight hours of reading, by a labeller whose screen judgement
+has failed four distinct ways in this project.
+
+## Proposing by motion instead
+
+A screener is geometrically distinctive and needs no court registration: with
+camera motion removed by the same ORB warp used elsewhere, he is a player who
+comes to a STOP while a team-mate passes within about a body-width. The rule is
+deliberately loose, because it selects what to LOOK at and never what to
+believe -- a tight rule would be the old geometric detector wearing a different
+hat, and its errors would silently become the training labels.
+
+Nine of its proposals, same view and same criterion:
+
+    source              clear screens   unclear   clear no
+    random near-ball          0 (0%)      2        7 (78%)
+    motion proposals          2 (22%)     5 (56%)  2 (22%)
+
+The proposer accepts 25% of moments against 40% for random sampling, so it is
+more selective; more to the point it is ENRICHED. Random sampling returns
+mostly open-floor running; every proposal is at least a contact situation.
+
+## What that buys and what it does not
+
+At 22% clear positives, fifty of them costs about 230 labelled clips rather
+than six hundred to a thousand -- roughly a quarter of the work, which makes a
+fine-tuning set reachable.
+
+The 56% unclear rate is the honest caveat. Even at eight frames, most contact
+situations cannot be resolved into screener-and-cutter from stills, which is
+the same wall NETS described when it said experts disagree on edge cases and
+its own annotators watched video with replay and freeze.
