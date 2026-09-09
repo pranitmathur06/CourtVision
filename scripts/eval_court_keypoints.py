@@ -28,7 +28,7 @@ from pathlib import Path
 
 import numpy as np
 
-DATA = Path("data/labeled/court_keypoints")
+DATA = Path("data/labeled/court_keypoints_by_game")
 GATE_FT = 2.0
 CONF_GRID = (0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8)
 

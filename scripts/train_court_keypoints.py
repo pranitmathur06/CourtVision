@@ -40,13 +40,13 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-DATA = Path("data/labeled/court_keypoints/data.yaml")
+DATA = Path("data/labeled/court_keypoints_by_game/data.yaml")
 #: `valid` is the Roboflow split name; the eval script selects its confidence
 #: floor there and reports on `test`.
 OUT = Path("checkpoints/court_keypoints")
 
 
-def _resolved_data() -> Path:
+def _resolved_data(config: Path = DATA) -> Path:
     """Point the dataset config at absolute paths, idempotently.
 
     Roboflow ships `train: ../train/images`, which resolves relative to
@@ -54,15 +54,15 @@ def _resolved_data() -> Path:
     fails to find images from anywhere else. The file is gitignored, so a fresh
     clone would otherwise need this fixed by hand before it could train.
     """
-    root = DATA.parent.resolve()
-    text = DATA.read_text()
+    root = config.parent.resolve()
+    text = config.read_text()
     if "path:" not in text:
         for split in ("train", "valid", "test"):
             text = text.replace(f"{split}: ../{split}/images",
                                 f"{split}: {split}/images")
         text = f"path: {root}\n" + text
-        DATA.write_text(text)
-    return DATA.resolve()
+        config.write_text(text)
+    return config.resolve()
 
 
 def main() -> int:
@@ -75,6 +75,10 @@ def main() -> int:
     parser.add_argument("--imgsz", type=int, default=960,
                         help="court lines are thin; 640 loses the far ones")
     parser.add_argument("--batch", type=int, default=8)
+    parser.add_argument("--data", default=str(DATA),
+                        help="defaults to the by-game split; the Roboflow "
+                             "download's own split puts frames from the same "
+                             "5-second clip in train and test")
     parser.add_argument("--sigma", type=float, default=0.18,
                         help="OKS tolerance per landmark, as a fraction of the "
                              "court's linear size; the 1/48 ultralytics picks "
@@ -90,10 +94,10 @@ def main() -> int:
 
     from courtvision.device import resolve_device
 
-    if not DATA.exists():
-        print(f"FAIL - no dataset at {DATA}")
+    if not Path(args.data).exists():
+        print(f"FAIL - no dataset at {args.data}")
         return 1
-    data = _resolved_data()
+    data = _resolved_data(Path(args.data))
     model = YOLO(args.model)
     # Read by v8PoseLoss when it builds its criterion, which happens lazily on
     # the first forward pass -- so setting it on the trainer's model at

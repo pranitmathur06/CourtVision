@@ -3477,3 +3477,42 @@ The check also carries its own control: every frame is scored a second time
 with a registration slipped 5 ft, on the same broadcast. The gap between the
 two is the evidence, not the absolute number, which depends on how much of the
 floor a given camera angle shows.
+
+## Round 40 - the keypoint detector works, and its first test number was leaked
+
+Trained 120 epochs at 640 px with the corrected sigma, the landmark error fell
+**281 px -> 18.9 px** (p90 50.6), pose mAP50 0.883. Against the reference
+homographies that is about 0.55 ft.
+
+On the broadcast this project actually has to serve -- 2025 Finals game 7,
+which appears nowhere in the keypoint dataset:
+
+    registered (both frames of a pair)   94.4%          [gate 90%]
+    two independent paths disagree       p50 0.67 ft    [gate 2 ft; painted key 5.8]
+    line agreement vs a 5 ft slip        85% of frames  [p < 0.001]
+
+That is the painted key's own consistency test, improved **8.7x**, on video the
+model has never seen.
+
+**The dataset test number was leaked and is withdrawn.** The first run reported
+100% registered at 0.87 ft p50 with 0 of 114 frames on the wrong end. Roboflow
+splits at the frame level, and the source clips are 5-second segments sampled a
+few frames apart: **all 107 clips in its test split also appear in train**, so a
+"held out" frame is a near-duplicate of a training frame taken a fraction of a
+second earlier. That number measured memorisation.
+
+`split_court_keypoints.py` regroups every image by the game it came from and
+assigns whole games to each split -- 11 train, 3 valid, 4 test, no game shared
+-- so nothing in test shares a camera, an arena, a lighting rig or a possession
+with anything in train. It is the rule the screen detector already needed, and
+scoring per source video is what showed 92% pooled was 86% and 94% per source.
+
+The first version of this split was itself broken in the same direction. Two
+naming conventions are in use, `-q1-01_54-01_48_mp4-` and `-09_49-09_44_mp4-`,
+and a regex handling only the first turned every frame of the second into its
+own "game", putting adjacent frames back on both sides. It is caught now by an
+explicit check that no game appears in two splits.
+
+The broadcast figures above are unaffected -- that game is in no split -- but
+they carry their own caveat: both arenas appear in training, so they measure an
+unseen game in a seen building, not an unseen court.
