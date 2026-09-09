@@ -60,6 +60,7 @@ def main() -> int:
     import cv2
     from ultralytics import YOLO
 
+    from courtvision.court_keypoints import registration_disagreement
     from courtvision.court_tracking import has_court, pairwise_homography
     from courtvision.device import resolve_device
 
@@ -68,6 +69,9 @@ def main() -> int:
         return 1
     model = YOLO(args.weights)
     device = resolve_device()
+
+    def register(frame):
+        return _register(model, frame, device, args.conf, 6)
     capture = cv2.VideoCapture(args.video)
     if not capture.isOpened():
         print(f"FAIL - cannot open {args.video}")
@@ -85,8 +89,8 @@ def main() -> int:
             continue
         court_frames += 1
 
-        matrix_a = _register(model, frame_a, device, args.conf, 6)
-        matrix_b = _register(model, frame_b, device, args.conf, 6)
+        matrix_a = register(frame_a)
+        matrix_b = register(frame_b)
         if matrix_a is None or matrix_b is None:
             continue
         carry = pairwise_homography(frame_a, frame_b)
@@ -101,10 +105,7 @@ def main() -> int:
                          for x in np.linspace(width * 0.15, width * 0.85, 6)
                          for y in np.linspace(height * 0.55, height * 0.92, 4)],
                         dtype=np.float32)
-        direct = cv2.perspectiveTransform(grid, matrix_a).reshape(-1, 2)
-        carried = cv2.perspectiveTransform(
-            cv2.perspectiveTransform(grid, carry), matrix_b).reshape(-1, 2)
-        errors.extend(np.hypot(*(direct - carried).T))
+        errors.extend(registration_disagreement(matrix_a, matrix_b, carry, grid))
 
     errors = np.array(errors)
     print(f"{args.video}  fps {fps:.1f}")

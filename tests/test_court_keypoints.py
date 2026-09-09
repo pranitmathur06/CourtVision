@@ -13,6 +13,7 @@ from courtvision.court_keypoints import (COURT_LENGTH_FT, COURT_WIDTH_FT,
                                          FLIP_INDEX, KEYPOINTS, MIN_KEYPOINTS,
                                          fuse_registrations,
                                          homography_from_keypoints,
+                                         registration_disagreement,
                                          symmetry_error)
 
 
@@ -217,3 +218,21 @@ def test_fusion_reports_when_no_fusion_happened():
     matrices = [None, _camera(0.0), None]
     fused, used = fuse_registrations(matrices, [None, None], probe, centre=1)
     assert used == 1, "a caller must be able to tell a fused result from a bare one"
+
+
+def test_perfect_registrations_disagree_by_nothing():
+    pytest.importorskip("cv2")
+    probe = np.array([[300, 500], [600, 520], [450, 400]], dtype=np.float32)
+    pan = np.eye(3); pan[0, 2] = -17.0          # camera moved 17 px between frames
+    a, b = _camera(0.0), _camera(17.0)
+    assert registration_disagreement(a, b, pan, probe).max() < 1e-6
+
+
+def test_a_registration_off_by_a_known_amount_is_reported_as_that_amount():
+    """The measurement must be in feet and must not be self-cancelling."""
+    pytest.importorskip("cv2")
+    probe = np.array([[300, 500], [600, 520], [450, 400]], dtype=np.float32)
+    pan = np.eye(3); pan[0, 2] = -17.0
+    slip = np.array([[1, 0, 3.0], [0, 1, 0], [0, 0, 1]])    # 3 ft along the court
+    got = registration_disagreement(_camera(0.0), slip @ _camera(17.0), pan, probe)
+    assert np.allclose(got, 3.0, atol=1e-6)

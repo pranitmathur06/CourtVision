@@ -211,3 +211,30 @@ def fuse_registrations(matrices, carries, probe, centre=None):
     if fused is None:
         return None, 0
     return fused, len(estimates)
+
+
+def registration_disagreement(matrix_a, matrix_b, carry, probe):
+    """How far two independent registrations of one instant disagree, in feet.
+
+    A point on the floor can reach court coordinates two ways: registered in
+    frame A, or carried into frame B by ORB and registered there. ORB is
+    accurate to about 0.5 px on consecutive broadcast frames and the court is
+    rigid, so the two answers describe the same physical spot and any gap
+    between them is the registration moving.
+
+    This needs no annotations, no model of mine, and no threshold chosen after
+    the fact -- which is what makes it the sharpest check available. A gate can
+    only reject registrations that look wrong; it cannot tell you whether the
+    ones it accepts are right. The painted key passes its gate and still
+    disagrees with itself by 5.8 ft.
+
+    `carry` maps frame A's pixels into frame B's. Returns one distance per
+    probe point.
+    """
+    import cv2
+
+    probe = np.asarray(probe, dtype=np.float32).reshape(-1, 1, 2)
+    direct = cv2.perspectiveTransform(probe, matrix_a).reshape(-1, 2)
+    carried = cv2.perspectiveTransform(
+        cv2.perspectiveTransform(probe, carry), matrix_b).reshape(-1, 2)
+    return np.hypot(*(direct - carried).T)
