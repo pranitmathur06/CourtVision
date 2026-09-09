@@ -49,6 +49,12 @@ def main() -> int:
                         default="runs/pose/checkpoints/court_keypoints/weights/best.pt")
     parser.add_argument("--samples", type=int, default=120)
     parser.add_argument("--conf", type=float, default=0.5)
+    parser.add_argument("--fuse", type=int, default=0,
+                        help="half-width, in frames, of the window fused onto "
+                             "each instant. 0 registers the single frame. The "
+                             "camera is rigid over a few frames and the court "
+                             "is fixed, so neighbours are repeat measurements "
+                             "of the same registration.")
     parser.add_argument("--start", type=float, default=600.0,
                         help="skip the pre-game show; the anthem and the "
                              "coach interview are not court frames, and "
@@ -60,7 +66,8 @@ def main() -> int:
     import cv2
     from ultralytics import YOLO
 
-    from courtvision.court_keypoints import registration_disagreement
+    from courtvision.court_keypoints import (fuse_registrations,
+                                             registration_disagreement)
     from courtvision.court_tracking import has_court, pairwise_homography
     from courtvision.device import resolve_device
 
@@ -78,19 +85,45 @@ def main() -> int:
         return 1
     fps = capture.get(cv2.CAP_PROP_FPS) or 30.0
 
+    def window(at):
+        """Consecutive frames centred on `at`, read in one pass."""
+        half = args.fuse
+        capture.set(cv2.CAP_PROP_POS_MSEC, (at - half / fps) * 1000)
+        frames = []
+        for _ in range(2 * half + 1):
+            ok, frame = capture.read()
+            if not ok:
+                return []
+            frames.append(frame)
+        return frames
+
+    def registration(at):
+        """One registration for this instant, fused over its window if asked."""
+        frames = window(at)
+        if not frames:
+            return None, None
+        centre = frames[len(frames) // 2]
+        if args.fuse == 0:
+            return register(centre), centre
+        matrices = [register(f) for f in frames]
+        carries = [pairwise_homography(frames[i], frames[i + 1])
+                   for i in range(len(frames) - 1)]
+        height, width = centre.shape[:2]
+        probe = np.array([[x, y]
+                          for x in np.linspace(width * 0.15, width * 0.85, 5)
+                          for y in np.linspace(height * 0.55, height * 0.92, 4)],
+                         dtype=np.float32)
+        fused, _ = fuse_registrations(matrices, carries, probe)
+        return fused, centre
+
     court_frames, both_registered, errors = 0, 0, []
     times = np.linspace(args.start, args.end, args.samples)
     for t in times:
-        capture.set(cv2.CAP_PROP_POS_MSEC, t * 1000)
-        ok_a, frame_a = capture.read()
-        capture.set(cv2.CAP_PROP_POS_MSEC, (t + GAP_S) * 1000)
-        ok_b, frame_b = capture.read()
-        if not (ok_a and ok_b) or not has_court(frame_a):
+        matrix_a, frame_a = registration(t)
+        matrix_b, frame_b = registration(t + GAP_S)
+        if frame_a is None or frame_b is None or not has_court(frame_a):
             continue
         court_frames += 1
-
-        matrix_a = register(frame_a)
-        matrix_b = register(frame_b)
         if matrix_a is None or matrix_b is None:
             continue
         carry = pairwise_homography(frame_a, frame_b)
@@ -108,7 +141,8 @@ def main() -> int:
         errors.extend(registration_disagreement(matrix_a, matrix_b, carry, grid))
 
     errors = np.array(errors)
-    print(f"{args.video}  fps {fps:.1f}")
+    print(f"{args.video}  fps {fps:.1f}  "
+          f"{'single frame' if args.fuse == 0 else f'fused over {2*args.fuse+1} frames'}")
     print(f"  court frames sampled     {court_frames}")
     print(f"  both frames registered   {both_registered}/{max(court_frames,1)}"
           f" = {both_registered/max(court_frames,1):.1%}")

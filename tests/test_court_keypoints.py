@@ -236,3 +236,23 @@ def test_a_registration_off_by_a_known_amount_is_reported_as_that_amount():
     slip = np.array([[1, 0, 3.0], [0, 1, 0], [0, 0, 1]])    # 3 ft along the court
     got = registration_disagreement(_camera(0.0), slip @ _camera(17.0), pan, probe)
     assert np.allclose(got, 3.0, atol=1e-6)
+
+
+def test_a_failed_refit_falls_back_to_the_centre_rather_than_losing_the_instant():
+    """Fusion must never do worse than not fusing.
+
+    If the carried estimates disagree too much to admit a homography, the
+    caller should still get the registration it would have had anyway --
+    reported as unfused, so the distinction stays visible.
+    """
+    pytest.importorskip("cv2")
+    # Probe points that are collinear cannot determine a homography, so the
+    # refit fails while the centre registration is perfectly good.
+    probe = np.array([[100, 300], [200, 300], [300, 300], [400, 300],
+                      [500, 300], [600, 300]], dtype=np.float32)
+    matrices = [_camera(0.0) for _ in range(3)]
+    fused, used = fuse_registrations(matrices, [np.eye(3), np.eye(3)], probe)
+    assert fused is not None
+    assert used in (1, 3)
+    if used == 1:
+        assert np.allclose(fused, matrices[1])

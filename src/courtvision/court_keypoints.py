@@ -209,7 +209,11 @@ def fuse_registrations(matrices, carries, probe, centre=None):
     fused, _ = cv2.findHomography(probe.reshape(-1, 2), court, cv2.RANSAC,
                                   FUSE_RANSAC_FT)
     if fused is None:
-        return None, 0
+        # The medians did not admit a homography -- they disagree too much to
+        # be one view of a plane. Fall back to the centre frame's own
+        # registration rather than discarding the instant: it is exactly what
+        # the caller would have had without fusion, and `used` says so.
+        return matrices[centre], 1 if matrices[centre] is not None else 0
     return fused, len(estimates)
 
 
