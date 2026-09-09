@@ -99,6 +99,12 @@ FLIP_INDEX = [35, 36, 2, 38, 39, 5, 41, 42, 34, 32, 10, 33, 29, 30, 31, 15,
 MIN_KEYPOINTS = 6
 #: Reprojection tolerance for RANSAC, in pixels.
 RANSAC_PX = 6.0
+#: Tolerance when refitting a fused registration. This fit runs pixels ->
+#: court, so cv2 measures its residual in the destination units, FEET, not
+#: pixels. A landmark is worth about 0.03 ft per pixel on a broadcast frame,
+#: so half a foot is a loose ~17 px -- deliberately, since the medians being
+#: fitted have already had their outliers removed.
+FUSE_RANSAC_FT = 0.5
 
 
 def homography_from_keypoints(points: dict[int, tuple[float, float]],
@@ -200,8 +206,8 @@ def fuse_registrations(matrices, carries, probe, centre=None):
         return matrices[centre], 1
 
     court = np.median(np.stack(estimates), axis=0)
-    fused, mask = cv2.findHomography(probe.reshape(-1, 2), court, cv2.RANSAC,
-                                     0.5)
+    fused, _ = cv2.findHomography(probe.reshape(-1, 2), court, cv2.RANSAC,
+                                  FUSE_RANSAC_FT)
     if fused is None:
         return None, 0
     return fused, len(estimates)

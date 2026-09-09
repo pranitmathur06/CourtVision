@@ -3377,3 +3377,45 @@ annotators are clicking a rim 10 ft up and parallax is expected.
 days. The rest of the repo routes through `courtvision.device.resolve_device`;
 the trainer did not, and ultralytics does not pick MPS on its own. Passing the
 device explicitly: 5.8 s/it at batch 16, about seven times faster.
+
+## Round 38 - the keypoint loss had no gradient
+
+The first training run looked healthy: box mAP50 0.995, box loss 4.8 -> 0.51.
+Pose mAP was **exactly 0.0** at every validation, which reads as "still early",
+and pose loss sat at 10.67 of a ceiling near 12.
+
+It was not early. Ultralytics scores keypoints with `1 - exp(-e)` where
+`e = d^2 / ((2*sigma)^2 * area * 2)`, and for any keypoint count other than
+COCO's 17 it invents `sigma = 1/nkpt` -- here 1/48 = 0.021. The tolerance that
+implies is `2*sigma*sqrt(area)`, and `area` for a court is the whole frame, so
+about 24 px. A COCO-pretrained pose head places body keypoints near the middle
+of the box and starts roughly 280 px from the court's landmarks. That is
+`e = 71`, and **`exp(-71)` is zero in float32**: the loss returns a flat 1.0
+with no gradient, and the keypoint head cannot move at all.
+
+What settled it was measuring the landmarks themselves rather than the metric:
+**281 px median error** after two epochs. A dead gradient and a slow start are
+indistinguishable in the loss curve; they are not indistinguishable in feet.
+
+`sigma` is now chosen so the initial error lands near `e = 1`, where the
+gradient is largest. Matched at six epochs, 640 px:
+
+    sigma        pose loss    landmark error    pose mAP50
+    0.021        11.7         281 px            0.0 (exactly)
+    0.18          4.6          77 px            nonzero
+
+**How much accuracy is actually needed.** Differentiating the reference
+homographies at the annotated landmarks gives 0.0292 ft per pixel (p90 0.0361),
+so the 2 ft gate corresponds to about **68 px** of median landmark error --
+which six epochs almost reaches. This is a conservative conversion: a
+homography fitted over roughly twelve landmarks averages down independent
+per-landmark noise, so the court error should come in below what this scaling
+predicts.
+
+**Registration can also be fused across frames.** ORB aligns consecutive
+broadcast frames to 0.5 px and the court is rigid, so every frame in a window
+is an independent measurement of the same registration. `fuse_registrations`
+carries the neighbours onto the centre frame and takes the median court
+position per probe -- median, because a wrong registration is not a small error
+but the other end of the floor, and a single one would drag an average. A
+refused ORB hop truncates the window instead of being chained through.
