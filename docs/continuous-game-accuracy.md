@@ -996,6 +996,17 @@ and not the training corpus, is the remaining risk.
 
 ## Round eight: every component measured on the real broadcast
 
+> **RETRACTED, later in this document.** The registration numbers immediately
+> below — 0.88 of frames registered, 0.5 px median rim reprojection, an implied
+> ~0.05 ft — are contradicted by Round 23, which measured the *same* global
+> search at **28.3% registered and the wrong basket on 100% of frames**, and by
+> Round 26, where two registrations of the same instant disagree by 5.8 ft.
+> This section was never marked, and its figures are cited forward at lines
+> ~1017, ~1113, ~1167 and ~1594 to argue that the rim can be projected rather
+> than detected. That argument inherits a retracted number. The measurement
+> below was 40 frames chosen for a metric that Round 23 showed cannot
+> distinguish a correct fit from one several hundred feet wrong.
+
 Court registration, tested independently on 40 frames spread over ten minutes —
 global search each time, no seeding from the previous frame, because across a
 camera cut there is no continuity to exploit:
@@ -3249,3 +3260,53 @@ The 56% unclear rate is the honest caveat. Even at eight frames, most contact
 situations cannot be resolved into screener-and-cutter from stills, which is
 the same wall NETS described when it said experts disagree on edge cases and
 its own annotators watched video with replay and freeze.
+
+# Round thirty-six: rebuilding from the foundation, and three defects on the way
+
+## Why the rebuild
+
+Two halves of this project sit side by side and explain each other. On exact
+court coordinates it works: assist attribution 91% cross-validated, screen
+counts in the real range, formations at plausible rates, transition measurable
+-- none of it needing a hand label, because geometry defines the answer and the
+feed scores it. On broadcast video the foundation is not there: registration
+17% mid-possession with survivors disagreeing by 5.8 ft, 463 track identities
+for ten players, a ball detector that fires on referees.
+
+So every action and tactic model has been asked to infer from a crop of one
+player what geometry would state outright. That is why a screen classifier
+scores 86-94% on curated clips and 0 of 5 here, why congestion is
+indistinguishable from a screen, and why four attempts at hand-labelling
+screens drifted four different ways: the label is a *relationship* and the
+evidence was a picture of one participant.
+
+## Phase 0: three things already written, wired to nothing
+
+**The strict gate was not connected.** `build_game_model.court_positions`
+called `key_homography` bare. The gate is not a free improvement, it is a
+trade, and the numbers are on record:
+
+    gate            coverage   p50 error   within 3 ft
+    none              92.3%      2.84 ft       50.7%
+    <= 220 px         18.5%      1.72 ft       79.1%
+
+Every position this project has produced came from the top row while the
+bottom row's 1.72 ft was quoted downstream. The gate is now applied, and this
+caller can afford it because it samples several offsets per event and needs
+only one to register.
+
+**`detect_paint_hue` was wired to nothing.** Every arena paints its own key;
+three broadcasts of four sit at hue 107-113 and one at 174, and the hardcoded
+blue finds that fourth arena's key on 10% of court frames instead of 97%. The
+hue is now calibrated once per game from the game's own frames.
+
+**`precise_key_corners` raised `NameError` on every call** -- it used
+`paint_hue` without taking it as a parameter. It had no callers and no tests,
+which is the only reason a broken function sat in the module unnoticed.
+
+## Retraction
+
+Round eight's registration figures (0.88 of frames, 0.5 px rim, ~0.05 ft) are
+retracted in place. Round 23 measured the same search at 28.3% registered with
+the wrong basket on 100% of frames. The Round 8 numbers were still being cited
+forward as the basis for projecting the rim rather than detecting it.

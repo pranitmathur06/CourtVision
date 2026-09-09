@@ -29,7 +29,9 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from courtvision.court import BASKET, COURT_WIDTH  # noqa: E402
-from courtvision.court_key import key_homography  # noqa: E402
+from courtvision.court_key import (detect_paint_hue,  # noqa: E402
+                                   key_homography, key_matches_rim,
+                                   key_quad)
 from courtvision.court_tracking import has_court  # noqa: E402
 
 # How far either side of an event to gather positions. A shot's context is the
@@ -60,11 +62,34 @@ def rim_at(rims, seconds: float):
     return None
 
 
-def court_positions(image, rim_px, boxes) -> np.ndarray | None:
-    """Court coordinates of every detected person's feet, or None."""
+def court_positions(image, rim_px, boxes, paint_hue=None,
+                    gate: bool = True) -> np.ndarray | None:
+    """Court coordinates of every detected person's feet, or None.
+
+    `gate` applies `key_matches_rim`, and it is a real trade rather than a
+    free improvement. Measured over a broadcast:
+
+        gate            coverage   p50 error   within 3 ft
+        none              92.3%      2.84 ft       50.7%
+        <= 220 px         18.5%      1.72 ft       79.1%
+
+    This function was calling `key_homography` bare, so every position it has
+    ever produced came from the ungated row -- while the 1.72 ft figure was
+    quoted downstream as though it applied. The default is now the accurate
+    row, which this caller can afford because it samples several offsets per
+    event and only needs one of them to register.
+
+    `paint_hue` is the arena's own key colour. Left None, the hardcoded blue
+    range runs, and on the one arena in four that paints its key at hue 174
+    that means 10% of court frames register instead of 97%.
+    """
     if not has_court(image):
         return None
-    matrix = key_homography(image, rim_px)
+    if gate:
+        quad = key_quad(image, paint_hue=paint_hue)
+        if quad is None or not key_matches_rim(quad, rim_px):
+            return None
+    matrix = key_homography(image, rim_px, paint_hue=paint_hue)
     if matrix is None or boxes is None or len(boxes) == 0:
         return None
     feet = np.stack([(boxes[:, 0] + boxes[:, 2]) / 2, boxes[:, 3]], axis=1)
@@ -143,6 +168,23 @@ def main() -> int:
     fps = capture.get(cv2.CAP_PROP_FPS)
     model = YOLO("yolo11x.pt")
 
+    # Calibrate the key colour from this arena's own footage before anything
+    # else. Every arena paints its own key -- three of four broadcasts sit at
+    # hue 107-113 and one at 174 -- and the hardcoded blue finds that fourth
+    # arena's key on 10% of court frames instead of 97%. `detect_paint_hue`
+    # existed for exactly this and was wired to nothing.
+    sampled = []
+    for probe in np.linspace(60.0, max(120.0, fps and 600.0), 12):
+        capture.set(cv2.CAP_PROP_POS_FRAMES, int(probe * fps))
+        ok, image = capture.read()
+        if ok and has_court(image):
+            sampled.append(image)
+    paint_hue = detect_paint_hue(sampled) if sampled else None
+    print(f"  paint hue calibrated from {len(sampled)} frames: {paint_hue}"
+          if paint_hue else
+          f"  paint hue not calibrated ({len(sampled)} frames); "
+          f"falling back to the default range")
+
     records = []
     described = 0
     for event in scoring:
@@ -162,7 +204,8 @@ def main() -> int:
             detected = model(image, verbose=False, conf=0.35, classes=[0])[0]
             boxes = (detected.boxes.xyxy.cpu().numpy()
                      if len(detected.boxes) else None)
-            points = court_positions(image, rim_at(rims, seconds + offset), boxes)
+            points = court_positions(image, rim_at(rims, seconds + offset),
+                                     boxes, paint_hue=paint_hue)
             if points is None:
                 continue
             context = describe(points)

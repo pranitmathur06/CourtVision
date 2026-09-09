@@ -349,13 +349,20 @@ def _intersect(first, second) -> tuple[float, float] | None:
 
 
 def precise_key_corners(image: np.ndarray,
-                        quad: np.ndarray) -> np.ndarray | None:
+                        quad: np.ndarray,
+                        paint_hue: "tuple[int, int] | None" = None
+                        ) -> np.ndarray | None:
     """Sub-pixel key corners, from the contour's four edges.
 
     Takes the coarse quad as a starting guess, assigns every contour pixel to
     the nearest of its four edges, fits a line per edge, and intersects
     neighbours. Returns None if any edge is too sparse to fit, because a corner
     from a two-pixel edge is worse than the approximation it replaces.
+
+    `paint_hue` is the arena's own key colour from `detect_paint_hue`; it was
+    referenced in the body without being a parameter, so this function raised
+    NameError on every call. It had no callers and no tests, which is the only
+    reason that never surfaced.
     """
     import cv2
 

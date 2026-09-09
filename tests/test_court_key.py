@@ -161,3 +161,41 @@ def test_key_quad_uses_a_calibrated_hue():
     red = _floor_with_paint(174)
     assert key_quad(red) is None, "the default blue range must miss red paint"
     assert key_quad(red, None, (160, 179)) is not None
+
+
+# --- Phase 0: three defects that were written but never wired ---------------
+
+def test_precise_key_corners_accepts_a_paint_hue():
+    """It referenced `paint_hue` without taking it, so every call raised.
+
+    No caller and no test existed, which is the only reason a NameError sat in
+    the module unnoticed.
+    """
+    pytest.importorskip("cv2")
+    from courtvision.court_key import precise_key_corners
+    image = np.zeros((200, 200, 3), dtype=np.uint8)
+    quad = np.array([[10.0, 10.0], [90.0, 10.0], [90.0, 90.0], [10.0, 90.0]],
+                    dtype=np.float32)
+    # Returns None on a blank frame; the point is that it returns at all.
+    assert precise_key_corners(image, quad) is None
+    assert precise_key_corners(image, quad, paint_hue=(95, 125)) is None
+
+
+def test_court_positions_gates_on_the_key_matching_the_rim():
+    """The gate is the difference between 1.72 ft and 2.84 ft p50 error.
+
+    `build_game_model` called `key_homography` bare, so it ran ungated while
+    the gated figure was quoted downstream.
+    """
+    pytest.importorskip("cv2")
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+    from build_game_model import court_positions
+
+    image = np.zeros((400, 400, 3), dtype=np.uint8)
+    boxes = np.array([[10.0, 10.0, 40.0, 120.0]])
+    # A blank frame has no court, so both paths refuse — the assertion that
+    # matters is that the gated call accepts the argument at all.
+    assert court_positions(image, (200.0, 50.0), boxes, gate=True) is None
+    assert court_positions(image, (200.0, 50.0), boxes, gate=False) is None
