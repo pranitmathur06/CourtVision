@@ -3398,11 +3398,23 @@ What settled it was measuring the landmarks themselves rather than the metric:
 indistinguishable in the loss curve; they are not indistinguishable in feet.
 
 `sigma` is now chosen so the initial error lands near `e = 1`, where the
-gradient is largest. Matched at six epochs, 640 px:
+gradient is largest. Matched at six epochs, 640 px, same seed and schedule:
 
-    sigma        pose loss    landmark error    pose mAP50
-    0.021        11.7         281 px            0.0 (exactly)
-    0.18          4.6          77 px            nonzero
+    sigma        landmark error    pose mAP50
+    0.021        346 px            0.0 (exactly)
+    0.18          77 px            nonzero
+
+The default arm is **worse at six epochs than it was at two** (346 px against
+281). It is not learning slowly; it is not learning, and the drift is noise --
+which is what a zero gradient predicts and what the loss curve alone could
+never have shown.
+
+**A correction.** The first write-up of this cited "pose loss 4.6 against 11.7"
+as evidence that the gradient had been restored. That comparison is not valid:
+`sigma` appears in the loss itself, so raising it shrinks the reported number
+whether or not any prediction improved. Loss magnitudes are incomparable across
+sigma by construction. The evidence is the landmark error in pixels and the
+pose mAP, both of which are computed independently of the training loss.
 
 **How much accuracy is actually needed.** Differentiating the reference
 homographies at the annotated landmarks gives 0.0292 ft per pixel (p90 0.0361),
