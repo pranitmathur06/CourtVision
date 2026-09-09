@@ -66,22 +66,34 @@ def court_positions(image, rim_px, boxes, paint_hue=None,
                     gate: bool = True) -> np.ndarray | None:
     """Court coordinates of every detected person's feet, or None.
 
-    `gate` applies `key_matches_rim`, and it is a real trade rather than a
-    free improvement. Measured over a broadcast:
+    `gate` applies `key_matches_rim`. It is a real trade, and an expensive one:
 
-        gate            coverage   p50 error   within 3 ft
-        none              92.3%      2.84 ft       50.7%
-        <= 220 px         18.5%      1.72 ft       79.1%
+        gate            per-frame coverage   p50 error   within 3 ft
+        none                       92.3%       2.84 ft       50.7%
+        <= 220 px                  18.5%       1.72 ft       79.1%
 
-    This function was calling `key_homography` bare, so every position it has
-    ever produced came from the ungated row -- while the 1.72 ft figure was
-    quoted downstream as though it applied. The default is now the accurate
-    row, which this caller can afford because it samples several offsets per
-    event and only needs one of them to register.
+    This function called `key_homography` bare, so every position it has
+    produced came from the ungated row while the 1.72 ft figure was quoted
+    downstream as though it applied.
+
+    What the gate costs at EVENT level, measured on this script's own 30
+    events rather than assumed: **30/30 with context ungated, 14/30 gated**.
+    The eight offsets do not rescue it, because they span 6.5 s of one shot
+    and the gate rejects on camera framing -- when the framing is wrong it is
+    wrong for all eight. An earlier commit had already measured 51.4% of shots
+    and that number was not carried forward.
+
+    And 1.72 ft is a proxy, not established truth. The gate variable (key
+    centre to rim, in pixels) is mechanically coupled to the metric that
+    scored it (projected rim against BASKET, in feet), so the gate largely
+    selects on its own evaluation and says nothing about error at the far arc.
+    Round 26 measured gate-passing registrations against each other and found
+    them disagreeing by 5.8 ft, where 1.72 ft registrations would disagree by
+    about 2.4. Treat this as "rejects obviously-wrong keys", not "1.72 ft".
 
     `paint_hue` is the arena's own key colour. Left None, the hardcoded blue
-    range runs, and on the one arena in four that paints its key at hue 174
-    that means 10% of court frames register instead of 97%.
+    range runs; on the one arena in four that paints its key at hue 174 that
+    is 10% of court frames registered instead of 87% with calibration.
     """
     if not has_court(image):
         return None
@@ -168,22 +180,48 @@ def main() -> int:
     fps = capture.get(cv2.CAP_PROP_FPS)
     model = YOLO("yolo11x.pt")
 
-    # Calibrate the key colour from this arena's own footage before anything
-    # else. Every arena paints its own key -- three of four broadcasts sit at
-    # hue 107-113 and one at 174 -- and the hardcoded blue finds that fourth
-    # arena's key on 10% of court frames instead of 97%. `detect_paint_hue`
-    # existed for exactly this and was wired to nothing.
+    # Live-play moments, for the hue calibration below. Every scoring event has
+    # a video time, and a few seconds before one is basketball by construction.
+    shot_times = [t for t in (to_video(e["elapsed_s"]) for e in scoring)
+                  if t is not None and t > 5.0]
+
+    # Calibrate the key colour from this arena's own footage, sampling LIVE
+    # PLAY -- not the opening minutes.
+    #
+    # A first version swept 60-600 s. The game runs 540-7209 s, so ten of
+    # twelve probes were pre-game, and of the five frames that passed
+    # `has_court` three were the anthem line-up, a player introduction and a
+    # coach close-up: skin and warm-ups fall inside the "wood" hue range, which
+    # is the failure `court_region` already documents. It reached the right
+    # answer by luck. Aligned shot times are known live play, which is the same
+    # fix adopted elsewhere in this project for the same problem.
     sampled = []
-    for probe in np.linspace(60.0, max(120.0, fps and 600.0), 12):
-        capture.set(cv2.CAP_PROP_POS_FRAMES, int(probe * fps))
-        ok, image = capture.read()
-        if ok and has_court(image):
-            sampled.append(image)
-    paint_hue = detect_paint_hue(sampled) if sampled else None
-    print(f"  paint hue calibrated from {len(sampled)} frames: {paint_hue}"
-          if paint_hue else
-          f"  paint hue not calibrated ({len(sampled)} frames); "
-          f"falling back to the default range")
+    if shot_times:
+        for probe in shot_times[:: max(1, len(shot_times) // 16)][:16]:
+            capture.set(cv2.CAP_PROP_POS_FRAMES, int((probe - 3.0) * fps))
+            ok, image = capture.read()
+            if ok and has_court(image):
+                sampled.append(image)
+    candidate = detect_paint_hue(sampled) if sampled else None
+
+    # A wrong calibration is strictly worse than the default, and silent: if
+    # the dominant hue lands on a courtside advertising board, `key_quad`
+    # returns None on every frame of the game while this still prints success.
+    # So the calibrated range only replaces the default if it actually finds
+    # more keys on the frames we already have.
+    paint_hue = None
+    if candidate and sampled:
+        with_default = sum(key_quad(f) is not None for f in sampled)
+        with_candidate = sum(key_quad(f, paint_hue=candidate) is not None
+                             for f in sampled)
+        if with_candidate > with_default:
+            paint_hue = candidate
+        print(f"  paint hue {candidate} finds {with_candidate}/{len(sampled)} "
+              f"keys against {with_default}/{len(sampled)} for the default "
+              f"-> {'using it' if paint_hue else 'keeping the default'}")
+    else:
+        print(f"  paint hue not calibrated ({len(sampled)} live frames); "
+              f"keeping the default range")
 
     records = []
     described = 0

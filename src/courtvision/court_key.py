@@ -359,10 +359,11 @@ def precise_key_corners(image: np.ndarray,
     neighbours. Returns None if any edge is too sparse to fit, because a corner
     from a two-pixel edge is worse than the approximation it replaces.
 
-    `paint_hue` is the arena's own key colour from `detect_paint_hue`; it was
-    referenced in the body without being a parameter, so this function raised
-    NameError on every call. It had no callers and no tests, which is the only
-    reason that never surfaced.
+    `paint_hue` is the arena's own key colour from `detect_paint_hue`. It was
+    referenced in the body without being a parameter: any call that reached
+    the body raised NameError, and a call passing the keyword raised TypeError.
+    A frame with no court returns before that line, which is why the fault
+    stayed hidden -- along with there being no callers and no tests.
     """
     import cv2
 

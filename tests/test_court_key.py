@@ -163,29 +163,31 @@ def test_key_quad_uses_a_calibrated_hue():
     assert key_quad(red, None, (160, 179)) is not None
 
 
-# --- Phase 0: three defects that were written but never wired ---------------
+# --- Phase 0: defects that were written but wired to nothing ---------------
 
-def test_precise_key_corners_accepts_a_paint_hue():
-    """It referenced `paint_hue` without taking it, so every call raised.
 
-    No caller and no test existed, which is the only reason a NameError sat in
-    the module unnoticed.
+def test_precise_key_corners_takes_a_paint_hue_without_raising():
+    """It used `paint_hue` without taking it, so any call that reached the
+    body raised NameError. A blank frame returned early, which is why the
+    fault stayed hidden -- this uses a frame that reaches the body.
     """
     pytest.importorskip("cv2")
-    from courtvision.court_key import precise_key_corners
-    image = np.zeros((200, 200, 3), dtype=np.uint8)
-    quad = np.array([[10.0, 10.0], [90.0, 10.0], [90.0, 90.0], [10.0, 90.0]],
-                    dtype=np.float32)
-    # Returns None on a blank frame; the point is that it returns at all.
-    assert precise_key_corners(image, quad) is None
-    assert precise_key_corners(image, quad, paint_hue=(95, 125)) is None
+    from courtvision.court_key import key_quad, precise_key_corners
+    image, _ = _synthetic_court()
+    quad = key_quad(image)
+    assert quad is not None, "the synthetic key must be findable"
+    # Reaches the body; before the fix this raised NameError, and passing the
+    # keyword raised TypeError.
+    precise_key_corners(image, quad)
+    precise_key_corners(image, quad, paint_hue=(95, 125))
 
 
-def test_court_positions_gates_on_the_key_matching_the_rim():
-    """The gate is the difference between 1.72 ft and 2.84 ft p50 error.
+def test_the_gate_rejects_a_key_far_from_the_rim():
+    """The gate is what separates p50 1.72 ft from p50 2.84 ft.
 
-    `build_game_model` called `key_homography` bare, so it ran ungated while
-    the gated figure was quoted downstream.
+    `build_game_model` ran ungated, so a key belonging to the other basket
+    registered happily. Both rims below find the same quad; only the distance
+    differs.
     """
     pytest.importorskip("cv2")
     import sys
@@ -193,9 +195,13 @@ def test_court_positions_gates_on_the_key_matching_the_rim():
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
     from build_game_model import court_positions
 
-    image = np.zeros((400, 400, 3), dtype=np.uint8)
-    boxes = np.array([[10.0, 10.0, 40.0, 120.0]])
-    # A blank frame has no court, so both paths refuse — the assertion that
-    # matters is that the gated call accepts the argument at all.
-    assert court_positions(image, (200.0, 50.0), boxes, gate=True) is None
-    assert court_positions(image, (200.0, 50.0), boxes, gate=False) is None
+    image, key = _synthetic_court()
+    boxes = np.array([[220.0, 180.0, 260.0, 295.0]])
+    # The synthetic key spans x 200-400, y 150-300; its centre is (300, 225).
+    near_rim = (300.0, 160.0)      # just above the key: the same basket
+    far_rim = (620.0, 60.0)        # across the frame: a different basket
+
+    assert court_positions(image, near_rim, boxes, gate=True) is not None
+    assert court_positions(image, far_rim, boxes, gate=True) is None
+    # Ungated, the far rim registers anyway -- the behaviour before this fix.
+    assert court_positions(image, far_rim, boxes, gate=False) is not None

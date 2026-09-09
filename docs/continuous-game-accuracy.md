@@ -1001,9 +1001,11 @@ and not the training corpus, is the remaining risk.
 > ~0.05 ft — are contradicted by Round 23, which measured the *same* global
 > search at **28.3% registered and the wrong basket on 100% of frames**, and by
 > Round 26, where two registrations of the same instant disagree by 5.8 ft.
-> This section was never marked, and its figures are cited forward at lines
-> ~1017, ~1113, ~1167 and ~1594 to argue that the rim can be projected rather
-> than detected. That argument inherits a retracted number. The measurement
+> This section was never marked, and its figures are carried forward later in
+> the document -- most consequentially in the argument that the rim can be
+> projected rather than detected, which inherits a retracted number. (Two of
+> the other restatements are summary tables, and the surrounding Round 10 text
+> argues the opposite.) The measurement
 > below was 40 frames chosen for a metric that Round 23 showed cannot
 > distinguish a correct fit from one several hundred feet wrong.
 
@@ -3291,18 +3293,47 @@ trade, and the numbers are on record:
     <= 220 px         18.5%      1.72 ft       79.1%
 
 Every position this project has produced came from the top row while the
-bottom row's 1.72 ft was quoted downstream. The gate is now applied, and this
-caller can afford it because it samples several offsets per event and needs
-only one to register.
+bottom row's 1.72 ft was quoted downstream.
+
+The gate is now applied, and **it costs more than the first version of this
+section claimed.** Measured on the script's own 30 events rather than argued
+from independence: **30/30 events carry context ungated, 14/30 gated.** The
+eight offsets do not rescue it -- they span 6.5 s of a single shot, and the
+gate rejects on camera framing, so when the framing is wrong it is wrong for
+all eight. An earlier commit had already measured 51.4% of shots by this route
+and that number was not carried forward.
+
+And 1.72 ft is a proxy rather than established truth. The gate variable is the
+pixel distance from the key centre to the rim; the metric that scored it is the
+projected rim against `BASKET` in feet. Those are mechanically coupled -- the
+key centre maps a fixed 4.25 ft from the basket -- so the gate largely selects
+on its own evaluation, and says nothing about error at the far arc where a
+small quad extrapolates worst. Round 26's independent check, carrying
+gate-passing registrations across 0.2 s with 0.5 px alignment, found them
+disagreeing by **5.8 ft**, where 1.72 ft registrations would disagree by about
+2.4. The honest description of the gate is "it rejects obviously-wrong keys",
+not "it delivers 1.72 ft".
 
 **`detect_paint_hue` was wired to nothing.** Every arena paints its own key;
-three broadcasts of four sit at hue 107-113 and one at 174, and the hardcoded
-blue finds that fourth arena's key on 10% of court frames instead of 97%. The
-hue is now calibrated once per game from the game's own frames.
+three broadcasts of four sit at hue 107-113 and one at 174, and on that fourth
+arena the hardcoded blue finds the key on 10% of court frames against 87% with
+calibration. (97% is the figure for an arena the default already suits, and
+quoting it here was a misreading of that table.)
 
-**`precise_key_corners` raised `NameError` on every call** -- it used
-`paint_hue` without taking it as a parameter. It had no callers and no tests,
-which is the only reason a broken function sat in the module unnoticed.
+The first version of the calibration was wrong in a way worth recording. It
+swept 60-600 s, but the game runs 540-7209 s, so ten of twelve probes were
+pre-game; of the five frames that passed `has_court`, three were the anthem
+line-up, a player introduction and a coach close-up, because skin and warm-ups
+fall inside the "wood" hue range. It reached the right answer by luck. It now
+samples a few seconds before aligned shots -- live play by construction -- and
+**only adopts the calibrated range if it finds more keys than the default on
+those same frames**, because a wrong calibration is silent and strictly worse
+than the default.
+
+**`precise_key_corners` raised `NameError`** on any call that reached its body,
+and `TypeError` on any call passing the keyword. A frame with no court returns
+before that line, which -- with no callers and no tests -- is why a broken
+function sat in the module unnoticed.
 
 ## Retraction
 
