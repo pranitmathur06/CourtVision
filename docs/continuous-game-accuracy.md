@@ -3403,6 +3403,14 @@ gradient is largest. Matched at six epochs, 640 px, same seed and schedule:
     sigma        landmark error    pose mAP50
     0.021        346 px            0.0 (exactly)
     0.18          77 px            nonzero
+    0.35         263 px            near zero
+
+The curve has an optimum rather than a direction, which is the useful part: the
+obvious reading of the bug -- "the tolerance is too tight, so loosen it" --
+picks 0.35 and lands 3.4x worse than 0.18. Too small saturates `exp(-e)` to no
+gradient; too large weakens it, since the gradient scales as `1/sigma^2`. Only
+the sweep distinguishes those, and the loss curve cannot, because its magnitude
+depends on sigma too.
 
 The default arm is **worse at six epochs than it was at two** (346 px against
 281). It is not learning slowly; it is not learning, and the drift is noise --
