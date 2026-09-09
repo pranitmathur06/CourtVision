@@ -3439,3 +3439,41 @@ carries the neighbours onto the centre frame and takes the median court
 position per probe -- median, because a wrong registration is not a small error
 but the other end of the floor, and a single one would drag an average. A
 refused ORB hop truncates the window instead of being chained through.
+
+## Round 39 - an absolute registration check, and the one thing it cannot see
+
+The ORB consistency test proves a registration is **stable**. It does not prove
+it is **right**: a constant offset, or the wrong basket, agrees with itself
+perfectly across 0.2 s and passes. Something has to pin the answer to the court
+itself, and the court is painted, so warping a frame into court coordinates and
+asking what fraction of its edges land on lines that are actually painted is an
+absolute check that needs no annotations, no feed, and no model of ours.
+
+Validated by breaking a known-good homography -- the dataset's human
+annotations -- in the ways that matter, over 58 frames:
+
+    human annotation     0.380
+    slipped 5 ft         0.274
+    twisted 4 degrees    0.272
+    wrong end            0.379   <- NOT DETECTED
+
+**The end swap is invisible, and no check of this kind can see it.** An NBA
+court's markings are symmetric about half-court, so flipping ends maps every
+painted line onto a painted line. The flip composes with an affine reflection,
+which preserves all projective structure, so the horizon and the foreshortening
+are identical as well and perspective cues do not help either. Which end of the
+floor a frame shows is not recoverable from the floor's geometry.
+
+This is worth stating plainly because Round 23 measured the painted key putting
+the **wrong basket on 100% of frames**, and a line-agreement check would have
+certified every one of them. The end has to be established elsewhere: from the
+model's learned appearance -- a far basket is smaller and sits higher in frame
+-- and it is measured against human annotations in `eval_court_keypoints.py`,
+which counts registrations landing on the wrong half. The line check is silent
+on it by construction, and a test pins the mask's symmetry so that if a future
+change made it asymmetric, this blind spot would not quietly stop being true.
+
+The check also carries its own control: every frame is scored a second time
+with a registration slipped 5 ft, on the same broadcast. The gap between the
+two is the evidence, not the absolute number, which depends on how much of the
+floor a given camera angle shows.
