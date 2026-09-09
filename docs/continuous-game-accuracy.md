@@ -3341,3 +3341,39 @@ Round eight's registration figures (0.88 of frames, 0.5 px rim, ~0.05 ft) are
 retracted in place. Round 23 measured the same search at 28.3% registered with
 the wrong basket on 100% of frames. The Round 8 numbers were still being cited
 forward as the basis for projecting the rim rather than detecting it.
+
+## Round 37 - the schema is not the bottleneck, and two-thirds of the labels are filler
+
+Phase 1 replaces the painted key with 48 learned landmarks. Before training
+anything, two facts about the dataset had to be established, because both would
+have been invisible failures.
+
+**The `v=0` keypoints carry coordinates, and the coordinates are junk.** Of
+40,848 annotated slots, 10,678 are flagged visible (`v=2`), 12,765 sit at the
+origin, and **17,405 carry a real-looking position with `v=0`**. Those 17,405
+look like free supervision -- they would have tripled the training signal. They
+are not real. Fitting a homography on the `v=2` points alone and reprojecting
+the `v=0` points puts them a median **48.7 ft** from where the schema says
+their landmark is, with **0.8%** inside 3 ft, and none of them fall outside the
+image, so "annotated but off-frame" does not explain it. Training on them would
+have taught the model to place two-thirds of the court at random.
+
+**The recovered schema predicts landmarks it was never fitted to, to 0.35 ft.**
+Holding out each visible landmark in turn, fitting on the rest, and asking
+where the held-out one lands: **p50 0.35 ft, p90 1.04 ft, 99.4% within 3 ft**,
+over 10,501 predictions on 840 frames from many arenas. This is the
+leave-one-out number, not the fit residual (0.23 ft), so it is a prediction
+rather than a measure of its own fit.
+
+That matters for what remains. The Phase 1 gate is 2 ft of court error, and the
+schema plus human landmark positions deliver 0.35 ft -- roughly six times the
+headroom. **Every remaining foot of error is the detector's**, not the
+geometry's. The worst two indices are 8 and 34 at 1.17 ft, which are the
+baskets: the one "landmark" in the schema that is not painted on the floor, so
+annotators are clicking a rim 10 ft up and parallax is expected.
+
+**Training was running on the CPU.** Ultralytics logged `torch-2.13.0 CPU
+(Apple M2)` and took 20 s per iteration -- 120 epochs would have been over two
+days. The rest of the repo routes through `courtvision.device.resolve_device`;
+the trainer did not, and ultralytics does not pick MPS on its own. Passing the
+device explicitly: 5.8 s/it at batch 16, about seven times faster.
