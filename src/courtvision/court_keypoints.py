@@ -146,3 +146,62 @@ def symmetry_error(schema: dict[int, tuple[float, float]]) -> float:
         bx, by = schema[b]
         errors.append(abs(ay + by - COURT_LENGTH_FT) + abs(ax - bx))
     return float(np.median(errors)) if errors else float("inf")
+
+
+def fuse_registrations(matrices, carries, probe, centre=None):
+    """One registration for an instant, from a whole window of frames.
+
+    A single frame's landmarks are noisy, but the camera is not: ORB aligns
+    consecutive broadcast frames to about 0.5 px, and the court is rigid. So
+    every frame in a window is an independent measurement of the SAME
+    registration, and they can be combined.
+
+    Each neighbour's registration is carried onto the centre frame's pixels and
+    asked where a probe point lands in court feet; the median across the window
+    is taken per probe, and a homography is refitted to those medians. The
+    median rather than the mean because a wrong registration is not a small
+    error -- it puts the play at the other end of the floor, and one of those
+    would drag an average with it.
+
+    `matrices[i]` maps frame i's pixels to court feet, or is None where that
+    frame did not register. `carries[i]` maps frame i's pixels into frame i+1's;
+    None breaks the chain, and frames beyond the break are dropped rather than
+    guessed through. Returns `(matrix, used)` where `used` counts the frames
+    that contributed -- 1 means no fusion happened and the caller has a plain
+    single-frame registration, not a fused one.
+    """
+    import cv2
+
+    if centre is None:
+        centre = len(matrices) // 2
+    probe = np.asarray(probe, dtype=np.float32).reshape(-1, 1, 2)
+
+    # Pixel transform from the centre frame to frame i, walking outwards and
+    # stopping at the first refused hop in each direction.
+    to_frame = {centre: np.eye(3, dtype=np.float64)}
+    for i in range(centre, len(matrices) - 1):
+        if carries[i] is None or i not in to_frame:
+            break
+        to_frame[i + 1] = carries[i] @ to_frame[i]
+    for i in range(centre, 0, -1):
+        if carries[i - 1] is None or i not in to_frame:
+            break
+        to_frame[i - 1] = np.linalg.inv(carries[i - 1]) @ to_frame[i]
+
+    estimates = []
+    for i, matrix in enumerate(matrices):
+        if matrix is None or i not in to_frame:
+            continue
+        moved = cv2.perspectiveTransform(probe, to_frame[i])
+        estimates.append(cv2.perspectiveTransform(moved, matrix).reshape(-1, 2))
+    if not estimates:
+        return None, 0
+    if len(estimates) == 1:
+        return matrices[centre], 1
+
+    court = np.median(np.stack(estimates), axis=0)
+    fused, mask = cv2.findHomography(probe.reshape(-1, 2), court, cv2.RANSAC,
+                                     0.5)
+    if fused is None:
+        return None, 0
+    return fused, len(estimates)

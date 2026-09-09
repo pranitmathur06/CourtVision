@@ -11,6 +11,7 @@ import pytest
 
 from courtvision.court_keypoints import (COURT_LENGTH_FT, COURT_WIDTH_FT,
                                          FLIP_INDEX, KEYPOINTS, MIN_KEYPOINTS,
+                                         fuse_registrations,
                                          homography_from_keypoints,
                                          symmetry_error)
 
@@ -115,3 +116,104 @@ def test_flip_index_is_an_involution():
     """A mirror applied twice is the identity; this is what makes it a check."""
     for i, j in enumerate(FLIP_INDEX):
         assert FLIP_INDEX[j] == i
+
+
+def test_the_flip_pairs_swap_ends_which_is_what_a_left_right_flip_does():
+    """`fliplr` augmentation is only safe if `flip_idx` matches the geometry.
+
+    A broadcast camera looks along the sideline, so image-x runs along the
+    court's length: flipping the image left-right swaps the two baskets. The
+    dataset's own pairs must therefore mirror about half-court -- 0 pairs with
+    35, which the schema places at (0, 0) and (0, 94). If they mirrored about
+    the centre line instead, every flipped training image would carry
+    systematically wrong labels, silently.
+    """
+    from courtvision.court_keypoints import COURT_LENGTH_FT
+
+    checked = 0
+    for a, b in ((i, FLIP_INDEX[i]) for i in KEYPOINTS):
+        if b not in KEYPOINTS or a >= b:
+            continue
+        (ax, ay), (bx, by) = KEYPOINTS[a], KEYPOINTS[b]
+        assert abs(ax - bx) < 0.01, (a, b)                    # same side
+        assert abs(ay + by - COURT_LENGTH_FT) < 0.01, (a, b)  # opposite end
+        checked += 1
+    assert checked >= 14
+
+
+def _camera(pan):
+    """A homography for a camera panned `pan` pixels along the court."""
+    import cv2
+    court = np.array([[0, 0], [50, 0], [50, 94], [0, 94]], dtype=np.float32)
+    image = np.array([[100 - pan, 600], [900 - pan, 600],
+                      [780 - pan, 120], [220 - pan, 120]], dtype=np.float32)
+    return cv2.getPerspectiveTransform(image, court)      # image -> court
+
+
+def test_fusion_averages_away_per_frame_noise():
+    pytest.importorskip("cv2")
+    import cv2
+    rng = np.random.default_rng(0)
+    probe = np.array([[300, 500], [600, 520], [450, 400], [700, 450],
+                      [250, 430], [550, 560]], dtype=np.float32)
+    pans = np.arange(9) * 4.0
+    truth = _camera(pans[4])
+
+    carries, matrices = [], []
+    for n, pan in enumerate(pans):
+        exact = _camera(pan)
+        # Jitter each frame's registration the way a landmark detector does.
+        wobble = np.eye(3)
+        wobble[:2, 2] = rng.normal(0, 1.1, 2)
+        matrices.append(wobble @ exact)
+        if n < len(pans) - 1:
+            shift = np.eye(3)
+            shift[0, 2] = -(pans[n + 1] - pan)
+            carries.append(shift)
+
+    def error(matrix):
+        got = cv2.perspectiveTransform(probe.reshape(-1, 1, 2), matrix).reshape(-1, 2)
+        want = cv2.perspectiveTransform(probe.reshape(-1, 1, 2), truth).reshape(-1, 2)
+        return float(np.median(np.hypot(*(got - want).T)))
+
+    fused, used = fuse_registrations(matrices, carries, probe)
+    assert used == 9
+    assert error(fused) < error(matrices[4])
+
+
+def test_one_registration_at_the_wrong_end_does_not_drag_the_answer():
+    """The failure mode that matters: not a small error, but the other basket."""
+    pytest.importorskip("cv2")
+    import cv2
+    probe = np.array([[300, 500], [600, 520], [450, 400], [700, 450],
+                      [250, 430], [550, 560]], dtype=np.float32)
+    matrices = [_camera(0.0) for _ in range(5)]
+    flip = np.array([[1, 0, 0], [0, -1, 94.0], [0, 0, 1]])   # swap ends
+    matrices[1] = flip @ matrices[1]
+    carries = [np.eye(3) for _ in range(4)]
+
+    fused, used = fuse_registrations(matrices, carries, probe)
+    assert used == 5
+    got = cv2.perspectiveTransform(probe.reshape(-1, 1, 2), fused).reshape(-1, 2)
+    want = cv2.perspectiveTransform(probe.reshape(-1, 1, 2), _camera(0.0)).reshape(-1, 2)
+    assert np.median(np.hypot(*(got - want).T)) < 0.5
+
+
+def test_a_refused_orb_hop_truncates_the_window_rather_than_guessing():
+    pytest.importorskip("cv2")
+    matrices = [_camera(p * 4.0) for p in range(7)]
+    carries = [np.eye(3)] * 6
+    carries[4] = None                       # ORB refused between 4 and 5
+    fused, used = fuse_registrations(matrices, carries, np.array(
+        [[300, 500], [600, 520], [450, 400], [700, 450], [250, 430], [550, 560]],
+        dtype=np.float32))
+    assert used == 5, "frames past the break must be dropped, not chained"
+
+
+def test_fusion_reports_when_no_fusion_happened():
+    pytest.importorskip("cv2")
+    probe = np.array([[300, 500], [600, 520], [450, 400], [700, 450],
+                      [250, 430], [550, 560]], dtype=np.float32)
+    matrices = [None, _camera(0.0), None]
+    fused, used = fuse_registrations(matrices, [None, None], probe, centre=1)
+    assert used == 1, "a caller must be able to tell a fused result from a bare one"
