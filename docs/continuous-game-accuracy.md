@@ -3516,3 +3516,40 @@ explicit check that no game appears in two splits.
 The broadcast figures above are unaffected -- that game is in no split -- but
 they carry their own caveat: both arenas appear in training, so they measure an
 unseen game in a seen building, not an unseen court.
+
+## Round 41 - Phase 1 gate, on the rebuilt model
+
+The 640 model was retrained after the original was destroyed (a fine-tune
+launched with the same run name and `exist_ok=True` overwrote it in place, and
+the only other copy was in a session temp directory). It reproduces exactly --
+seed 0, same schedule -- and the weights now live in `checkpoints/`, outside
+the scratch directory ultralytics reuses.
+
+    held-out GAMES (4 games, no clip shared with training)
+      registered                 137/138 = 99.3%      [gate 90%]
+      court error                p50 1.94 ft          [gate 2 ft]
+      frames inside the gate     68/138 = 49.3%
+      wrong end of the floor     0/137                [painted key: 100% wrong]
+
+    2025 FINALS GAME 7 BROADCAST (in no split of the dataset)
+      registered                 33/36 = 91.7%        [gate 90%]
+      two paths disagree, fused  p50 0.59 ft          [gate 2; painted key 5.8]
+                                 p90 2.01 ft
+      line agreement             0.184 vs 0.157 for the same frames 5 ft off
+
+The gate is met on both, but the margins are different and the weaker one
+should be stated plainly: **single-frame court error on unseen arenas is
+1.94 ft against a 2 ft gate, with only 49.3% of individual frames inside it.**
+The comfortable number, 0.59 ft, is the fused one, and fusion is available on
+video -- which is what the product consumes -- but not on isolated frames.
+
+The 960 fine-tune that destroyed the first model was also misconfigured, and
+that is the more useful half of the lesson: ultralytics defaults to `lr0=0.01`
+with warmup, so starting from converged weights re-trains rather than refines.
+Pose mAP50 fell 0.707 -> 0.435 over eleven epochs at the higher resolution. Any
+retry needs a rate near 0.001.
+
+Validation is noisy enough to be worth ignoring epoch by epoch: across this
+run it read 0.707, 0.643, 0.745, 0.587, 0.132 on consecutive samples. The
+validation split is 94 frames of whole games, so one awkward camera angle moves
+it several tenths. Only the test games and the broadcast checks decide anything.
