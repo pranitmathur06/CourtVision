@@ -3610,3 +3610,54 @@ registration while supplying no matrix; it now carries the neighbour's
 registration onto the centre frame. The sigma ablation (346/77/263 px) was run
 on the leaked Roboflow split, one seed per arm, and should be read as
 establishing the mechanism rather than the exact ordering of 0.18 against 0.35.
+
+## Round 43 - the second review, and the schema question settled by paint
+
+A second independent review confirmed Round 42's findings and added a sharper
+one about the schema's justification.
+
+**The symmetry check was not independent, and the docstring claiming it was is
+withdrawn.** `rectify_keypoint_schema.py` minimises exactly the flip-pair
+residuals that `symmetry_error` measures, and `KEYPOINTS` was then written as
+exact mirrors by hand -- so it returns approximately zero by construction. The
+line calling it "something a fit can never see" was wrong. It is still a real
+check on a schema derived some other way (the painted-key bootstrap failed it
+at 65 ft) and it still pins the index pairing, but it cannot vouch for the
+schema shipped here.
+
+**The reviewer's inference from that was reasonable and turns out to be
+backwards.** The fitted schema matches annotators better than the adopted
+constants -- leave-one-out 0.20 ft against 0.35 -- which suggests the constants
+are the worse of the two. But leave-one-out measures agreement with where
+annotators CLICKED, and it is invariant to any projective transform of the
+whole schema, so it cannot speak to absolute court accuracy at all.
+
+The question is settled by the one reference outside both schemas: real paint.
+Running the same model's landmarks through each schema and scoring against a
+mask built from true NBA dimensions, on our broadcast:
+
+    exact constants   line agreement p50 0.1891   (33 of 35 frames)
+    the fit           line agreement p50 0.1724   (33 of 35 frames)
+
+The constants put paint on paint better. Both statements are true at once: the
+fit reproduces the annotators' click conventions more closely, and the
+constants describe the actual court more closely. The product needs court
+positions, so the constants stay -- but on this evidence, not on the symmetry
+argument, which was circular.
+
+**Also fixed.** The two-estimate "median" in `fuse_registrations` was a mean, so
+a wrong neighbour was averaged in rather than outvoted -- the opposite of why a
+median was chosen; two estimates now fall back to the centre. The cross-split
+check that Round 40 said existed did not; it is now in the script, with tests
+on `game_of` and on the shipped splits. `check_schema_loo.py` is checked in,
+because the 0.35 ft figure was being quoted from a script that no longer
+existed. And the fusion test passed with the carry composition reversed -- the
+pans were symmetric about the centre, so the error cancelled; it now also fuses
+onto an end frame, which fails if the chain is inverted.
+
+**One defect found here affects every model trained so far.** The sigma
+override was applied through a train-start callback, so the LOSS used 0.18 but
+the VALIDATOR kept ultralytics' 1/48 -- meaning `best.pt` and `patience` were
+selected on the metric the trainer's own docstring calls broken. It belongs in
+`data.yaml`, where both read it, and now is. Every checkpoint to date was
+selected under the old arrangement.

@@ -184,10 +184,17 @@ COURT_ORIENTATION = -1.0
 def symmetry_error(schema: dict[int, tuple[float, float]]) -> float:
     """Median disagreement, in feet, with the dataset's own mirror pairs.
 
-    An independent test of any candidate schema: `flip_idx` is annotation
-    metadata, not something a fit can see, so a schema that satisfies it is
-    right for a reason its own optimisation never had access to. The first
-    attempt at these coordinates failed this at 65 ft.
+    NOT an independent test of the schema shipped here.
+    `scripts/rectify_keypoint_schema.py` minimises exactly these flip-pair
+    residuals, and `KEYPOINTS` was then written as exact mirrors by hand, so
+    this returns ~0 by construction. An earlier version of this docstring
+    called it something a fit could never see; that was wrong.
+
+    It remains a real check on a schema derived some OTHER way -- the first
+    attempt at these coordinates, bootstrapped from the painted-key
+    registration, failed it at 65 ft -- and it still pins the index pairing.
+    The schema's actual justification is the line-agreement comparison against
+    true NBA geometry on broadcast footage, which is outside its derivation.
     """
     errors = []
     for a, b in ((i, FLIP_INDEX[i]) for i in schema):
@@ -254,6 +261,11 @@ def fuse_registrations(matrices, carries, probe, centre=None):
     # matrix. Refitting works for one estimate too: the median is that
     # estimate, and the fit recovers the neighbour's registration carried onto
     # the centre frame, which is a real answer rather than a discarded instant.
+    if len(estimates) == 2:
+        # The median of two values is their mean, so a wrong neighbour would be
+        # averaged in rather than rejected -- the opposite of why the median
+        # was chosen. Two measurements cannot outvote each other.
+        return matrices[centre], 1 if matrices[centre] is not None else 0
     court = np.median(np.stack(estimates), axis=0)
     fused, _ = cv2.findHomography(probe.reshape(-1, 2), court, cv2.RANSAC,
                                   FUSE_RANSAC_FT)

@@ -81,6 +81,17 @@ def main() -> int:
         for game in chosen:
             print(f"         {game}")
 
+    # The docs claimed this check existed; it did not. Without it the leak
+    # this script was written to remove could return silently.
+    seen: dict[str, str] = {}
+    for split, chosen in (("train", train), ("valid", valid), ("test", test)):
+        for game in chosen:
+            if game in seen:
+                print(f"FAIL - {game} is in both {seen[game]} and {split}")
+                return 1
+            seen[game] = split
+    print(f"checked: {len(seen)} games, none in two splits")
+
     yaml = (SOURCE / "data.yaml").read_text()
     yaml = re.sub(r"^path: .*$", f"path: {TARGET.resolve()}", yaml, flags=re.M)
     (TARGET / "data.yaml").write_text(yaml)

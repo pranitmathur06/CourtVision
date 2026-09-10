@@ -181,6 +181,18 @@ def test_fusion_averages_away_per_frame_noise():
     assert used == 9
     assert error(fused) < error(matrices[4])
 
+    # Pin the composition DIRECTION. With pans symmetric about the centre a
+    # reversed carry chain cancels out and this test passes anyway, so fuse
+    # onto frame 0 instead: every neighbour is then on one side, and inverting
+    # the chain walks the camera the wrong way.
+    onesided, used = fuse_registrations(matrices, carries, probe, centre=0)
+    assert used == 9
+    truth_at_0 = _camera(pans[0])
+    got = cv2.perspectiveTransform(probe.reshape(-1, 1, 2), onesided).reshape(-1, 2)
+    want = cv2.perspectiveTransform(probe.reshape(-1, 1, 2), truth_at_0).reshape(-1, 2)
+    assert np.median(np.hypot(*(got - want).T)) < 1.0, (
+        "fusing onto an end frame must still land on that frame's court")
+
 
 def test_one_registration_at_the_wrong_end_does_not_drag_the_answer():
     """The failure mode that matters: not a small error, but the other basket."""
