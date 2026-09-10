@@ -122,12 +122,13 @@ MULTI_START_FT = ((0.0, 0.0), (3.0, 0.0), (-3.0, 0.0), (0.0, 3.0), (0.0, -3.0))
 #: moving along it costs nothing.
 MIN_COVERAGE = 0.10
 PEAK_SHIFT_FT = 2.0
-#: PROVISIONAL. 3.0 was chosen on the OKC calibration game by the fallback
-#: rule in scripts/select_refinement_threshold.py (no candidate reached a
-#: 0.30 ft held-out median, so the lowest median). The ratio was redefined
-#: since -- solution and neighbours now compared on common samples -- so it
-#: must be recalibrated on a fresh OKC dump before it is anything firmer.
-MIN_PEAK_RATIO = 3.0
+#: Selected by scripts/select_refinement_threshold.py from
+#: outputs/calib_okc_bright_v2.json (OKC calibration game, commit d715788,
+#: made at threshold 0 with the common-sample ratio). No candidate reached a
+#: 0.30 ft held-out median, so the rule's fallback took the lowest: 0.54 ft,
+#: tied between 2.0 and 5.0, ties to the lower. The previous 3.0 came from the
+#: same rule under the old ratio definition.
+MIN_PEAK_RATIO = 2.0
 #: A direction needs this many visible samples before it is judged; fewer means
 #: no visible lines constrain it, and the landmark prior holds it.
 MIN_GROUP_SAMPLES = 40
