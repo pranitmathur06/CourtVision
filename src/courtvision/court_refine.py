@@ -1,0 +1,479 @@
+"""Sub-foot court registration: align every painted line, not twelve points.
+
+The landmark model places about twelve points per frame, each to roughly
+35 px, and a homography through them lands 1.62 ft from the annotators' court
+on held-out games. That error is set by how precisely a landmark can be
+localised -- the corner of a lane is a blob a network has to point at -- and
+more epochs and longer fusion windows were both measured not to move it.
+
+A painted line is a far better measurement than a point. It is a thin,
+high-contrast ridge whose centre can be found to a fraction of a pixel
+wherever it is visible, and an NBA floor carries hundreds of feet of them.
+Every sample along every visible line is an independent constraint, so the fit
+is driven by hundreds of sub-pixel measurements instead of a dozen coarse ones.
+
+It is also arena-agnostic by construction. Every NBA floor carries identical
+lines in identical places; only paint colour, logos and wood vary. The landmark
+model has to generalise across appearance, but this stage only needs a start
+inside its capture range, and then the geometry takes over.
+
+## How this can fail, and what guards against it
+
+This is the family of method that failed here before: an ICP refinement whose
+line score improved 7.60 -> 1.30 ft while true error rose 10.2 -> 16.5. It
+matched lines to whatever edges were nearest -- logos, limbs, the crowd -- and
+optimised the match rather than the truth. The differences are specific:
+
+- **Point-to-line, not point-to-point.** A sample may slide along its line;
+  only its perpendicular offset is a residual, so nothing is asked of a sample
+  that it cannot measure.
+- **Orientation and continuity.** A candidate must run the way the projected
+  line runs (structure tensor, within MAX_ANGLE_DEG) and stay bright a few
+  pixels along it. A limb crossing the line, a logo stroke at another angle, or
+  a blob fails.
+- **Coarse to fine.** The search window halves every pass, so by the last one a
+  neighbouring line is out of reach.
+- **Robust loss and a weak prior.** Residuals go through soft-L1, and the
+  landmark fit enters as a prior at its measured noise, so directions the
+  visible lines cannot observe -- sliding along parallel lines -- stay where the
+  landmarks put them rather than drifting.
+- **A drift guard.** A refinement that moves the visible floor further than the
+  landmark fit's own error could explain is refused, not returned.
+- **Measured on lines it did not use.** `held_out_offsets` asks where a line's
+  paint lies, in court feet, after a refinement that never saw that line.
+  Nothing in that number comes from annotations or was optimised.
+"""
+
+from __future__ import annotations
+
+import numpy as np
+
+from .court_lines import court_lines
+
+#: Search half-widths in pixels, one per pass. The first must exceed the
+#: landmark fit's error (1.62 ft is ~50 px on the near side of a broadcast
+#: frame); the last is small enough that no neighbouring line can be reached.
+SEARCH_PX = (48, 24, 12, 6, 3)
+#: Spacing of samples along each court line.
+SAMPLE_SPACING_FT = 0.5
+#: A candidate ridge must run within this angle of the projected line.
+MAX_ANGLE_DEG = 12.0
+#: How line-like the neighbourhood must be (structure-tensor coherence).
+MIN_COHERENCE = 0.3
+#: Ridge peak above the profile's median, in top-hat grey levels.
+MIN_CONTRAST = 6.0
+#: The ridge must stay this bright, as a fraction of its peak, along the line.
+MIN_CONTINUITY = 0.4
+#: Fewer usable samples than this and the fit is not attempted.
+MIN_SAMPLES = 30
+#: Noise of a line-centre measurement, and of the landmark fit used as prior.
+LINE_SIGMA_PX = 0.7
+PRIOR_PX = 40.0
+#: A refinement moving the visible floor further than this is refused. The
+#: landmark fit's per-frame error on held-out games is p50 1.62 ft, p90 3.07;
+#: allowing about two and a half times the p90 covers its tail while still
+#: refusing a relock onto paint half the court away.
+MAX_DRIFT_FT = 8.0
+#: Extra starts, in court feet, tried around the landmark registration.
+#:
+#: Parallel lines on a court sit as little as 3 ft apart -- the sideline and the
+#: corner-three line -- and a start 6 ft off locked onto the wrong one with a
+#: 0.106 px residual, 3.0 ft from the truth. Sharpness cannot see that; the
+#: lock is sharp. But hypotheses on the SAME frame share the same occlusion, so
+#: their absolute coverage is comparable where coverage across frames is not,
+#: and the right alignment explains the most paint. Starts are spaced at that
+#: 3 ft confusion distance.
+MULTI_START_FT = ((0.0, 0.0), (3.0, 0.0), (-3.0, 0.0), (0.0, 3.0), (0.0, -3.0),
+                  (6.0, 0.0), (-6.0, 0.0), (0.0, 6.0), (0.0, -6.0))
+#: Is the solution a sharp fit to the paint, or merely a fit?
+#:
+#: A low residual proves nothing. Started 25 ft off on a synthetic court the
+#: refinement locked onto the wrong paint with a 0.11 px residual; started 30 ft
+#: off along the court it kept the across-court mapping exact, compressed the
+#: along-court one, and scored 0.079 px over 405 samples, 28 ft from the truth.
+#:
+#: Raw coverage -- the share of visible line samples that find paint -- caught
+#: those on synthetic frames and failed on broadcast: fans, graphics and
+#: players hide much of the floor, so correct fits scored 16-35% and nearly
+#: every frame was refused. Hidden samples are uninformative, not evidence of
+#: misalignment. So coverage at the solution is compared with coverage after
+#: moving the registration PEAK_SHIFT_FT each way, separately for each direction
+#: the lines constrain. A correct fit is a sharp peak; occlusion scales the
+#: solution and its neighbours alike and cancels in the ratio. A lock onto the
+#: wrong lines leaves the lines pinning the wrong direction unexplained, and
+#: moving along it costs nothing.
+MIN_COVERAGE = 0.10
+PEAK_SHIFT_FT = 2.0
+#: Calibrated on the OKC game (calibration set), never on the unseen arena.
+MIN_PEAK_RATIO = 2.0
+#: A direction needs this many visible samples before it is judged; fewer means
+#: no visible lines constrain it, and the landmark prior holds it.
+MIN_GROUP_SAMPLES = 40
+#: Margin around a player box inside which samples are ignored.
+BOX_MARGIN_PX = 6
+
+
+def _line_samples(spacing_ft: float = SAMPLE_SPACING_FT):
+    """Points along every painted line, with unit tangents and line ids."""
+    points, tangents, ids = [], [], []
+    for index, polyline in enumerate(court_lines()):
+        p = np.asarray(polyline, dtype=np.float64)
+        for a, b in zip(p[:-1], p[1:]):
+            segment = b - a
+            length = float(np.hypot(*segment))
+            if length < 1e-9:
+                continue
+            count = max(1, int(length / spacing_ft))
+            tangent = segment / length
+            for s in (np.arange(count) + 0.5) / count:
+                points.append(a + segment * s)
+                tangents.append(tangent)
+                ids.append(index)
+    return (np.array(points), np.array(tangents), np.array(ids, dtype=int))
+
+
+_POINTS, _TANGENTS, _LINE_IDS = _line_samples()
+
+
+def _project(matrix: np.ndarray, points: np.ndarray):
+    """Apply a homography; also report which points land in front of it."""
+    h = np.c_[points, np.ones(len(points))] @ matrix.T
+    w = h[:, 2]
+    ok = w > 1e-9
+    out = np.full((len(points), 2), np.nan)
+    out[ok] = h[ok, :2] / w[ok, None]
+    return out, ok
+
+
+def paint_response(image: np.ndarray) -> np.ndarray:
+    """Thin bright ridges -- painted lines -- with the floor's shading removed."""
+    import cv2
+
+    grey = image if image.ndim == 2 else cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    grey = cv2.GaussianBlur(grey.astype(np.float32), (0, 0), 1.0)
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (21, 21))
+    return cv2.morphologyEx(grey, cv2.MORPH_TOPHAT, kernel)
+
+
+def _structure(response: np.ndarray):
+    """Line-normal angle and coherence at every pixel."""
+    import cv2
+
+    gx = cv2.Sobel(response, cv2.CV_32F, 1, 0, ksize=3)
+    gy = cv2.Sobel(response, cv2.CV_32F, 0, 1, ksize=3)
+    jxx = cv2.GaussianBlur(gx * gx, (0, 0), 2.0)
+    jxy = cv2.GaussianBlur(gx * gy, (0, 0), 2.0)
+    jyy = cv2.GaussianBlur(gy * gy, (0, 0), 2.0)
+    # For a ridge the gradient energy sits on its two flanks, pointing across
+    # it, so the dominant gradient orientation is the line's NORMAL.
+    normal = 0.5 * np.arctan2(2 * jxy, jxx - jyy)
+    coherence = np.sqrt((jxx - jyy) ** 2 + 4 * jxy ** 2) / (jxx + jyy + 1e-6)
+    return normal, coherence
+
+
+def _observe(response, structure, inverse, half_width, keep, boxes):
+    """Find the painted ridge nearest each projected line sample.
+
+    `inverse` maps court -> image. Returns image positions of the ridges found
+    and the indices of the samples they belong to.
+    """
+    from scipy.ndimage import map_coordinates
+
+    height, width = response.shape
+    points = _POINTS[keep]
+    tangents = _TANGENTS[keep]
+    index = np.flatnonzero(keep)
+
+    projected, front = _project(inverse, points)
+    ahead, front2 = _project(inverse, points + tangents)
+    valid = front & front2
+    t_img = ahead - projected
+    length = np.hypot(t_img[:, 0], t_img[:, 1])
+    valid &= length > 1e-6
+    t_img = t_img / np.where(length > 1e-6, length, 1.0)[:, None]
+    n_img = np.stack([-t_img[:, 1], t_img[:, 0]], axis=1)
+
+    margin = half_width + 8
+    x, y = projected[:, 0], projected[:, 1]
+    valid &= (x > margin) & (x < width - margin) & (y > margin) & (y < height - margin)
+    if boxes is not None and len(boxes):
+        for x1, y1, x2, y2 in np.asarray(boxes, dtype=float):
+            inside = ((x >= x1 - BOX_MARGIN_PX) & (x <= x2 + BOX_MARGIN_PX)
+                      & (y >= y1 - BOX_MARGIN_PX) & (y <= y2 + BOX_MARGIN_PX))
+            valid &= ~inside
+    if valid.sum() == 0:
+        return np.zeros((0, 2)), np.zeros(0, dtype=int), np.zeros(0, dtype=int)
+    candidates = index[valid]
+
+    projected, t_img, n_img, index = (projected[valid], t_img[valid],
+                                      n_img[valid], index[valid])
+    offsets = np.arange(-half_width, half_width + 1, dtype=np.float64)
+    xs = projected[:, 0:1] + n_img[:, 0:1] * offsets
+    ys = projected[:, 1:2] + n_img[:, 1:2] * offsets
+    profile = map_coordinates(response, [ys.ravel(), xs.ravel()], order=1,
+                              mode="constant").reshape(len(projected), -1)
+    k = profile.argmax(axis=1)
+    rows = np.arange(len(profile))
+    peak = profile[rows, k]
+    good = (k > 0) & (k < len(offsets) - 1)
+    good &= peak - np.median(profile, axis=1) >= MIN_CONTRAST
+
+    # Sub-pixel centre from a parabola through the peak and its neighbours.
+    kk = np.clip(k, 1, len(offsets) - 2)
+    y0, y1, y2 = profile[rows, kk - 1], profile[rows, kk], profile[rows, kk + 1]
+    denominator = y0 - 2 * y1 + y2
+    delta = np.where(denominator < 0, 0.5 * (y0 - y2) / np.where(
+        denominator < 0, denominator, -1.0), 0.0)
+    delta = np.clip(delta, -0.5, 0.5)
+    found = projected + n_img * (offsets[kk] + delta)[:, None]
+
+    # Continuity: a painted line stays bright along its own direction.
+    along = []
+    for step in (-6.0, -3.0, 3.0, 6.0):
+        p = found + t_img * step
+        along.append(map_coordinates(response, [p[:, 1], p[:, 0]], order=1,
+                                     mode="constant"))
+    good &= np.mean(along, axis=0) >= MIN_CONTINUITY * np.maximum(peak, 1e-6)
+
+    # Orientation: the ridge must run the way the projected line runs.
+    normal, coherence = structure
+    ix = np.clip(np.round(found[:, 0]).astype(int), 0, width - 1)
+    iy = np.clip(np.round(found[:, 1]).astype(int), 0, height - 1)
+    expected = np.arctan2(n_img[:, 1], n_img[:, 0])
+    difference = np.abs(((normal[iy, ix] - expected) + np.pi / 2) % np.pi - np.pi / 2)
+    good &= difference <= np.deg2rad(MAX_ANGLE_DEG)
+    good &= coherence[iy, ix] >= MIN_COHERENCE
+
+    return found[good], index[good], candidates
+
+
+_NORMALISE = np.array([[1 / 50.0, 0, -25 / 50.0], [0, 1 / 50.0, -47 / 50.0],
+                       [0, 0, 1.0]])
+_DENORMALISE = np.linalg.inv(_NORMALISE)
+
+
+def _compose(inverse0, params):
+    """court -> image, as a perturbation of the starting one in normalised feet."""
+    d = np.append(params, 0.0).reshape(3, 3)
+    return inverse0 @ _DENORMALISE @ (np.eye(3) + d) @ _NORMALISE
+
+
+def _fit(inverse0, observed, index, prior_points, robust_px, prior_inverse=None):
+    """Least-squares court -> image homography, point-to-line plus a weak prior.
+
+    The fit is parameterised around `inverse0`, where the search started, but
+    the prior pulls toward `prior_inverse` -- the landmark registration, which
+    is the actual evidence. A displaced start is a place to look from, not a
+    belief about where the court is.
+    """
+    from scipy.optimize import least_squares
+
+    points = _POINTS[index]
+    ahead = points + _TANGENTS[index]
+    prior_image, _ = _project(inverse0 if prior_inverse is None else prior_inverse,
+                              prior_points)
+
+    def residuals(params):
+        inverse = _compose(inverse0, params)
+        a, _ = _project(inverse, points)
+        b, _ = _project(inverse, ahead)
+        u = b - a
+        u /= np.maximum(np.hypot(u[:, 0], u[:, 1]), 1e-9)[:, None]
+        # Signed perpendicular distance, in pixels, from the paint to the line.
+        line = (u[:, 0] * (observed[:, 1] - a[:, 1])
+                - u[:, 1] * (observed[:, 0] - a[:, 0])) / LINE_SIGMA_PX
+        moved, _ = _project(inverse, prior_points)
+        prior = ((moved - prior_image) / PRIOR_PX).ravel()
+        return np.concatenate([line, prior])
+
+    solution = least_squares(residuals, np.zeros(8), loss="soft_l1",
+                             f_scale=max(robust_px / LINE_SIGMA_PX, 1.0),
+                             x_scale="jac", max_nfev=200)
+    inverse = _compose(inverse0, solution.x)
+    a, _ = _project(inverse, points)
+    b, _ = _project(inverse, ahead)
+    u = b - a
+    u /= np.maximum(np.hypot(u[:, 0], u[:, 1]), 1e-9)[:, None]
+    final = np.abs(u[:, 0] * (observed[:, 1] - a[:, 1])
+                   - u[:, 1] * (observed[:, 0] - a[:, 0]))
+    return inverse, final
+
+
+def prepare(image):
+    """Paint response and structure tensor, computed once per frame.
+
+    Measuring accuracy means refining a frame once per held-out line family,
+    and these two images do not depend on which lines are held out.
+    """
+    response = paint_response(image)
+    return response, _structure(response)
+
+
+def sample_normals(index):
+    """Court-space unit normals of the given line samples."""
+    tangents = _TANGENTS[np.asarray(index, dtype=int)]
+    return np.stack([-tangents[:, 1], tangents[:, 0]], axis=1)
+
+
+def _group_coverage(response, structure, matrix, keep, boxes, window, axis):
+    """Share of the visible samples pinning `axis` that find paint."""
+    _, found, visible = _observe(response, structure, np.linalg.inv(matrix),
+                                 window, keep, boxes)
+    if not len(visible):
+        return 0.0, 0
+    in_group = np.abs(sample_normals(visible)[:, axis]) >= 0.7
+    if not in_group.sum():
+        return 0.0, 0
+    hit = (np.abs(sample_normals(found)[:, axis]) >= 0.7).sum() if len(found) else 0
+    return hit / in_group.sum(), int(in_group.sum())
+
+
+def _peak_sharpness(response, structure, matrix, keep, boxes, window):
+    """Worst coverage, and worst solution-to-neighbour ratio, over directions."""
+    worst_coverage, worst_ratio, judged = 1.0, np.inf, False
+    for axis in (0, 1):
+        coverage, visible = _group_coverage(response, structure, matrix, keep,
+                                            boxes, window, axis)
+        if visible < MIN_GROUP_SAMPLES:
+            continue
+        neighbour = 0.0
+        for sign in (-1.0, 1.0):
+            move = np.eye(3)
+            move[axis, 2] = sign * PEAK_SHIFT_FT
+            moved, _ = _group_coverage(response, structure, move @ matrix, keep,
+                                       boxes, window, axis)
+            neighbour = max(neighbour, moved)
+        worst_coverage = min(worst_coverage, coverage)
+        worst_ratio = min(worst_ratio, coverage / max(neighbour, 1e-3))
+        judged = True
+    if not judged:
+        return {"coverage": 0.0, "ratio": 0.0}
+    return {"coverage": float(worst_coverage), "ratio": float(worst_ratio)}
+
+
+def _refine_from(response, structure, start, prior, keep, boxes, passes):
+    """One coarse-to-fine refinement from `start`; None if it runs out of paint."""
+    base = np.linalg.inv(start)
+    prior_inverse = np.linalg.inv(prior)
+    inverse = base.copy()
+    observed = np.zeros((0, 2))
+    index = np.zeros(0, dtype=int)
+    residual = np.zeros(0)
+    for half_width in passes:
+        observed, index, _ = _observe(response, structure, inverse, half_width,
+                                      keep, boxes)
+        if len(index) < MIN_SAMPLES:
+            return None, f"only {len(index)} line samples at {half_width} px"
+        visible = _POINTS[index]
+        lo, hi = visible.min(axis=0), visible.max(axis=0)
+        prior_points = np.array([[x, y] for x in np.linspace(lo[0], hi[0], 3)
+                                 for y in np.linspace(lo[1], hi[1], 3)])
+        inverse, residual = _fit(base, observed, index, prior_points,
+                                 robust_px=max(half_width / 4.0, LINE_SIGMA_PX),
+                                 prior_inverse=prior_inverse)
+    refined = np.linalg.inv(inverse)
+    refined /= refined[2, 2]
+    return (refined, observed, index, residual), ""
+
+
+def _explained(response, structure, matrix, keep, boxes, window):
+    """Share of the visible line samples that find paint -- comparable across
+    hypotheses on one frame, because they share its occlusion."""
+    _, found, visible = _observe(response, structure, np.linalg.inv(matrix),
+                                 window, keep, boxes)
+    return len(found) / max(len(visible), 1)
+
+
+def refine(image, matrix, boxes=None, exclude_lines=(), passes=SEARCH_PX,
+           prepared=None, starts=MULTI_START_FT):
+    """Refine an image -> court homography by aligning every visible line.
+
+    `matrix` is the starting registration (from the landmark model). `boxes`
+    are player boxes in pixels; samples inside them are ignored, because a
+    white jersey edge beside a line is exactly the clutter that misled ICP.
+    `exclude_lines` holds court-line ids out of the fit, which is how the
+    result is measured without circularity.
+
+    Returns `(matrix, info)`. When `info["refined"]` is False the starting
+    matrix comes back unchanged -- a refusal is never dressed as a result.
+    """
+    response, structure = prepared if prepared is not None else prepare(image)
+    keep = ~np.isin(_LINE_IDS, list(exclude_lines))
+    info = {"refined": False, "samples": 0, "residual_px": None,
+            "drift_ft": None, "coverage": None, "peak_ratio": None,
+            "explained": None, "reason": ""}
+
+    best, best_score, last_reason = None, -1.0, ""
+    for dx, dy in starts:
+        move = np.array([[1.0, 0, dx], [0, 1.0, dy], [0, 0, 1.0]])
+        outcome, reason = _refine_from(response, structure, move @ matrix,
+                                       matrix, keep, boxes, passes)
+        if outcome is None:
+            last_reason = reason
+            continue
+        score = _explained(response, structure, outcome[0], keep, boxes,
+                           passes[-1])
+        if score > best_score:
+            best, best_score = outcome, score
+    if best is None:
+        info["reason"] = last_reason
+        return matrix, info
+    refined, observed, index, residual = best
+
+    # How far did the visible floor move from the LANDMARK registration?
+    # Beyond what that fit's own error could explain means the lines were
+    # matched to the wrong paint.
+    before, _ = _project(matrix, observed)
+    after, _ = _project(refined, observed)
+    drift = float(np.median(np.hypot(*(after - before).T)))
+    peak = _peak_sharpness(response, structure, refined, keep, boxes,
+                           passes[-1])
+    info.update(samples=int(len(index)),
+                residual_px=float(np.median(residual)), drift_ft=drift,
+                coverage=peak["coverage"], peak_ratio=peak["ratio"],
+                explained=float(best_score))
+    if drift > MAX_DRIFT_FT:
+        info["reason"] = f"moved the floor {drift:.1f} ft; refused"
+        return matrix, info
+    if peak["coverage"] < MIN_COVERAGE:
+        info["reason"] = f"paint under only {peak['coverage']:.0%} of the lines"
+        return matrix, info
+    if peak["ratio"] < MIN_PEAK_RATIO:
+        info["reason"] = (f"not a sharp fit: {PEAK_SHIFT_FT:.0f} ft away "
+                          f"explains nearly as much (ratio {peak['ratio']:.1f})")
+        return matrix, info
+    info["refined"] = True
+    return refined, info
+
+
+def held_out_offsets(image, matrix, lines, boxes=None, half_width: int = 24,
+                     prepared=None, details=False):
+    """Where the paint of `lines` actually lies, in court feet, off the model.
+
+    Pair with `refine(..., exclude_lines=lines)`: the registration then never
+    saw these lines, so their measured offset is an accuracy figure rather than
+    a residual. Returns signed perpendicular offsets, one per sample found.
+
+    The window is deliberately wider than the errors being measured. A window
+    that only just covered the answer would reject the large offsets at its
+    edge and report the small ones -- the saturation that sank two earlier
+    estimators here.
+    """
+    response, structure = prepared if prepared is not None else prepare(image)
+    keep = np.isin(_LINE_IDS, list(lines))
+    observed, index, _ = _observe(response, structure, np.linalg.inv(matrix),
+                                  half_width, keep, boxes)
+    if not len(index):
+        return (np.zeros(0), index) if details else np.zeros(0)
+    court, _ = _project(matrix, observed)
+    offsets = np.sum(sample_normals(index) * (court - _POINTS[index]), axis=1)
+    return (offsets, index) if details else offsets
+
+
+#: Line families worth holding out, by court_lines() index.
+HOLD_OUT = {
+    "boundary": (0,), "half-court": (1,), "centre circle": (2,),
+    "near lane": (3,), "near FT circle": (4,), "near arc": (8,),
+    "near corners": (6, 7), "far lane": (9,), "far FT circle": (10,),
+    "far arc": (14,), "far corners": (12, 13),
+}
