@@ -6,10 +6,13 @@ lost, or whose refit is refused, counts as a failure -- infinite error -- in
 EVERY statistic. An earlier table counted failures in the median but not the
 p90 and so reported a 0.67 ft tail that was really 0.89.
 
-The simulation is exact only for a dump made at threshold 0: a candidate then
-refuses a frame when the full fit's ratio falls below it, and refuses a
-measurement when that family's refit's ratio does. A dump gated higher has
-already discarded refits the candidate would need to judge, so it is refused.
+The simulation is exact for any dump gated at or below the lowest candidate: a
+candidate refuses a frame when the full fit's ratio falls below it, and refuses
+a measurement when that family's refit's ratio does. That works because the
+evaluator records every refused refit and its ratio -- an earlier one skipped
+refused refits, which is what made its dumps unable to simulate a higher
+threshold. A dump gated ABOVE the lowest candidate never measured the frames
+and refits that candidate would accept, so it is refused.
 
 It also refuses the unseen arena, whose footage must not choose anything, and
 any dump without provenance. The previous threshold was set by code that was

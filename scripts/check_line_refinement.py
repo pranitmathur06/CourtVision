@@ -50,10 +50,10 @@ def main() -> int:
                              "landmark start alone achieves")
     parser.add_argument("--min-peak-ratio", type=float, default=None,
                         help="override the acceptance threshold. Calibration "
-                             "dumps are made at 0, so the selection script can "
-                             "apply each candidate to frames AND refits exactly; "
-                             "a dump gated at 2 cannot simulate 5, because its "
-                             "held-out refits were already gated at 2")
+                             "dumps are gated at or below the lowest candidate; "
+                             "refused refits and their ratios are recorded, so "
+                             "the selection script can apply each candidate to "
+                             "frames AND refits exactly")
     parser.add_argument("--polarity", choices=("bright", "both", "all"), default=None,
                         help="which ridges count as paint; default is the "
                              "module's PAINT_POLARITY")

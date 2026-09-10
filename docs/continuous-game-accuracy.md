@@ -3965,9 +3965,11 @@ rule came first" cannot be verified from the repository.
 So every OKC figure since Round 48 was measured with a biased instrument and is
 superseded, and the threshold is void. `scripts/select_refinement_threshold.py`
 is now the rule, checked in before any recalibration: it counts lost and
-refused as failures in every statistic, requires dumps made at threshold 0 (so
-a candidate can judge frames AND refits exactly -- a dump gated at 2 cannot
-simulate 5), refuses the unseen arena, and refuses dumps without provenance.
+refused as failures in every statistic, requires dumps gated at or below the
+lowest candidate (refused refits and their ratios are now recorded, so each
+candidate is applied to frames AND refits exactly; the old evaluator's skipped
+refits are what made its dumps unable to do this), refuses the unseen arena,
+and refuses dumps without provenance.
 Dumps now record video, arguments, commit, threshold, polarity, the control
 values and every registered frame. Also fixed: a 1e-3 floor under the
 sharpness ratio's denominator, which made any partial lock with empty 2 ft
