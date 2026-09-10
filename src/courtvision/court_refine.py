@@ -122,10 +122,12 @@ MULTI_START_FT = ((0.0, 0.0), (3.0, 0.0), (-3.0, 0.0), (0.0, 3.0), (0.0, -3.0))
 #: moving along it costs nothing.
 MIN_COVERAGE = 0.10
 PEAK_SHIFT_FT = 2.0
-#: VOID pending recalibration: the evaluator that produced the last
-#: value dropped refused refits and biased held-out lines low, and the
-#: ratio is now count-smoothed. Set by scripts/select_refinement_threshold.py.
-MIN_PEAK_RATIO = 5.0
+#: PROVISIONAL. 3.0 was chosen on the OKC calibration game by the fallback
+#: rule in scripts/select_refinement_threshold.py (no candidate reached a
+#: 0.30 ft held-out median, so the lowest median). The ratio was redefined
+#: since -- solution and neighbours now compared on common samples -- so it
+#: must be recalibrated on a fresh OKC dump before it is anything firmer.
+MIN_PEAK_RATIO = 3.0
 #: A direction needs this many visible samples before it is judged; fewer means
 #: no visible lines constrain it, and the landmark prior holds it.
 MIN_GROUP_SAMPLES = 40
@@ -157,6 +159,7 @@ def _line_samples(spacing_ft: float = SAMPLE_SPACING_FT):
 
 
 _POINTS, _TANGENTS, _LINE_IDS, _SEGMENTS = _line_samples()
+_NORMALS = np.stack([-_TANGENTS[:, 1], _TANGENTS[:, 0]], axis=1)
 
 
 def _segment_consensus(profile, segments, offsets, slack_px):
@@ -397,44 +400,48 @@ def sample_normals(index):
     return np.stack([-tangents[:, 1], tangents[:, 0]], axis=1)
 
 
-def _group_coverage(response, structure, matrix, keep, boxes, window, axis):
-    """Paint hits and visible samples among the lines pinning `axis`."""
+def _hits(response, structure, matrix, keep, boxes, window):
+    """Indices of the line samples that find paint, and of those that could."""
     _, found, visible = _observe(response, structure, np.linalg.inv(matrix),
                                  window, keep, boxes)
-    if not len(visible):
-        return 0, 0
-    in_group = int((np.abs(sample_normals(visible)[:, axis]) >= 0.7).sum())
-    hit = int((np.abs(sample_normals(found)[:, axis]) >= 0.7).sum()) if len(found) else 0
-    return hit, in_group
+    return set(found.tolist()), set(visible.tolist())
 
 
 def _peak_sharpness(response, structure, matrix, keep, boxes, window):
-    """Worst coverage, and worst solution-to-neighbour ratio, over directions."""
-    worst_coverage, worst_ratio, judged = 1.0, np.inf, False
+    """Worst coverage, and worst solution-to-neighbour ratio, over directions.
+
+    The solution and each 2 ft neighbour are compared on the SAME samples --
+    those usable under both. Recomputing visibility for the neighbour alone let
+    a shift that pushed a group's samples off the usable frame, or into player
+    boxes, collapse the neighbour's denominator: with nothing visible its
+    smoothed rate reached 1.0, and a correct, fully covered fit read as not
+    sharp and was refused. A shift that leaves too few common samples is
+    uninformative, so it is skipped rather than counted against the fit.
+    """
+    found, visible = _hits(response, structure, matrix, keep, boxes, window)
+    worst_coverage, coverage_judged = 1.0, False
+    worst_ratio, ratio_judged = np.inf, False
     for axis in (0, 1):
-        hit, visible = _group_coverage(response, structure, matrix, keep,
-                                       boxes, window, axis)
-        if visible < MIN_GROUP_SAMPLES:
+        group = {i for i in visible if abs(_NORMALS[i, axis]) >= 0.7}
+        if len(group) < MIN_GROUP_SAMPLES:
             continue
-        # Rates are add-one smoothed on counts. A fixed floor under the
-        # neighbour's rate (it was 1e-3) turned any partial lock whose 2 ft
-        # neighbours found nothing into a ratio of about 1000x its coverage --
-        # an unrefusable class. Smoothing bounds the ratio by what the visible
-        # sample count can actually support.
-        rate = (hit + 1) / (visible + 1)
-        neighbour = 0.0
+        worst_coverage = min(worst_coverage, len(found & group) / len(group))
+        coverage_judged = True
         for sign in (-1.0, 1.0):
             move = np.eye(3)
             move[axis, 2] = sign * PEAK_SHIFT_FT
-            n_hit, n_visible = _group_coverage(response, structure, move @ matrix,
-                                               keep, boxes, window, axis)
-            neighbour = max(neighbour, (n_hit + 1) / (n_visible + 1))
-        worst_coverage = min(worst_coverage, hit / visible)
-        worst_ratio = min(worst_ratio, rate / neighbour)
-        judged = True
-    if not judged:
-        return {"coverage": 0.0, "ratio": 0.0}
-    return {"coverage": float(worst_coverage), "ratio": float(worst_ratio)}
+            n_found, n_visible = _hits(response, structure, move @ matrix, keep,
+                                       boxes, window)
+            common = group & n_visible
+            if len(common) < MIN_GROUP_SAMPLES:
+                continue
+            # Add-one smoothing on counts over the same samples: bounded by what
+            # the sample count supports, unlike the 1e-3 floor it replaced.
+            ratio = (len(found & common) + 1) / (len(n_found & common) + 1)
+            worst_ratio = min(worst_ratio, ratio)
+            ratio_judged = True
+    return {"coverage": float(worst_coverage) if coverage_judged else 0.0,
+            "ratio": float(worst_ratio) if ratio_judged else 0.0}
 
 
 def _refine_from(response, structure, start, prior, keep, boxes, passes):
@@ -462,13 +469,32 @@ def _refine_from(response, structure, start, prior, keep, boxes, passes):
     return (refined, observed, index, residual), ""
 
 
-def _explained(response, structure, matrix, keep, boxes, window):
-    """Share of the visible line samples that find paint, and how many were
-    visible -- comparable across hypotheses on one frame, which share its
-    occlusion, provided they see about as much of the court."""
-    _, found, visible = _observe(response, structure, np.linalg.inv(matrix),
-                                 window, keep, boxes)
-    return len(found) / max(len(visible), 1), len(visible)
+def _choose(candidates):
+    """The hypothesis explaining the most paint, judged on common ground.
+
+    `candidates` are (found, visible, outcome) with index sets. Shares are
+    compared over the samples EVERY hypothesis can see. Comparing each one's
+    own share, with a floor at 70% of the best-seeing one's visibility, could
+    disqualify the right hypothesis purely because a wrong basin pulled more
+    court into frame. The floor survives only as a fallback, when the
+    hypotheses share too little court to compare on.
+    """
+    if not candidates:
+        return None, -1.0
+    common = set.intersection(*(visible for _, visible, _ in candidates))
+    if len(common) >= MIN_SAMPLES:
+        scored = [(len(found & common) / len(common), outcome)
+                  for found, _, outcome in candidates]
+    else:
+        most = max(len(visible) for _, visible, _ in candidates)
+        scored = [(len(found) / max(len(visible), 1), outcome)
+                  for found, visible, outcome in candidates
+                  if len(visible) >= MIN_RELATIVE_VISIBLE * most]
+    best, best_score = None, -1.0
+    for score, outcome in scored:          # ties keep the earlier start
+        if score > best_score:
+            best, best_score = outcome, score
+    return best, best_score
 
 
 #: A hypothesis must see at least this share of the court the best-seeing one
@@ -504,15 +530,10 @@ def refine(image, matrix, boxes=None, exclude_lines=(), passes=SEARCH_PX,
         if outcome is None:
             last_reason = reason
             continue
-        score, visible = _explained(response, structure, outcome[0], keep, boxes,
-                                    passes[-1])
-        candidates.append((score, visible, outcome))
-    best, best_score = None, -1.0
-    if candidates:
-        most = max(v for _, v, _ in candidates)
-        for score, visible, outcome in candidates:
-            if visible >= MIN_RELATIVE_VISIBLE * most and score > best_score:
-                best, best_score = outcome, score
+        found, visible = _hits(response, structure, outcome[0], keep, boxes,
+                               passes[-1])
+        candidates.append((found, visible, outcome))
+    best, best_score = _choose(candidates)
     if best is None:
         info["reason"] = last_reason
         return matrix, info

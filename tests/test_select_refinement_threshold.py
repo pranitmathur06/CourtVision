@@ -80,3 +80,21 @@ def test_failures_count_everywhere_and_the_smallest_passing_threshold_wins(tmp_p
     assert "MIN_PEAK_RATIO = 5.0" in out, out
     chosen_row = next(line for line in out.splitlines() if "<- chosen" in line)
     assert "inf" in chosen_row, "the refused refit must appear in the tail"
+
+
+def test_when_nothing_reaches_the_target_the_fallback_is_the_lowest_median(tmp_path):
+    """The rule that actually chose 3.0 on OKC, now checkable: at 2 and 3 the
+    median is 0.50; at 5, 7 and 10 it is 0.45; the lowest threshold with the
+    lowest median is 5."""
+    records = [
+        {"t": 1.0, "peak_ratio": 12, "refined_err": 0.40, "refit_ratio": 12},
+        {"t": 1.0, "peak_ratio": 12, "refined_err": 0.45, "refit_ratio": 12},
+        {"t": 1.0, "peak_ratio": 12, "refined_err": 0.50, "refit_ratio": 12},
+        {"t": 2.0, "peak_ratio": 3, "refined_err": 0.80, "refit_ratio": 3},
+        {"t": 2.0, "peak_ratio": 3, "refined_err": 0.90, "refit_ratio": 3},
+    ]
+    frames = [{"t": 1.0, "refined": True, "peak_ratio": 12},
+              {"t": 2.0, "refined": True, "peak_ratio": 3}]
+    code, out = _run(tmp_path, {"meta": _meta(frames=frames), "records": records})
+    assert code == 0, out
+    assert "FALLBACK" in out and "MIN_PEAK_RATIO = 5.0" in out, out

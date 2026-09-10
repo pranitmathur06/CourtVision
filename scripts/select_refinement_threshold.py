@@ -1,7 +1,10 @@
 """Choose MIN_PEAK_RATIO from a calibration dump, by a rule written here first.
 
 The rule: the smallest threshold in CANDIDATES whose accepted measurements
-reach a held-out median of TARGET_FT or better, where a held-out family that is
+reach a held-out median of TARGET_FT or better -- and if none does, the
+threshold with the lowest such median (ties to the lower threshold), reported
+as a FALLBACK. That second clause was previously stated only in prose, after
+the dumps it was applied to existed; it lives here now. A held-out family that is
 lost, or whose refit is refused, counts as a failure -- infinite error -- in
 EVERY statistic. An earlier table counted failures in the median but not the
 p90 and so reported a 0.67 ft tail that was really 0.89.
@@ -62,7 +65,7 @@ def main() -> int:
     print(f"{meta['video']}  commit {meta['commit']}{' (dirty)' if meta.get('dirty') else ''}"
           f"  polarity {meta['polarity']}  {registered} registered frames")
     print("  threshold  frames accepted   measurements   p50       p90       within   failed")
-    chosen = None
+    chosen, medians = None, []
     for threshold in CANDIDATES:
         accepted = sum(1 for f in frames if f["refined"] and (f["peak_ratio"] or 0) >= threshold)
         errors = []
@@ -74,14 +77,20 @@ def main() -> int:
             else:
                 errors.append(r["refined_err"])
         p50, p90, within, failed = _stats(errors)
+        medians.append((threshold, p50))
         mark = ""
         if chosen is None and p50 <= TARGET_FT:
             chosen, mark = threshold, "  <- chosen"
         print(f"  {threshold:9.1f}  {accepted:4d} ({accepted/max(registered,1):4.0%})"
               f"      {len(errors):5d}       {p50:6.2f}    {p90:6.2f}    {within:5.0%}   {failed:5.0%}{mark}")
     if chosen is None:
-        print(f"  no candidate reaches a held-out median of {TARGET_FT} ft")
-        return 1
+        finite = [(p50, threshold) for threshold, p50 in medians if np.isfinite(p50)]
+        if not finite:
+            print("  no candidate has a finite held-out median")
+            return 1
+        best_median, chosen = min(finite)
+        print(f"  no candidate reaches {TARGET_FT} ft; FALLBACK: the threshold with "
+              f"the lowest held-out median ({best_median:.2f} ft)")
     print(f"MIN_PEAK_RATIO = {chosen}")
     return 0
 

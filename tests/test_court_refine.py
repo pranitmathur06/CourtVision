@@ -312,3 +312,38 @@ def test_held_out_measurement_keeps_the_ends_of_a_rotated_line():
     true = np.sum(court_refine.sample_normals(index) * (moved - q), axis=1)
     assert abs(np.median(np.abs(measured)) - np.median(np.abs(true))) < 0.03, (
         np.median(np.abs(measured)), np.median(np.abs(true)))
+
+
+def test_a_shift_that_hides_the_samples_is_not_evidence_against_the_fit(monkeypatch):
+    """Review finding: neighbour visibility recomputed alone could collapse to
+    zero, giving a smoothed rate of 1.0 and refusing a correct fit. Under the
+    old logic this fit reads ratio ~0.9 and is refused; it must now pass."""
+    import courtvision.court_refine as court_refine
+    xs = [i for i in range(len(court_refine._POINTS)) if abs(court_refine._NORMALS[i, 0]) >= 0.7][:100]
+    ys = [i for i in range(len(court_refine._POINTS)) if abs(court_refine._NORMALS[i, 1]) >= 0.7][:100]
+    everything = set(xs) | set(ys)
+
+    def fake_hits(response, structure, matrix, keep, boxes, window):
+        dx, dy = matrix[0, 2], matrix[1, 2]
+        if abs(dx) < 1e-9 and abs(dy) < 1e-9:
+            return set(xs[:90]) | set(ys[:90]), everything      # the fit: 90% covered
+        if dx > 0:
+            return set(), set()                                  # this shift leaves the frame
+        return set(xs[:5]) | set(ys[:5]), everything             # neighbours find little
+
+    monkeypatch.setattr(court_refine, "_hits", fake_hits)
+    out = court_refine._peak_sharpness(None, None, np.eye(3), None, None, 3)
+    assert out["ratio"] > court_refine.MIN_PEAK_RATIO, out
+    assert abs(out["coverage"] - 0.9) < 1e-9
+
+
+def test_hypotheses_are_compared_on_the_court_they_both_see():
+    """Review finding: a wrong basin that pulls more court into frame could
+    disqualify the right hypothesis on sample count alone."""
+    import courtvision.court_refine as court_refine
+    shared = set(range(100))
+    right = (set(range(80)), shared, "right")                    # 80% of shared court
+    wrong = (set(range(40)) | set(range(100, 260)),              # 40% of shared court,
+             shared | set(range(100, 400)), "wrong")              # but sees 4x the court
+    best, score = court_refine._choose([right, wrong])
+    assert best == "right" and abs(score - 0.8) < 1e-9

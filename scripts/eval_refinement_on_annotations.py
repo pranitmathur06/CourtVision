@@ -26,6 +26,11 @@ that adds this file, and docs Round 51.
 
 Unlike the held-out-line protocol, this scores the PRODUCTION fit -- every line
 used -- against something no part of the refinement produced.
+
+Added after the declared run, reporting only (settings and metric unchanged):
+a per-arena breakdown, which the declared output lacked and whose absence let
+a pooled 0.23 ft hide that TD Garden carried it; and commit provenance in the
+dump.
 """
 
 from __future__ import annotations
@@ -123,8 +128,14 @@ def main() -> int:
                              "err": error(refined) if info["refined"] else None,
                              "reason": info["reason"]}
 
+    import subprocess
+    commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"],
+                            capture_output=True, text=True).stdout.strip()
+    dirty = bool(subprocess.run(["git", "status", "--porcelain"],
+                                capture_output=True, text=True).stdout.strip())
     json.dump({"meta": {"settings": [PRIMARY_POLARITY, PRIMARY_THRESHOLD],
-                        "weights": args.weights, "conf": args.conf},
+                        "weights": args.weights, "conf": args.conf,
+                        "commit": commit, "dirty": dirty},
                "rows": rows}, open(args.dump, "w"), indent=1)
     sizes = sorted({tuple(r["size"]) for r in rows})
     print(f"{len(rows)} test images with a usable reference; sizes {sizes[:4]}")
@@ -144,6 +155,11 @@ def main() -> int:
                         ("seen arena", [r for r in rows if not r["unseen"]])):
         print(f"\n== PRIMARY ({PRIMARY_POLARITY}, threshold {PRIMARY_THRESHOLD}) -- {name}")
         block(name, group, PRIMARY_POLARITY, PRIMARY_THRESHOLD)
+    print("\n== per arena, PRIMARY settings")
+    for game in sorted({r["game"] for r in rows}):
+        group = [r for r in rows if r["game"] == game]
+        block(f"{game} ({'unseen' if group[0]['unseen'] else 'seen'})", group,
+              PRIMARY_POLARITY, PRIMARY_THRESHOLD)
     print("\n-- context only, selects nothing: unseen arenas, accepted-only p50 (acceptance)")
     unseen = [r for r in rows if r["unseen"] and r["registered"]]
     for polarity in ("bright", "all"):
