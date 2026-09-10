@@ -122,6 +122,14 @@ def main() -> int:
     # train start is early enough, and setting it on `model` here would not
     # survive the trainer rebuilding from weights.
     def _set_sigmas(trainer):
+        """Loose sigma for the LOSS only.
+
+        Deliberately not set in data.yaml: that key is also read by the
+        validator, and a loose sigma there saturates the metric so early that
+        checkpoint selection becomes meaningless -- a run scored that way kept
+        its epoch-2 weights out of 35 and registered 50% of held-out frames
+        against 97.8% for the same recipe selected on the tight default.
+        """
         import torch
         trainer.model.kpt_oks_sigmas = torch.full((48,), args.sigma)
 

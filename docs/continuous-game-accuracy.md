@@ -3805,3 +3805,39 @@ the event -- so registration error alone is smaller than that.
 
 This replaces the "about 5 ft" of Round 45, which came from matching shots to
 the nearest of ten players and was inflated by the association guess.
+
+## Round 47 - the two sigmas want opposite things, and fixing one broke the other
+
+Round 43 recorded a defect: the sigma override was applied through a train-start
+callback, so the loss used 0.18 while the validator kept ultralytics' 1/48, and
+`best.pt` was therefore selected on the metric the trainer calls broken. Moving
+it into `data.yaml`, which both read, looked like the obvious fix.
+
+It made the model much worse:
+
+                              val sigma 1/48    val sigma 0.18
+      registered              97.8%             50.0%
+      court error, per frame  1.62 ft           2.04 ft
+      frames inside the gate  65.2%             22.5%
+
+The cause is visible in the training curve. With sigma 0.18 the validation
+metric reached **0.9907 at epoch 2** and never beat it, so patience fired at 32
+and the shipped weights were a **two-epoch model**.
+
+The two sigmas serve opposite purposes and should not share a value:
+
+- The **loss** needs a loose sigma. At 1/48 the OKS loss saturates at
+  initialization and the keypoint head receives no gradient at all -- 281 px
+  landmark error after two epochs while box mAP50 read 0.995.
+- The **validator** needs a tight one. At 0.18 every reasonable model scores
+  about 0.99, so the metric cannot tell a good localiser from a much better
+  one, and checkpoint selection becomes noise.
+
+The original arrangement -- loose in the loss via the callback, tight in
+validation by default -- was accidentally correct. The review was right that
+the inconsistency was undocumented and unintentional; the conclusion that it
+should be made consistent was wrong, and only measuring it showed that.
+
+`data.yaml` now carries a comment saying why the key is absent, since its
+absence is the load-bearing part and an obvious-looking edit would undo it.
+`court_kp_960_ft.pt` remains the production model.
