@@ -116,7 +116,11 @@ def main() -> int:
         fused, _ = fuse_registrations(matrices, carries, probe)
         return fused, centre
 
-    court_frames, both_registered, errors = 0, 0, []
+    # Registration failure and ORB failure are different things and the gate
+    # is about the first. Counting them together reported "78% registered" for
+    # a model that had in fact registered more -- ORB refusing to align two
+    # frames says nothing about whether either was registered.
+    court_frames, both_registered, orb_failed, errors = 0, 0, 0, []
     times = np.linspace(args.start, args.end, args.samples)
     for t in times:
         matrix_a, frame_a = registration(t)
@@ -126,10 +130,11 @@ def main() -> int:
         court_frames += 1
         if matrix_a is None or matrix_b is None:
             continue
+        both_registered += 1
         carry = pairwise_homography(frame_a, frame_b)
         if carry is None:
-            continue                      # ORB refused; not a registration failure
-        both_registered += 1
+            orb_failed += 1               # not a registration failure
+            continue
 
         # Probe the lower half of the frame, which is the floor in a broadcast
         # camera; the upper half is crowd.
@@ -145,7 +150,10 @@ def main() -> int:
           f"{'single frame' if args.fuse == 0 else f'fused over {2*args.fuse+1} frames'}")
     print(f"  court frames sampled     {court_frames}")
     print(f"  both frames registered   {both_registered}/{max(court_frames,1)}"
-          f" = {both_registered/max(court_frames,1):.1%}")
+          f" = {both_registered/max(court_frames,1):.1%}   [gate 90%]")
+    print(f"  of those, ORB refused    {orb_failed}"
+          f"  (excluded from the disagreement below -- it is measured only on "
+          f"instants ORB could align, which are the easier ones)")
     if len(errors):
         print(f"  the two paths disagree   p50 {np.median(errors):.2f} ft   "
               f"p90 {np.percentile(errors,90):.2f} ft   [gate p50 <= 2 ft; "

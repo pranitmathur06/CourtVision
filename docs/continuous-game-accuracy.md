@@ -3661,3 +3661,50 @@ the VALIDATOR kept ultralytics' 1/48 -- meaning `best.pt` and `patience` were
 selected on the metric the trainer's own docstring calls broken. It belongs in
 `data.yaml`, where both read it, and now is. Every checkpoint to date was
 selected under the old arrangement.
+
+## Round 44 - Phase 1 passes, at 960 px and on the right denominator
+
+Fine-tuning the 640 model at 960 px with `lr0=0.001` -- the rate the first
+attempt got wrong, which re-trained rather than refined -- moved the number
+that was short:
+
+    held-out GAMES          640 px      960 fine-tune
+      registered            100.0%      97.8%
+      court error, frame    2.00 ft     1.62 ft        [gate 2 ft]
+      frames inside gate    50.0%       65.2%
+      wrong end             0/138       0/135
+
+    BROADCAST, fused        640 px      960 fine-tune
+      disagreement p50      0.79 ft     0.45 ft        [gate 2 ft]
+      disagreement p90      3.36 ft     1.81 ft
+
+**The 91.7% broadcast registration reported in Round 41 was a small-sample
+artefact** and is withdrawn. It came from `--samples 60`, which yields 36 court
+frames; at `--samples 120` the same 640 model gives 79.7%. Both models sit near
+78-80% by that measure, so it was never a property of the model.
+
+That denominator was also wrong. `has_court` is a wood-fraction heuristic, and
+looking at the frames where the detector found no court at all: three of six
+were **not court views** -- a player lying on the floor filling the frame, a
+courtside close-up where skin and jersey pass the colour test -- two were
+**alternate cameras** (the under-basket stanchion cam, a high reverse angle)
+that appear in no training set, and one was a genuine miss. Registering those
+is neither possible nor wanted, and the painted key's 17% was never measured
+that way.
+
+Round 26 scored the painted key by sampling the seconds before each aligned
+shot: mid-possession by construction, main camera by convention. On that same
+denominator, chosen by the feed and therefore blind to whether registration
+succeeded:
+
+    registered during live play   75/80 = 93.8%   [gate 90%; painted key 17%]
+
+**Phase 1 gate: met.** Registration 93.8% on broadcast live play and 97.8% on
+held-out games; court error 1.62 ft per frame on unseen games and 0.45 ft fused
+on broadcast, both inside 2 ft; consistency 0.45 ft against the painted key's
+5.8; wrong end 0 of 135, against 100% of frames.
+
+One caveat carried forward: every checkpoint so far was selected by a validator
+still using sigma=1/48 (fixed in `data.yaml` after these runs), so `best.pt`
+and early stopping were chosen on a metric the trainer documents as broken.
+The models measured here are good despite that, not because of it.
