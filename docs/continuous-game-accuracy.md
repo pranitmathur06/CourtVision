@@ -3978,3 +3978,45 @@ counts); hypotheses compared on explained paint must now see at least 70% as
 much court as the best-seeing one; a control that does not run is reported as
 a failure; and the evaluator's default video, which pointed at the held-out
 arena, is gone.
+
+## Round 51 - honest numbers, and unseen arenas that were on disk all along
+
+Re-measured on the OKC calibration game with the unbiased evaluator (dumps made
+at threshold 0, every failure counted), paint polarity "bright":
+
+    landmark only                                     p50 1.02 ft
+    refined, lost/refused held-out lines as failures  p50 0.60-0.67 ft
+    refined, measured lines only                      p50 0.47 ft, p90 1.45, 34% within 0.3
+
+No candidate threshold meets 0.30 ft under the declared rule, and "all"
+polarity is worse on OKC (conservative p50 about 1.05). **The 0.25 ft of Round
+49 was an artifact of the biased evaluator.** Refinement is real -- better than
+its landmark start on 73% of measured lines -- and about a factor of two short
+of the target on the arena it was developed on.
+
+Neither accounting is the production accuracy. A held-out refit lacks a whole
+line family and is weaker than the all-lines fit, and a high threshold refuses
+exactly those refits, so counting them as failures is pessimistic and grows
+more so as the threshold rises; measuring only the successes is optimistic.
+
+The error is not uniform. Measured-only, interior features are at or near the
+target -- free-throw circles 0.20-0.29 ft, corners 0.20, far lane 0.34 -- while
+the boundary family, the long lines at the edge of the frame where a fit without
+them extrapolates, is 0.97 ft. Frames with slower camera pans measure 0.41 ft
+and faster ones 0.93 ft (Spearman +0.26 over 33 frames): suggestive that motion
+matters, but pans are small (p50 0.7, p90 3.4 px per frame), too small for
+rolling-shutter skew alone to produce 30 px errors. Inconclusive.
+
+**Unseen arenas were already on disk.** The keypoint dataset's by-game test
+split holds four games the landmark model never trained on, and by the 2025
+playoff schedule (inferred, not recorded in the data) three are at arenas in
+no split at all -- TD Garden, Kaseya Center, Fiserv Forum -- each with human
+annotations. The refinement was never tuned on them. Declared before running:
+polarity "bright" and threshold 3.0 (the OKC fallback rule: no candidate met
+0.30, so the one minimising OKC's conservative median), scored as the median
+distance to the annotation-fitted registration over annotated landmarks, with
+refused frames falling back to their landmark registration. This scores the
+production fit, every line used, against something the refinement never
+produced -- which the held-out-line protocol cannot. Its limit: annotators
+agree with the schema to about 0.35 ft, so errors near that cannot be resolved.
+This replaces the plan to download new footage.

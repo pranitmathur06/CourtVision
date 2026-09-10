@@ -241,7 +241,7 @@ def main() -> int:
         print(f"  HELD-OUT line error   landmark only  p50 {np.median(b):.2f} ft"
               f"   p90 {np.percentile(b,90):.2f} ft")
         print(f"                        refined        p50 {np.median(r):.2f} ft"
-              f"   p90 {np.percentile(r,90):.2f} ft   [target 0.30]")
+              f"   p90 {np.percentile(r, 90, method="nearest"):.2f} ft   [target 0.30]")
         print(f"                        within 0.3 ft  {np.mean(r <= 0.3):.0%} "
               f"of {len(r)} frame-family measurements")
         for family, values in sorted(by_family.items()):
