@@ -3895,3 +3895,35 @@ and the lines it did not. The worst family is the boundary, 0.59 ft -- the lines
 at the frame edges. Both point to radial lens distortion, which a homography
 cannot represent. Being tested directly next: residuals should track
 rho^2 * n.(p - c) with a consistent sign across frames, and grow toward the edge.
+
+## Round 49 - three leads ruled out, and a threshold that buys accuracy
+
+Held-out error on the OKC calibration game is a continuum, not basin jumps
+(Round 48). Three explanations for it were tested and ruled out:
+
+- **Radial lens distortion.** Distortion moves points by k1*rho^2*(p - c), so
+  post-fit residuals should track rho^2 * n.(p - c). Over 2,028 line samples in
+  10 frames: per-frame k1 median +0.0006 with its IQR straddling zero, the same
+  sign in only 60% of frames, pooled R^2 = -0.009, and residuals no larger at
+  the frame edge (0.37 px) than the centre (0.46 px).
+- **Temporal fusion of refined fits.** Paired on the same centre frames and
+  held-out families, fused better in 3 of 6, median change -0.05 ft. Small
+  sample, but no sign of a lever -- consistent with every earlier fusion test.
+- **Split-half agreement** was attempted to estimate the all-lines fit without
+  holding out a whole family, and is inconclusive: an even/odd split of line
+  families left one half unfittable in 18 of 22 frames, so 4 were compared.
+
+**The acceptance guard does predict accuracy** -- the synthetic-versus-wrong-start
+calibration had understated it. On lines the fit never saw, Spearman -0.49
+between peak ratio and error, -0.55 for paint explained. The threshold was set
+by a rule fixed before the unseen arena was scored: the smallest value whose
+accepted fits reach a held-out median of 0.30 ft, lost lines counted as
+failures.
+
+    threshold   frames accepted   held-out p50   p90     within 0.3 ft
+    2           74%               0.36 ft        1.27    43%
+    5 (chosen)  45%               0.25 ft        0.67    55%
+    10          19%               0.15 ft        0.56    73%
+
+The trade is stated plainly: on the calibration game, a frame the refinement
+accepts meets 0.3 ft at the median, and fewer than half of frames are accepted.

@@ -122,8 +122,16 @@ MULTI_START_FT = ((0.0, 0.0), (3.0, 0.0), (-3.0, 0.0), (0.0, 3.0), (0.0, -3.0))
 #: moving along it costs nothing.
 MIN_COVERAGE = 0.10
 PEAK_SHIFT_FT = 2.0
-#: Calibrated on the OKC game (calibration set), never on the unseen arena.
-MIN_PEAK_RATIO = 2.0
+#: Set on the OKC game (calibration set) by a rule fixed before the unseen
+#: arena was scored: the smallest threshold whose accepted fits reach a
+#: held-out median of 0.30 ft, lost held-out lines counted as failures.
+#: Peak ratio predicts accuracy on lines the fit never saw (Spearman -0.49):
+#:     2    74% of frames   p50 0.36 ft    43% within 0.3
+#:     3    60% of frames   p50 0.31 ft    46% within 0.3
+#:     5    45% of frames   p50 0.25 ft    55% within 0.3
+#:     7    32% of frames   p50 0.18 ft    64% within 0.3
+#:    10    19% of frames   p50 0.15 ft    73% within 0.3
+MIN_PEAK_RATIO = 5.0
 #: A direction needs this many visible samples before it is judged; fewer means
 #: no visible lines constrain it, and the landmark prior holds it.
 MIN_GROUP_SAMPLES = 40
