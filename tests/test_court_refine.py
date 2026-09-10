@@ -106,7 +106,11 @@ def test_held_out_lines_measure_accuracy_the_fit_never_saw():
 
 def test_a_diagonal_gross_start_is_refused_or_corrected():
     """The ICP failure: locking onto the wrong paint and reporting success.
-    Refusing is acceptable; being wrong and marked refined is not."""
+    Refusing is acceptable; being wrong and marked refined is not.
+
+    This pins only the safety half, and a refine() that refused everything
+    would pass it. The capability half -- that correct starts converge -- is
+    pinned by the tests around it, which such a refine() would fail."""
     truth = _truth()
     image = _render(truth)
     start = _perturb(truth, 12.0, 12.0, 0.0)
@@ -127,7 +131,8 @@ def test_a_diagonal_gross_start_is_refused_or_corrected():
     "sharp but partial alignment (23% of paint explained, against 87% for the "
     "truth on the same frame) and reports success, where the earlier design "
     "refused. A pure 25 ft translation is not what the landmark model produces: "
-    "1 of 74 held-out measurements had a landmark start more than 3 ft off. "
+    "5 of 118 held-out measurements in the consensus calibration dump (1 of 74 "
+    "in the single-start one) had a landmark start more than 3 ft off. "
     "strict=True: if this starts passing, the trade and its docs are stale."))
 def test_a_start_translated_25_ft_across_the_court_is_caught():
     truth = _truth()
@@ -227,3 +232,83 @@ def test_a_start_one_line_spacing_off_does_not_lock_onto_the_neighbour():
                                starts=((0.0, 0.0),))
         assert info["refined"], (dx, dy, info)
         assert _court_error(refined, truth) < 0.1, (dx, dy, _court_error(refined, truth))
+
+
+def _render_painted(image_to_court, seed=1):
+    """A floor built like Toyota Center's: dark lines, and a solid painted key
+    whose boundary is a colour edge with no lane line drawn on it."""
+    width, height = SIZE
+    image = np.full((height, width, 3), (150, 190, 215), np.uint8)
+    court_to_image = np.linalg.inv(image_to_court)
+
+    def project(polyline):
+        p = np.c_[np.asarray(polyline, float), np.ones(len(polyline))] @ court_to_image.T
+        return p[:, :2] / p[:, 2:3]
+
+    for near, far in ((0.0, 19.0), (94.0, 75.0)):
+        key = project([(17, near), (33, near), (33, far), (17, far)])
+        cv2.fillPoly(image, [np.int32(np.round(key * 16))], (40, 40, 200),
+                     cv2.LINE_AA, shift=4)
+    for index, polyline in enumerate(court_lines()):
+        if index in (3, 9):            # the lanes exist only as the key's edge
+            continue
+        cv2.polylines(image, [np.int32(np.round(project(polyline) * 16))], False,
+                      (25, 25, 25), 3, cv2.LINE_AA, shift=4)
+    rng = np.random.default_rng(seed)
+    return np.clip(image + rng.normal(0, 5, image.shape), 0, 255).astype(np.uint8)
+
+
+def test_dark_lines_and_a_painted_key_are_found_by_the_all_mode(monkeypatch):
+    """The unseen arena: black arc and circles, a red key with no lane line."""
+    import courtvision.court_refine as court_refine
+    truth = _truth()
+    image = _render_painted(truth)
+    start = _perturb(truth, 1.5, -1.0, 1.0)
+    monkeypatch.setattr(court_refine, "PAINT_POLARITY", "all")
+    refined, info = refine(image, start)
+    assert info["refined"], info
+    assert _court_error(refined, truth) < 0.1, _court_error(refined, truth)
+    # The lane, evidenced ONLY by the key's edge, measured by a fit that never saw it.
+    lines = HOLD_OUT["near lane"]
+    fitted, finfo = refine(image, start, exclude_lines=lines)
+    assert finfo["refined"], finfo
+    offsets = held_out_offsets(image, fitted, lines)
+    assert len(offsets) > 10
+    assert np.median(np.abs(offsets)) < 0.15, np.median(np.abs(offsets))
+
+
+def test_bright_only_evidence_cannot_see_that_floor(monkeypatch):
+    """Pins the failure that sank the first unseen-arena test (0 of 37 frames)."""
+    import courtvision.court_refine as court_refine
+    truth = _truth()
+    image = _render_painted(truth)
+    monkeypatch.setattr(court_refine, "PAINT_POLARITY", "bright")
+    refined, info = refine(image, _perturb(truth, 1.5, -1.0, 1.0))
+    assert not info["refined"] or _court_error(refined, truth) > 0.3
+
+
+def test_held_out_measurement_keeps_the_ends_of_a_rotated_line():
+    """A measurement must see every sample, including where the error is largest.
+
+    Segment consensus restricts each straight segment to a band around its mean
+    offset. Inherited by the held-out measurement, it dropped the ends of a
+    slightly rotated long line -- exactly the samples carrying the most error --
+    and read 0.204 ft for a line truly 0.308 ft off at 1 degree.
+    """
+    import courtvision.court_refine as court_refine
+    truth = _truth()
+    image = _render(truth, clutter=False)
+    lines = HOLD_OUT["boundary"]
+    _, exact_index = held_out_offsets(image, truth, lines, details=True)
+    rotated = _perturb(truth, 0.0, 0.0, 1.0)
+    measured, index = held_out_offsets(image, rotated, lines, details=True)
+    assert len(index) >= 0.9 * len(exact_index), (len(index), len(exact_index))
+    # True offset of each sample under the rotated registration.
+    q = court_refine._POINTS[index]
+    paint = np.c_[q, np.ones(len(q))] @ np.linalg.inv(truth).T
+    paint = paint[:, :2] / paint[:, 2:3]
+    moved = np.c_[paint, np.ones(len(paint))] @ rotated.T
+    moved = moved[:, :2] / moved[:, 2:3]
+    true = np.sum(court_refine.sample_normals(index) * (moved - q), axis=1)
+    assert abs(np.median(np.abs(measured)) - np.median(np.abs(true))) < 0.03, (
+        np.median(np.abs(measured)), np.median(np.abs(true)))

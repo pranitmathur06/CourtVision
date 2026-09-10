@@ -3927,3 +3927,52 @@ failures.
 
 The trade is stated plainly: on the calibration game, a frame the refinement
 accepts meets 0.3 ft at the median, and fewer than half of frames are accepted.
+
+## Round 50 - the unseen arena failed, and the review found the evaluator biased
+
+**Toyota Center accepted 0 of 37 registered frames.** The refinement was
+developed on OKC, whose lines are white, and it looked only for thin BRIGHT
+ridges. Toyota Center paints its arc and circles BLACK, and its lane is a solid
+red key with no line on the boundary at all -- the lane line is only the edge
+between red paint and wood, and the sidelines are the same against red
+out-of-bounds paint. Resolution was ruled out first (854x480 there against
+1280x720; upscaling changed nothing, 0 of 15 either way). The design had
+considered dark lines and rejected them over wood plank seams; that assumption
+did not survive a second arena. `PAINT_POLARITY` now offers "bright", "both"
+(adds dark ridges) and "all" (also treats a step edge between painted regions
+as a line, weighted below ridges so a white line's centre still beats its
+flanks). A synthetic floor built like Toyota Center's pins both the fix and the
+failure. **Toyota Center is no longer a clean unseen arena** -- it was
+diagnosed on -- and the other two games on disk are arenas in training.
+
+**An independent review found the measurement biased optimistically, twice:**
+
+- The held-out measurement inherited segment consensus, which restricts each
+  segment to a band around its mean offset. At the ends of a slightly rotated
+  long line the band misses the paint and those samples vanish -- the ones
+  carrying the most error. On a synthetic line truly 0.308 ft off at 1 degree
+  it read 0.204. Measurement now runs without consensus, pinned by a test.
+- A held-out family whose REFIT was refused was skipped before being counted,
+  so it sat in neither the failures nor the denominator. Now counted.
+
+Two reporting errors as well. Round 49's p90 column counted failures in the
+median but not the tail: the true p90s were 2.22, 0.89 and 0.75 ft, not 1.27,
+0.67 and 0.56. And the threshold's provenance is weaker than stated -- the rule
+was given before the selection was run, but it was committed together with the
+value, six minutes after the dump it read, by code never checked in, so "the
+rule came first" cannot be verified from the repository.
+
+So every OKC figure since Round 48 was measured with a biased instrument and is
+superseded, and the threshold is void. `scripts/select_refinement_threshold.py`
+is now the rule, checked in before any recalibration: it counts lost and
+refused as failures in every statistic, requires dumps made at threshold 0 (so
+a candidate can judge frames AND refits exactly -- a dump gated at 2 cannot
+simulate 5), refuses the unseen arena, and refuses dumps without provenance.
+Dumps now record video, arguments, commit, threshold, polarity, the control
+values and every registered frame. Also fixed: a 1e-3 floor under the
+sharpness ratio's denominator, which made any partial lock with empty 2 ft
+neighbours score about 1000x its coverage (rates are now add-one smoothed on
+counts); hypotheses compared on explained paint must now see at least 70% as
+much court as the best-seeing one; a control that does not run is reported as
+a failure; and the evaluator's default video, which pointed at the held-out
+arena, is gone.

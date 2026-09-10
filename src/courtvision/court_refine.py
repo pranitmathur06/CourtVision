@@ -122,15 +122,9 @@ MULTI_START_FT = ((0.0, 0.0), (3.0, 0.0), (-3.0, 0.0), (0.0, 3.0), (0.0, -3.0))
 #: moving along it costs nothing.
 MIN_COVERAGE = 0.10
 PEAK_SHIFT_FT = 2.0
-#: Set on the OKC game (calibration set) by a rule fixed before the unseen
-#: arena was scored: the smallest threshold whose accepted fits reach a
-#: held-out median of 0.30 ft, lost held-out lines counted as failures.
-#: Peak ratio predicts accuracy on lines the fit never saw (Spearman -0.49):
-#:     2    74% of frames   p50 0.36 ft    43% within 0.3
-#:     3    60% of frames   p50 0.31 ft    46% within 0.3
-#:     5    45% of frames   p50 0.25 ft    55% within 0.3
-#:     7    32% of frames   p50 0.18 ft    64% within 0.3
-#:    10    19% of frames   p50 0.15 ft    73% within 0.3
+#: VOID pending recalibration: the evaluator that produced the last
+#: value dropped refused refits and biased held-out lines low, and the
+#: ratio is now count-smoothed. Set by scripts/select_refinement_threshold.py.
 MIN_PEAK_RATIO = 5.0
 #: A direction needs this many visible samples before it is judged; fewer means
 #: no visible lines constrain it, and the landmark prior holds it.
@@ -192,14 +186,46 @@ def _project(matrix: np.ndarray, points: np.ndarray):
     return out, ok
 
 
-def paint_response(image: np.ndarray) -> np.ndarray:
-    """Thin bright ridges -- painted lines -- with the floor's shading removed."""
+#: What counts as evidence of a painted line.
+#:
+#: "bright" finds thin ridges lighter than the floor -- white paint on wood,
+#: as at OKC, where refinement was developed. "both" adds ridges darker than
+#: the floor. "all" also treats a step edge between two painted regions as a
+#: line.
+#:
+#: The unseen arena showed why all three exist. At Toyota Center the arc and
+#: the circles are BLACK lines, and the lane is a solid red key with no line on
+#: its boundary at all -- the lane line is only the edge between red paint and
+#: wood, as are the sidelines against red out-of-bounds paint. Bright-only
+#: refinement accepted 0 of 37 frames there; adding dark ridges recovered the
+#: arcs but not the key. An edge is located where the paint changes, which for
+#: NBA dimensions is the outer edge of the lane line, within about an inch of
+#: the modelled position. At a white line the edge evidence also fires on both
+#: flanks, so it is weighted below ridge evidence and the line centre still wins.
+PAINT_POLARITY = "bright"
+EDGE_WEIGHT = 0.5
+
+
+def paint_response(image: np.ndarray, polarity: str | None = None) -> np.ndarray:
+    """Evidence of painted lines, with the floor's slow shading removed."""
     import cv2
 
+    polarity = polarity or PAINT_POLARITY
     grey = image if image.ndim == 2 else cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     grey = cv2.GaussianBlur(grey.astype(np.float32), (0, 0), 1.0)
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (21, 21))
-    return cv2.morphologyEx(grey, cv2.MORPH_TOPHAT, kernel)
+    bright = cv2.morphologyEx(grey, cv2.MORPH_TOPHAT, kernel)
+    if polarity == "bright":
+        return bright
+    ridges = bright + cv2.morphologyEx(grey, cv2.MORPH_BLACKHAT, kernel)
+    if polarity == "both":
+        return ridges
+    if polarity == "all":
+        # Per-pixel gradient in grey levels: a 3x3 Sobel on a unit ramp reads 8.
+        gx = cv2.Sobel(grey, cv2.CV_32F, 1, 0, ksize=3) / 8.0
+        gy = cv2.Sobel(grey, cv2.CV_32F, 0, 1, ksize=3) / 8.0
+        return ridges + EDGE_WEIGHT * np.sqrt(gx * gx + gy * gy)
+    raise ValueError(f"unknown polarity {polarity!r}")
 
 
 def _structure(response: np.ndarray):
@@ -218,7 +244,8 @@ def _structure(response: np.ndarray):
     return normal, coherence
 
 
-def _observe(response, structure, inverse, half_width, keep, boxes):
+def _observe(response, structure, inverse, half_width, keep, boxes,
+             consensus=True):
     """Find the painted ridge nearest each projected line sample.
 
     `inverse` maps court -> image. Returns image positions of the ridges found
@@ -260,7 +287,7 @@ def _observe(response, structure, inverse, half_width, keep, boxes):
     profile = map_coordinates(response, [ys.ravel(), xs.ravel()], order=1,
                               mode="constant").reshape(len(projected), -1)
     choose = profile
-    if half_width >= CONSENSUS_PX:
+    if consensus and half_width >= CONSENSUS_PX:
         # Slack grows with the window: a slightly rotated start makes a long
         # segment's offset drift along its length.
         choose = _segment_consensus(profile, _SEGMENTS[index], offsets,
@@ -371,35 +398,39 @@ def sample_normals(index):
 
 
 def _group_coverage(response, structure, matrix, keep, boxes, window, axis):
-    """Share of the visible samples pinning `axis` that find paint."""
+    """Paint hits and visible samples among the lines pinning `axis`."""
     _, found, visible = _observe(response, structure, np.linalg.inv(matrix),
                                  window, keep, boxes)
     if not len(visible):
-        return 0.0, 0
-    in_group = np.abs(sample_normals(visible)[:, axis]) >= 0.7
-    if not in_group.sum():
-        return 0.0, 0
-    hit = (np.abs(sample_normals(found)[:, axis]) >= 0.7).sum() if len(found) else 0
-    return hit / in_group.sum(), int(in_group.sum())
+        return 0, 0
+    in_group = int((np.abs(sample_normals(visible)[:, axis]) >= 0.7).sum())
+    hit = int((np.abs(sample_normals(found)[:, axis]) >= 0.7).sum()) if len(found) else 0
+    return hit, in_group
 
 
 def _peak_sharpness(response, structure, matrix, keep, boxes, window):
     """Worst coverage, and worst solution-to-neighbour ratio, over directions."""
     worst_coverage, worst_ratio, judged = 1.0, np.inf, False
     for axis in (0, 1):
-        coverage, visible = _group_coverage(response, structure, matrix, keep,
-                                            boxes, window, axis)
+        hit, visible = _group_coverage(response, structure, matrix, keep,
+                                       boxes, window, axis)
         if visible < MIN_GROUP_SAMPLES:
             continue
+        # Rates are add-one smoothed on counts. A fixed floor under the
+        # neighbour's rate (it was 1e-3) turned any partial lock whose 2 ft
+        # neighbours found nothing into a ratio of about 1000x its coverage --
+        # an unrefusable class. Smoothing bounds the ratio by what the visible
+        # sample count can actually support.
+        rate = (hit + 1) / (visible + 1)
         neighbour = 0.0
         for sign in (-1.0, 1.0):
             move = np.eye(3)
             move[axis, 2] = sign * PEAK_SHIFT_FT
-            moved, _ = _group_coverage(response, structure, move @ matrix, keep,
-                                       boxes, window, axis)
-            neighbour = max(neighbour, moved)
-        worst_coverage = min(worst_coverage, coverage)
-        worst_ratio = min(worst_ratio, coverage / max(neighbour, 1e-3))
+            n_hit, n_visible = _group_coverage(response, structure, move @ matrix,
+                                               keep, boxes, window, axis)
+            neighbour = max(neighbour, (n_hit + 1) / (n_visible + 1))
+        worst_coverage = min(worst_coverage, hit / visible)
+        worst_ratio = min(worst_ratio, rate / neighbour)
         judged = True
     if not judged:
         return {"coverage": 0.0, "ratio": 0.0}
@@ -432,11 +463,18 @@ def _refine_from(response, structure, start, prior, keep, boxes, passes):
 
 
 def _explained(response, structure, matrix, keep, boxes, window):
-    """Share of the visible line samples that find paint -- comparable across
-    hypotheses on one frame, because they share its occlusion."""
+    """Share of the visible line samples that find paint, and how many were
+    visible -- comparable across hypotheses on one frame, which share its
+    occlusion, provided they see about as much of the court."""
     _, found, visible = _observe(response, structure, np.linalg.inv(matrix),
                                  window, keep, boxes)
-    return len(found) / max(len(visible), 1)
+    return len(found) / max(len(visible), 1), len(visible)
+
+
+#: A hypothesis must see at least this share of the court the best-seeing one
+#: does before its explained share is compared. Otherwise one that pushes most
+#: of the court out of frame competes on a smaller denominator.
+MIN_RELATIVE_VISIBLE = 0.7
 
 
 def refine(image, matrix, boxes=None, exclude_lines=(), passes=SEARCH_PX,
@@ -458,7 +496,7 @@ def refine(image, matrix, boxes=None, exclude_lines=(), passes=SEARCH_PX,
             "drift_ft": None, "coverage": None, "peak_ratio": None,
             "explained": None, "reason": ""}
 
-    best, best_score, last_reason = None, -1.0, ""
+    candidates, last_reason = [], ""
     for dx, dy in starts:
         move = np.array([[1.0, 0, dx], [0, 1.0, dy], [0, 0, 1.0]])
         outcome, reason = _refine_from(response, structure, move @ matrix,
@@ -466,10 +504,15 @@ def refine(image, matrix, boxes=None, exclude_lines=(), passes=SEARCH_PX,
         if outcome is None:
             last_reason = reason
             continue
-        score = _explained(response, structure, outcome[0], keep, boxes,
-                           passes[-1])
-        if score > best_score:
-            best, best_score = outcome, score
+        score, visible = _explained(response, structure, outcome[0], keep, boxes,
+                                    passes[-1])
+        candidates.append((score, visible, outcome))
+    best, best_score = None, -1.0
+    if candidates:
+        most = max(v for _, v, _ in candidates)
+        for score, visible, outcome in candidates:
+            if visible >= MIN_RELATIVE_VISIBLE * most and score > best_score:
+                best, best_score = outcome, score
     if best is None:
         info["reason"] = last_reason
         return matrix, info
@@ -516,8 +559,12 @@ def held_out_offsets(image, matrix, lines, boxes=None, half_width: int = 24,
     """
     response, structure = prepared if prepared is not None else prepare(image)
     keep = np.isin(_LINE_IDS, list(lines))
+    # No segment consensus here. It restricts each segment to a band around
+    # its mean offset; at the ends of a slightly rotated long line that band
+    # misses the paint, and those samples vanish -- reading 0.204 ft for a line
+    # truly 0.308 ft off at 1 degree. A measurement must see every sample.
     observed, index, _ = _observe(response, structure, np.linalg.inv(matrix),
-                                  half_width, keep, boxes)
+                                  half_width, keep, boxes, consensus=False)
     if not len(index):
         return (np.zeros(0), index) if details else np.zeros(0)
     court, _ = _project(matrix, observed)

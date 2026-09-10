@@ -31,7 +31,9 @@ MIN_PER_FAMILY = 15
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--video", default="data/games/FZAUuuuREg0.mp4")
+    # Required: a default here once pointed at the held-out arena, so an
+    # omitted flag would have scored the footage meant to stay unseen.
+    parser.add_argument("--video", required=True)
     parser.add_argument("--weights",
                         default="checkpoints/court_keypoints/court_kp_960_ft.pt")
     parser.add_argument("--detector",
@@ -46,6 +48,15 @@ def main() -> int:
                              "about one line spacing apart, and extra starts "
                              "jump between them; this isolates what the "
                              "landmark start alone achieves")
+    parser.add_argument("--min-peak-ratio", type=float, default=None,
+                        help="override the acceptance threshold. Calibration "
+                             "dumps are made at 0, so the selection script can "
+                             "apply each candidate to frames AND refits exactly; "
+                             "a dump gated at 2 cannot simulate 5, because its "
+                             "held-out refits were already gated at 2")
+    parser.add_argument("--polarity", choices=("bright", "both", "all"), default=None,
+                        help="which ridges count as paint; default is the "
+                             "module's PAINT_POLARITY")
     parser.add_argument("--dump", default=None,
                         help="write every (frame, family) measurement to JSON, "
                              "so a tail can be traced to its cause -- a far-off "
@@ -57,8 +68,13 @@ def main() -> int:
     from ultralytics import YOLO
 
     from courtvision.court_keypoints import KEYPOINTS, homography_from_keypoints
+    import courtvision.court_refine as court_refine
     from courtvision.court_refine import (HOLD_OUT, held_out_offsets, prepare,
                                           refine, sample_normals)
+    if args.polarity:
+        court_refine.PAINT_POLARITY = args.polarity
+    if args.min_peak_ratio is not None:
+        court_refine.MIN_PEAK_RATIO = args.min_peak_ratio
     from courtvision.court_tracking import has_court
     from courtvision.device import resolve_device
 
@@ -77,8 +93,9 @@ def main() -> int:
     base_err, refined_err = [], []            # per (frame, family) medians
     by_family: dict[str, list[float]] = {}
     control = []
-    attempted = missing = 0
+    attempted = missing = refit_refused = 0
     records: list[dict] = []
+    frame_list: list[dict] = []
 
     for t in np.linspace(args.start, args.end, args.samples):
         capture.set(cv2.CAP_PROP_POS_MSEC, t * 1000)
@@ -104,6 +121,9 @@ def main() -> int:
 
         full, info = refine(frame, start, boxes=boxes, prepared=prepared,
                             **starts)
+        frame_list.append({"t": float(t), "refined": bool(info["refined"]),
+                           "peak_ratio": info["peak_ratio"],
+                           "reason": info["reason"]})
         if info["coverage"] is not None:
             coverage.append(info["coverage"])
         if not info["refined"]:
@@ -119,20 +139,27 @@ def main() -> int:
 
         for family, lines in HOLD_OUT.items():
             base = held_out_offsets(frame, start, lines, boxes, prepared=prepared)
-            fitted, finfo = refine(frame, start, boxes=boxes, exclude_lines=lines,
-                                   prepared=prepared, **starts)
-            if not finfo["refined"]:
-                continue
-            offsets, index = held_out_offsets(frame, fitted, lines, boxes,
-                                              prepared=prepared, details=True)
             if len(base) < MIN_PER_FAMILY:
                 continue          # the family is not visible in this frame
             attempted += 1
+            fitted, finfo = refine(frame, start, boxes=boxes, exclude_lines=lines,
+                                   prepared=prepared, **starts)
             record = dict(frame_info, family=family,
                           landmark_err=float(np.median(np.abs(base))),
-                          held_out_drift=finfo["drift_ft"],
-                          found=int(len(offsets)))
+                          refit_ratio=finfo["peak_ratio"],
+                          refit_reason=finfo["reason"],
+                          held_out_drift=finfo["drift_ft"])
             records.append(record)
+            if not finfo["refined"]:
+                # Counted, not skipped: a visible family whose refit is refused
+                # was previously in neither the failures nor the denominator.
+                refit_refused += 1
+                record["refined_err"] = None
+                record["found"] = 0
+                continue
+            offsets, index = held_out_offsets(frame, fitted, lines, boxes,
+                                              prepared=prepared, details=True)
+            record["found"] = int(len(offsets))
             if len(offsets) < MIN_PER_FAMILY:
                 record["refined_err"] = None
                 # Visible, but its paint is not near where the refined fit
@@ -167,8 +194,19 @@ def main() -> int:
 
     if args.dump:
         import json
+        import subprocess
         Path(args.dump).parent.mkdir(parents=True, exist_ok=True)
-        json.dump(records, open(args.dump, "w"), indent=1)
+        commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"],
+                                capture_output=True, text=True).stdout.strip()
+        meta = {"video": args.video, "args": vars(args), "commit": commit,
+                "dirty": bool(subprocess.run(["git", "status", "--porcelain"],
+                                             capture_output=True, text=True).stdout.strip()),
+                "min_peak_ratio": court_refine.MIN_PEAK_RATIO,
+                "polarity": court_refine.PAINT_POLARITY,
+                "court_frames": court_frames, "registered": registered,
+                "accepted": accepted, "control": control,
+                "frames": frame_list}
+        json.dump({"meta": meta, "records": records}, open(args.dump, "w"), indent=1)
     n = max(court_frames, 1)
     print(f"{args.video}")
     print(f"  court frames {court_frames}   landmark-registered {registered} "
@@ -180,18 +218,26 @@ def main() -> int:
         print(f"  coverage p10/p50 {np.percentile(coverage,10):.2f}/"
               f"{np.median(coverage):.2f}   residual p50 "
               f"{np.median(residual) if residual else float('nan'):.2f} px")
+    if len(control) < 10:
+        # A control that did not run is a failure, not an absence: an estimator
+        # that loses its samples after the shift produces no entry at all.
+        print(f"  CONTROL  FAIL -- only {len(control)} control measurements ran")
     if control:
         c = np.array(control)
-        verdict = "PASS" if abs(np.median(c) - SHIFT_FT) < 0.05 else "FAIL"
+        verdict = "PASS" if abs(np.median(c) - SHIFT_FT) < 0.05 and len(c) >= 10 else "FAIL"
         print(f"  CONTROL  known {SHIFT_FT} ft shift reads {np.median(c):.3f} ft "
               f"(p10 {np.percentile(c,10):.3f}, p90 {np.percentile(c,90):.3f})"
               f"  -> {verdict}")
     if attempted:
-        print(f"  held-out paint NOT FOUND near the refined fit: {missing}/"
-              f"{attempted} = {missing/attempted:.0%}   (counted as failures, "
-              f"not dropped)")
+        print(f"  visible held-out families {attempted}: refit refused "
+              f"{refit_refused}, paint not found {missing}  -- both counted as "
+              f"failures, not dropped")
     if refined_err:
-        b, r = np.array(base_err), np.array(refined_err)
+        b = np.array(base_err)
+        # Every statistic counts lost and refused as failures. The p90 used to
+        # be taken over found lines only while the p50 counted them -- which
+        # reported 0.67 ft for a tail that is really 0.89.
+        r = np.array(refined_err + [np.inf] * (missing + refit_refused))
         print(f"  HELD-OUT line error   landmark only  p50 {np.median(b):.2f} ft"
               f"   p90 {np.percentile(b,90):.2f} ft")
         print(f"                        refined        p50 {np.median(r):.2f} ft"
