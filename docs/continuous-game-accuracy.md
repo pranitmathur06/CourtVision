@@ -3761,3 +3761,47 @@ court zones. It does NOT bound the tactics, which are relationships between
 players in the same frame: a per-frame registration error moves everyone
 together, so screen proximity, spacing and matchups survive it. A test pins
 that a translation leaves every pairwise distance unchanged.
+
+## Round 46 - free throws give the first trustworthy absolute number on broadcast
+
+Three attempts to measure absolute registration error on broadcast failed their
+own controls, and the pattern is worth stating because each looked fine until
+the control ran:
+
+- Nearest-bright-ridge along the projected lines: reported 1.84 ft for the
+  registration and 1.99 ft for one deliberately slipped 2 ft. With a wide search
+  window there is always some bright thing nearby.
+- Per-frame paint-brightness optimum: a known +2 ft shift moved the measured
+  optimum by only 1.0 ft, so the estimator was about half as sensitive as it
+  needed to be and its absolute values were damped.
+- Shooter identification by jersey OCR: 3 successful reads in 149 shots. The
+  88% figure was measured on curated crops; arbitrary broadcast player boxes
+  are mostly players facing away, blurred, or too small.
+
+**Free throws work, because the rules place the player.** A free-throw shooter
+stands on the line at (25, 19). Nothing has to be tracked, identified, or
+supplied by the feed. Identification is robust rather than circular: the next
+nearest player is a measured **7.03 ft** away, so a registration wrong by
+several feet still picks the right man -- a selection that only worked when the
+answer was already right would prove nothing, and this one does not need that.
+
+Over 26 usable free throws:
+
+    offset across the court   -0.57 ft  +/- 2.31
+    offset along the court    +0.13 ft  +/- 2.79
+    distance from the line    p50 3.56 ft   p90 4.83 ft
+
+**The systematic bias is not there.** Both offsets are within about half a foot
+of zero, which contradicts the +2.04 ft (paint) and +3.00 ft (shot chart)
+estimates that motivated the calibration in Round 45. Rejecting that
+calibration was right, and for a better reason than was available at the time:
+not merely that the two disagreed, but that a third measurement with a sound
+control says there was nothing to correct.
+
+What remains is per-frame scatter of roughly 2.3-2.8 ft. The 3.56 ft distance
+is an upper bound -- it also contains the shooter standing a foot behind the
+line, the detector box's bottom edge as a proxy for feet, and a 1.2 s lead on
+the event -- so registration error alone is smaller than that.
+
+This replaces the "about 5 ft" of Round 45, which came from matching shots to
+the nearest of ten players and was inflated by the association guess.
