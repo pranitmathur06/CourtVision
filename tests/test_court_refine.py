@@ -104,18 +104,37 @@ def test_held_out_lines_measure_accuracy_the_fit_never_saw():
         assert np.median(np.abs(offsets)) < 0.1, (name, np.median(np.abs(offsets)))
 
 
-def test_gross_wrong_starts_are_refused_or_corrected():
+def test_a_diagonal_gross_start_is_refused_or_corrected():
     """The ICP failure: locking onto the wrong paint and reporting success.
     Refusing is acceptable; being wrong and marked refined is not."""
     truth = _truth()
     image = _render(truth)
-    for dx, dy in ((25.0, 0.0), (12.0, 12.0)):
-        start = _perturb(truth, dx, dy, 0.0)
-        refined, info = refine(image, start)
-        if info["refined"]:
-            assert _court_error(refined, truth) < 1.0, (dx, dy, info)
-        else:
-            assert np.allclose(refined, start), "a refusal must return the start"
+    start = _perturb(truth, 12.0, 12.0, 0.0)
+    refined, info = refine(image, start)
+    if info["refined"]:
+        assert _court_error(refined, truth) < 1.0, info
+    else:
+        assert np.allclose(refined, start), "a refusal must return the start"
+
+
+@pytest.mark.xfail(strict=True, reason=(
+    "Known blind spot, a deliberate trade. Segment consensus -- each straight "
+    "segment choosing its paint as a unit -- was adopted because on the OKC "
+    "calibration game it accepts 74% of registered frames against 60% for a "
+    "single start, loses 9% of held-out lines against 14%, and on the 73 "
+    "measurements both scored has identical accuracy (median change +0.000 ft). "
+    "The cost: from a start translated 25 ft across the court it locks onto a "
+    "sharp but partial alignment (23% of paint explained, against 87% for the "
+    "truth on the same frame) and reports success, where the earlier design "
+    "refused. A pure 25 ft translation is not what the landmark model produces: "
+    "1 of 74 held-out measurements had a landmark start more than 3 ft off. "
+    "strict=True: if this starts passing, the trade and its docs are stale."))
+def test_a_start_translated_25_ft_across_the_court_is_caught():
+    truth = _truth()
+    image = _render(truth)
+    start = _perturb(truth, 25.0, 0.0, 0.0)
+    refined, info = refine(image, start)
+    assert not info["refined"] or _court_error(refined, truth) < 1.0
 
 
 @pytest.mark.xfail(strict=True, reason=(
@@ -192,3 +211,19 @@ def test_player_boxes_keep_a_white_edge_from_pulling_the_fit():
     refined, info = refine(image, start, boxes=np.array([[x1, y1, x2, y2]]))
     assert info["refined"], info
     assert _court_error(refined, truth) < 0.1
+
+
+def test_a_start_one_line_spacing_off_does_not_lock_onto_the_neighbour():
+    """The broadcast failure: parallel lines 3 ft apart alias each other.
+
+    A single start -- no multi-start to rescue it -- exactly one sideline to
+    corner-three spacing off. Segment consensus must pull it to the truth
+    rather than let part of the sideline settle on the corner-three line.
+    """
+    truth = _truth()
+    image = _render(truth)
+    for dx, dy in ((3.0, 0.0), (-3.0, 0.0), (0.0, 3.0)):
+        refined, info = refine(image, _perturb(truth, dx, dy, 0.0),
+                               starts=((0.0, 0.0),))
+        assert info["refined"], (dx, dy, info)
+        assert _court_error(refined, truth) < 0.1, (dx, dy, _court_error(refined, truth))

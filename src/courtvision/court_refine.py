@@ -54,6 +54,22 @@ from .court_lines import court_lines
 #: landmark fit's error (1.62 ft is ~50 px on the near side of a broadcast
 #: frame); the last is small enough that no neighbouring line can be reached.
 SEARCH_PX = (48, 24, 12, 6, 3)
+#: In wide passes every straight segment chooses its paint as a UNIT.
+#:
+#: Parallel lines alias: the sideline and the corner-three line are 3 ft apart,
+#: and with each sample free to take the brightest ridge in its own window, part
+#: of a sideline settled on the corner line -- on broadcast, 6 ft starts landed
+#: 3.4 ft from the landmark-started fit in 17 of 36 cases. A whole segment is
+#: harder to fool: shifted onto its neighbour, a 94 ft sideline lines up only
+#: along the 14 ft the corner line exists, so the profile averaged along the
+#: segment still peaks on the true line.
+#:
+#: Aligning on curves first was tried and failed. Curves are not isolated: the
+#: lane lines run 2 ft outside the free-throw circle and the free-throw line is
+#: its diameter, with orientations matching the circle's at exactly those
+#: points, so a wide window on a curve reaches straight lines anyway.
+CONSENSUS_PX = 12
+CONSENSUS_MIN_SAMPLES = 5
 #: Spacing of samples along each court line.
 SAMPLE_SPACING_FT = 0.5
 #: A candidate ridge must run within this angle of the projected line.
@@ -83,8 +99,10 @@ MAX_DRIFT_FT = 8.0
 #: their absolute coverage is comparable where coverage across frames is not,
 #: and the right alignment explains the most paint. Starts are spaced at that
 #: 3 ft confusion distance.
-MULTI_START_FT = ((0.0, 0.0), (3.0, 0.0), (-3.0, 0.0), (0.0, 3.0), (0.0, -3.0),
-                  (6.0, 0.0), (-6.0, 0.0), (0.0, 6.0), (0.0, -6.0))
+#: Reduced from a 6 ft grid: on broadcast the wider starts found aliases
+#: rather than the answer, and with curves anchoring the coarse stage every
+#: start inside the capture range should converge to the same fit anyway.
+MULTI_START_FT = ((0.0, 0.0), (3.0, 0.0), (-3.0, 0.0), (0.0, 3.0), (0.0, -3.0))
 #: Is the solution a sharp fit to the paint, or merely a fit?
 #:
 #: A low residual proves nothing. Started 25 ft off on a synthetic court the
@@ -114,8 +132,9 @@ BOX_MARGIN_PX = 6
 
 
 def _line_samples(spacing_ft: float = SAMPLE_SPACING_FT):
-    """Points along every painted line, with unit tangents and line ids."""
-    points, tangents, ids = [], [], []
+    """Points along every painted line: unit tangents, line and segment ids."""
+    points, tangents, ids, segments = [], [], [], []
+    segment_id = 0
     for index, polyline in enumerate(court_lines()):
         p = np.asarray(polyline, dtype=np.float64)
         for a, b in zip(p[:-1], p[1:]):
@@ -129,10 +148,30 @@ def _line_samples(spacing_ft: float = SAMPLE_SPACING_FT):
                 points.append(a + segment * s)
                 tangents.append(tangent)
                 ids.append(index)
-    return (np.array(points), np.array(tangents), np.array(ids, dtype=int))
+                segments.append(segment_id)
+            segment_id += 1
+    return (np.array(points), np.array(tangents), np.array(ids, dtype=int),
+            np.array(segments, dtype=int))
 
 
-_POINTS, _TANGENTS, _LINE_IDS = _line_samples()
+_POINTS, _TANGENTS, _LINE_IDS, _SEGMENTS = _line_samples()
+
+
+def _segment_consensus(profile, segments, offsets, slack_px):
+    """Restrict each straight segment's samples to one shared painted line.
+
+    Arcs are drawn as many short segments of one sample each, so this only ever
+    binds genuinely straight runs.
+    """
+    masked = profile.copy()
+    for segment in np.unique(segments):
+        rows = np.flatnonzero(segments == segment)
+        if len(rows) < CONSENSUS_MIN_SAMPLES:
+            continue
+        centre = offsets[int(profile[rows].mean(axis=0).argmax())]
+        far = np.flatnonzero(np.abs(offsets - centre) > slack_px)
+        masked[np.ix_(rows, far)] = -np.inf
+    return masked
 
 
 def _project(matrix: np.ndarray, points: np.ndarray):
@@ -212,10 +251,17 @@ def _observe(response, structure, inverse, half_width, keep, boxes):
     ys = projected[:, 1:2] + n_img[:, 1:2] * offsets
     profile = map_coordinates(response, [ys.ravel(), xs.ravel()], order=1,
                               mode="constant").reshape(len(projected), -1)
-    k = profile.argmax(axis=1)
+    choose = profile
+    if half_width >= CONSENSUS_PX:
+        # Slack grows with the window: a slightly rotated start makes a long
+        # segment's offset drift along its length.
+        choose = _segment_consensus(profile, _SEGMENTS[index], offsets,
+                                    max(4.0, half_width / 4.0))
+    k = choose.argmax(axis=1)
     rows = np.arange(len(profile))
     peak = profile[rows, k]
-    good = (k > 0) & (k < len(offsets) - 1)
+    good = np.isfinite(choose[rows, k])
+    good &= (k > 0) & (k < len(offsets) - 1)
     good &= peak - np.median(profile, axis=1) >= MIN_CONTRAST
 
     # Sub-pixel centre from a parabola through the peak and its neighbours.
@@ -284,7 +330,8 @@ def _fit(inverse0, observed, index, prior_points, robust_px, prior_inverse=None)
                 - u[:, 1] * (observed[:, 0] - a[:, 0])) / LINE_SIGMA_PX
         moved, _ = _project(inverse, prior_points)
         prior = ((moved - prior_image) / PRIOR_PX).ravel()
-        return np.concatenate([line, prior])
+        return np.nan_to_num(np.concatenate([line, prior]), nan=1e3,
+                             posinf=1e3, neginf=-1e3)
 
     solution = least_squares(residuals, np.zeros(8), loss="soft_l1",
                              f_scale=max(robust_px / LINE_SIGMA_PX, 1.0),
