@@ -7,8 +7,8 @@ pytest.importorskip("cv2")
 pytest.importorskip("scipy")
 
 from courtvision.court_register import register_frame  # noqa: E402
-from test_court_refine import (_court_error, _perturb, _render,  # noqa: E402
-                               _render_painted, _truth)
+from tests.test_court_refine import (_court_error, _perturb,  # noqa: E402
+                                     _render, _render_painted, _truth)
 
 
 def test_a_white_lined_floor_is_registered_accurately():
