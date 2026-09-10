@@ -147,6 +147,43 @@ def homography_from_keypoints(points: dict[int, tuple[float, float]],
     return matrix, inliers
 
 
+#: Court-space correction applied after registration, in feet.
+#:
+#: ZERO, deliberately. A correction was measured, tested, and REJECTED.
+#:
+#: The registration is systematically off across the court on broadcast, and no
+#: internal check can see it: consistency compares two registrations of one
+#: instant, so an error that is a function of the court cancels. Two external methods
+#: were used to size it. Sliding the registration and watching where paint
+#: brightness peaks gave +2.04 ft across and -0.11 along. The league's shot
+#: chart -- 139 courtside positions that never saw our pixels, against a
+#: shuffled-pairing control reaching only 13.93 ft where the true pairing
+#: reached 5.48 -- gave +3.00 across and +1.75 along.
+#:
+#: Applying the feed's offset and re-measuring with paint made things WORSE:
+#: along the court went -0.11 -> -1.99 ft, which is exactly what arithmetic
+#: predicts if paint was right that there was no bias to remove, and across
+#: went +2.04 -> +3.87 instead of the -0.96 the correction implied.
+#:
+#: So the two disagree, and the disagreement is diagnostic rather than noise.
+#: The paint estimate across the court is not robust -- its curve plateaus from
+#: +1 to +5 ft rather than peaking, so the location of its maximum is barely
+#: determined. The feed estimate is weakly constrained too: the residual after
+#: correction spreads by 6.5 ft, so the minimum it selects is shallow, and the
+#: gain was only 6.38 -> 5.48 ft.
+#:
+#: Shipping a correction on that basis is precisely the failure this project
+#: has already made twice -- a number that improves while the truth moves the
+#: other way. It stays zero until a measurement survives its own cross-check.
+CALIBRATION_FT = (0.0, 0.0)
+
+
+def calibrated(matrix, offset=CALIBRATION_FT):
+    """A registration with the measured court-space bias removed."""
+    dx, dy = offset
+    return np.array([[1.0, 0.0, dx], [0.0, 1.0, dy], [0.0, 0.0, 1.0]]) @ matrix
+
+
 def orientation_sign(matrix, points) -> float:
     """Sign of the Jacobian determinant of an image -> court homography.
 

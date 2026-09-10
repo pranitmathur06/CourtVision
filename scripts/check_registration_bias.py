@@ -82,12 +82,18 @@ def main() -> int:
                         default="checkpoints/court_keypoints/court_kp_960_ft.pt")
     parser.add_argument("--samples", type=int, default=30)
     parser.add_argument("--conf", type=float, default=0.6)
+    parser.add_argument("--calibrated", action="store_true",
+                        help="apply CALIBRATION_FT first. The offset was "
+                             "derived from the feed's shot chart, so measuring "
+                             "it here -- with paint brightness, which never saw "
+                             "the feed -- is an independent confirmation.")
     args = parser.parse_args()
 
     import cv2
     from ultralytics import YOLO
 
-    from courtvision.court_keypoints import KEYPOINTS, homography_from_keypoints
+    from courtvision.court_keypoints import (KEYPOINTS, calibrated,
+                                             homography_from_keypoints)
     from courtvision.court_tracking import has_court
     from courtvision.device import resolve_device
 
@@ -117,6 +123,8 @@ def main() -> int:
         matrix, _ = homography_from_keypoints(seen)
         if matrix is None:
             continue
+        if args.calibrated:
+            matrix = calibrated(matrix)
         frames += 1
         for d in OFFSETS:
             v = brightness_on_lines(frame, matrix, dense, 0.0, d)

@@ -338,3 +338,48 @@ def test_the_180_degree_rotation_is_NOT_caught_and_that_is_expected():
     pts = np.array(list(seen.values()), dtype=np.float32)
     rotated = np.array([[-1, 0, 50.0], [0, -1, 94.0], [0, 0, 1]]) @ good
     assert orientation_sign(rotated, pts) == orientation_sign(good, pts)
+
+
+def test_the_shipped_calibration_is_zero_until_one_survives_cross_checking():
+    from courtvision.court_keypoints import CALIBRATION_FT
+
+    assert CALIBRATION_FT == (0.0, 0.0), (
+        "a correction was measured from the feed and rejected: applying it "
+        "made the independent paint measurement worse, not better")
+
+
+def test_calibration_shifts_the_court_by_exactly_its_offset():
+    pytest.importorskip("cv2")
+    import cv2
+    from courtvision.court_keypoints import CALIBRATION_FT, calibrated
+
+    probe = np.array([[300, 500], [600, 520], [450, 400]], dtype=np.float32)
+    base = _camera(0.0)
+    moved = calibrated(base, offset=(3.0, 1.75))
+    before = cv2.perspectiveTransform(probe.reshape(-1, 1, 2), base).reshape(-1, 2)
+    after = cv2.perspectiveTransform(probe.reshape(-1, 1, 2), moved).reshape(-1, 2)
+    assert np.allclose(after - before, np.array([3.0, 1.75]), atol=1e-4)
+
+
+def test_calibration_leaves_relative_geometry_untouched():
+    """Why the bias is survivable for tactics.
+
+    Every tactic this project measures is a relationship BETWEEN players --
+    screen proximity, spacing, matchups. A translation moves everyone together,
+    so those distances are unchanged; only absolute position moves.
+    """
+    pytest.importorskip("cv2")
+    import cv2
+    from courtvision.court_keypoints import calibrated
+
+    probe = np.array([[300, 500], [600, 520], [450, 400], [700, 450]],
+                     dtype=np.float32)
+    base = _camera(0.0)
+    before = cv2.perspectiveTransform(probe.reshape(-1, 1, 2), base).reshape(-1, 2)
+    after = cv2.perspectiveTransform(
+        probe.reshape(-1, 1, 2), calibrated(base, offset=(3.0, 1.75))).reshape(-1, 2)
+    for i in range(len(probe)):
+        for j in range(i + 1, len(probe)):
+            d_before = np.hypot(*(before[i] - before[j]))
+            d_after = np.hypot(*(after[i] - after[j]))
+            assert abs(d_before - d_after) < 1e-4

@@ -3708,3 +3708,56 @@ One caveat carried forward: every checkpoint so far was selected by a validator
 still using sigma=1/48 (fixed in `data.yaml` after these runs), so `best.pt`
 and early stopping were chosen on a metric the trainer documents as broken.
 The models measured here are good despite that, not because of it.
+
+## Round 45 - the feed calibration was measured, cross-checked, and rejected
+
+Registration on broadcast is systematically off across the court, and nothing
+internal could see it. `check_registration_bias` slides the registration and
+watches where paint brightness peaks; validated on 60 human-annotated frames it
+reads +0.00 and -0.02 ft at 2.1x contrast, and on our broadcast it read
+**-0.11 ft along the court and +2.04 ft across it**, at 1.2x.
+
+The league's shot chart is the external reference the plan called for: 157
+courtside positions for this game that have never seen a pixel of our video.
+Pairing them to aligned events by surname gives 149 matches, and the pairing
+checks out independently -- the play description states each shot's distance,
+and it agrees with the chart's coordinates to **0.3 ft** over 142 shots.
+
+Fitting the offset that best reconciles the feed's locations with detected
+player positions is circular if done naively: minimising the distance to the
+NEAREST player rewards any offset that pushes points into crowded floor. So the
+same fit was run on a deliberately wrong pairing. It could reach only 13.93 ft
+where the true pairing reached 5.48, so the signal is real.
+
+    no correction     median miss 6.38 ft
+    best offset       dx +3.00  dy +1.75  ->  5.48 ft
+    shuffled control  best achievable 13.93 ft
+
+**Then the correction was applied and re-measured with paint, and it made
+things worse.** Along the court went -0.11 -> -1.99 ft, exactly what arithmetic
+predicts if paint was right that there was nothing to remove; across the court
+went +2.04 -> +3.87 rather than the -0.96 the correction implied.
+
+The disagreement is diagnostic. The paint estimate across the court is not
+robust: its curve plateaus from +1 to +5 ft instead of peaking, so the location
+of the maximum is barely determined -- and the earlier "two independent methods
+agree" reading of +2.04 against +3.00 was weaker than it looked. The feed
+estimate is weakly constrained too: the residual after correction is centred
+(+0.26, +0.59 ft) but spreads by 6.5 ft, so the minimum it selects is shallow,
+and it bought only 0.9 ft.
+
+`CALIBRATION_FT` is therefore **zero**, with the rejected value recorded. This
+is the failure mode that produced the ICP result -- a score improving 7.60 ->
+1.30 ft while true error went 10.2 -> 16.5 -- and the only reason it did not
+repeat is that the correction was checked against a method that did not
+produce it.
+
+**What the exercise did establish.** The absolute error on broadcast is roughly
+5 ft, and it is mostly per-frame rather than a fixed offset, so no single
+correction can remove it. That is far worse than the 0.45 ft consistency figure
+suggests, and it is the honest number for absolute court position. It bounds
+what Phase 4 can claim about shot distance, three-point classification and
+court zones. It does NOT bound the tactics, which are relationships between
+players in the same frame: a per-frame registration error moves everyone
+together, so screen proximity, spacing and matchups survive it. A test pins
+that a translation leaves every pairwise distance unchanged.
