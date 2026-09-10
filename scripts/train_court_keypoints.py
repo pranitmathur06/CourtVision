@@ -38,12 +38,19 @@ pose and arena colour rather than over the shape of the thing itself.
 from __future__ import annotations
 
 import argparse
+import shutil
 from pathlib import Path
 
 DATA = Path("data/labeled/court_keypoints_by_game/data.yaml")
 #: `valid` is the Roboflow split name; the eval script selects its confidence
 #: floor there and reports on `test`.
 OUT = Path("checkpoints/court_keypoints")
+#: Weights are copied here when a run finishes. `runs/` is scratch that
+#: ultralytics reuses and overwrites -- a fine-tune launched with the same run
+#: name and exist_ok=True destroyed a converged model that had already been
+#: measured, and the only other copy was in a session temp directory. A run
+#: that took seven hours needs somewhere durable that is not the run directory.
+KEEP = Path("checkpoints/court_keypoints")
 
 
 def _resolved_data(config: Path = DATA) -> Path:
@@ -88,6 +95,17 @@ def main() -> int:
                         help="ultralytics defaults to CPU on this Mac -- 20 s "
                              "per iteration -- so the device is passed "
                              "explicitly, as the rest of the repo does")
+    parser.add_argument("--name", default=None,
+                        help="run directory name; defaults to one describing "
+                             "the configuration, so a fine-tune cannot "
+                             "overwrite the run it started from")
+    parser.add_argument("--lr0", type=float, default=None,
+                        help="initial learning rate. Ultralytics defaults to "
+                             "0.01 with warmup, which RE-TRAINS a converged "
+                             "model rather than refining it -- a 960 fine-tune "
+                             "started that way took pose mAP50 from 0.707 to "
+                             "0.435 in eleven epochs. Pass something near "
+                             "0.001 when starting from trained weights.")
     args = parser.parse_args()
 
     from ultralytics import YOLO
@@ -110,14 +128,23 @@ def main() -> int:
     model.add_callback("on_train_start", _set_sigmas)
     device = args.device or resolve_device()
     print(f"training on {device}")
-    model.train(data=str(data), epochs=args.epochs,
+    name = args.name or f"court_kp_{args.imgsz}_s{args.sigma}"
+    extra = {} if args.lr0 is None else {"lr0": args.lr0}
+    model.train(data=str(data), epochs=args.epochs, **extra,
                 imgsz=args.imgsz, batch=args.batch, device=device,
-                project=str(OUT.parent), name=OUT.name, exist_ok=True,
+                project=str(OUT.parent), name=name, exist_ok=True,
                 # A court fills the frame, so the aggressive scale/translate
                 # augmentation meant for objects moves landmarks out of view.
                 scale=0.25, translate=0.05, degrees=0.0, shear=0.0,
                 mosaic=0.0, fliplr=0.5, patience=30)
-    print(f"  weights in {OUT}/weights/best.pt")
+    produced = Path("runs/pose") / OUT.parent / name / "weights" / "best.pt"
+    if produced.exists():
+        KEEP.mkdir(parents=True, exist_ok=True)
+        kept = KEEP / f"{name}.pt"
+        shutil.copy2(produced, kept)
+        print(f"  weights kept at {kept}")
+    else:
+        print(f"  WARNING - no weights at {produced}")
     return 0
 
 
