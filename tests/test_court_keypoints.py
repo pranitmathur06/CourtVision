@@ -256,3 +256,73 @@ def test_a_failed_refit_falls_back_to_the_centre_rather_than_losing_the_instant(
     assert used in (1, 3)
     if used == 1:
         assert np.allclose(fused, matrices[1])
+
+
+def test_a_lone_neighbour_registration_is_carried_not_reported_as_nothing():
+    """used>=1 must mean a matrix was produced.
+
+    The centre frame failing while a neighbour registered is common -- one
+    blurred frame in a pan. Returning (None, 1) claimed a registration and
+    supplied none, so a caller checking `used` got a null matrix.
+    """
+    pytest.importorskip("cv2")
+    import cv2
+    probe = np.array([[300, 500], [600, 520], [450, 400], [700, 450],
+                      [250, 430], [550, 560]], dtype=np.float32)
+    matrices = [_camera(0.0), None, None]        # only the far neighbour worked
+    carries = [np.eye(3), np.eye(3)]
+    fused, used = fuse_registrations(matrices, carries, probe, centre=1)
+    assert used >= 1
+    assert fused is not None, "used >= 1 must mean a matrix came back"
+    got = cv2.perspectiveTransform(probe.reshape(-1, 1, 2), fused).reshape(-1, 2)
+    want = cv2.perspectiveTransform(probe.reshape(-1, 1, 2), _camera(0.0)).reshape(-1, 2)
+    assert np.median(np.hypot(*(got - want).T)) < 0.5
+
+
+def test_a_mirrored_registration_is_refused():
+    """Corrects a claim this project recorded: that geometry cannot see an
+    end swap. The paint is symmetric, but a reflection reverses orientation."""
+    pytest.importorskip("cv2")
+    import cv2
+    from courtvision.court_keypoints import COURT_ORIENTATION, orientation_sign
+
+    court = np.array([[0, 0], [50, 0], [50, 94], [0, 94]], dtype=np.float32)
+    image = np.array([[100, 600], [900, 600], [780, 120], [220, 120]],
+                     dtype=np.float32)
+    c2i = cv2.getPerspectiveTransform(court, image)
+    seen = {}
+    for index, (x, y) in KEYPOINTS.items():
+        p = np.array([x, y, 1.0]) @ c2i.T
+        seen[index] = (p[0] / p[2], p[1] / p[2])
+
+    good, _ = homography_from_keypoints(seen)
+    assert good is not None
+    pts = np.array(list(seen.values()), dtype=np.float32)
+    assert orientation_sign(good, pts) == COURT_ORIENTATION
+
+    mirrored = np.array([[1, 0, 0], [0, -1, 94.0], [0, 0, 1]]) @ good
+    assert orientation_sign(mirrored, pts) == -COURT_ORIENTATION
+
+
+def test_the_180_degree_rotation_is_NOT_caught_and_that_is_expected():
+    """End AND side swap preserves orientation -- the reverse-angle camera.
+
+    Pinned so the limit stays stated: this one needs a temporal or feed cue,
+    not geometry.
+    """
+    pytest.importorskip("cv2")
+    import cv2
+    from courtvision.court_keypoints import orientation_sign
+
+    court = np.array([[0, 0], [50, 0], [50, 94], [0, 94]], dtype=np.float32)
+    image = np.array([[100, 600], [900, 600], [780, 120], [220, 120]],
+                     dtype=np.float32)
+    c2i = cv2.getPerspectiveTransform(court, image)
+    seen = {}
+    for index, (x, y) in KEYPOINTS.items():
+        p = np.array([x, y, 1.0]) @ c2i.T
+        seen[index] = (p[0] / p[2], p[1] / p[2])
+    good, _ = homography_from_keypoints(seen)
+    pts = np.array(list(seen.values()), dtype=np.float32)
+    rotated = np.array([[-1, 0, 50.0], [0, -1, 94.0], [0, 0, 1]]) @ good
+    assert orientation_sign(rotated, pts) == orientation_sign(good, pts)

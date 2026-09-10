@@ -97,8 +97,13 @@ FLIP_INDEX = [35, 36, 2, 38, 39, 5, 41, 42, 34, 32, 10, 33, 29, 30, 31, 15,
 # error whether or not the correspondences were right -- the trap `court.py`
 # already documents. Six leaves something for RANSAC to disagree with.
 MIN_KEYPOINTS = 6
-#: Reprojection tolerance for RANSAC, in pixels.
-RANSAC_PX = 6.0
+#: Reprojection tolerance for the image -> court fit. cv2 measures its
+#: residual in the DESTINATION space, so this is FEET, not pixels. It was
+#: written as `RANSAC_PX = 6.0` and read as six pixels; six feet accepts
+#: everything, and on the held-out games 801 of the 1,565 landmarks used by
+#: accepted fits had residuals over half a foot. "RANSAC discards the bad
+#: ones" was not happening. The value is chosen on the validation split.
+RANSAC_FT = 1.0
 #: Tolerance when refitting a fused registration. This fit runs pixels ->
 #: court, so cv2 measures its residual in the destination units, FEET, not
 #: pixels. A landmark is worth about 0.03 ft per pixel on a broadcast frame,
@@ -109,7 +114,8 @@ FUSE_RANSAC_FT = 0.5
 
 def homography_from_keypoints(points: dict[int, tuple[float, float]],
                               min_points: int = MIN_KEYPOINTS,
-                              ransac_px: float = RANSAC_PX):
+                              ransac_ft: float = RANSAC_FT,
+                              require_orientation: bool = True):
     """Image-to-court homography from detected landmarks, or None.
 
     `points` maps keypoint index to its pixel position. Indices absent from
@@ -127,13 +133,52 @@ def homography_from_keypoints(points: dict[int, tuple[float, float]],
     image_pts = np.array([xy for _, xy in usable], dtype=np.float32)
     court_pts = np.array([KEYPOINTS[i] for i, _ in usable], dtype=np.float32)
     matrix, mask = cv2.findHomography(image_pts, court_pts, cv2.RANSAC,
-                                      ransac_px)
+                                      ransac_ft)
     if matrix is None or mask is None:
         return None, 0
     inliers = int(mask.sum())
     if inliers < min_points:
         return None, inliers
+    if require_orientation and orientation_sign(matrix, image_pts) != COURT_ORIENTATION:
+        # Mirrored: the fit landed on the far basket's markings, which are
+        # identical to the near ones. Every court coordinate downstream would
+        # be at the wrong end of the floor.
+        return None, inliers
     return matrix, inliers
+
+
+def orientation_sign(matrix, points) -> float:
+    """Sign of the Jacobian determinant of an image -> court homography.
+
+    A broadcast camera and the court frame have a fixed handedness -- image y
+    runs down, court y runs up -- so every correct registration has the same
+    sign. Measured on all 840 human references: -1 on 100% of them, and +1 on
+    100% of the same references after an end swap.
+
+    That makes a mirrored registration detectable from one number, which
+    corrects a claim this project previously recorded: that no geometric check
+    could see an end swap, because the court's paint is symmetric about
+    half-court. The paint is symmetric, but a reflection is not a rotation --
+    it reverses orientation, and the determinant sees that.
+
+    What genuinely cannot be seen is the 180 degree rotation, an end AND side
+    swap, which preserves orientation. That is the reverse-angle camera, and it
+    needs a temporal or feed-side cue rather than geometry.
+    """
+    import cv2
+
+    points = np.asarray(points, dtype=np.float32).reshape(-1, 2)
+    centre = points.mean(axis=0)
+    origin = cv2.perspectiveTransform(np.float32([[centre]]), matrix).reshape(2)
+    along_x = cv2.perspectiveTransform(
+        np.float32([[centre + [1.0, 0.0]]]), matrix).reshape(2) - origin
+    along_y = cv2.perspectiveTransform(
+        np.float32([[centre + [0.0, 1.0]]]), matrix).reshape(2) - origin
+    return float(np.sign(along_x[0] * along_y[1] - along_x[1] * along_y[0]))
+
+
+#: The handedness every correct registration has, measured on 840 references.
+COURT_ORIENTATION = -1.0
 
 
 def symmetry_error(schema: dict[int, tuple[float, float]]) -> float:
@@ -202,9 +247,13 @@ def fuse_registrations(matrices, carries, probe, centre=None):
         estimates.append(cv2.perspectiveTransform(moved, matrix).reshape(-1, 2))
     if not estimates:
         return None, 0
-    if len(estimates) == 1:
-        return matrices[centre], 1
 
+    # No special case for a single estimate. Returning `matrices[centre]` here
+    # handed back None whenever the one estimate came from a NEIGHBOUR rather
+    # than the centre -- reporting used=1, a registration, while supplying no
+    # matrix. Refitting works for one estimate too: the median is that
+    # estimate, and the fit recovers the neighbour's registration carried onto
+    # the centre frame, which is a real answer rather than a discarded instant.
     court = np.median(np.stack(estimates), axis=0)
     fused, _ = cv2.findHomography(probe.reshape(-1, 2), court, cv2.RANSAC,
                                   FUSE_RANSAC_FT)

@@ -31,6 +31,8 @@ import numpy as np
 DATA = Path("data/labeled/court_keypoints_by_game")
 GATE_FT = 2.0
 CONF_GRID = (0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8)
+#: cv2 measures the fit's residual in court feet, so this is feet.
+RANSAC_GRID = (0.5, 1.0, 2.0, 6.0)
 
 
 def _truth(label: Path, width: int, height: int) -> dict[int, tuple[float, float]]:
@@ -92,18 +94,22 @@ def _gather(model, split: str, device: str):
     return frames
 
 
-def _score(frames, conf: float):
+def _score(frames, conf: float, ransac_ft: float = 1.0):
     import cv2
 
     from courtvision.court_keypoints import homography_from_keypoints
 
     registered, wrong_half, usable = 0, 0, 0
     errors: list[float] = []
+    #: Per-FRAME medians. Pooling every landmark instead lets a wide-angle
+    #: frame with twenty visible landmarks outvote a tight one with eight, so
+    #: the pooled median is not the median frame. The gate is about frames.
+    per_frame: list[float] = []
     found: list[int] = []
     for predicted, reference, probe in frames:
         seen = {i: xy for i, (xy, c) in predicted.items() if c >= conf}
         found.append(len(seen))
-        matrix, _ = homography_from_keypoints(seen)
+        matrix, _ = homography_from_keypoints(seen, ransac_ft=ransac_ft)
         if matrix is None:
             continue
         registered += 1
@@ -111,11 +117,13 @@ def _score(frames, conf: float):
         want = cv2.perspectiveTransform(probe, reference).reshape(-1, 2)
         err = np.hypot(*(got - want).T)
         errors.extend(err)
+        per_frame.append(float(np.median(err)))
         # The failure that made the painted key unusable: right court, wrong end.
         wrong_half += (np.median(got[:, 1]) > 47) != (np.median(want[:, 1]) > 47)
         usable += np.median(err) <= GATE_FT
     return {"n": len(frames), "registered": registered, "usable": usable,
-            "errors": np.array(errors), "wrong_half": wrong_half,
+            "errors": np.array(errors), "per_frame": np.array(per_frame),
+            "wrong_half": wrong_half,
             "found": float(np.median(found)) if found else 0.0}
 
 
@@ -139,28 +147,33 @@ def main() -> int:
     device = resolve_device()
 
     selection = _gather(model, args.select_on, device)
-    scores = {c: _score(selection, c) for c in CONF_GRID}
+    scores = {(c, r): _score(selection, c, r)
+              for c in CONF_GRID for r in RANSAC_GRID}
     # Pre-registered rule: the fraction of frames that register AND land inside
-    # the gate. Ties break to the higher floor, which is the more conservative.
-    best = max(CONF_GRID, key=lambda c: (scores[c]["usable"] / max(scores[c]["n"], 1), c))
-    print(f"confidence floor chosen on '{args.select_on}' "
-          f"({scores[best]['n']} frames): {best}")
-    for c in CONF_GRID:
-        s = scores[c]
-        marker = " <-" if c == best else ""
-        print(f"    {c:.1f}  usable {s['usable']/max(s['n'],1):6.1%}"
-              f"  registered {s['registered']/max(s['n'],1):6.1%}{marker}")
+    # the gate. Ties break to the higher floor and the tighter fit, both the
+    # more conservative choice.
+    best = max(scores, key=lambda k: (scores[k]["usable"] / max(scores[k]["n"], 1),
+                                      k[0], -k[1]))
+    print(f"chosen on '{args.select_on}' ({scores[best]['n']} frames): "
+          f"conf {best[0]}, ransac {best[1]} ft")
+    for r in RANSAC_GRID:
+        row = " ".join(f"{scores[(c, r)]['usable']/max(scores[(c, r)]['n'],1):5.1%}"
+                       for c in CONF_GRID)
+        print(f"    ransac {r:4.1f} ft  usable by conf: {row}")
 
-    s = _score(_gather(model, args.report_on, device), best)
+    s = _score(_gather(model, args.report_on, device), best[0], best[1])
     n = max(s["n"], 1)
     print(f"\nreported on '{args.report_on}': {s['n']} frames")
     print(f"  landmarks found per frame   p50 {s['found']:.0f}")
     print(f"  registered                  {s['registered']}/{s['n']} = "
           f"{s['registered']/n:.1%}   [gate 90%]")
-    if len(s["errors"]):
-        print(f"  court error                 p50 {np.median(s['errors']):.2f} ft"
-              f"   p90 {np.percentile(s['errors'], 90):.2f} ft   "
+    if len(s["per_frame"]):
+        print(f"  court error, PER FRAME      p50 {np.median(s['per_frame']):.2f} ft"
+              f"   p90 {np.percentile(s['per_frame'], 90):.2f} ft   "
               f"[gate p50 <= {GATE_FT:.0f} ft]")
+        print(f"  court error, pooled         p50 {np.median(s['errors']):.2f} ft"
+              f"   (every landmark equally weighted -- reported for continuity "
+              f"with earlier rounds, NOT the gate)")
     print(f"  frames inside the gate      {s['usable']}/{s['n']} = {s['usable']/n:.1%}")
     print(f"  wrong end of the floor      {s['wrong_half']}/{max(s['registered'],1)}")
     return 0

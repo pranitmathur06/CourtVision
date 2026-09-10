@@ -3553,3 +3553,60 @@ Validation is noisy enough to be worth ignoring epoch by epoch: across this
 run it read 0.707, 0.643, 0.745, 0.587, 0.132 on consecutive samples. The
 validation split is 94 frames of whole games, so one awkward camera angle moves
 it several tenths. Only the test games and the broadcast checks decide anything.
+
+## Round 42 - the Phase 1 review, and three corrections
+
+An independent review of Phase 1 found defects in the code and in two claims
+recorded here. The substantive ones, with what was done:
+
+**`RANSAC_PX = 6.0` was six FEET.** `cv2.findHomography` measures its residual
+in the destination space, and that fit runs pixels -> court feet. The module
+already had this right for the fused refit (`FUSE_RANSAC_FT`) and wrong for the
+main one. At six feet nothing is rejected: on a realistic synthetic fit, 12 of
+12 landmarks are inliers at 6.0 against 10 of 12 at 1.0, and on the held-out
+games 801 of the 1,565 landmarks used by accepted fits had residuals over half
+a foot. "RANSAC discards the bad ones" was not happening, and the
+`inliers >= 30` assertion in the tests was vacuous.
+
+Fixing it changed the result **very little** -- per-frame p50 2.03 -> 2.00 ft --
+which is itself the useful finding: the error is landmark localisation, not
+outlier contamination. The threshold is now selected on validation alongside
+the confidence floor.
+
+**The 2 ft gate was reported on a pooled median, and the per-frame median does
+not meet it.** `errors.extend(err)` pooled every landmark across every frame,
+so a wide-angle frame with twenty visible landmarks outvoted a tight one with
+eight. The gate is about frames. Per frame, on held-out games:
+
+    court error, per frame    p50 2.00 ft   p90 2.96 ft   [gate 2 ft]
+    court error, pooled       p50 1.91 ft
+    frames inside the gate    69/138 = 50.0%
+
+**Phase 1 does not clear its gate on held-out single frames.** It sits exactly
+on the boundary. Round 41's "the gate is met on both" was true only under the
+pooling choice and is withdrawn. The fused broadcast figure (0.59 ft) stands
+and is what the product consumes, but it is a different measurement on
+different footage, and the two should not be quoted as if they were one result.
+
+**"No check of this kind can see an end swap" was wrong.** Round 39 argued that
+because the court's paint is symmetric about half-court, and the flip composes
+with an affine reflection preserving projective structure, an end swap is
+undetectable. The paint is symmetric and the projective structure is preserved,
+but a reflection is not a rotation: it reverses **orientation**. On all 840
+human references the Jacobian determinant of a correct registration is negative
+on 100% of frames, and positive on 100% of the same frames after an end swap.
+One sign separates them completely. `orientation_sign` now rejects mirrored
+registrations inside `homography_from_keypoints`.
+
+What is genuinely undetectable is the 180 degree rotation -- an end AND side
+swap, which preserves orientation. That is the reverse-angle camera, and it
+needs a temporal or feed-side cue. A test pins that limit so it stays stated.
+
+**Smaller corrections.** `exp(-71)` is about 1.5e-31, not zero in float32; the
+gradient is negligible rather than absent, and the conclusion is unchanged but
+the wording was wrong. `fuse_registrations` returned `(None, 1)` when the only
+usable estimate came from a neighbour rather than the centre -- claiming a
+registration while supplying no matrix; it now carries the neighbour's
+registration onto the centre frame. The sigma ablation (346/77/263 px) was run
+on the leaked Roboflow split, one seed per arm, and should be read as
+establishing the mechanism rather than the exact ordering of 0.18 against 0.35.
