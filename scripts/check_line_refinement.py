@@ -40,6 +40,17 @@ def main() -> int:
     parser.add_argument("--conf", type=float, default=0.6)
     parser.add_argument("--start", type=float, default=600.0)
     parser.add_argument("--end", type=float, default=8400.0)
+    parser.add_argument("--single-start", action="store_true",
+                        help="refine from the landmark registration only. On "
+                             "broadcast, paint supports several sharp solutions "
+                             "about one line spacing apart, and extra starts "
+                             "jump between them; this isolates what the "
+                             "landmark start alone achieves")
+    parser.add_argument("--dump", default=None,
+                        help="write every (frame, family) measurement to JSON, "
+                             "so a tail can be traced to its cause -- a far-off "
+                             "landmark start, a lock, one line family -- rather "
+                             "than read off an aggregate over a handful of frames")
     args = parser.parse_args()
 
     import cv2
@@ -59,12 +70,15 @@ def main() -> int:
     detector = YOLO(args.detector)
     device = resolve_device()
     capture = cv2.VideoCapture(args.video)
+    starts = {"starts": ((0.0, 0.0),)} if args.single_start else {}
 
     court_frames = registered = accepted = 0
     coverage, residual, reasons = [], [], {}
     base_err, refined_err = [], []            # per (frame, family) medians
     by_family: dict[str, list[float]] = {}
     control = []
+    attempted = missing = 0
+    records: list[dict] = []
 
     for t in np.linspace(args.start, args.end, args.samples):
         capture.set(cv2.CAP_PROP_POS_MSEC, t * 1000)
@@ -88,7 +102,8 @@ def main() -> int:
                  if found is not None and len(found) else None)
         prepared = prepare(frame)
 
-        full, info = refine(frame, start, boxes=boxes, prepared=prepared)
+        full, info = refine(frame, start, boxes=boxes, prepared=prepared,
+                            **starts)
         if info["coverage"] is not None:
             coverage.append(info["coverage"])
         if not info["refined"]:
@@ -97,19 +112,40 @@ def main() -> int:
             continue
         accepted += 1
         residual.append(info["residual_px"])
+        frame_info = {"t": float(t), "drift_ft": info["drift_ft"],
+                      "peak_ratio": info["peak_ratio"],
+                      "explained": info.get("explained"),
+                      "residual_px": info["residual_px"]}
 
         for family, lines in HOLD_OUT.items():
             base = held_out_offsets(frame, start, lines, boxes, prepared=prepared)
             fitted, finfo = refine(frame, start, boxes=boxes, exclude_lines=lines,
-                                   prepared=prepared)
+                                   prepared=prepared, **starts)
             if not finfo["refined"]:
                 continue
             offsets, index = held_out_offsets(frame, fitted, lines, boxes,
                                               prepared=prepared, details=True)
-            if len(offsets) < MIN_PER_FAMILY or len(base) < MIN_PER_FAMILY:
+            if len(base) < MIN_PER_FAMILY:
+                continue          # the family is not visible in this frame
+            attempted += 1
+            record = dict(frame_info, family=family,
+                          landmark_err=float(np.median(np.abs(base))),
+                          held_out_drift=finfo["drift_ft"],
+                          found=int(len(offsets)))
+            records.append(record)
+            if len(offsets) < MIN_PER_FAMILY:
+                record["refined_err"] = None
+                # Visible, but its paint is not near where the refined fit
+                # puts it. Dropping this silently would score only the fits
+                # that were already close -- a fit locked one line spacing
+                # (3 ft, ~100 px) off can never be measured by a 24 px window,
+                # so it would vanish from the statistics instead of counting
+                # against them.
+                missing += 1
                 continue
             refined_err.append(float(np.median(np.abs(offsets))))
             base_err.append(float(np.median(np.abs(base))))
+            record["refined_err"] = refined_err[-1]
             by_family.setdefault(family, []).append(refined_err[-1])
 
             # Control: shift by a known amount in each court axis and require
@@ -129,6 +165,10 @@ def main() -> int:
                     change = (shifted[b] - offsets[a])[strong] / component[strong]
                     control.append(float(np.median(change)))
 
+    if args.dump:
+        import json
+        Path(args.dump).parent.mkdir(parents=True, exist_ok=True)
+        json.dump(records, open(args.dump, "w"), indent=1)
     n = max(court_frames, 1)
     print(f"{args.video}")
     print(f"  court frames {court_frames}   landmark-registered {registered} "
@@ -146,6 +186,10 @@ def main() -> int:
         print(f"  CONTROL  known {SHIFT_FT} ft shift reads {np.median(c):.3f} ft "
               f"(p10 {np.percentile(c,10):.3f}, p90 {np.percentile(c,90):.3f})"
               f"  -> {verdict}")
+    if attempted:
+        print(f"  held-out paint NOT FOUND near the refined fit: {missing}/"
+              f"{attempted} = {missing/attempted:.0%}   (counted as failures, "
+              f"not dropped)")
     if refined_err:
         b, r = np.array(base_err), np.array(refined_err)
         print(f"  HELD-OUT line error   landmark only  p50 {np.median(b):.2f} ft"

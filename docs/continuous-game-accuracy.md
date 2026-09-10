@@ -3841,3 +3841,57 @@ should be made consistent was wrong, and only measuring it showed that.
 `data.yaml` now carries a comment saying why the key is absent, since its
 absence is the load-bearing part and an obvious-looking edit would undo it.
 `court_kp_960_ft.pt` remains the production model.
+
+## Round 48 - toward 0.3 ft: dense line refinement, and what real footage says about it
+
+Target raised to 0.3 ft on an unseen arena. The landmark fit is limited by how
+precisely a network can point at a blob; painted lines are thin ridges whose
+centres can be found to a fraction of a pixel along hundreds of feet of paint.
+`court_refine.py` aligns every visible line (point-to-line, sub-pixel ridge
+centres, orientation and continuity checks, robust loss, landmark prior), and
+`check_line_refinement.py` measures it on **lines the fit never saw** -- in court
+feet, with no annotations, which matters because the annotations are only
+consistent to ~0.35 ft and cannot certify anything finer.
+
+**The measurement is sound where three before it were not.** A known 0.5 ft shift
+reads 0.499 ft (p10 0.465, p90 0.543) on real footage. It also had a bias, found
+and fixed: a held-out family whose paint was not found near the refined fit was
+dropped, so a fit locked one line spacing (3 ft, ~100 px) off -- unmeasurable in a
+24 px window -- vanished from the statistics instead of counting against them.
+Re-scored, the 9-start variant had been silently dropping **14%** of its
+measurements.
+
+**Three designs, on the OKC calibration game.** Synthetic tests flattered every
+one; real frames decided.
+
+    design          accepted  not found  held-out p50  p90     n
+    9-start grid    80%       14%        0.40 ft       1.09    32   (small sample)
+    consensus       60%        7%        0.36 ft       2.05    25   (small sample)
+    single start    60%       14%        0.35 ft       1.42    64   (28 frames)
+    landmark only                        0.92 ft       2.00
+
+- **Multi-start** found aliases rather than the answer: 6 ft starts landed ~3 ft
+  from the landmark-started fit in 17 of 36 cases, and the acceptance guard
+  passed 58% of deliberately 20-30 ft wrong starts at a threshold that kept 80%
+  of true fits.
+- **Curves first** failed on geometry: curves are not isolated. The lane lines
+  run 2 ft outside the free-throw circle and the free-throw line is its
+  diameter, with matching orientation at exactly those points.
+- **Segment consensus** (each straight segment picks its paint as a unit) fixed
+  the synthetic aliasing and left real capture unchanged: 11 of 27 six-foot
+  starts still landed elsewhere.
+
+**The basin hypothesis was tested and is wrong.** If refinement were limited by
+starting in the wrong basin, error would be bimodal -- near-perfect or one line
+spacing off -- and track the landmark start. Over 74 measurements it is a
+continuum (25 at or under 0.3 ft, 20 at 0.3-0.6, 10 at 0.6-1.2, 8 at 1.2-2.4,
+1 above), and barely related to the start (correlation +0.24; even starts under
+0.75 ft reach 0.3 ft only half the time). Temporal propagation, which fixes
+basins, would not fix this, and was not built.
+
+**Current lead: the camera model.** The fit's residual is 0.56 px (~0.02-0.05 ft)
+yet held-out lines sit 0.35 ft off, so no single homography fits the lines it saw
+and the lines it did not. The worst family is the boundary, 0.59 ft -- the lines
+at the frame edges. Both point to radial lens distortion, which a homography
+cannot represent. Being tested directly next: residuals should track
+rho^2 * n.(p - c) with a consistent sign across frames, and grow toward the edge.
