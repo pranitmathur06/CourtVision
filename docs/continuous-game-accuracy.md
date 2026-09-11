@@ -4682,3 +4682,28 @@ r^3. A two-term model (k1 r^2 + k2 r^4), fitted on boundary and interior
 straights from two halves of the frames, agrees between halves (k1 -0.0018 /
 -0.0008, k2 +0.0117 / +0.0128) and takes the held-out far-edge offsets from ~4
 px to 1-2 px. It is now the lens model; estimate_camera fits both terms.
+
+**With the two-term lens** (k1 -0.0021, k2 +0.0108, from paint, agreeing with
+both split halves), against the average of the two labellers: p50 0.39 ft,
+within 0.3 38% (from 35%) -- the lens barely moves the whole-game number.
+Broken down, the error is not uniform: free-throw-line corners 0.24 ft (34
+spots), baseline points 0.37 (61), far corners 0.45 (17), near corners 0.60
+(5), sideline hashes and half-court points 1.54 ft (14). Drawn over the worst
+frames, the key and lanes sit within 0.1-0.45 ft of the clicks while spots
+20-40 ft down the court, near the frame edge, miss by 1.2-2.6 ft: the error
+grows with distance from the paint the fit rests on, as in Round 54.
+
+**Trusted score** (declared before its first output, acaf18e): of 132 spots,
+107 lie within 3 ft of paint the fit used.
+
+    spots        n     p50      p75      within 0.3
+    trusted     107    0.34 ft  0.61     42%
+    flagged      25    0.56 ft
+    all         132    0.39 ft  0.62     38%
+
+FAIL as measured -- 0.34 is above 0.30. The averaged clicks carry ~0.18 ft of
+their own noise, so the registration's own error on trusted ground is roughly
+0.29 ft: at the goal, but that is an estimate from the noise model, not a
+measurement, and it is not reported as a pass. Over a whole game at Toyota
+Center, the honest reading is: ~0.3 ft where the system vouches for a point,
+~0.35-0.4 over everything, and the far sideline off by feet.
