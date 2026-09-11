@@ -4630,3 +4630,33 @@ right; that result is recorded below when it lands. Either way the headline
 stands: over the whole game the fixed-camera registration measures ~0.4-0.5 ft
 against hand labels whose own noise is ~0.24 ft a click -- not the 0.3 ft
 goal, and not a number these labels can refine.
+
+## Round 62 - the reoriented labeller works; the labels' noise floor is ~0.25 ft
+
+The third label set came from the labeller whose diagram is drawn as the
+camera sees the court (v3). As given, with no repair, 163 of 203 clicks (80%)
+agree with their frame's consensus within 1 ft; the second labeller's set,
+from the old diagram, had whole frames mixing two conventions. The diagram was
+the cause.
+
+Against it the whole-game test (registration with camera, floor check and
+landmark-free search; lens correction k1 = 0.0037):
+
+    measure                               frames  clicks   camera p50   free p50
+    DIRECT, all clicks                      23      193      0.54 ft     0.95 ft
+    DIRECT-CONSENSUS (declared, cf36518)     6       48      0.44 ft     0.91 ft
+
+Per-frame medians on the consensus frames: 0.24, 0.37, 0.40, 0.57, 0.65,
+0.69 ft. FAIL. The consensus measure covers only six frames because the
+declared rule needs 8 agreeing clicks and most frames have 7 of 8.
+
+**The labels' own floor.** The two 1080p labellers clicked 176 of the same
+spots; they disagree by 5.6 px, 0.35 ft median, so one click carries ~0.25 ft
+of noise -- the same figure as the first pair (0.24). Against one labeller a
+perfect registration would still score ~0.25 ft, so the 0.3 ft goal sits almost
+on the labels' noise floor. Removing it from 0.44 leaves ~0.35-0.4 ft of
+registration error over the whole game: above the goal, by this estimate.
+
+Next, declared in scripts/eval_two_labellers.py before running: score against
+the average of the two labellers' clicks on the spots both made (noise
+~0.25 / sqrt 2 = 0.18 ft), keeping each frame's label consensus.
