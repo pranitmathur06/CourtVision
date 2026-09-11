@@ -174,6 +174,7 @@ def main() -> int:
                       if clip != row["clip"]]
             camera, report = estimate_centre(others, (frame.shape[1], frame.shape[0]))
             row["camera"] = report
+            row["camera_used"] = camera is not None
             if camera is not None:
                 matrix, info = register_frame(frame, start, boxes=boxes, camera=camera)
             _score(row, frame, start, boxes, floor, reference, matrix, info)
@@ -211,7 +212,11 @@ def main() -> int:
                 d = np.concatenate([r["dist"] for r in members])
                 if (d <= radius).any():
                     clip_p50.append(float(np.median(e[d <= radius])))
-        cameras = sum(1 for r in everything if (r.get("camera") or {}).get("centre"))
+        # A refused estimate still reports the centre it tried; count only
+        # images actually registered with a camera.
+        cameras = sum(1 for r in everything
+                      if r.get("camera_used", bool((r.get("camera") or {}).get("centre"))
+                               and "reason" not in (r.get("camera") or {})))
         verdict = "PASS" if p50 <= TARGET_FT else "FAIL"
         if unseen:
             verdicts.append(verdict)
