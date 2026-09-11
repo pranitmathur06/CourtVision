@@ -294,7 +294,11 @@ def main() -> int:
             start, _ = homography_from_keypoints(
                 {i: tuple(xy[i]) for i in range(len(xy))
                  if i in KEYPOINTS and conf[i] >= args.conf and (xy[i] > 0).all()})
-        if start is None:
+        # Production registers a frame with no landmark start too: with the
+        # game's camera, register_frame searches for one. Skipping such frames
+        # here scored only the easier ones (5 of 25 labelled frames were
+        # dropped this way); the free arm still needs a start and records none.
+        if start is None and camera is None:
             continue
         found = detector.predict(frame, device=device, verbose=False)[0].boxes
         boxes = (found.xyxy.cpu().numpy()[found.cls.cpu().numpy() == 0]
@@ -303,6 +307,10 @@ def main() -> int:
         truth = np.array([p[0] for p in pts], np.float64)
         for arm, cam in (("free", None), ("camera", camera)):
             if arm == "camera" and cam is None:
+                continue
+            if arm == "free" and start is None:
+                row["arms"][arm] = {"refined": False, "err": [], "dist": [], "robust_err": None,
+                                    "robust_dist": None, "direct_err": None}
                 continue
             matrix, info = register_frame(frame, start, boxes=boxes, camera=cam)
             estimate = cv2.perspectiveTransform(px, matrix).reshape(-1, 2)
