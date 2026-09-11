@@ -25,6 +25,25 @@ exactly that.
   0.3; the same over ALL points registered; per-frame medians; coverage of
   labelled points and of frames. PASS: trusted p50 <= 0.30 ft AND all-point
   p50 <= 0.30 ft -- a whole game, not only the ground near paint.
+
+Revised after the first run on real labels, and before looking at any
+registration against the revised reference (the first run's registration
+errors, ~36 ft, were meaningless -- the reference itself was 6 ft
+inconsistent):
+- Misassigned clicks. Many labelled frames held a few points attached to the
+  wrong landmark (landmark names were only shown on hover; the arc apex was
+  placed on a sideline). The reference is now fitted with RANSAC over the
+  LABELS ALONE (1 ft in court space), then refitted on the inliers; points
+  it rejects are not scored, and a frame needs MIN_POINTS inliers and a
+  leave-one-out residual under MAX_REFERENCE_FT. Nothing from any
+  registration enters that choice. The strict, as-declared numbers are still
+  printed.
+- The court's symmetry. A court looks the same rotated 180 degrees, so which
+  end a labeller calls y = 0 is a convention, not a measurement; the same
+  holds for left and right. Each frame's labels are compared under the four
+  symmetries of the court, and the one nearest the registration is used.
+  The alternatives differ by tens of feet, so this aligns conventions and
+  cannot hide a sub-foot error.
 """
 
 from __future__ import annotations
@@ -37,6 +56,34 @@ import numpy as np
 
 MIN_POINTS = 8
 TARGET_FT = 0.30
+MAX_REFERENCE_FT = 0.5
+SYMMETRIES = ((False, False), (True, False), (False, True), (True, True))
+
+
+def robust_reference(points):
+    """RANSAC over the labels alone; (inlier mask, leave-one-out residual) or None."""
+    import cv2
+    px = np.array([p[1] for p in points], np.float64)
+    court = np.array([p[0] for p in points], np.float64)
+    if len(points) < MIN_POINTS:
+        return None
+    _, mask = cv2.findHomography(px, court, cv2.RANSAC, 1.0, maxIters=5000, confidence=0.999)
+    if mask is None:
+        return None
+    keep = mask.ravel().astype(bool)
+    if keep.sum() < MIN_POINTS:
+        return None
+    _, loo = reference([p for p, k in zip(points, keep) if k])
+    return keep, loo
+
+
+def symmetric(court, flip_x, flip_y):
+    out = np.array(court, np.float64).copy()
+    if flip_x:
+        out[:, 0] = 50.0 - out[:, 0]
+    if flip_y:
+        out[:, 1] = 94.0 - out[:, 1]
+    return out
 
 
 def reference(points):
@@ -101,9 +148,12 @@ def main() -> int:
             unlabelled += 1
             continue
         ref, ref_noise = reference(pts)
+        robust = robust_reference(pts)
         frame = cv2.imread(str(root / "images" / item["file"]))
         row = {"file": item["file"], "t": item["t"], "n_points": len(pts),
-               "reference_loo_ft": ref_noise, "arms": {}}
+               "reference_loo_ft": ref_noise, "arms": {},
+               "robust_loo_ft": robust[1] if robust else None,
+               "inliers": robust[0].tolist() if robust else None}
         rows.append(row)
         result = model.predict(frame, device=device, verbose=False)[0]
         start = None
@@ -126,10 +176,19 @@ def main() -> int:
             matrix, info = register_frame(frame, start, boxes=boxes, camera=cam)
             estimate = cv2.perspectiveTransform(px, matrix).reshape(-1, 2)
             err = np.hypot(*(estimate - truth).T)
+            # Robust: label inliers only, under the court symmetry nearest the fit.
+            robust_err = None
+            if robust and robust[1] <= MAX_REFERENCE_FT:
+                keep = robust[0]
+                options = [np.hypot(*(estimate[keep] - symmetric(truth[keep], fx, fy)).T)
+                           for fx, fy in SYMMETRIES]
+                robust_err = min(options, key=np.median).tolist()
             dist = (support_distance(info["support"], estimate) if info["refined"]
                     else np.full(len(truth), np.inf))
             row["arms"][arm] = {"refined": bool(info["refined"]), "err": err.tolist(),
-                                "dist": dist.tolist()}
+                                "dist": dist.tolist(), "robust_err": robust_err,
+                                "robust_dist": (dist[robust[0]].tolist()
+                                                if robust_err is not None else None)}
 
     if args.dump:
         json.dump({"meta": {"set": args.set, "camera": entry, **code_provenance(court_refine.__file__),
@@ -141,6 +200,31 @@ def main() -> int:
           f"scored, {unusable} marked unusable, {unlabelled} unlabelled or under {MIN_POINTS} points")
     noise = [r["reference_loo_ft"] for r in rows]
     print(f"  reference leave-one-out noise p50 {np.nanmedian(noise):.2f} ft")
+    good = [r for r in rows if r["robust_loo_ft"] is not None and r["robust_loo_ft"] <= MAX_REFERENCE_FT]
+    print(f"  robust reference: {len(good)}/{len(rows)} frames usable, "
+          f"{sum(sum(r['inliers']) for r in good)} of {sum(r['n_points'] for r in good)} "
+          f"points kept, leave-one-out p50 "
+          f"{np.median([r['robust_loo_ft'] for r in good]) if good else float('nan'):.2f} ft")
+    for arm in ("free", "camera"):
+        scored = [r for r in good if arm in r["arms"]]
+        refined = [r for r in scored if r["arms"][arm]["refined"] and r["arms"][arm]["robust_err"]]
+        if not refined:
+            continue
+        err = np.concatenate([r["arms"][arm]["robust_err"] for r in refined])
+        dist = np.concatenate([r["arms"][arm]["robust_dist"] for r in refined])
+        t = dist <= court_refine.TRUST_RADIUS_FT
+        total = sum(sum(r["inliers"]) for r in good)
+        per_frame = [float(np.median(r["arms"][arm]["robust_err"])) for r in refined]
+        tp50 = float(np.median(err[t])) if t.any() else float("inf")
+        ap50 = float(np.median(err))
+        print(f"  ROBUST {arm:6s} frames refined {len(refined)}/{len(good)}  points trusted "
+              f"{t.sum() / max(total, 1):.0%}   trusted p50 {tp50:.2f} p75 "
+              f"{np.percentile(err[t], 75) if t.any() else float('nan'):.2f} within 0.3 "
+              f"{np.mean(err[t] <= TARGET_FT) if t.any() else 0:.0%}  |  all points p50 {ap50:.2f} "
+              f"p75 {np.percentile(err, 75):.2f} within 0.3 {np.mean(err <= TARGET_FT):.0%}  |  "
+              f"frames <= 0.3 {np.mean(np.array(per_frame) <= TARGET_FT):.0%}  -> "
+              f"{'PASS' if tp50 <= TARGET_FT and ap50 <= TARGET_FT else 'FAIL'}")
+    print("  STRICT (as declared):")
     verdict = 1
     for arm in ("free", "camera"):
         scored = [r for r in rows if arm in r["arms"]]
