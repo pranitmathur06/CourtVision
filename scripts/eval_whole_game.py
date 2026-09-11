@@ -56,6 +56,15 @@ intersections. It was chosen after the per-landmark errors against the
 registration had been seen, which is recorded here; the label-only evidence is
 what justifies it.
 
+Label repair (added when a second labeller's file arrived, before any
+registration was scored against it): that labeller placed sidelines and
+corners consistently but swapped the two sides of the lane (x = 17 and 33) --
+the free-throw corner nearer the far sideline marked 33, and so on -- so a
+frame mixed two conventions and its clicks disagreed by ~20 ft. Each frame's
+labels are tried as given and with the lane pairs swapped, the sides swapped,
+or both, and the variant whose clicks agree best (most RANSAC inliers, then the
+smallest leave-one-out residual) is used. The choice reads only the labels.
+
 `--fuse` (added after the diagnosis that a third of usable frames were
 accepted 1.6-3.5 ft off, before fusion was run on any labelled frame): a third
 arm registers every frame within court_fusion.WINDOW_S of the labelled one,
@@ -80,6 +89,36 @@ MAX_REFERENCE_FT = 0.5
 #: Tangent junctions, arc and circle crowns, and unmarked centres.
 AMBIGUOUS = {9, 11, 32, 33, 13, 30, 17, 27, 103, 104, 22}
 SYMMETRIES = ((False, False), (True, False), (False, True), (True, True))
+#: Landmark pairs a labeller can swap by reading the diagram mirrored.
+LANE_PAIRS = ((3, 4), (12, 14), (38, 39), (29, 31))
+SIDE_PAIRS = ((0, 7), (1, 6), (16, 18), (35, 42), (36, 41), (26, 28), (20, 102), (100, 101))
+
+
+def repair(points_by_id, court_of):
+    """The labels' most self-consistent reading under lane/side swaps.
+
+    `points_by_id` maps landmark id -> click. Returns (points, variant).
+    """
+    import cv2
+    best = None
+    for lane in (False, True):
+        for side in (False, True):
+            swap = {}
+            for a, b in (LANE_PAIRS if lane else ()) + (SIDE_PAIRS if side else ()):
+                swap[a], swap[b] = b, a
+            pts = [(court_of[swap.get(int(k), int(k))], v) for k, v in points_by_id.items()
+                   if swap.get(int(k), int(k)) in court_of]
+            if len(pts) < MIN_POINTS:
+                continue
+            px = np.array([q[1] for q in pts], np.float64)
+            court = np.array([q[0] for q in pts], np.float64)
+            _, mask = cv2.findHomography(px, court, cv2.RANSAC, 1.0, maxIters=5000, confidence=0.999)
+            inliers = int(mask.sum()) if mask is not None else 0
+            _, loo = reference(pts)
+            key = (inliers, -loo)
+            if best is None or key > best[0]:
+                best = (key, pts, ("lane" if lane else "") + ("+side" if side else ""))
+    return (best[1], best[2] or "as given") if best else ([], "none")
 
 
 def robust_reference(points):
@@ -135,6 +174,8 @@ def main() -> int:
     parser.add_argument("--dump", default=None)
     parser.add_argument("--fuse", action="store_true")
     parser.add_argument("--landmarks", choices=("all", "intersections"), default="all")
+    parser.add_argument("--repair", action="store_true",
+                        help="read each frame's labels under lane/side swaps, keep the most consistent")
     args = parser.parse_args()
 
     import cv2
@@ -217,15 +258,19 @@ def main() -> int:
         if rec.get("skip"):
             unusable += 1
             continue
-        pts = [(court_of[int(k)], v) for k, v in rec["points"].items()
-               if args.landmarks == "all" or int(k) not in AMBIGUOUS]
+        kept = {k: v for k, v in rec["points"].items()
+                if args.landmarks == "all" or int(k) not in AMBIGUOUS}
+        if args.repair:
+            pts, variant = repair(kept, court_of)
+        else:
+            pts, variant = [(court_of[int(k)], v) for k, v in kept.items()], "as given"
         if len(pts) < MIN_POINTS:
             unlabelled += 1
             continue
         ref, ref_noise = reference(pts)
         robust = robust_reference(pts)
         frame = cv2.imread(str(root / "images" / item["file"]))
-        row = {"file": item["file"], "t": item["t"], "n_points": len(pts),
+        row = {"file": item["file"], "t": item["t"], "n_points": len(pts), "label_variant": variant,
                "reference_loo_ft": ref_noise, "arms": {},
                "robust_loo_ft": robust[1] if robust else None,
                "inliers": robust[0].tolist() if robust else None}
