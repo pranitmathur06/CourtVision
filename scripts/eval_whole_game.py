@@ -87,6 +87,15 @@ the hypothesis agreeing with the most clicks (within 1 ft) wins. Clicks no
 reading can place are dropped, not scored. Nothing from any registration
 enters it.
 
+DIRECT-CONSENSUS (added when the third label set arrived from the reoriented
+labeller -- 80% of its clicks agree with their frame within 1 ft as given --
+and committed while its first run was in progress, before any of its
+registration numbers were seen): DIRECT restricted to each frame's label
+consensus, the clicks a RANSAC fit over the LABELS ALONE places within 1 ft.
+Stray clicks (a wrong landmark, a slip) are dropped by the labels, not by the
+registration; frames need MIN_POINTS consensus clicks. This is the headline
+for that set. PASS: p50 <= 0.30 ft.
+
 `--fuse` (added after the diagnosis that a third of usable frames were
 accepted 1.6-3.5 ft off, before fusion was run on any labelled frame): a third
 arm registers every frame within court_fusion.WINDOW_S of the labelled one,
@@ -441,6 +450,17 @@ def main() -> int:
         print(f"  DIRECT {arm:6s} frames registered {len(refined)}/{len(rows)}  clicks {len(err)}  "
               f"p50 {np.median(err):.2f}  p75 {np.percentile(err, 75):.2f}  within 0.3 {np.mean(err <= TARGET_FT):.0%}"
               f"  |  per-frame p50 {np.median(per_frame):.2f}, frames <= 0.3 {np.mean(np.array(per_frame) <= TARGET_FT):.0%}"
+              f"  -> {'PASS' if np.median(err) <= TARGET_FT else 'FAIL'}")
+    for arm in ("free", "camera"):
+        refined = [r for r in rows if arm in r["arms"] and r["arms"][arm]["refined"]
+                   and r["arms"][arm].get("direct_err") and r.get("inliers")
+                   and sum(r["inliers"]) >= MIN_POINTS]
+        if not refined:
+            continue
+        err = np.concatenate([np.asarray(r["arms"][arm]["direct_err"])[np.asarray(r["inliers"], bool)]
+                              for r in refined])
+        print(f"  DIRECT-CONSENSUS {arm:6s} frames {len(refined)}  clicks {len(err)}  p50 {np.median(err):.2f}"
+              f"  p75 {np.percentile(err, 75):.2f}  within 0.3 {np.mean(err <= TARGET_FT):.0%}"
               f"  -> {'PASS' if np.median(err) <= TARGET_FT else 'FAIL'}")
     good = [r for r in rows if r["robust_loo_ft"] is not None and r["robust_loo_ft"] <= MAX_REFERENCE_FT]
     print(f"  robust reference: {len(good)}/{len(rows)} frames usable, "
