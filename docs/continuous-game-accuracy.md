@@ -4407,3 +4407,28 @@ Two limits on the test itself. Even the best frames score 0.35-0.5 ft, and the
 labels' own leave-one-out noise is 0.43 ft per point -- at 480p a hand click is
 about a pixel, a third of a foot on the far side -- so this reference cannot
 certify 0.3 ft even for a perfect registration. And 11 frames is thin.
+
+**The same game at 1080p** (downloaded with the user's permission; labels
+carried over by image matching, 35 of 38 frames transferred, 3 dropped for a
+weak match; camera centre solved again, 53 of 112 frames agreeing, 1 ft from
+the 480p centre):
+
+    arm      frames refined   trusted p50   all points p50   frames <= 0.3
+    free      10/11           0.72 ft       0.89 ft           0%
+    camera    10/11           0.49          0.56              0%
+
+Resolution removes the gross locks: t=3461 3.45 -> 0.94 ft, t=1751 2.18 ->
+0.72, t=1076 1.64 -> 0.31. Drawn over the frames, the camera fit now lies on
+the painted key edges and the black arc, nearly coinciding with the labels' own
+fit; what remains is carried by individual clicks -- a sideline hash scored 4.2
+ft, a far-sideline point 2.9 ft, free-throw circle crowns 1.1-1.4 ft.
+
+The labels cannot resolve 0.3 ft. They were placed at 480p (one pixel is 2.25
+at 1080p) with ~10 points per frame against an 8-parameter homography, and
+many landmarks are tangent points or unmarked spots. From the labels alone,
+those sit 0.73 ft from the rest of their frame against 0.52 for line
+intersections; but restricting the reference to intersections leaves 6 frames
+with 8 points and none consistent enough to use. The whole-game test is
+therefore INCONCLUSIVE at 1080p, not passed: the registration is visibly on
+the paint, and the reference is too coarse to measure whether that is 0.2 ft
+or 0.5.
