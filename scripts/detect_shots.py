@@ -57,9 +57,11 @@ import numpy as np
 
 TOLERANCE_S = 3.0
 GAP_S = 2.0
-#: Defaults; --tune sweeps these on the first half only.
-APPROACH = 1.6          # rim widths: how near the ball must come
-FAR = 3.5               # rim widths: how far it must be before and after
+#: Frozen at the values --tune chose on the FIRST half of Finals G7
+#: (P 0.598 R 0.778 F1 0.676 there; 0.619 on that game's held-out half). They
+#: are the defaults so another game can be scored without touching anything.
+APPROACH = 2.6          # rim widths: how near the ball must come
+FAR = 5.0               # rim widths: how far it must be before and after
 MERGE_S = 6.0
 BALL_CONF = 0.25
 #: The clock must fall by this much within +/- LIVE_WINDOW_S of a call.
