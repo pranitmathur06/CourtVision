@@ -4491,3 +4491,20 @@ own colours (a red key, a navy one) are the obvious witness.
 Against the whole-game labels at 1080p the search changes little (camera arm
 0.51 ft trusted, 0.52 all), as expected: those frames mostly had landmark
 starts.
+
+**Coverage with the search and no geometric check:** 63 of 84 sampled frames
+fitted (from 50), 13 gained, none lost; every new fit checked by eye lies on
+the paint. Of the 21 still unfitted, ~15 are not main-camera game views
+(close-ups, crowd, dancers, ads, overhead and rim cameras, wipes) and one is
+the baseline camera; ~5 are main-camera views the search could not start --
+centre-court shots and motion-blurred pans. Main-camera coverage is roughly
+61 of 66, ~92%, against ~75% before.
+
+**Other games, by the floor (e9812ac).** A halftime highlight from another
+arena is a near pan/tilt/zoom of this camera -- its fit lies neatly on that
+other court -- so geometry cannot refuse it without refusing good frames too.
+Its paint can: the median CIELAB colour of the keys under each fit sat within
+25 units of the game's for every genuine frame and at 106-115 for the two
+highlights. estimate_camera now records each game's floor signature; a fit
+whose key is more than 60 units away is refused (set with those values in
+view, midway in the gap). No signature, or no key in view, never refuses.
