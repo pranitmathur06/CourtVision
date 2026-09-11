@@ -114,11 +114,17 @@ def ptz_params(court_to_image, centre, size, points):
 
 
 class FixedCamera:
-    """A game's camera centre, and the four-parameter model it implies."""
+    """A game's camera centre, and the four-parameter model it implies.
 
-    def __init__(self, centre, size):
+    `floor` is the game's floor signature (see `floor_signature`): the median
+    colour of its keys and wood. Frames whose key colour is far from it are
+    another floor -- another game -- whatever the geometry says.
+    """
+
+    def __init__(self, centre, size, floor=None):
         self.centre = np.asarray(centre, dtype=np.float64)
         self.size = tuple(int(v) for v in size)
+        self.floor = floor
 
     def parameterise(self, court_to_image, points):
         """(compose, x0): the model as a function of 4 parameters, started at the fit."""
@@ -353,3 +359,74 @@ def search_starts(camera, response, structure, boxes=None, keep=SEARCH_KEEP, ima
         polished.append((-best.fun, best.x))
     polished.sort(key=lambda s: -s[0])
     return [np.linalg.inv(model_of(*v)) for _, v in polished[:keep]]
+
+
+#: Lanes and two wood bands, in court feet, for the floor signature.
+_SIGNATURE_LANES = (np.array([[17, 0], [33, 0], [33, 19], [17, 19]], np.float64),
+                    np.array([[17, 75], [33, 75], [33, 94], [17, 94]], np.float64))
+_SIGNATURE_WOOD = (np.array([[3, 22], [47, 22], [47, 40], [3, 40]], np.float64),
+                   np.array([[3, 54], [47, 54], [47, 72], [3, 72]], np.float64))
+#: A frame whose key colour is further than this (CIELAB, 8-bit OpenCV units)
+#: from the game's is another floor. On a whole Toyota Center game genuine
+#: frames sat within 25 and two halftime highlights from other arenas at
+#: 106-115; the limit was set with those values in view, midway in the gap.
+FLOOR_LANE_LAB = 60.0
+MIN_SIGNATURE_PX = 500
+
+
+def _region_lab(lab, image_to_court, polygons, boxes):
+    import cv2
+    court_to_image = np.linalg.inv(image_to_court)
+    mask = np.zeros(lab.shape[:2], np.uint8)
+    for polygon in polygons:
+        h = np.c_[polygon, np.ones(len(polygon))] @ court_to_image.T
+        if np.any(h[:, 2] <= 1e-6):
+            continue
+        corners = h[:, :2] / h[:, 2:3]
+        if np.any(np.abs(corners) > 100000):
+            continue
+        cv2.fillPoly(mask, [np.round(corners).astype(np.int32)], 1)
+    if boxes is not None and len(boxes):
+        for x1, y1, x2, y2 in np.asarray(boxes, int):
+            mask[max(y1, 0):max(y2, 0), max(x1, 0):max(x2, 0)] = 0
+    pixels = lab[mask > 0]
+    return np.median(pixels, axis=0) if len(pixels) >= MIN_SIGNATURE_PX else None
+
+
+def floor_signature(image, image_to_court, boxes=None):
+    """Median CIELAB colour of the keys and of the wood, under a registration.
+
+    Returns {"lane": [L, a, b] or None, "wood": [...] or None}. A key is the
+    most distinctive surface an arena paints -- red at Toyota Center, navy or
+    blue elsewhere -- so it identifies the floor far better than wood does.
+    """
+    import cv2
+    lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB).astype(np.float64)
+    lane = _region_lab(lab, image_to_court, _SIGNATURE_LANES, boxes)
+    wood = _region_lab(lab, image_to_court, _SIGNATURE_WOOD, boxes)
+    return {"lane": None if lane is None else lane.tolist(),
+            "wood": None if wood is None else wood.tolist()}
+
+
+def game_floor(signatures):
+    """The game's floor: the median of many frames' signatures."""
+    out = {}
+    for part in ("lane", "wood"):
+        values = [s[part] for s in signatures if s.get(part) is not None]
+        out[part] = np.median(np.array(values), axis=0).tolist() if values else None
+    return out
+
+
+def same_floor(camera, image, image_to_court, boxes=None):
+    """(ok, distance): whether a registered frame shows this game's floor.
+
+    Undecided -- ok, distance None -- when the game has no signature or no key
+    is visible; a check that cannot see the key does not refuse.
+    """
+    if camera is None or not camera.floor or camera.floor.get("lane") is None:
+        return True, None
+    lane = floor_signature(image, image_to_court, boxes)["lane"]
+    if lane is None:
+        return True, None
+    distance = float(np.linalg.norm(np.array(lane) - np.array(camera.floor["lane"])))
+    return distance <= FLOOR_LANE_LAB, distance

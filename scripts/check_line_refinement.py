@@ -106,7 +106,7 @@ def main() -> int:
         if Path(entry["video"]).name != Path(args.video).name or entry["centre"] is None:
             print(f"FAIL - {args.camera} holds no camera for {args.video}")
             return 1
-        starts["camera"] = FixedCamera(entry["centre"], entry["size"])
+        starts["camera"] = FixedCamera(entry["centre"], entry["size"], entry.get("floor"))
 
     court_frames = registered = accepted = 0
     coverage, residual, reasons = [], [], {}

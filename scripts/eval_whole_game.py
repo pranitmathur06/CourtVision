@@ -155,7 +155,8 @@ def main() -> int:
     labels = json.load(open(root / "labels.json"))
     camera_file = Path(args.camera or f"outputs/camera/{Path(manifest['video']).stem}.json")
     entry = json.load(open(camera_file))
-    camera = FixedCamera(entry["centre"], entry["size"]) if entry.get("centre") else None
+    camera = (FixedCamera(entry["centre"], entry["size"], entry.get("floor"))
+              if entry.get("centre") else None)
     if camera is None:
         print(f"no camera centre in {camera_file}; the camera arm is skipped")
     court_of = {p["id"]: (p["x"], p["y"]) for p in labels["points"]}

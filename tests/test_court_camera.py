@@ -154,3 +154,31 @@ def test_a_frame_from_another_camera_is_refused():
     matrix, info = register_frame(image, start, camera=FixedCamera(CENTRE, SIZE),
                                   polarities=("bright",), search=False, verify=True)
     assert not info["refined"] or _court_error(matrix, other) < 0.3, info
+
+
+def test_another_floor_is_refused_by_its_key_colour():
+    """Halftime highlights from other arenas fit this camera's geometry nearly
+    as well as its own frames; their paint does not."""
+    from courtvision.court_camera import floor_signature, same_floor
+    from tests.test_court_refine import _render
+    truth = _camera_frame([25, 15, 0], f=1100.0)
+
+    def painted(key_bgr):
+        image = _render(truth, clutter=False)
+        lane = np.array([[17, 0], [33, 0], [33, 19], [17, 19]], np.float64)
+        h = np.c_[lane, np.ones(4)] @ np.linalg.inv(truth).T
+        cv2.fillPoly(image, [np.round(h[:, :2] / h[:, 2:3]).astype(np.int32)], key_bgr)
+        return image
+
+    home = painted((40, 40, 200))                     # a red key
+    camera = FixedCamera(CENTRE, SIZE, floor=floor_signature(home, truth))
+    assert same_floor(camera, painted((45, 38, 205)), truth)[0]
+    ok, distance = same_floor(camera, painted((90, 40, 20)), truth)   # a navy key
+    assert not ok and distance > 60, distance
+
+
+def test_no_signature_or_no_visible_key_never_refuses():
+    from courtvision.court_camera import same_floor
+    truth = _camera_frame([25, 15, 0], f=1100.0)
+    blank = np.zeros((700, 1000, 3), np.uint8)
+    assert same_floor(FixedCamera(CENTRE, SIZE), blank, truth) == (True, None)

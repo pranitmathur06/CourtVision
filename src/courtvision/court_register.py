@@ -49,10 +49,13 @@ def register_frame(frame, landmark_matrix, boxes=None, polarities=POLARITIES,
       eight genuine frames whose camera fits sit on the paint read 3.2-12.2 px
       and were refused with them. The free fit is the less trustworthy of the
       two -- it is the one that locks onto ad boards and extrapolates the far
-      side -- so its disagreement is not evidence against the camera. Other
-      games need a check that does not rest on geometry.
+      side -- so its disagreement is not evidence against the camera.
+    - The floor: when the camera carries its game's floor signature, a fit
+      whose key is a different colour is refused (court_camera.same_floor).
+      That is what catches another game's highlights: their geometry can be a
+      near pan/tilt/zoom of this camera, their paint never is.
     """
-    from .court_camera import search_starts
+    from .court_camera import same_floor, search_starts
     from .court_refine import _POINTS
 
     best_matrix, best_info, tried = None, None, {}
@@ -82,6 +85,12 @@ def register_frame(frame, landmark_matrix, boxes=None, polarities=POLARITIES,
                     tried[polarity] = dict(info, refined=False,
                                            reason=f"not this game's camera ({cost:.1f} px)")
                     continue
+        ok, distance = same_floor(camera, frame, matrix, boxes)
+        info = dict(info, floor_lab_distance=distance)
+        if not ok:
+            tried[polarity] = dict(info, refined=False,
+                                   reason=f"not this game's floor (key colour {distance:.0f} Lab away)")
+            continue
         tried[polarity] = info
         if best_info is None or info["peak_ratio"] > best_info["peak_ratio"]:
             best_matrix, best_info = matrix, dict(info, polarity=polarity)
