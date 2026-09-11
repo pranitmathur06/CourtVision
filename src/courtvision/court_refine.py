@@ -396,15 +396,25 @@ def _compose(inverse0, params):
     return inverse0 @ _DENORMALISE @ (np.eye(3) + d) @ _NORMALISE
 
 
-def _fit(inverse0, observed, index, prior_points, robust_px, prior_inverse=None):
+def _fit(inverse0, observed, index, prior_points, robust_px, prior_inverse=None,
+         model=None):
     """Least-squares court -> image homography, point-to-line plus a weak prior.
 
     The fit is parameterised around `inverse0`, where the search started, but
     the prior pulls toward `prior_inverse` -- the landmark registration, which
     is the actual evidence. A displaced start is a place to look from, not a
     belief about where the court is.
+
+    `model` is (compose, x0) from `FixedCamera.parameterise`: the homography
+    as a function of pan/tilt/roll/zoom about the game's camera centre.
+    Without it the fit is a free eight-parameter perturbation of `inverse0`.
     """
     from scipy.optimize import least_squares
+
+    if model is None:
+        compose, x0 = (lambda params: _compose(inverse0, params)), np.zeros(8)
+    else:
+        compose, x0 = model
 
     points = _POINTS[index]
     ahead = points + _TANGENTS[index]
@@ -412,7 +422,7 @@ def _fit(inverse0, observed, index, prior_points, robust_px, prior_inverse=None)
                               prior_points)
 
     def residuals(params):
-        inverse = _compose(inverse0, params)
+        inverse = compose(params)
         a, _ = _project(inverse, points)
         b, _ = _project(inverse, ahead)
         u = b - a
@@ -425,10 +435,10 @@ def _fit(inverse0, observed, index, prior_points, robust_px, prior_inverse=None)
         return np.nan_to_num(np.concatenate([line, prior]), nan=1e3,
                              posinf=1e3, neginf=-1e3)
 
-    solution = least_squares(residuals, np.zeros(8), loss="soft_l1",
+    solution = least_squares(residuals, x0, loss="soft_l1",
                              f_scale=max(robust_px / LINE_SIGMA_PX, 1.0),
                              x_scale="jac", max_nfev=200)
-    inverse = _compose(inverse0, solution.x)
+    inverse = compose(solution.x)
     a, _ = _project(inverse, points)
     b, _ = _project(inverse, ahead)
     u = b - a
@@ -498,10 +508,20 @@ def _peak_sharpness(response, structure, matrix, keep, boxes, window):
             "ratio": float(worst_ratio) if ratio_judged else 0.0}
 
 
-def _refine_from(response, structure, start, prior, keep, boxes, passes):
+def _refine_from(response, structure, start, prior, keep, boxes, passes,
+                 camera=None):
     """One coarse-to-fine refinement from `start`; None if it runs out of paint."""
     base = np.linalg.inv(start)
     prior_inverse = np.linalg.inv(prior)
+    model = None
+    if camera is not None:
+        height, width = response.shape
+        seen, front = _project(base, _POINTS)
+        inside = front & (seen[:, 0] >= 0) & (seen[:, 0] < width) & (seen[:, 1] >= 0) & (seen[:, 1] < height)
+        points = _POINTS[inside][:: max(1, int(inside.sum()) // 60)]
+        if len(points) < 8:
+            return None, "too little court in view for the camera model"
+        model = camera.parameterise(base, points)
     inverse = base.copy()
     observed = np.zeros((0, 2))
     index = np.zeros(0, dtype=int)
@@ -517,7 +537,7 @@ def _refine_from(response, structure, start, prior, keep, boxes, passes):
                                  for y in np.linspace(lo[1], hi[1], 3)])
         inverse, residual = _fit(base, observed, index, prior_points,
                                  robust_px=max(half_width / 4.0, LINE_SIGMA_PX),
-                                 prior_inverse=prior_inverse)
+                                 prior_inverse=prior_inverse, model=model)
     for _ in range(FINAL_ITERATIONS - 1):
         more_obs, more_idx, _ = _observe(response, structure, inverse, passes[-1],
                                          keep, boxes)
@@ -529,7 +549,7 @@ def _refine_from(response, structure, start, prior, keep, boxes, passes):
                                  for y in np.linspace(lo[1], hi[1], 3)])
         moved_inverse, moved_residual = _fit(
             base, more_obs, more_idx, prior_points,
-            robust_px=max(passes[-1] / 4.0, LINE_SIGMA_PX), prior_inverse=prior_inverse)
+            robust_px=max(passes[-1] / 4.0, LINE_SIGMA_PX), prior_inverse=prior_inverse, model=model)
         before_px, _ = _project(inverse, _POINTS[more_idx])
         after_px, _ = _project(moved_inverse, _POINTS[more_idx])
         observed, index = more_obs, more_idx
@@ -558,7 +578,7 @@ def _refine_from(response, structure, start, prior, keep, boxes, passes):
                                  for y in np.linspace(lo[1], hi[1], 3)])
         inverse, residual = _fit(base, union_obs, union_idx, prior_points,
                                  robust_px=EXPANSION_ROBUST_PX,
-                                 prior_inverse=prior_inverse)
+                                 prior_inverse=prior_inverse, model=model)
         # Close on a narrow pass, so what is reported -- samples, residual,
         # drift -- describes paint the final fit actually sits on.
         final_obs, final_idx, _ = _observe(response, structure, inverse,
@@ -569,7 +589,7 @@ def _refine_from(response, structure, start, prior, keep, boxes, passes):
         observed, index = final_obs, final_idx
         inverse, residual = _fit(base, observed, index, prior_points,
                                  robust_px=max(passes[-1] / 4.0, LINE_SIGMA_PX),
-                                 prior_inverse=prior_inverse)
+                                 prior_inverse=prior_inverse, model=model)
         _, settled, _ = _observe(response, structure, inverse, passes[-1], keep, boxes)
         if len(settled) <= len(near_idx):
             inverse, observed, index, residual = before
@@ -614,14 +634,16 @@ MIN_RELATIVE_VISIBLE = 0.7
 
 
 def refine(image, matrix, boxes=None, exclude_lines=(), passes=SEARCH_PX,
-           prepared=None, starts=MULTI_START_FT):
+           prepared=None, starts=MULTI_START_FT, camera=None):
     """Refine an image -> court homography by aligning every visible line.
 
     `matrix` is the starting registration (from the landmark model). `boxes`
     are player boxes in pixels; samples inside them are ignored, because a
     white jersey edge beside a line is exactly the clutter that misled ICP.
     `exclude_lines` holds court-line ids out of the fit, which is how the
-    result is measured without circularity.
+    result is measured without circularity. `camera` is the game's
+    `court_camera.FixedCamera`; with it every fit is a pan/tilt/roll/zoom of
+    that camera rather than a free homography.
 
     Returns `(matrix, info)`. When `info["refined"]` is False the starting
     matrix comes back unchanged -- a refusal is never dressed as a result.
@@ -636,7 +658,7 @@ def refine(image, matrix, boxes=None, exclude_lines=(), passes=SEARCH_PX,
     for dx, dy in starts:
         move = np.array([[1.0, 0, dx], [0, 1.0, dy], [0, 0, 1.0]])
         outcome, reason = _refine_from(response, structure, move @ matrix,
-                                       matrix, keep, boxes, passes)
+                                       matrix, keep, boxes, passes, camera)
         if outcome is None:
             last_reason = reason
             continue

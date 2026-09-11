@@ -61,6 +61,11 @@ def main() -> int:
                              "every fit is tried with bright and all evidence "
                              "and the sharper accepted one kept, as "
                              "court_register.register_frame does")
+    parser.add_argument("--camera", default=None,
+                        help="outputs/camera/<video>.json from "
+                             "scripts/estimate_camera.py (a separate pass over "
+                             "the same game); every fit and held-out refit is "
+                             "then a pan/tilt/roll/zoom of that camera")
     parser.add_argument("--dump", default=None,
                         help="write every (frame, family) measurement to JSON, "
                              "so a tail can be traced to its cause -- a far-off "
@@ -94,6 +99,14 @@ def main() -> int:
     device = resolve_device()
     capture = cv2.VideoCapture(args.video)
     starts = {"starts": ((0.0, 0.0),)} if args.single_start else {}
+    if args.camera:
+        import json as _json
+        from courtvision.court_camera import FixedCamera
+        entry = _json.load(open(args.camera))
+        if Path(entry["video"]).name != Path(args.video).name or entry["centre"] is None:
+            print(f"FAIL - {args.camera} holds no camera for {args.video}")
+            return 1
+        starts["camera"] = FixedCamera(entry["centre"], entry["size"])
 
     court_frames = registered = accepted = 0
     coverage, residual, reasons = [], [], {}
@@ -252,6 +265,8 @@ def main() -> int:
                 "min_peak_ratio": court_refine.MIN_PEAK_RATIO,
                 "polarity": args.polarity or court_refine.PAINT_POLARITY,
                 "trust_radius_ft": court_refine.TRUST_RADIUS_FT,
+                "camera": (starts["camera"].centre.tolist()
+                           if "camera" in starts else None),
                 "court_frames": court_frames, "registered": registered,
                 "accepted": accepted, "control": control,
                 "frames": frame_list}

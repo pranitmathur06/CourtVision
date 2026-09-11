@@ -26,7 +26,8 @@ from .court_refine import _structure, paint_response, refine
 POLARITIES = ("bright", "all")
 
 
-def register_frame(frame, landmark_matrix, boxes=None, polarities=POLARITIES):
+def register_frame(frame, landmark_matrix, boxes=None, polarities=POLARITIES,
+                   camera=None):
     """Refine a landmark registration with each kind of paint evidence.
 
     Returns `(matrix, info)`. When `info["refined"]` is False no evidence type
@@ -39,7 +40,8 @@ def register_frame(frame, landmark_matrix, boxes=None, polarities=POLARITIES):
     for polarity in polarities:
         response = paint_response(frame, polarity)
         matrix, info = refine(frame, landmark_matrix, boxes=boxes,
-                              prepared=(response, _structure(response)))
+                              prepared=(response, _structure(response)),
+                              camera=camera)
         tried[polarity] = info
         if info["refined"] and (best_info is None
                                 or info["peak_ratio"] > best_info["peak_ratio"]):
