@@ -4584,3 +4584,31 @@ in every main-camera frame -- court length to the right, the far sideline
 (x = 0) at the top -- so the v3 labeller (data/labeling/court_toyota_1080_v3)
 draws the diagram exactly so and names every landmark by where it is in the
 picture ("left free-throw line: top end", "bottom sideline: right hash").
+
+## Round 61 - measuring the labels, and a lens the model ignored
+
+**How noisy are the hand labels?** Twelve frames were labelled by both people;
+on 75 spots both clicked (within 25 px of each other) they disagree by 6.1 px
+median at 1080p, 0.34 ft -- so one click carries roughly 0.24 ft of its own
+noise (less for the second labeller, who clicked at 1080p; the first
+labeller's clicks were carried up from 480p). On the second labeller's most
+self-consistent clicks (per-click mirror repair: 49 clicks, 6 frames) the
+camera fit reads 0.49 ft median; the first labeller's gave 0.49-0.52. Taking
+the click noise out leaves a registration error of roughly 0.4 ft over the
+whole game -- not 0.3. The labels do not explain it away.
+
+**Where it sits: the frame edges.** By distance from the image centre (0 to 1
+of the half-diagonal) the clean clicks read 0.40, 0.39, 0.44 and 0.65 ft.
+The paint says the same without any label: long painted lines (boundary,
+half-court) lie ~0 px from the straight-line model in the middle of the frame,
++2.2 px at 0.70-0.85 and +3.5 px beyond, always outward -- a zoom lens bending
+straight lines, which no homography can represent. One radial coefficient
+describes it (u_d = c + (u - c)(1 + k1 r^2)): from paint alone +0.0052 and
++0.0054 on two halves of the game's frames, +0.0052 and +0.0055 on wide and
+tight zooms. Held out, it cut the edge offsets by 20-30% even before any
+re-registration.
+
+**Built (commit above):** estimate_camera measures k1 per game from its own
+fits; register_frame undistorts the frame and boxes first and returns a matrix
+on pinhole pixels; pixels go to the court through `to_court`. The centre of
+the frame is still ~0.4 ft on the labels, so the lens is not the whole story.
