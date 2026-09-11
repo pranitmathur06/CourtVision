@@ -96,7 +96,7 @@ def ptz_params(court_to_image, centre, size, points):
     # Look from the centre at the points' middle, as a fallback start.
     forward = np.append(points.mean(axis=0), 0.0) - centre
     forward /= np.linalg.norm(forward)
-    right = np.cross(forward, [0, 0, -1.0])
+    right = np.cross(forward, [0, 0, 1.0])
     right /= max(np.linalg.norm(right), 1e-9)
     rotations.append(np.vstack([right, np.cross(forward, right), forward]))
     best = None
@@ -195,3 +195,161 @@ def estimate_centre(fits, size, outlier_px=OUTLIER_PX):
             return None, dict(report, reason="too few frames agree on one centre")
         keep = inliers
     return None, dict(report, reason="outlier removal did not settle")
+
+
+def look_at(target_xy, f, centre, roll_deg=0.0):
+    """PTZ parameters for a camera at `centre` looking at court point `target_xy`."""
+    import cv2
+    forward = np.array([target_xy[0], target_xy[1], 0.0]) - np.asarray(centre, np.float64)
+    forward /= np.linalg.norm(forward)
+    # Image right is forward x world-up; image down is forward x right, which
+    # points at the floor. Crossing with world-DOWN instead (as a first version
+    # did) builds an upside-down camera: every hypothesis rolled 180 degrees.
+    right = np.cross(forward, [0.0, 0.0, 1.0])
+    right /= max(np.linalg.norm(right), 1e-9)
+    down = np.cross(forward, right)
+    rotation = np.vstack([right, down, forward])
+    roll = np.deg2rad(roll_deg)
+    spin = np.array([[np.cos(roll), -np.sin(roll), 0], [np.sin(roll), np.cos(roll), 0], [0, 0, 1.0]])
+    rotation = spin @ rotation
+    return np.r_[cv2.Rodrigues(rotation)[0].ravel(), np.log(f)]
+
+
+#: The landmark-free search: where the camera looks (court feet), how zoomed it
+#: is (focal length as a multiple of image width), and a small roll.
+SEARCH_X_FT = tuple(float(x) for x in range(0, 51, 5))
+SEARCH_Y_FT = tuple(float(y) for y in range(-6, 101, 3))
+SEARCH_F = (0.8, 1.0, 1.25, 1.55, 1.9, 2.35, 2.9, 3.6)
+SEARCH_KEEP = 3
+SEARCH_MIN_VISIBLE = 60
+#: Scale of the chamfer score, in pixels: how far a projected line may sit from
+#: painted line and still count for something.
+CHAMFER_PX = 25.0
+
+
+def _paint_distance(response, boxes):
+    """Distance, in pixels, from every pixel to the nearest painted ridge."""
+    import cv2
+    level = max(6.0, float(np.percentile(response, 97)))
+    ridge = (response >= level).astype(np.uint8)
+    if boxes is not None and len(boxes):
+        for x1, y1, x2, y2 in np.asarray(boxes, int):
+            ridge[max(y1, 0):max(y2, 0), max(x1, 0):max(x2, 0)] = 0
+    return cv2.distanceTransform(1 - ridge, cv2.DIST_L2, 5)
+
+
+def _chamfer(distance, court_to_image, points, boxes):
+    """Smooth score of a hypothesis: how close its projected lines lie to paint."""
+    height, width = distance.shape
+    h = np.c_[points, np.ones(len(points))] @ court_to_image.T
+    front = h[:, 2] > 1e-6
+    xy = h[front, :2] / h[front, 2:3]
+    inside = (xy[:, 0] >= 0) & (xy[:, 0] < width - 1) & (xy[:, 1] >= 0) & (xy[:, 1] < height - 1)
+    xy = xy[inside]
+    if boxes is not None and len(boxes):
+        for x1, y1, x2, y2 in np.asarray(boxes, float):
+            xy = xy[~((xy[:, 0] >= x1) & (xy[:, 0] <= x2) & (xy[:, 1] >= y1) & (xy[:, 1] <= y2))]
+    if len(xy) < SEARCH_MIN_VISIBLE:
+        return -1.0
+    d = distance[xy[:, 1].astype(int), xy[:, 0].astype(int)]
+    return float(np.sum(np.exp(-(d / CHAMFER_PX) ** 2)))
+
+
+#: Downscale for the floor-overlap score; the silhouette needs no detail.
+SEARCH_SCALE = 8
+#: Court outline, and the two lanes, in court feet.
+_COURT = np.array([[0, 0], [50, 0], [50, 94], [0, 94]], np.float64)
+_LANES = (np.array([[17, 0], [33, 0], [33, 19], [17, 19]], np.float64),
+          np.array([[17, 75], [33, 75], [33, 94], [17, 94]], np.float64))
+
+
+def _floor_masks(image, boxes):
+    """Floor pixels (wood or court paint, players filled in), downscaled."""
+    import cv2
+    from .candidates import court_region
+    region = court_region(image, erode_px=0)
+    if region is None:
+        return None
+    region = region.astype(np.uint8)
+    if boxes is not None and len(boxes):
+        for x1, y1, x2, y2 in np.asarray(boxes, int):      # players stand on floor
+            region[max(y1, 0):max(y2, 0), max(x1, 0):max(x2, 0)] = 1
+    h, w = region.shape
+    return cv2.resize(region, (w // SEARCH_SCALE, h // SEARCH_SCALE),
+                      interpolation=cv2.INTER_AREA) > 0.5
+
+
+def _floor_overlap(floor, court_to_image):
+    """IoU of the projected court with the floor -- lanes in or out, whichever
+    fits: some floors paint the key in the floor's colours, some do not."""
+    import cv2
+    scale = np.diag([1.0 / SEARCH_SCALE, 1.0 / SEARCH_SCALE, 1.0])
+    h = np.c_[_COURT, np.ones(4)] @ (scale @ court_to_image).T
+    if np.any(h[:, 2] <= 1e-6):
+        return -1.0
+    outline = np.round(h[:, :2] / h[:, 2:3]).astype(np.int32)
+    if np.any(np.abs(outline) > 100000):
+        return -1.0
+    court = np.zeros(floor.shape, np.uint8)
+    cv2.fillPoly(court, [outline], 1)
+    best = -1.0
+    for with_lanes in (True, False):
+        mask = court.copy()
+        if not with_lanes:
+            for lane in _LANES:
+                hl = np.c_[lane, np.ones(4)] @ (scale @ court_to_image).T
+                cv2.fillPoly(mask, [np.round(hl[:, :2] / hl[:, 2:3]).astype(np.int32)], 0)
+        m = mask.astype(bool)
+        union = (m | floor).sum()
+        if union:
+            best = max(best, float((m & floor).sum()) / float(union))
+    return best
+
+
+def search_starts(camera, response, structure, boxes=None, keep=SEARCH_KEEP, image=None):
+    """Image->court starts for a frame, from the floor's silhouette and its paint.
+
+    With the centre fixed a frame is four numbers, so they can be searched.
+    Scoring by paint alone failed on broadcast: the strongest ridges in a frame
+    are the score graphic, ad boards and crowd, and a hypothesis that threw the
+    court into the stands out-scored the true pose three to one. The floor is
+    the better witness -- the projected court must cover the wood the camera
+    sees -- so hypotheses are ranked by their overlap with the floor, polished
+    on it, and handed to the refinement, which aligns the paint.
+    """
+    from scipy.optimize import minimize
+
+    if image is None:
+        return []
+    floor = _floor_masks(image, boxes)
+    if floor is None or floor.mean() < 0.05:
+        return []
+    width, _ = camera.size
+
+    def model_of(x, y, logf, roll=0.0):
+        return ptz_matrix(look_at((x, y), np.exp(logf) * width, camera.centre, roll),
+                          camera.centre, camera.size)
+
+    scored = []
+    for fx in SEARCH_F:
+        for x in SEARCH_X_FT:
+            for y in SEARCH_Y_FT:
+                score = _floor_overlap(floor, model_of(x, y, np.log(fx)))
+                if score > 0:
+                    scored.append((score, x, y, fx))
+    scored.sort(key=lambda s: -s[0])
+    seeds = []
+    for score, x, y, fx in scored:
+        if all(np.hypot(x - sx, y - sy) > 6.0 or abs(np.log(fx / sf)) > 0.3
+               for _, sx, sy, sf in seeds):
+            seeds.append((score, x, y, fx))
+        if len(seeds) == 2 * keep:
+            break
+    polished = []
+    for _, x, y, fx in seeds:
+        best = minimize(lambda v: -_floor_overlap(floor, model_of(*v)),
+                        [x, y, np.log(fx), 0.0], method="Powell",
+                        options={"xtol": 0.02, "ftol": 1e-3, "maxfev": 300})
+        polished.append((-best.fun, best.x))
+    polished.sort(key=lambda s: -s[0])
+    return [np.linalg.inv(model_of(*v)) for _, v in polished[:keep]]

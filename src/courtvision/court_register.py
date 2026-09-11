@@ -27,7 +27,7 @@ POLARITIES = ("bright", "all")
 
 
 def register_frame(frame, landmark_matrix, boxes=None, polarities=POLARITIES,
-                   camera=None):
+                   camera=None, search=True, verify=True):
     """Refine a landmark registration with each kind of paint evidence.
 
     Returns `(matrix, info)`. When `info["refined"]` is False no evidence type
@@ -35,16 +35,50 @@ def register_frame(frame, landmark_matrix, boxes=None, polarities=POLARITIES,
     unchanged -- the pipeline's fallback, never dressed as a refinement.
     `info["polarity"]` names the evidence used, and `info["tried"]` keeps every
     attempt's diagnostics.
+
+    With the game's `camera`:
+    - `search`: starts found from paint alone (court_camera.search_starts) are
+      tried beside the landmark start, and are the only starts when the
+      landmark model gives none -- on a whole game at Toyota Center it gave
+      none on ~20 of ~65 ordinary game views. Within one kind of evidence the
+      fit resting on the most paint wins.
+    - `verify`: the accepted fit is re-fitted without the camera; if this
+      game's camera cannot reproduce that free fit, the frame is refused -- it
+      is another camera, or another game (halftime highlights from other
+      arenas were otherwise accepted).
     """
+    from .court_camera import search_starts
+    from .court_refine import _POINTS
+
     best_matrix, best_info, tried = None, None, {}
     for polarity in polarities:
         response = paint_response(frame, polarity)
-        matrix, info = refine(frame, landmark_matrix, boxes=boxes,
-                              prepared=(response, _structure(response)),
-                              camera=camera)
+        prepared = (response, _structure(response))
+        starts = [landmark_matrix] if landmark_matrix is not None else []
+        if camera is not None and search:
+            starts += search_starts(camera, *prepared, boxes=boxes, image=frame)
+        chosen = None
+        for start in starts:
+            matrix, info = refine(frame, start, boxes=boxes, prepared=prepared,
+                                  camera=camera)
+            if info["refined"] and (chosen is None or info["samples"] > chosen[1]["samples"]):
+                chosen = (matrix, info)
+        if chosen is None:
+            tried[polarity] = {"refined": False, "starts": len(starts)}
+            continue
+        matrix, info = chosen
+        if camera is not None and verify:
+            free, free_info = refine(frame, matrix, boxes=boxes, prepared=prepared,
+                                     passes=(12, 6, 3), starts=((0.0, 0.0),))
+            if free_info["refined"]:
+                ok, cost = camera.explains(free, _POINTS[free_info["support"]])
+                info = dict(info, camera_check_px=float(cost))
+                if not ok:
+                    tried[polarity] = dict(info, refined=False,
+                                           reason=f"not this game's camera ({cost:.1f} px)")
+                    continue
         tried[polarity] = info
-        if info["refined"] and (best_info is None
-                                or info["peak_ratio"] > best_info["peak_ratio"]):
+        if best_info is None or info["peak_ratio"] > best_info["peak_ratio"]:
             best_matrix, best_info = matrix, dict(info, polarity=polarity)
     if best_info is None:
         return landmark_matrix, {"refined": False, "polarity": None, "tried": tried}

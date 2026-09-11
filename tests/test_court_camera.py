@@ -18,7 +18,7 @@ CENTRE = np.array([130.0, 47.0, 35.0])        # beside the court, 35 ft up
 def _look_at(target, roll_deg=0.0):
     forward = np.asarray(target, float) - CENTRE
     forward /= np.linalg.norm(forward)
-    right = np.cross(forward, [0, 0, -1.0])
+    right = np.cross(forward, [0, 0, 1.0])
     right /= np.linalg.norm(right)
     down = np.cross(forward, right)
     rotation = np.vstack([right, down, forward])
@@ -55,7 +55,7 @@ def test_the_centre_is_recovered_jointly_and_other_cameras_are_dropped():
     for target in ([25, 30, 0], [20, 20, 0]):
         forward = np.asarray(target, float) - other
         forward /= np.linalg.norm(forward)
-        right = np.cross(forward, [0, 0, -1.0]); right /= np.linalg.norm(right)
+        right = np.cross(forward, [0, 0, 1.0]); right /= np.linalg.norm(right)
         rotation = np.vstack([right, np.cross(forward, right), forward])
         rvec = cv2.Rodrigues(rotation)[0].ravel()
         fits.append((np.linalg.inv(ptz_matrix(np.r_[rvec, np.log(1300)], other, SIZE)), _grid()))
@@ -96,7 +96,7 @@ def _other_camera_frame(target):
     other = np.array([25.0, -30.0, 20.0])
     forward = np.asarray(target, float) - other
     forward /= np.linalg.norm(forward)
-    right = np.cross(forward, [0, 0, -1.0]); right /= np.linalg.norm(right)
+    right = np.cross(forward, [0, 0, 1.0]); right /= np.linalg.norm(right)
     rotation = np.vstack([right, np.cross(forward, right), forward])
     rvec = cv2.Rodrigues(rotation)[0].ravel()
     return np.linalg.inv(ptz_matrix(np.r_[rvec, np.log(1300)], other, SIZE))
@@ -120,3 +120,37 @@ def test_reported_inliers_are_the_frames_actually_kept():
     camera, report = estimate_centre(fits, SIZE)
     assert camera is not None, report
     assert report["inliers"] == 8 and report["worst_px"] <= 3.0, report
+
+
+def test_a_frame_with_no_landmark_start_is_found_from_paint_alone():
+    """The landmark model gave no start on ~30% of a whole game's views. With
+    the camera fixed, the four remaining numbers are searched from paint."""
+    from courtvision.court_register import register_frame
+    from tests.test_court_refine import _render
+    truth = _camera_frame([25, 20, 0], f=1100.0)
+    image = _render(truth, clutter=False)
+    # A broadcast shows stands around the floor; the search reads the floor's
+    # silhouette, so the fixture must have one (an all-wood frame has none).
+    court = np.array([[-3, -3], [53, -3], [53, 97], [-3, 97]], np.float64)
+    h = np.c_[court, np.ones(4)] @ np.linalg.inv(truth).T
+    outline = np.round(h[:, :2] / h[:, 2:3]).astype(np.int32)
+    floor = np.zeros(image.shape[:2], np.uint8)
+    cv2.fillPoly(floor, [outline], 1)
+    image[floor == 0] = (40, 30, 35)
+    matrix, info = register_frame(image, None, camera=FixedCamera(CENTRE, SIZE),
+                                  polarities=("bright",))
+    assert info["refined"], info
+    assert _court_error(matrix, truth) < 0.1
+
+
+def test_a_frame_from_another_camera_is_refused():
+    """A view from a different centre is not a pan/tilt/zoom of this game's
+    camera; forcing it into the model must not be accepted as a registration."""
+    from courtvision.court_register import register_frame
+    from tests.test_court_refine import _render
+    other = _other_camera_frame([25, 20, 0])
+    image = _render(other, clutter=False)
+    start = _perturb(other, 0.5, -0.5, 0.3)
+    matrix, info = register_frame(image, start, camera=FixedCamera(CENTRE, SIZE),
+                                  polarities=("bright",), search=False)
+    assert not info["refined"] or _court_error(matrix, other) < 0.3, info
