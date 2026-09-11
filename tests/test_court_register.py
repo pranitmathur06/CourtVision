@@ -36,3 +36,20 @@ def test_a_floor_with_no_lines_falls_back_to_the_landmark_registration():
     assert not info["refined"]
     assert np.allclose(matrix, start), "the fallback must be the landmark fit, unchanged"
     assert set(info["tried"]) == {"bright", "all"}
+
+
+def test_a_search_only_fit_on_little_paint_is_not_accepted(monkeypatch):
+    """A search start has nothing else vouching for it: a fit that rests on
+    only a few line samples from it is refused, where a landmark start's is not."""
+    import courtvision.court_register as reg
+    import courtvision.court_camera as cc
+    truth = _truth()
+    image = _render(truth)
+    thin = {"refined": True, "samples": 38, "peak_ratio": 38.0, "support": np.arange(38)}
+    monkeypatch.setattr(reg, "refine", lambda *a, **k: (truth, dict(thin)))
+    monkeypatch.setattr(cc, "search_starts", lambda *a, **k: [truth])
+    camera = cc.FixedCamera([130.0, 47.0, 35.0], (1000, 700))
+    _, info = reg.register_frame(image, None, camera=camera, polarities=("bright",))
+    assert not info["refined"], info
+    _, info = reg.register_frame(image, truth, camera=camera, polarities=("bright",), search=False)
+    assert info["refined"] and info["start"] == "landmark"

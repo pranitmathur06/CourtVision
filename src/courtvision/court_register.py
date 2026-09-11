@@ -24,6 +24,13 @@ from .court_refine import _structure, paint_response, refine
 
 #: Evidence types tried per frame; on a tie the earlier one is kept.
 POLARITIES = ("bright", "all")
+#: A fit whose start came from the landmark-free search, with nothing else
+#: vouching for it, must rest on at least this many line samples (0.5 ft
+#: apart). Over a whole Toyota Center game the one wrong search fit -- a
+#: courtside close-up given a main-camera pose -- rested on 38; the next
+#: fewest of 61 fits had 98, and no landmark-started fit had under 145. Set
+#: with those values in view, midway in the gap.
+SEARCH_MIN_SAMPLES = 80
 
 
 def register_frame(frame, landmark_matrix, boxes=None, polarities=POLARITIES,
@@ -62,15 +69,20 @@ def register_frame(frame, landmark_matrix, boxes=None, polarities=POLARITIES,
     for polarity in polarities:
         response = paint_response(frame, polarity)
         prepared = (response, _structure(response))
-        starts = [landmark_matrix] if landmark_matrix is not None else []
+        starts = [("landmark", landmark_matrix)] if landmark_matrix is not None else []
         if camera is not None and search:
-            starts += search_starts(camera, *prepared, boxes=boxes, image=frame)
+            starts += [("search", s) for s in search_starts(camera, *prepared, boxes=boxes,
+                                                            image=frame)]
         chosen = None
-        for start in starts:
+        for source, start in starts:
             matrix, info = refine(frame, start, boxes=boxes, prepared=prepared,
                                   camera=camera)
-            if info["refined"] and (chosen is None or info["samples"] > chosen[1]["samples"]):
-                chosen = (matrix, info)
+            if not info["refined"]:
+                continue
+            if source == "search" and info["samples"] < SEARCH_MIN_SAMPLES:
+                continue
+            if chosen is None or info["samples"] > chosen[1]["samples"]:
+                chosen = (matrix, dict(info, start=source))
         if chosen is None:
             tried[polarity] = {"refined": False, "starts": len(starts)}
             continue

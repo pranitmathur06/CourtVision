@@ -4528,3 +4528,25 @@ Two guards were tested on data before being built, and both failed:
   close-up's floor looks court-shaped).
 
 Next measured: how many samples good fits rest on, and which start won.
+
+**What separates the wrong close-up fit: how much paint it rests on.** All 84
+frames re-registered, recording each fit's samples and winning start:
+
+    start that won     fits   samples: min   p10   median   max
+    landmark            26            145    176     208     293
+    search              35             38    104     201     350
+
+The wrong fit (t02876) rests on 38; the next fewest of all 61 has 98. A fit
+whose start came only from the search -- nothing else vouching for it -- now
+needs 80 samples (SEARCH_MIN_SAMPLES, set with these values in view, midway in
+the gap); landmark-started fits are unchanged. Note that the search now wins
+35 of 61 frames, including frames that had a landmark start: within one kind
+of evidence the fit on the most paint wins, whichever start it came from.
+
+**Whole-game standing, 84 frames sampled every 45 s from 150 minutes:**
+60 fitted, every fit checked by eye on the paint; both other-arena highlights
+refused; ~16 frames are not main-camera views (close-ups, crowd, dancers, ads,
+overhead and rim cameras, wipes, one baseline camera); ~6 main-camera views
+unfitted (centre court, motion blur). Main-camera coverage ~60/66, ~91%.
+Accuracy on this game remains measured only as ~0.5 ft against labels that
+cannot resolve 0.3.
