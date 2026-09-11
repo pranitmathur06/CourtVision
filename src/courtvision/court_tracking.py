@@ -185,14 +185,10 @@ def propagate(images: Sequence[np.ndarray],
 #
 # Solve the rig once from the frames that register confidently, then give every
 # remaining frame a three-parameter problem: pan, tilt, zoom.
+#
+# `rig_bounds` turned the rig into bounds for `court_lines.search_camera`; both
+# went when ee94b99 removed the camera search.
 
-# Half-width of the box left around each solved rig coordinate. Not zero:
-# differential evolution needs a non-degenerate interval, and a foot of slack
-# absorbs the spread between individually-solved frames without reopening the
-# search.
-RIG_SLACK_FT = 1.0
-# Focal length is the one intrinsic that genuinely varies -- the operator zooms
-# constantly -- so it keeps its full range.
 RIG_MIN_FRAMES = 5
 
 
@@ -220,22 +216,6 @@ def estimate_rig(params: Sequence[np.ndarray],
         pairs.sort(key=lambda x: -x[0])
         good = [p for _, p in pairs[:max(RIG_MIN_FRAMES, len(pairs) // 3)]]
     return np.median(np.vstack(good), axis=0)
-
-
-def rig_bounds(rig: np.ndarray,
-               base: Sequence[tuple[float, float]] | None = None,
-               slack: float = RIG_SLACK_FT) -> list[tuple[float, float]]:
-    """Search bounds that pin the camera position and free only pan/tilt/zoom."""
-    from courtvision.court_lines import DEFAULT_CAMERA_BOUNDS
-
-    base = list(base or DEFAULT_CAMERA_BOUNDS)
-    out: list[tuple[float, float]] = []
-    for axis in range(3):
-        lo, hi = base[axis]
-        centre = float(np.clip(rig[axis], lo, hi))
-        out.append((max(lo, centre - slack), min(hi, centre + slack)))
-    out.extend(base[3:])
-    return out
 
 
 # ---------------------------------------------------------------------------
