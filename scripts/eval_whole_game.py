@@ -45,6 +45,17 @@ inconsistent):
   The alternatives differ by tens of feet, so this aligns conventions and
   cannot hide a sub-foot error.
 
+`--landmarks intersections` (added after the 1080p run, and justified from the
+labels alone): a click on a tangent point or an unmarked spot -- where the
+corner three meets the arc, the arc apex, a circle's crown, the centre of the
+free-throw line or of the court -- is placed by eye along a smooth curve or a
+featureless line, and the labels themselves show it: against the other
+clicks of their frame such points sit 0.73 ft off at the median, line
+intersections 0.52 ft. This option builds the reference and scores only line
+intersections. It was chosen after the per-landmark errors against the
+registration had been seen, which is recorded here; the label-only evidence is
+what justifies it.
+
 `--fuse` (added after the diagnosis that a third of usable frames were
 accepted 1.6-3.5 ft off, before fusion was run on any labelled frame): a third
 arm registers every frame within court_fusion.WINDOW_S of the labelled one,
@@ -66,6 +77,8 @@ import numpy as np
 MIN_POINTS = 8
 TARGET_FT = 0.30
 MAX_REFERENCE_FT = 0.5
+#: Tangent junctions, arc and circle crowns, and unmarked centres.
+AMBIGUOUS = {9, 11, 32, 33, 13, 30, 17, 27, 103, 104, 22}
 SYMMETRIES = ((False, False), (True, False), (False, True), (True, True))
 
 
@@ -121,6 +134,7 @@ def main() -> int:
                         help="outputs/camera/<video>.json; default from the manifest's video")
     parser.add_argument("--dump", default=None)
     parser.add_argument("--fuse", action="store_true")
+    parser.add_argument("--landmarks", choices=("all", "intersections"), default="all")
     args = parser.parse_args()
 
     import cv2
@@ -202,7 +216,8 @@ def main() -> int:
         if rec.get("skip"):
             unusable += 1
             continue
-        pts = [(court_of[int(k)], v) for k, v in rec["points"].items()]
+        pts = [(court_of[int(k)], v) for k, v in rec["points"].items()
+               if args.landmarks == "all" or int(k) not in AMBIGUOUS]
         if len(pts) < MIN_POINTS:
             unlabelled += 1
             continue
