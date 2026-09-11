@@ -225,11 +225,12 @@ def test_court_rotation_is_its_own_inverse():
 def test_court_rotation_maps_one_basket_onto_the_other():
     from courtvision.court_tracking import court_rotation
     from courtvision.court import BASKET, COURT_WIDTH
-    from courtvision.court_lines import COURT_LENGTH_FT
+    from courtvision.court_lines import COURT_LENGTH
+    assert COURT_LENGTH == 94.0   # y runs baseline to baseline; x is the 50 ft width
     near = np.array([BASKET[0], BASKET[1], 1.0])
     far = court_rotation() @ near
     assert np.allclose(far[:2], [COURT_WIDTH - BASKET[0],
-                                 COURT_LENGTH_FT - BASKET[1]])
+                                 COURT_LENGTH - BASKET[1]])
 
 
 # The basket sits on the court centreline (x = 25) and the rotation maps

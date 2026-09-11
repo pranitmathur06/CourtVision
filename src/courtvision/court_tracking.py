@@ -325,13 +325,13 @@ def players_on_court(court_to_image_inverse: np.ndarray,
     if not valid.any():
         return 0.0
     court = projected[valid, :2] / w[valid, None]
-    from courtvision.court_lines import COURT_LENGTH_FT
+    from courtvision.court_lines import COURT_LENGTH
     from courtvision.court import COURT_WIDTH
 
     inside = ((court[:, 0] >= -margin_ft)
               & (court[:, 0] <= COURT_WIDTH + margin_ft)
               & (court[:, 1] >= -margin_ft)
-              & (court[:, 1] <= COURT_LENGTH_FT + margin_ft))
+              & (court[:, 1] <= COURT_LENGTH + margin_ft))
     return float(inside.mean())
 
 
@@ -422,10 +422,10 @@ def right_basket(court_to_image: np.ndarray,
 def court_rotation() -> np.ndarray:
     """(x, y) -> (COURT_WIDTH - x, COURT_LENGTH - y), as a 3x3 on court feet."""
     from courtvision.court import COURT_WIDTH
-    from courtvision.court_lines import COURT_LENGTH_FT
+    from courtvision.court_lines import COURT_LENGTH
 
     return np.array([[-1.0, 0.0, COURT_WIDTH],
-                     [0.0, -1.0, COURT_LENGTH_FT],
+                     [0.0, -1.0, COURT_LENGTH],
                      [0.0, 0.0, 1.0]])
 
 
