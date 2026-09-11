@@ -44,6 +44,15 @@ inconsistent):
   symmetries of the court, and the one nearest the registration is used.
   The alternatives differ by tens of feet, so this aligns conventions and
   cannot hide a sub-foot error.
+
+`--fuse` (added after the diagnosis that a third of usable frames were
+accepted 1.6-3.5 ft off, before fusion was run on any labelled frame): a third
+arm registers every frame within court_fusion.WINDOW_S of the labelled one,
+carries each accepted registration to it by chained frame-to-frame tracking,
+and takes the per-point median (court_fusion.fuse). The window is read from
+the game video, as production would; the labelled frame is the one read at the
+manifest time. Trust for the fused arm uses the union of the candidates'
+support.
 """
 
 from __future__ import annotations
@@ -111,6 +120,7 @@ def main() -> int:
     parser.add_argument("--camera", default=None,
                         help="outputs/camera/<video>.json; default from the manifest's video")
     parser.add_argument("--dump", default=None)
+    parser.add_argument("--fuse", action="store_true")
     args = parser.parse_args()
 
     import cv2
@@ -120,7 +130,9 @@ def main() -> int:
     from courtvision.court_camera import FixedCamera
     from courtvision.court_keypoints import KEYPOINTS, homography_from_keypoints
     from courtvision.court_refine import support_distance
+    from courtvision.court_fusion import STEP_S, WINDOW_S, chain, fuse
     from courtvision.court_register import register_frame
+    from courtvision.court_tracking import pairwise_homography
     from courtvision.device import resolve_device
     from courtvision.provenance import code_provenance
 
@@ -134,6 +146,53 @@ def main() -> int:
         print(f"no camera centre in {camera_file}; the camera arm is skipped")
     court_of = {p["id"]: (p["x"], p["y"]) for p in labels["points"]}
     model, detector, device = YOLO(args.weights), YOLO(args.detector), resolve_device()
+    capture = cv2.VideoCapture(manifest["video"]) if args.fuse else None
+
+    def start_and_boxes(image):
+        result = model.predict(image, device=device, verbose=False)[0]
+        begin = None
+        if result.keypoints is not None and len(result.keypoints):
+            xy = result.keypoints.xy[0].cpu().numpy()
+            conf = result.keypoints.conf[0].cpu().numpy()
+            begin, _ = homography_from_keypoints(
+                {i: tuple(xy[i]) for i in range(len(xy))
+                 if i in KEYPOINTS and conf[i] >= args.conf and (xy[i] > 0).all()})
+        found = detector.predict(image, device=device, verbose=False)[0].boxes
+        found_boxes = (found.xyxy.cpu().numpy()[found.cls.cpu().numpy() == 0]
+                       if found is not None and len(found) else None)
+        return begin, found_boxes
+
+    def fused_registration(t, target):
+        """Median of the window's accepted registrations, carried to `target`."""
+        offsets = np.arange(STEP_S, WINDOW_S + 1e-9, STEP_S)
+        candidates, supports = [], []
+        begin, bx = start_and_boxes(target)
+        if begin is not None:
+            m, inf = register_frame(target, begin, boxes=bx, camera=camera)
+            if inf["refined"]:
+                candidates.append(m)
+                supports.append(court_refine._POINTS[inf["support"]])
+        for sign in (1.0, -1.0):
+            images = [target]
+            for dt in offsets:
+                capture.set(cv2.CAP_PROP_POS_MSEC, (t + sign * dt) * 1000)
+                ok, img = capture.read()
+                if not ok:
+                    break
+                images.append(img)
+            hops = [pairwise_homography(images[k], images[k + 1]) for k in range(len(images) - 1)]
+            for img, carried in zip(images[1:], chain(hops)):
+                begin, bx = start_and_boxes(img)
+                if begin is None:
+                    continue
+                m, inf = register_frame(img, begin, boxes=bx, camera=camera)
+                if inf["refined"]:
+                    candidates.append(m @ carried)
+                    supports.append(court_refine._POINTS[inf["support"]])
+        matrix, spread = fuse(candidates, (target.shape[1], target.shape[0]))
+        support = np.vstack(supports) if supports else np.zeros((0, 2))
+        return matrix, spread, len(candidates), support
+
     rows, unusable, unlabelled = [], 0, 0
     for item in manifest["frames"]:
         rec = labels["frames"].get(item["file"])
@@ -189,6 +248,28 @@ def main() -> int:
                                 "dist": dist.tolist(), "robust_err": robust_err,
                                 "robust_dist": (dist[robust[0]].tolist()
                                                 if robust_err is not None else None)}
+        if args.fuse:
+            matrix, spread, n_candidates, support_points = fused_registration(item["t"], frame)
+            refined = matrix is not None
+            if refined:
+                estimate = cv2.perspectiveTransform(px, matrix).reshape(-1, 2)
+                err = np.hypot(*(estimate - truth).T)
+                from scipy.spatial import cKDTree
+                dist = cKDTree(support_points).query(estimate)[0]
+            else:
+                err = np.full(len(truth), np.inf)
+                dist = np.full(len(truth), np.inf)
+            robust_err = None
+            if refined and robust and robust[1] <= MAX_REFERENCE_FT:
+                keep = robust[0]
+                options = [np.hypot(*(estimate[keep] - symmetric(truth[keep], fx, fy)).T)
+                           for fx, fy in SYMMETRIES]
+                robust_err = min(options, key=np.median).tolist()
+            row["arms"]["fused"] = {"refined": refined, "err": err.tolist(), "dist": dist.tolist(),
+                                    "robust_err": robust_err, "candidates": n_candidates,
+                                    "spread_ft": spread,
+                                    "robust_dist": (dist[robust[0]].tolist()
+                                                    if robust_err is not None else None)}
 
     if args.dump:
         json.dump({"meta": {"set": args.set, "camera": entry, **code_provenance(court_refine.__file__),
@@ -205,7 +286,7 @@ def main() -> int:
           f"{sum(sum(r['inliers']) for r in good)} of {sum(r['n_points'] for r in good)} "
           f"points kept, leave-one-out p50 "
           f"{np.median([r['robust_loo_ft'] for r in good]) if good else float('nan'):.2f} ft")
-    for arm in ("free", "camera"):
+    for arm in ("free", "camera", "fused"):
         scored = [r for r in good if arm in r["arms"]]
         refined = [r for r in scored if r["arms"][arm]["refined"] and r["arms"][arm]["robust_err"]]
         if not refined:
