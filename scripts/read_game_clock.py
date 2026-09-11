@@ -11,11 +11,14 @@ be read off the scoreboard itself.
 - Read: scoreboard.read_clock on every sampled frame. The last minute of a
   period shows tenths ("35.9"), which comes back as three digits and reads
   equally as 3:59 -- and 3:59 looks like the clock jumping back up, which
-  earlier turned one quarter into four. A scoreboard shows tenths only in the
-  last minute, so the tenths reading is taken exactly when the clock was
-  already under TENTHS_BELOW_S a moment ago (`resolve`). Preferring instead
-  whichever reading did not exceed the previous one collapsed 9:55 into 95.5
-  and lost half the game.
+  earlier turned one quarter into four. Both readings are kept and settled by
+  the one thing a clock always does within a period: it falls. Take the
+  LARGEST reading that is not above the previous one; when none is -- a new
+  quarter, a replay, a misread -- keep the largest and leave it to the period
+  split below. That reads 9:55 mid-quarter and 35.9 in the last minute alike.
+  Preferring tenths whenever the clock was under a minute turned "1:05" into
+  10.5 and split every quarter in two; dropping the sample instead threw away
+  every quarter after the first, since each one starts above the last.
 - Period: the clock only falls within a period, so the readings are cut at
   every upward jump over RESET_JUMP_S and the runs are numbered in order.
   Runs shorter than MIN_RUN readings are replays or stray misreads and are
@@ -46,8 +49,6 @@ OT_S = 300.0
 RESET_JUMP_S = 30.0
 #: A run this short is a replay or a misread, not a period.
 MIN_RUN = 20
-#: A scoreboard switches to seconds and tenths only inside the last minute.
-TENTHS_BELOW_S = 61.0
 
 
 def readings_from(text: str | None):
@@ -74,12 +75,11 @@ def resolve(candidates):
     for t, options in candidates:
         if not options:
             continue
-        if running is None or len(options) == 1:
-            seconds = options[0]
-        elif running <= TENTHS_BELOW_S:
-            seconds = min(options)               # in the last minute: tenths
+        if running is None:
+            seconds = max(options)
         else:
-            seconds = max(options)               # otherwise: minutes and seconds
+            below = [v for v in options if v <= running + 1.0]
+            seconds = max(below) if below else max(options)
         out.append((t, seconds))
         running = seconds
     return out
