@@ -4092,3 +4092,29 @@ the selection script and reproduces 3.0 from the OKC dump. Because the ratio
 was redefined, 3.0 is provisional until recalibrated on a fresh OKC dump, which
 is running, as is a re-run of the unseen-arena evaluation with the current code
 -- reported as a re-run, since the test set has now informed design choices.
+
+## Round 53 - the review's fixes, re-measured: acceptance up, per-arena picture unchanged
+
+Threshold re-derived by the checked-in rule on a fresh OKC dump made with the
+common-sample sharpness ratio: 79% of registered frames accepted (70% before
+the fix, which had been refusing correct fits), control 0.497 ft for a known
+0.5, no candidate reaching a 0.30 ft held-out median, fallback to the lowest
+(0.54 ft, tied between 2.0 and 5.0, ties to the lower): MIN_PEAK_RATIO 2.0.
+
+The unseen-arena evaluation re-run with the current code (6d302e4, clean tree)
+-- a re-run, not a first look, since the test images have informed design since
+the declared run:
+
+    arena          bright @ 2.0    per-frame rule @ 2.0    within 0.3 ft
+    TD Garden      0.19 ft         0.21 ft                 82%
+    Fiserv Forum   0.34 ft         0.33 ft                 44%
+    Kaseya (n=7)   0.35 ft         0.31 ft                 29%
+    unseen pooled, with fallback   0.25 ft, p90 0.59       63%
+
+The fixes raised acceptance -- Kaseya now 100%, fewer fallbacks -- and trimmed
+the tail (pooled p90 0.66 to 0.59 under the per-frame rule). They did not move
+the per-arena picture: TD Garden meets 0.3 ft, Fiserv and Kaseya miss it by a
+few hundredths. Subtracting the reference's ~0.13 ft of noise would nominally
+bring Fiserv to about 0.30; that is not claimed, because the subtraction
+assumes independence the data cannot confirm. Next: whether the error at the
+periphery is missing support or the fit actively bending the far side.
