@@ -22,7 +22,9 @@ be read off the scoreboard itself.
 - Period: the clock only falls within a period, so the readings are cut at
   every upward jump over RESET_JUMP_S and the runs are numbered in order.
   Runs shorter than MIN_RUN readings are replays or stray misreads and are
-  dropped. Rules keyed to exact values all failed on this broadcast: any
+  dropped, and a run that does not START near the top of the clock is a replay
+  too -- a quarter begins at 12:00, a replay of its last minute begins at 1:00
+  -- so it is merged into the period it interrupts (NEW_PERIOD_SHARE). Rules keyed to exact values all failed on this broadcast: any
   upward jump as a reset gave 20 periods; requiring the last reading near zero
   merged three quarters; requiring the new one at 12:00 missed a quarter whose
   first readable frame was 11:24.
@@ -49,6 +51,8 @@ OT_S = 300.0
 RESET_JUMP_S = 30.0
 #: A run this short is a replay or a misread, not a period.
 MIN_RUN = 20
+#: A new period's first reading is near the top of the clock; a replay's is not.
+NEW_PERIOD_SHARE = 0.8
 
 
 def readings_from(text: str | None):
@@ -115,8 +119,13 @@ def assign_periods(readings):
         runs.append(current)
     kept = [run for run in runs if len(run) >= MIN_RUN]
     dropped = sum(len(run) for run in runs if len(run) < MIN_RUN)
-    out = [(t, period, seconds)
-           for period, run in enumerate(kept, start=1) for t, seconds in run]
+    out, period, top = [], 0, None
+    for run in kept:
+        start = run[0][1]
+        if top is None or start >= NEW_PERIOD_SHARE * top:
+            period += 1
+            top = start
+        out += [(t, period, seconds) for t, seconds in run]
     return out, dropped
 
 
