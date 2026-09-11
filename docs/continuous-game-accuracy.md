@@ -4353,3 +4353,41 @@ ft noise -- so it neither proves nor disproves the arena; but the gate as set
 The cost of honesty is coverage: at 3 ft, 30-46% of players' feet are
 trusted. The rest are flagged; their error is 0.22-0.42 ft (untrusted p50),
 not the multi-foot extrapolation of Round 55, but not certified either.
+
+## Round 58 - a whole game: the stills did not transfer
+
+The user's standard: registration must hold across a WHOLE game, not short
+clips. The only whole game on disk at an arena in no training game is Toyota
+Center (854x480). Frames were sampled every 45 s across the entire broadcast
+(84 court frames) and landmarks hand-placed blind in a labeller that shows no
+registration (data/labeling/court_toyota; test declared at c7eb857 before any
+label existed). The user labelled 32 frames covering the first ~47 minutes
+(video 671-3506 s).
+
+**The labels needed repair, from the labels alone.** The first scoring read
+~36 ft: the reference itself was 6 ft inconsistent. Landmark names were only
+on hover and some clicks were attached to the wrong landmark (the arc apex
+placed on a sideline). The reference is now fitted by RANSAC over the labels
+only, frames need 8 inliers and a leave-one-out residual under 0.5 ft, and the
+court's end/side convention is aligned by symmetry (5ff17f6, committed before
+any registration was scored against it). 11 of 32 frames survive, 100 of 120
+points; the labels' own leave-one-out noise is 0.43 ft per point.
+
+**Result: FAIL.**
+
+    arm      frames refined   trusted p50   all points p50   frames <= 0.3
+    free       7/11           0.61 ft       0.84 ft          14%
+    camera     9/11           0.57          0.66              0%
+
+Drawn over the frames, the worst are not label noise: the labels' own fit
+sits on the painted key and arc, while the production fit slid the key along
+the floor by 1.6-3.5 ft and was ACCEPTED (t=3461, 1751, 1076). The fixed
+camera cannot forbid it -- a slide along the court is a pan -- and the peak
+ratio does not see it. The 1080p annotated stills (0.16-0.25 ft) did not
+predict this: 480p video with a painted floor is a harder input, and whole-game
+sampling includes the views short clips do not.
+
+Next: temporal fusion (court_fusion.py). A lock belongs to one frame's paint
+and start; carried by frame-to-frame tracking, the window's median should
+outvote it. Settings fixed before running on the labels: +/-2 s at 5 fps,
+>= 3 candidates.
