@@ -4759,3 +4759,56 @@ sit within 2 s of a clock reading**, their video times rising with game time on
 every consecutive pair. Those 126 are the evaluation set; the rest fall where
 the clock is not on screen. Tuning will use the first half, scoring the second,
 as the 0.396 measurement did.
+
+## Round 64 - Phase 2's gate, on a game nothing was tuned on
+
+Shot detection from the ball's path past the rim, scored against the official
+play-by-play at +/- 3 s.
+
+**The two findings that did the work.**
+
+*Ball confidence.* The cache is written at 0.10 so no real ball is lost, but at
+that level the four-class detector puts ~2.9 "ball" boxes on every frame, many
+on the rim and net themselves. The nearest candidate to the rim was then junk:
+over official shot windows the closest approach read 0.33 rim widths against
+0.40 at random moments -- no signal at all. At 0.25 it reads 1.41 against 3.91,
+and the ball comes within one rim width in 42% of shot windows against 17% of
+random ones. Filtering by box SIZE instead destroys it: the detector's genuine
+ball boxes are loose (~32 px at 720p against the rim's 39) and a 22 px cap
+drops coverage from 53% of frames to 10%.
+
+*Live play.* 76 of 181 second-half calls sat more than 30 s from any official
+attempt: replays of a basket look exactly like the basket, free throws are
+shots a field-goal chart does not contain, and warm-ups put balls through rims
+too. All three happen with the clock stopped, while 98% of official attempts
+happen with it running. Keeping only calls made while the clock ticks took
+Finals G7 from F1 0.402 to 0.619 held out. That idea came from looking at where
+the test half's false alarms fell, so it is declared in the script: the 0.619
+is optimistic.
+
+**The frozen test.** Thresholds fixed at what the sweep chose on Finals G7's
+first half (approach 2.6 rim widths, far 5.0, merge 6 s, ball confidence 0.25),
+committed before the second game's data existed (cf5e499), then run once on
+Finals G1 -- a different game, 180 official attempts, 150 placed within 2 s of
+a clock reading:
+
+    game                         tol   predicted  official   P      R      F1
+    Finals G1 (nothing tuned)    3 s      194       150     0.546  0.707  0.616
+    Finals G1                    5 s      194       150     0.608  0.787  0.686
+    Finals G7 (tuned on its 1st) 3 s      174       126     0.563  0.778  0.653
+
+**PASS: 0.616 at +/- 3 s on a game nothing was tuned on**, against the 0.60
+gate and the 0.396 this project measured before. The two games agree, which is
+the point of the frozen run.
+
+**The gate's second half** -- no ball detections on people in the stands -- is
+met where it matters: of the ball detections the rule uses (near the rim), 0 of
+16 sampled sit off the court; 8.3% of the raw stream does, almost all of it
+below 0.45 confidence. cache_detections now marks every ball box with whether
+court lies beneath it (3494611).
+
+**Not yet used: the projected rim.** The rim was seen by the detector on 0.372
+of Finals G7's frames and 0.499 of G1's; gap-filling brings the rule's ball+rim
+coverage to 0.35-0.47. The camera model puts a rim on every fitted frame,
+0.13 ft from the detected one (Round 63), which is the obvious next lever for
+recall -- and the measurement above is the baseline it has to beat.
