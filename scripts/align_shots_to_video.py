@@ -47,8 +47,11 @@ def main() -> int:
     kept = [p for p in placed if p["gap_s"] <= args.max_gap_s]
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     json.dump(placed, open(args.out, "w"), indent=1)
-    order = np.argsort([p["clock_s"] for p in kept])
-    rising = np.mean(np.diff([kept[i]["t"] for i in np.argsort([(p["period"], -p["clock_s"]) for p in kept], axis=0)[:, 0]]) >= 0) if len(kept) > 2 else float("nan")
+    # In game order: period ascending, clock descending. Their video times
+    # should rise; anything else means shots matched to replays.
+    ordered = sorted(kept, key=lambda p: (p["period"], -p["clock_s"]))
+    rising = (np.mean(np.diff([p["t"] for p in ordered]) >= 0) if len(ordered) > 2
+              else float("nan"))
     print(f"{len(official)} official attempts; {len(placed)} placed; {len(kept)} within {args.max_gap_s:g} s of a clock reading")
     print(f"  their video times rise with game time on {rising:.0%} of consecutive pairs")
     return 0
