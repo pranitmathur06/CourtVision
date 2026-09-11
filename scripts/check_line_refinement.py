@@ -196,11 +196,9 @@ def main() -> int:
         import json
         import subprocess
         Path(args.dump).parent.mkdir(parents=True, exist_ok=True)
-        commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"],
-                                capture_output=True, text=True).stdout.strip()
-        meta = {"video": args.video, "args": vars(args), "commit": commit,
-                "dirty": bool(subprocess.run(["git", "status", "--porcelain"],
-                                             capture_output=True, text=True).stdout.strip()),
+        from courtvision.provenance import code_provenance
+        meta = {"video": args.video, "args": vars(args),
+                **code_provenance(court_refine.__file__),
                 "min_peak_ratio": court_refine.MIN_PEAK_RATIO,
                 "polarity": court_refine.PAINT_POLARITY,
                 "court_frames": court_frames, "registered": registered,

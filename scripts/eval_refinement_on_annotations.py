@@ -128,14 +128,10 @@ def main() -> int:
                              "err": error(refined) if info["refined"] else None,
                              "reason": info["reason"]}
 
-    import subprocess
-    commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"],
-                            capture_output=True, text=True).stdout.strip()
-    dirty = bool(subprocess.run(["git", "status", "--porcelain"],
-                                capture_output=True, text=True).stdout.strip())
+    from courtvision.provenance import code_provenance
     json.dump({"meta": {"settings": [PRIMARY_POLARITY, PRIMARY_THRESHOLD],
                         "weights": args.weights, "conf": args.conf,
-                        "commit": commit, "dirty": dirty},
+                        **code_provenance(court_refine.__file__)},
                "rows": rows}, open(args.dump, "w"), indent=1)
     sizes = sorted({tuple(r["size"]) for r in rows})
     print(f"{len(rows)} test images with a usable reference; sizes {sizes[:4]}")
