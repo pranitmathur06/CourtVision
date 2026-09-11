@@ -9,10 +9,22 @@ be read off the scoreboard itself.
 - Learn: autoscoreboard.bootstrap_templates -- the ones digit counts down,
   and the tens digit changing marks the 0 -> 9 wrap that pins the alphabet.
 - Read: scoreboard.read_clock on every sampled frame. The last minute of a
-  period shows "SS.T"; a three-digit read whose seconds exceed 59 is that.
-- Period: the clock counts down within a period, so a reading more than
-  PERIOD_JUMP_S above the running clock is a new period (12:00 after 0:00;
-  overtime restarts at 5:00).
+  period shows tenths ("35.9"), which comes back as three digits and reads
+  equally as 3:59 -- and 3:59 looks like the clock jumping back up, which
+  earlier turned one quarter into four. A scoreboard shows tenths only in the
+  last minute, so the tenths reading is taken exactly when the clock was
+  already under TENTHS_BELOW_S a moment ago (`resolve`). Preferring instead
+  whichever reading did not exceed the previous one collapsed 9:55 into 95.5
+  and lost half the game.
+- Period: the clock only falls within a period, so the readings are cut at
+  every upward jump over RESET_JUMP_S and the runs are numbered in order.
+  Runs shorter than MIN_RUN readings are replays or stray misreads and are
+  dropped. Rules keyed to exact values all failed on this broadcast: any
+  upward jump as a reset gave 20 periods; requiring the last reading near zero
+  merged three quarters; requiring the new one at 12:00 missed a quarter whose
+  first readable frame was 11:24.
+- Raw readings are saved beside the resolved ones, so a change of rule costs
+  no video pass.
 - Self-check: within a period the clock never goes up. Readings that do, by
   more than a second, are misreads, counted and dropped -- the same test that
   gave the score reader its 2% error rate with no labels.
@@ -30,7 +42,47 @@ import numpy as np
 
 PERIOD_S = 720.0
 OT_S = 300.0
-PERIOD_JUMP_S = 120.0
+#: An upward jump this large ends a run of readings.
+RESET_JUMP_S = 30.0
+#: A run this short is a replay or a misread, not a period.
+MIN_RUN = 20
+#: A scoreboard switches to seconds and tenths only inside the last minute.
+TENTHS_BELOW_S = 61.0
+
+
+def readings_from(text: str | None):
+    """The seconds a clock text could mean: [minutes:seconds] and [seconds.tenths]."""
+    if not text or ":" not in text:
+        return []
+    left, right = text.split(":")
+    if not left.isdigit() or not right.isdigit():
+        return []
+    out = []
+    if len(right) == 2 and int(right) <= 59:
+        value = int(left) * 60 + int(right)
+        if value <= PERIOD_S:
+            out.append(float(value))
+    digits = left + right
+    if len(digits) == 3:                        # "359" is 3:59 or 35.9
+        out.append(int(digits[:2]) + int(digits[2]) / 10.0)
+    return out
+
+
+def resolve(candidates):
+    """[(t, [possible seconds])] -> [(t, seconds)], settling ties by continuity."""
+    out, running = [], None
+    for t, options in candidates:
+        if not options:
+            continue
+        if running is None or len(options) == 1:
+            seconds = options[0]
+        elif running <= TENTHS_BELOW_S:
+            seconds = min(options)               # in the last minute: tenths
+        else:
+            seconds = max(options)               # otherwise: minutes and seconds
+        out.append((t, seconds))
+        running = seconds
+    return out
 
 
 def parse(text: str | None):
@@ -50,19 +102,22 @@ def parse(text: str | None):
 
 
 def assign_periods(readings):
-    """[(t, seconds)] in video order -> [(t, period, seconds)], dropping misreads."""
-    out, period, running, misreads = [], 1, None, 0
+    """[(t, seconds)] in video order -> [(t, period, seconds)], dropping short runs."""
+    runs, current = [], []
     for t, seconds in readings:
-        if running is None:
-            running = seconds
-        elif seconds > running + PERIOD_JUMP_S:
-            period += 1                          # a reset: the next period began
-        elif seconds > running + 1.0:
-            misreads += 1                        # a clock that runs backwards
-            continue
-        running = seconds
-        out.append((t, period, seconds))
-    return out, misreads
+        if current and seconds > current[-1][1] + RESET_JUMP_S:
+            runs.append(current)
+            current = []
+        elif current and seconds > current[-1][1] + 1.0:
+            continue                             # a small step back: a misread
+        current.append((t, seconds))
+    if current:
+        runs.append(current)
+    kept = [run for run in runs if len(run) >= MIN_RUN]
+    dropped = sum(len(run) for run in runs if len(run) < MIN_RUN)
+    out = [(t, period, seconds)
+           for period, run in enumerate(kept, start=1) for t, seconds in run]
+    return out, dropped
 
 
 def elapsed(period: int, seconds: float) -> float:
@@ -108,24 +163,30 @@ def main() -> int:
     top, bottom, left, right = location.roi
     print(f"clock at rows {top}-{bottom}, cols {left}-{right}; ticks {location.ticks}/{location.samples}; digits {sorted(templates)}")
 
-    raw = []
+    candidates = []
     for t in np.arange(0.0, duration, args.step):
         frame = frame_at(float(t))
         if frame is None:
             continue
         text, _ = read_clock(frame[top:bottom, left:right], templates)
-        seconds = parse(text)
-        if seconds is not None:
-            raw.append((float(t), seconds))
+        options = readings_from(text)
+        if options:
+            candidates.append((float(t), options))
+    raw = resolve(candidates)
     rows, misreads = assign_periods(raw)
     out = Path(args.out or f"outputs/clock/{Path(args.video).stem}.json")
     out.parent.mkdir(parents=True, exist_ok=True)
     json.dump({"video": args.video, "roi": list(location.roi), "step": args.step,
+               "raw": [{"t": t, "options": options} for t, options in candidates],
                "readings": [{"t": t, "period": p, "seconds": s, "elapsed": elapsed(p, s)}
                             for t, p, s in rows]}, open(out, "w"), indent=0)
     periods = sorted({p for _, p, _ in rows})
     print(f"{len(np.arange(0.0, duration, args.step))} frames sampled; {len(raw)} read; "
-          f"{misreads} dropped as running backwards ({misreads / max(len(raw), 1):.1%}); periods seen {periods}")
+          f"{misreads} dropped in short runs ({misreads / max(len(raw), 1):.1%}); periods seen {periods}")
+    for p in periods:
+        run = [(t, s) for t, q, s in rows if q == p]
+        print(f"  period {p}: {len(run):4d} readings, clock {max(s for _, s in run):.0f} -> "
+              f"{min(s for _, s in run):.1f} s, video {run[0][0]:.0f}..{run[-1][0]:.0f} s")
     return 0
 
 
