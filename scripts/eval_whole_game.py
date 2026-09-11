@@ -76,6 +76,17 @@ by leverage (~3x) and rejected all but one precisely labelled frame; it is
 still printed. PASS: direct p50 <= 0.30 ft over all clicks of registered
 frames, with coverage (frames registered of frames labelled) reported beside it.
 
+`--repair clicks` (added after the lane/side repair left clicks in the same
+frame under different conventions -- a centre-court click given the far
+sideline's id, a baseline corner the opposite corner's -- and read only the
+labels): the court is symmetric, so a click could be any of its landmark's
+mirror images (x -> 50 - x, y -> 94 - y). Each frame's reading is found by
+RANSAC over the clicks AND their mirror candidates: four clicks with chosen
+readings fix a homography, every click then takes the reading nearest it, and
+the hypothesis agreeing with the most clicks (within 1 ft) wins. Clicks no
+reading can place are dropped, not scored. Nothing from any registration
+enters it.
+
 `--fuse` (added after the diagnosis that a third of usable frames were
 accepted 1.6-3.5 ft off, before fusion was run on any labelled frame): a third
 arm registers every frame within court_fusion.WINDOW_S of the labelled one,
@@ -103,6 +114,50 @@ SYMMETRIES = ((False, False), (True, False), (False, True), (True, True))
 #: Landmark pairs a labeller can swap by reading the diagram mirrored.
 LANE_PAIRS = ((3, 4), (12, 14), (38, 39), (29, 31))
 SIDE_PAIRS = ((0, 7), (1, 6), (16, 18), (35, 42), (36, 41), (26, 28), (20, 102), (100, 101))
+
+
+def repair_clicks(points_by_id, court_of, iterations=3000, seed=0):
+    """Each click's most consistent reading among its landmark's mirror images.
+
+    Returns (points, variant) where points are only the clicks some reading
+    places within 1 ft of the frame's consensus.
+    """
+    import cv2
+    rng = np.random.default_rng(seed)
+    clicks = [(int(k), np.asarray(v, np.float64)) for k, v in points_by_id.items() if int(k) in court_of]
+    if len(clicks) < MIN_POINTS:
+        return [], "none"
+    base = [np.array(court_of[k], np.float64) for k, _ in clicks]
+    options = [np.array([[c[0], c[1]], [50 - c[0], c[1]], [c[0], 94 - c[1]], [50 - c[0], 94 - c[1]]])
+               for c in base]
+    px = np.array([v for _, v in clicks])
+    best = (0, None)
+    for _ in range(iterations):
+        pick = rng.choice(len(clicks), 4, replace=False)
+        src = px[pick].astype(np.float32)
+        dst = np.array([options[i][rng.integers(4)] for i in pick], np.float32)
+        try:
+            matrix = cv2.getPerspectiveTransform(src, dst)
+        except cv2.error:
+            continue
+        h = np.c_[px, np.ones(len(px))] @ matrix.T
+        if np.any(np.abs(h[:, 2]) < 1e-9):
+            continue
+        mapped = h[:, :2] / h[:, 2:3]
+        residual = np.array([np.min(np.hypot(*(options[i] - mapped[i]).T)) for i in range(len(clicks))])
+        count = int((residual < 1.0).sum())
+        if count > best[0]:
+            best = (count, mapped)
+    if best[1] is None or best[0] < MIN_POINTS:
+        return [], "none"
+    mapped = best[1]
+    points = []
+    for i, (k, v) in enumerate(clicks):
+        d = np.hypot(*(options[i] - mapped[i]).T)
+        if d.min() < 1.0:
+            chosen = options[i][int(np.argmin(d))]
+            points.append(((float(chosen[0]), float(chosen[1])), [float(v[0]), float(v[1])]))
+    return points, f"clicks ({len(points)}/{len(clicks)})"
 
 
 def repair(points_by_id, court_of):
@@ -185,8 +240,10 @@ def main() -> int:
     parser.add_argument("--dump", default=None)
     parser.add_argument("--fuse", action="store_true")
     parser.add_argument("--landmarks", choices=("all", "intersections"), default="all")
-    parser.add_argument("--repair", action="store_true",
-                        help="read each frame's labels under lane/side swaps, keep the most consistent")
+    parser.add_argument("--repair", nargs="?", const="swaps", default=None,
+                        choices=("swaps", "clicks"),
+                        help="swaps: read each frame's labels under lane/side swaps; "
+                             "clicks: choose each click's reading among its mirror images")
     args = parser.parse_args()
 
     import cv2
@@ -271,7 +328,9 @@ def main() -> int:
             continue
         kept = {k: v for k, v in rec["points"].items()
                 if args.landmarks == "all" or int(k) not in AMBIGUOUS}
-        if args.repair:
+        if args.repair == "clicks":
+            pts, variant = repair_clicks(kept, court_of)
+        elif args.repair:
             pts, variant = repair(kept, court_of)
         else:
             pts, variant = [(court_of[int(k)], v) for k, v in kept.items()], "as given"
