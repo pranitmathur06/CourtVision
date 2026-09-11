@@ -417,3 +417,26 @@ def test_a_refused_refinement_trusts_nothing():
     assert not info["refined"]
     assert not trusted(info, np.array([[25.0, 5.0]])).any()
     assert not trusted({"refined": False}, np.array([[25.0, 5.0]])).any()
+
+
+def test_a_degenerate_fit_is_refused_not_raised(monkeypatch):
+    """A fit that runs to a singular matrix is a failure to report, not a crash."""
+    import courtvision.court_refine as cr
+    truth = _truth()
+    image = _render(truth, clutter=False)
+    real_fit = cr._fit
+    calls = []
+
+    def collapsing_fit(*args, **kwargs):
+        # Real through the coarse-to-fine passes, singular once they are done,
+        # so the refinement reaches its end holding a matrix with no inverse.
+        calls.append(1)
+        inverse, residual = real_fit(*args, **kwargs)
+        if len(calls) > len(cr.SEARCH_PX):
+            return np.zeros((3, 3)), residual
+        return inverse, residual
+    monkeypatch.setattr(cr, "_fit", collapsing_fit)
+    matrix, info = refine(image, truth, starts=((0.0, 0.0),))
+    assert not info["refined"]
+    assert np.allclose(matrix, truth)
+    assert "degenerate" in info["reason"], info["reason"]

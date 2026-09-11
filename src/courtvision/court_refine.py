@@ -594,7 +594,14 @@ def _refine_from(response, structure, start, prior, keep, boxes, passes,
         if len(settled) <= len(near_idx):
             inverse, observed, index, residual = before
             break
+    # A camera-constrained fit can run to a degenerate camera -- zero focal
+    # length, or the court plane seen edge-on -- whose matrix has no inverse.
+    # That is a failed fit, reported as one, not an exception.
+    if not np.all(np.isfinite(inverse)) or np.linalg.cond(inverse) > 1e12:
+        return None, "degenerate fit: the matrix is singular"
     refined = np.linalg.inv(inverse)
+    if not np.isfinite(refined[2, 2]) or abs(refined[2, 2]) < 1e-12:
+        return None, "degenerate fit: the matrix is singular"
     refined /= refined[2, 2]
     return (refined, observed, index, residual), ""
 
