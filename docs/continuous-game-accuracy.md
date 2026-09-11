@@ -4612,3 +4612,21 @@ re-registration.
 fits; register_frame undistorts the frame and boxes first and returns a matrix
 on pinhole pixels; pixels go to the court through `to_court`. The centre of
 the frame is still ~0.4 ft on the labels, so the lens is not the whole story.
+
+**The lens correction, measured.** Estimated the committed way -- on the
+game's own fixed-camera fits, since a free homography bends to follow the
+lines and hid most of the distortion (k1 0.0007 on free fits) -- k1 is 0.0037
+for this game. Against the second labeller's cleanest 49 clicks it changes
+nothing that the labels can see:
+
+    distance from frame centre      centre   mid    outer   edge    all
+    no lens correction  (ft)        0.40     0.39   0.44    0.65    0.49
+    lens correction     (ft)        0.41     0.39   0.37    0.63    0.50
+
+The edge error that motivated it did not come down. 49 clicks is a small
+sample, and the label-free straightness check (long painted lines against the
+straight model, by radius) is the better test of whether the correction is
+right; that result is recorded below when it lands. Either way the headline
+stands: over the whole game the fixed-camera registration measures ~0.4-0.5 ft
+against hand labels whose own noise is ~0.24 ft a click -- not the 0.3 ft
+goal, and not a number these labels can refine.
