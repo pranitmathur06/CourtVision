@@ -10,6 +10,14 @@ Frames are read sequentially (a seek per frame costs more than decoding) and
 sampled at --fps. Boxes come from the four-class detector, so the same pass
 records where the rim WAS seen, which is the availability the projected rim
 has to beat: 0.364 of frames, measured on this broadcast.
+
+Each ball box also carries `over_court`: whether any floor lies beneath it in
+the frame. A ball in flight is above the floor but still has court below it;
+one detected on a spectator has none. Phase 2's gate asks for no ball
+detections in the stands, and on a 300-frame sample of Finals G7 8.3% of ball
+boxes above 0.25 confidence failed this test -- 13% of those between 0.15 and
+0.30 confidence, 0% above 0.75 -- while 0 of the 16 near the rim did, which is
+why the shot detector was unaffected by them.
 """
 
 from __future__ import annotations
@@ -30,8 +38,10 @@ def main() -> int:
     args = parser.parse_args()
 
     import cv2
+    import numpy as np
     from ultralytics import YOLO
 
+    from courtvision.candidates import court_region
     from courtvision.device import resolve_device
 
     model, device = YOLO(args.detector), resolve_device()
@@ -54,11 +64,20 @@ def main() -> int:
         t = (index - 1) / source_fps
         found = model.predict(frame, device=device, verbose=False, conf=args.conf)[0].boxes
         row = {"t": round(float(t), 3), "boxes": []}
+        region = None
         if found is not None and len(found):
             for cls, conf, box in zip(found.cls.cpu().numpy(), found.conf.cpu().numpy(),
                                       found.xyxy.cpu().numpy()):
-                row["boxes"].append({"cls": names[int(cls)], "conf": round(float(conf), 3),
-                                     "xyxy": [round(float(v), 1) for v in box]})
+                entry = {"cls": names[int(cls)], "conf": round(float(conf), 3),
+                         "xyxy": [round(float(v), 1) for v in box]}
+                if entry["cls"] == "ball":
+                    if region is None:
+                        region = court_region(frame, erode_px=0)
+                    entry["over_court"] = bool(
+                        region is not None
+                        and region[int(np.clip((box[1] + box[3]) / 2, 0, region.shape[0] - 1)):,
+                                   int(np.clip((box[0] + box[2]) / 2, 0, region.shape[1] - 1))].any())
+                row["boxes"].append(entry)
         rows.append(row)
         kept += 1
         if kept % 2000 == 0:
