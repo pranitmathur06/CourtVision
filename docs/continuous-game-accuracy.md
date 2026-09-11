@@ -4508,3 +4508,23 @@ Its paint can: the median CIELAB colour of the keys under each fit sat within
 highlights. estimate_camera now records each game's floor signature; a fit
 whose key is more than 60 units away is refused (set with those values in
 view, midway in the gap). No signature, or no key in view, never refuses.
+
+**With the floor check, all 84 frames: 61 fitted.** Both halftime highlights
+refused by key colour (106-115 units); no genuine frame refused by it (the
+largest genuine distance was 25). Two frames flipped for another reason when
+the centre was re-solved (136.86 -> 136.81 ft): t02426, a centre-court view,
+lost its fit; t02876 gained one -- and that fit is WRONG. t02876 is a tight
+close-up from a courtside camera under the basket; the search placed a
+main-camera pose whose court lines happen to meet a few painted edges, and the
+refinement accepted it (ratio 38) resting on only 38 samples. The key under it
+was covered by players, so the floor check had nothing to judge.
+
+Two guards were tested on data before being built, and both failed:
+
+- Zoom range: the wrong fit's focal length is 2.46x the image width, in the
+  middle of the 63 good fits (1.82-3.34x).
+- Floor silhouette: its projected court overlaps the floor mask at 0.66,
+  inside the good fits' 0.60-0.90 (the mask excludes the red key, so a
+  close-up's floor looks court-shaped).
+
+Next measured: how many samples good fits rest on, and which start won.
