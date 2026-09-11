@@ -4304,3 +4304,52 @@ footage at 720p and 480p reads worse than these 1080p stills on held-out lines;
 a resolution study on the valid split is running. An independent review of the
 gate (per the plan) is in progress; the gate is not declared passed until it
 reports.
+
+## Round 57 - the review: Round 56's gate did not stand, and the honest re-run
+
+An independent review of Round 56, confirmed here, found three defects:
+
+1. `estimate_centre` kept every frame whenever dropping its outliers would
+   leave fewer than MIN_FRAMES, and reported them all as inliers. Kaseya's
+   centres came from six frames, four over the 3 px limit, reported 6/6.
+2. Kaseya's seven images are ONE 5-second clip; its "leave-one-out" centre was
+   solved from six near-duplicates of the frame being scored.
+3. The trust-radius rule took the largest passing radius outright. On OKC 4, 6
+   and 8 ft FAILED (0.27, 0.27, 0.26) and 12 ft passed only by composition,
+   while ground 8-12 ft from support was ~0.47 ft off. Round 56 and commit
+   33030df said every candidate qualified and that error barely grows with
+   distance; both were false.
+
+Also: a WRONG centre is not refused (with another arena's centre, 4 of 7 Kaseya
+frames were accepted at 1.0-1.7 ft) -- `FixedCamera.explains` is not used
+anywhere yet -- and the split-half check that justified the camera model
+included the four test games.
+
+Fixed in 732a87f, declared before re-running: the outlier rule always fires;
+the trust rule is monotone (every radius up to the chosen one must pass),
+giving TRUST_RADIUS_FT = 3; the camera comes only from OTHER CLIPS of a game;
+and the valid split's two arenas in no training game are scored too. Per
+arena, trusted points (within 3 ft of used paint), per-clip medians shown:
+
+    arena                split  camera    trusted p50  within 0.3  clips<=0.3  feet trusted
+    TD Garden            test   63/63     0.16 ft      84%         10/10       46%   PASS
+    Fiserv Forum         test   44/45     0.20         74%          6/7        38%   PASS
+    Kaseya Center        test    0/7      0.32         43%          0/1        38%   FAIL
+    Crypto.com Arena     valid   5/14     0.25         58%          2/3        39%   PASS
+    Toyota Center        valid   0/13     0.17         85%          2/2        37%   PASS
+    (seen) Target Ctr    test   12/23     0.20         68%          3/3        37%
+    (seen) MSG           valid  59/67     0.16         84%         10/10       30%
+
+Free homography, same code: TD 0.18, Fiserv 0.23, Kaseya 0.32, Crypto.com
+0.25, Toyota 0.17, MSG 0.23. The camera helps where a game has enough clips to
+solve a centre honestly (TD, Fiserv, MSG); on one- to three-clip games it
+mostly cannot be applied.
+
+**Four of five unseen arenas pass; Kaseya fails at 0.32 ft.** Kaseya is one
+clip -- a single measurement, 0.02 ft over, inside the reference's own ~0.13
+ft noise -- so it neither proves nor disproves the arena; but the gate as set
+("every unseen arena") is not met, and it is not reported as met.
+
+The cost of honesty is coverage: at 3 ft, 30-46% of players' feet are
+trusted. The rest are flagged; their error is 0.22-0.42 ft (untrusted p50),
+not the multi-foot extrapolation of Round 55, but not certified either.
