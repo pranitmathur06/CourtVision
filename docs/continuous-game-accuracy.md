@@ -4232,3 +4232,75 @@ Open: a far-field guard or constraint that does not depend on the paint the
 fit already used -- e.g. refusing or flagging frames whose used samples span
 too little of the court, or requiring that far lines predicted in view are
 found near where the fit puts them.
+
+## Round 56 - a camera that does not move: the gate passes on all three unseen arenas
+
+**The trust radius (built first).** A registration now reports the line samples
+its fit rests on (`info["support"]`) and asserts only court points within
+TRUST_RADIUS_FT of them (199e28c). The radius rule and the per-arena test were
+committed before any run. That check alone could not rescue the video footage.
+
+**What the dev footage showed next.** On Toyota Center the PRODUCTION fit, not
+only the held-out one, put the far sideline on the bottom edge of the LED ad
+board and the near sideline on the top of the score graphic, squeezing the
+court between them with a sharp peak ratio. A trust radius cannot catch that:
+the fit rests on the wrong paint and trusts it. Admitting the boundary only
+after an interior-first fit fixed one frame and broke another (the key slid
+off the red paint at t=4963); it was reverted.
+
+**The fix: one camera centre per game.** The main broadcast camera turns and
+zooms but does not move, so every frame is K(f) R [r1 r2 -RC] with one C per
+game: four parameters per frame instead of eight. Neither a squeezed court nor
+a diagonal far sideline is a pan/tilt/zoom of a fixed camera. Checked on the
+human annotations before building (18 games, split-half: C solved jointly on
+half of each game's frames, the other half fitted with it fixed): 0.20 ft
+median (p90 0.32) against 0.17 ft for a free homography. The median of per-frame
+decompositions is a poor estimate (0.57 ft; focal length and depth trade off
+along the ray), so C is solved jointly with outlier frames dropped
+(court_camera.py, 2ab377f). Estimated from a game's own free fits with no
+annotations, MSG's centre lands within ~3 ft of the one its annotations give,
+and OKC's regular-season and Finals games agree to 0.7 ft.
+
+**Held-out lines on video, fixed camera** (camera from a separate pass over
+each game, sample grid offset from the evaluator's):
+
+    footage                   before (free)   camera   interior families
+    OKC (1280x720)            0.56 ft         0.35     0.07-0.19
+    Toyota Center (854x480)   1.91            0.48     0.14-0.18
+    Finals at Paycom (720p)   1.28            0.43
+    MSG (720p)                --              0.41     arcs/circles 0.11-0.22
+
+The remaining held-out error is concentrated in families whose MEASUREMENT is
+contaminated, confirmed by eye: at Toyota Center the boundary window reaches
+the ad-board bottom and the score-graphic edge (the camera fit's boundary lies
+on the wood/red edge); at MSG the lane window finds a white stripe ~2 ft inside
+the blue key (the fit's lane lies on the key edge). These are not excluded from
+the numbers above. Acceptance fell on Toyota Center (89% to 61% of registered
+frames): the camera model refuses what it cannot explain, including t=3773.
+
+**Radius selected on OKC** (33030df): every candidate met the 0.25 ft
+calibration target; the largest, 12 ft, was taken -- p50 0.24 ft, 79% of
+visible held-out paint and 79% of feet trusted. With the camera, error barely
+grows with distance from paint.
+
+**The gate: unseen arenas, human annotations** (declared at fe0c8bb, camera
+centre per image from the free fits of the game's OTHER test images, no
+annotations; per arena, over annotated floor points):
+
+    arena                 images  refined  trusted  trusted p50  p75    within 0.3
+    TD Garden              63      98%      99%      0.17 ft     0.27   79%   PASS
+    Fiserv Forum           44      98%      96%      0.20 ft     0.32   71%   PASS
+    Kaseya Center           7     100%     100%      0.26 ft     0.38   60%   PASS
+    Target Center (seen)   20      95%      94%      0.22 ft     0.34   68%
+
+Free homography, same script and radius: TD Garden 0.20, Fiserv 0.26, Kaseya
+0.35 (FAIL). The camera model moves every arena and is what carries Kaseya.
+
+What this does and does not show. The claim is a median: 21-40% of points are
+still worse than 0.3 ft. Kaseya is 7 images. These test images have informed
+design since Round 51, so this is a re-run on known images -- but the camera
+arm and the radius were both fixed before either touched them. YouTube
+footage at 720p and 480p reads worse than these 1080p stills on held-out lines;
+a resolution study on the valid split is running. An independent review of the
+gate (per the plan) is in progress; the gate is not declared passed until it
+reports.
