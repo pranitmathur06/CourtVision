@@ -23,6 +23,13 @@ radius are flagged as extrapolated and are reported separately, not hidden.
   (coverage); and untrusted points' error, beside landmark-only.
 - PASS for an arena: trusted p50 <= 0.30 ft. The reference itself carries
   ~0.13 ft of noise, which is not subtracted.
+
+`--camera loo` (added before this script was first run, with the fixed-camera
+model): each image is registered as a pan/tilt/roll/zoom of its game's camera,
+whose centre is solved from the FREE production registrations of the game's
+OTHER test images -- leave-one-out, no annotations. An image whose game yields
+no centre keeps the free registration and is counted as such. A camera fit
+that is refused asserts nothing, exactly as a refused free fit.
 """
 
 from __future__ import annotations
@@ -49,6 +56,7 @@ def main() -> int:
     parser.add_argument("--detector", default="runs/detect/outputs/train/detector/weights/best.pt")
     parser.add_argument("--conf", type=float, default=0.6)
     parser.add_argument("--dump", default="outputs/trusted_on_annotations.json")
+    parser.add_argument("--camera", choices=("none", "loo"), default="none")
     args = parser.parse_args()
 
     import cv2
@@ -65,9 +73,32 @@ def main() -> int:
     from eval_court_keypoints import _truth
     from split_court_keypoints import game_of
 
+    from courtvision.court_camera import estimate_centre
+
+    def _score(row, frame, start, boxes, floor, reference, matrix, info):
+        probe = np.array([[p] for p in floor.values()], dtype=np.float32)
+        truth = cv2.perspectiveTransform(probe, reference).reshape(-1, 2)
+        err = np.hypot(*(cv2.perspectiveTransform(probe, matrix).reshape(-1, 2) - truth).T)
+        lm = np.hypot(*(cv2.perspectiveTransform(probe, start).reshape(-1, 2) - truth).T)
+        # Trust is decided as production decides it: at the court position
+        # the registration itself gives the point, not the annotators' one.
+        estimate = cv2.perspectiveTransform(probe, matrix).reshape(-1, 2)
+        dist = (support_distance(info["support"], estimate) if info["refined"]
+                else np.full(len(truth), np.inf))
+        feet_dist = []
+        if boxes is not None and len(boxes):
+            feet = np.c_[(boxes[:, 0] + boxes[:, 2]) / 2, boxes[:, 3]].astype(np.float32)
+            court = cv2.perspectiveTransform(feet.reshape(-1, 1, 2), matrix).reshape(-1, 2)
+            inside = (court[:, 0] > -3) & (court[:, 0] < 53) & (court[:, 1] > -3) & (court[:, 1] < 97)
+            feet_dist = (support_distance(info["support"], court[inside]) if info["refined"]
+                         else np.full(int(inside.sum()), np.inf)).tolist()
+        row.update(registered=True, refined=bool(info["refined"]),
+                   polarity=info.get("polarity"), err=err.tolist(), landmark_err=lm.tolist(),
+                   dist=dist.tolist(), feet_dist=feet_dist)
+
     radius = court_refine.TRUST_RADIUS_FT
     model, detector, device = YOLO(args.weights), YOLO(args.detector), resolve_device()
-    rows = []
+    rows, pending = [], []
     for path in sorted((DATA / "images").glob("*.jpg")):
         label = DATA / "labels" / (path.stem + ".txt")
         if not label.exists():
@@ -96,27 +127,28 @@ def main() -> int:
         boxes = (found.xyxy.cpu().numpy()[found.cls.cpu().numpy() == 0]
                  if found is not None and len(found) else None)
         matrix, info = register_frame(frame, start, boxes=boxes)
-        probe = np.array([[p] for p in floor.values()], dtype=np.float32)
-        truth = cv2.perspectiveTransform(probe, reference).reshape(-1, 2)
-        err = np.hypot(*(cv2.perspectiveTransform(probe, matrix).reshape(-1, 2) - truth).T)
-        lm = np.hypot(*(cv2.perspectiveTransform(probe, start).reshape(-1, 2) - truth).T)
-        # Trust is decided as production decides it: at the court position
-        # the registration itself gives the point, not the annotators' one.
-        estimate = cv2.perspectiveTransform(probe, matrix).reshape(-1, 2)
-        dist = (support_distance(info["support"], estimate) if info["refined"]
-                else np.full(len(truth), np.inf))
-        feet_dist = []
-        if boxes is not None and len(boxes):
-            feet = np.c_[(boxes[:, 0] + boxes[:, 2]) / 2, boxes[:, 3]].astype(np.float32)
-            court = cv2.perspectiveTransform(feet.reshape(-1, 1, 2), matrix).reshape(-1, 2)
-            inside = (court[:, 0] > -3) & (court[:, 0] < 53) & (court[:, 1] > -3) & (court[:, 1] < 97)
-            feet_dist = (support_distance(info["support"], court[inside]) if info["refined"]
-                         else np.full(int(inside.sum()), np.inf)).tolist()
-        row.update(registered=True, refined=bool(info["refined"]),
-                   polarity=info.get("polarity"), err=err.tolist(), landmark_err=lm.tolist(),
-                   dist=dist.tolist(), feet_dist=feet_dist)
+        if args.camera == "loo":
+            # Scored after every free fit of the game exists; see below.
+            pending.append((row, frame, start, boxes, floor, reference, matrix, info))
+            continue
+        _score(row, frame, start, boxes, floor, reference, matrix, info)
 
-    json.dump({"meta": {"trust_radius_ft": radius,
+    if args.camera == "loo":
+        free = {}
+        for row, frame, start, boxes, floor, reference, matrix, info in pending:
+            if info["refined"]:
+                free.setdefault(row["game"], []).append(
+                    (row["image"], matrix, court_refine._POINTS[info["support"]]))
+        for row, frame, start, boxes, floor, reference, matrix, info in pending:
+            others = [(m, pts) for name, m, pts in free.get(row["game"], [])
+                      if name != row["image"]]
+            camera, report = estimate_centre(others, (frame.shape[1], frame.shape[0]))
+            row["camera"] = report
+            if camera is not None:
+                matrix, info = register_frame(frame, start, boxes=boxes, camera=camera)
+            _score(row, frame, start, boxes, floor, reference, matrix, info)
+
+    json.dump({"meta": {"trust_radius_ft": radius, "camera": args.camera,
                         "min_peak_ratio": court_refine.MIN_PEAK_RATIO,
                         **code_provenance(court_refine.__file__)}, "rows": rows},
               open(args.dump, "w"), indent=1)
