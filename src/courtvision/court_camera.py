@@ -121,10 +121,12 @@ class FixedCamera:
     another floor -- another game -- whatever the geometry says.
     """
 
-    def __init__(self, centre, size, floor=None):
+    def __init__(self, centre, size, floor=None, k1=None):
         self.centre = np.asarray(centre, dtype=np.float64)
         self.size = tuple(int(v) for v in size)
         self.floor = floor
+        #: Radial lens distortion (see `distort_points`); None or 0 for a pinhole.
+        self.k1 = k1
 
     def parameterise(self, court_to_image, points):
         """(compose, x0): the model as a function of 4 parameters, started at the fit."""
@@ -430,3 +432,109 @@ def same_floor(camera, image, image_to_court, boxes=None):
         return True, None
     distance = float(np.linalg.norm(np.array(lane) - np.array(camera.floor["lane"])))
     return distance <= FLOOR_LANE_LAB, distance
+
+
+# -- Lens distortion ----------------------------------------------------------
+#
+# A broadcast zoom lens bends straight lines toward the frame edges, which no
+# homography can represent. Over a whole Toyota Center game at 1080p, long
+# painted lines sat ~0 px from a straight-line model in the middle of the frame,
+# +2.2 px at 0.7-0.85 of the half-diagonal and +3.5 px beyond -- always
+# outward -- and hand-labelled error rose from 0.40 ft in the middle to 0.65 ft
+# at the edges. One coefficient describes it: estimated from paint alone on
+# two halves of the game's frames it read +0.0052 and +0.0054, and the same on
+# wide and tight zooms (+0.0052, +0.0055).
+#
+# Model: a pinhole point u is recorded at u_d = c + (u - c)(1 + k1 r^2), with c
+# the image centre and r = |u - c| / half-diagonal.
+
+
+def _radial(size):
+    width, height = size
+    return np.array([width / 2.0, height / 2.0]), float(np.hypot(width / 2.0, height / 2.0))
+
+
+def distort_points(points, k1, size):
+    """Pinhole pixels -> where the lens records them."""
+    points = np.asarray(points, np.float64).reshape(-1, 2)
+    if not k1:
+        return points.copy()
+    centre, half = _radial(size)
+    d = points - centre
+    r2 = np.sum(d * d, axis=1) / half ** 2
+    return centre + d * (1.0 + k1 * r2)[:, None]
+
+
+def undistort_points(points, k1, size, iterations=6):
+    """Recorded pixels -> pinhole pixels (fixed-point inverse of `distort_points`)."""
+    points = np.asarray(points, np.float64).reshape(-1, 2)
+    if not k1:
+        return points.copy()
+    centre, half = _radial(size)
+    recorded = points - centre
+    u = recorded.copy()
+    for _ in range(iterations):
+        r2 = np.sum(u * u, axis=1) / half ** 2
+        u = recorded / (1.0 + k1 * r2)[:, None]
+    return centre + u
+
+
+_MAPS = {}
+
+
+def undistort_image(image, k1):
+    """The frame a pinhole camera would have recorded."""
+    import cv2
+    if not k1:
+        return image
+    height, width = image.shape[:2]
+    key = (width, height, round(float(k1), 7))
+    if key not in _MAPS:
+        ys, xs = np.mgrid[0:height, 0:width].astype(np.float64)
+        pinhole = np.c_[xs.ravel(), ys.ravel()]
+        recorded = distort_points(pinhole, k1, (width, height))
+        _MAPS[key] = (recorded[:, 0].reshape(height, width).astype(np.float32),
+                      recorded[:, 1].reshape(height, width).astype(np.float32))
+    map_x, map_y = _MAPS[key]
+    return cv2.remap(image, map_x, map_y, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+
+
+def estimate_k1(samples):
+    """Radial distortion from paint alone.
+
+    `samples` is a list of (image, image_to_court, boxes): frames registered
+    WITHOUT distortion. Paint on the long straight lines (boundary, half-court)
+    is found near where each registration puts them, and its offset from the
+    straight projected line is regressed on the normal component of the radial
+    displacement the model predicts, k1 r^2 (u - c).n. Offsets over 8 px are
+    paint found on the wrong edge and are left out.
+    """
+    from .court_refine import (_LINE_IDS, _POINTS, _TANGENTS, _observe, _project,
+                               _structure, paint_response)
+
+    long_lines = np.isin(_LINE_IDS, [0, 1])
+    offsets, bases = [], []
+    for image, image_to_court, boxes in samples:
+        size = (image.shape[1], image.shape[0])
+        centre, half = _radial(size)
+        response = paint_response(image, "all")
+        inverse = np.linalg.inv(image_to_court)
+        found, index, _ = _observe(response, _structure(response), inverse, 12, long_lines,
+                                   boxes, consensus=False)
+        if len(index) < 30:
+            continue
+        model, _ = _project(inverse, _POINTS[index])
+        ahead, _ = _project(inverse, _POINTS[index] + _TANGENTS[index])
+        t = ahead - model
+        t /= np.maximum(np.hypot(*t.T), 1e-9)[:, None]
+        normal = np.stack([-t[:, 1], t[:, 0]], axis=1)
+        d = model - centre
+        offsets.append(np.sum((found - model) * normal, axis=1))
+        bases.append(np.sum(d * d, axis=1) / half ** 2 * np.sum(d * normal, axis=1))
+    if not offsets:
+        return None
+    o, b = np.concatenate(offsets), np.concatenate(bases)
+    keep = np.abs(o) < 8
+    if keep.sum() < 200:
+        return None
+    return float(np.sum(o[keep] * b[keep]) / np.sum(b[keep] ** 2))

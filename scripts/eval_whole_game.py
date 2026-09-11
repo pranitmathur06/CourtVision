@@ -264,7 +264,7 @@ def main() -> int:
     labels = json.load(open(root / "labels.json"))
     camera_file = Path(args.camera or f"outputs/camera/{Path(manifest['video']).stem}.json")
     entry = json.load(open(camera_file))
-    camera = (FixedCamera(entry["centre"], entry["size"], entry.get("floor"))
+    camera = (FixedCamera(entry["centre"], entry["size"], entry.get("floor"), entry.get("k1"))
               if entry.get("centre") else None)
     if camera is None:
         print(f"no camera centre in {camera_file}; the camera arm is skipped")
@@ -377,7 +377,10 @@ def main() -> int:
                 row["arms"][arm] = {"refined": False, "err": [], "dist": [], "robust_err": None,
                                     "robust_dist": None, "direct_err": None}
                 continue
-            estimate = cv2.perspectiveTransform(px, matrix).reshape(-1, 2)
+            # Clicks are on the recorded frame; with a lens model the matrix
+            # maps pinhole pixels, so the clicks go through the lens first.
+            from courtvision.court_register import to_court
+            estimate = to_court(matrix, info, px.reshape(-1, 2), (frame.shape[1], frame.shape[0]))
             err = np.hypot(*(estimate - truth).T)
             # Robust: label inliers only, under the court symmetry nearest the fit.
             robust_err = None

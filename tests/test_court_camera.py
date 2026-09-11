@@ -182,3 +182,36 @@ def test_no_signature_or_no_visible_key_never_refuses():
     truth = _camera_frame([25, 15, 0], f=1100.0)
     blank = np.zeros((700, 1000, 3), np.uint8)
     assert same_floor(FixedCamera(CENTRE, SIZE), blank, truth) == (True, None)
+
+
+def test_undistortion_inverts_the_lens():
+    from courtvision.court_camera import distort_points, undistort_points
+    pts = np.array([[10.0, 10.0], [500.0, 350.0], [990.0, 690.0], [100.0, 600.0]])
+    back = undistort_points(distort_points(pts, 0.0055, SIZE), 0.0055, SIZE)
+    assert np.allclose(back, pts, atol=0.01)
+
+
+def test_a_distorted_frame_is_registered_through_the_lens():
+    """Render the court through a lens like the broadcast's; with k1 known the
+    registration maps recorded pixels to the court as a pinhole fit would."""
+    from courtvision.court_camera import undistort_points
+    from courtvision.court_register import register_frame, to_court
+    from tests.test_court_refine import _render
+    truth = _camera_frame([25, 20, 0], f=1100.0)
+    pinhole = _render(truth, clutter=False)
+    k1 = 0.02                                               # exaggerated, so the effect is unmistakable
+    h, w = pinhole.shape[:2]
+    ys, xs = np.mgrid[0:h, 0:w].astype(np.float64)
+    src = undistort_points(np.c_[xs.ravel(), ys.ravel()], k1, SIZE)
+    recorded = cv2.remap(pinhole, src[:, 0].reshape(h, w).astype(np.float32),
+                         src[:, 1].reshape(h, w).astype(np.float32), cv2.INTER_LINEAR)
+    start = _perturb(truth, 1.0, -0.8, 0.5)
+    matrix, info = register_frame(recorded, start, camera=FixedCamera(CENTRE, SIZE, k1=k1),
+                                  polarities=("bright",), search=False)
+    assert info["refined"], info
+    corners = np.array([[150.0, 120.0], [850.0, 120.0], [150.0, 600.0], [850.0, 600.0]])
+    from courtvision.court_camera import distort_points
+    recorded_px = distort_points(corners, k1, SIZE)
+    expected = cv2.perspectiveTransform(corners.reshape(-1, 1, 2), truth).reshape(-1, 2)
+    got = to_court(matrix, info, recorded_px, SIZE)
+    assert np.median(np.hypot(*(got - expected).T)) < 0.15
