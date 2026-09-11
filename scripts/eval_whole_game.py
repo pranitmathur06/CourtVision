@@ -372,6 +372,11 @@ def main() -> int:
                                     "robust_dist": None, "direct_err": None}
                 continue
             matrix, info = register_frame(frame, start, boxes=boxes, camera=cam)
+            if matrix is None:
+                # No landmark start and no accepted fit: the frame asserts nothing.
+                row["arms"][arm] = {"refined": False, "err": [], "dist": [], "robust_err": None,
+                                    "robust_dist": None, "direct_err": None}
+                continue
             estimate = cv2.perspectiveTransform(px, matrix).reshape(-1, 2)
             err = np.hypot(*(estimate - truth).T)
             # Robust: label inliers only, under the court symmetry nearest the fit.
