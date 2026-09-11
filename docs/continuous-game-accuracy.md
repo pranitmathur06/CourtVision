@@ -4707,3 +4707,16 @@ their own noise, so the registration's own error on trusted ground is roughly
 measurement, and it is not reported as a pass. Over a whole game at Toyota
 Center, the honest reading is: ~0.3 ft where the system vouches for a point,
 ~0.35-0.4 over everything, and the far sideline off by feet.
+
+**Straightness with the two-term lens, re-registered (label-free):** straight
+painted lines' median outward offset by radius, 60 fitted frames:
+
+    radius (of half-diagonal)   0-0.3   0.3-0.5   0.5-0.7   0.7-0.85   0.85+
+    no lens                     ~0      ~0        +0.2-0.3  +1.95-2.4  +3.2-5.6 px
+    two-term lens               -0.20   -0.23     +0.21     +1.66      +2.66 px
+
+The edges straighten somewhat but a ~2 px outward bow remains beyond 0.7 of
+the half-diagonal. A two-term radial model centred on the image centre does
+not account for all of it; an off-centre principal point, tangential terms, or
+how paint is found near the frame edge remain open. On the whole-game labels
+the lens changed nothing measurable (0.39 ft before and after).
