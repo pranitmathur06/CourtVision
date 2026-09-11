@@ -13,8 +13,14 @@ among them, or a FAILURE (infinite) if the refit finds fewer than MIN_SAMPLES.
 A refused refit asserts nothing, so it adds no error, but its visible paint
 stays in the coverage denominator -- a radius cannot look good by refusing.
 
-The rule: the LARGEST radius in CANDIDATES_FT whose conservative median is at
-or under CALIBRATION_TARGET_FT. That is 0.05 ft inside the 0.30 ft goal,
+The rule: the largest radius R in CANDIDATES_FT such that EVERY candidate up to
+and including R has a conservative median at or under CALIBRATION_TARGET_FT
+(candidates with no measurable family are skipped). A first version took the
+largest passing radius outright, and that is not monotone: on OKC 4, 6 and 8 ft
+failed (0.27, 0.27, 0.26) while 12 ft passed at 0.24 only because the families
+it newly admitted scored 0.19 and pulled the pooled median down -- the ground
+between 8 and 12 ft was itself ~0.47 ft off. A radius certifies all the ground
+inside it, so every radius inside it must pass. That is 0.05 ft inside the 0.30 ft goal,
 because at equal distance from paint the test arenas differed by up to ~0.08 ft
 (Round 54), and the calibration arena must leave room for an arena that is
 worse. If no radius qualifies, the smallest is taken and marked FALLBACK --
@@ -68,10 +74,17 @@ def score(records, frames, radius):
 
 
 def choose(table):
-    """The largest radius meeting the calibration target, else the smallest."""
-    passing = [r for r, s in table.items() if s["p50"] <= CALIBRATION_TARGET_FT]
-    if passing:
-        return max(passing), False
+    """The largest radius below which every measurable radius meets the target."""
+    chosen = None
+    for radius in sorted(table):
+        p50 = table[radius]["p50"]
+        if not np.isfinite(p50) and table[radius].get("n", 1) == 0:
+            continue                      # nothing measurable at this radius
+        if not p50 <= CALIBRATION_TARGET_FT:
+            break
+        chosen = radius
+    if chosen is not None:
+        return chosen, False
     return min(table), True
 
 

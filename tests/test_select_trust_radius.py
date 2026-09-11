@@ -51,6 +51,15 @@ def test_the_largest_passing_radius_wins_and_none_is_a_fallback():
     assert rule.choose({2.0: {"p50": 0.4}, 4.0: {"p50": 0.5}}) == (2.0, True)
 
 
+def test_a_radius_past_a_failing_one_cannot_be_chosen():
+    """OKC's table: 12 ft passed only by composition, with 4-8 ft failing."""
+    nan = float("nan")
+    table = {2.0: {"p50": nan, "n": 0}, 3.0: {"p50": 0.16, "n": 32},
+             4.0: {"p50": 0.27, "n": 56}, 6.0: {"p50": 0.27, "n": 83},
+             8.0: {"p50": 0.26, "n": 95}, 12.0: {"p50": 0.24, "n": 115}}
+    assert rule.choose(table) == (3.0, False)
+
+
 def test_only_the_calibration_game_may_choose(tmp_path):
     dump = tmp_path / "d.json"
     dump.write_text(json.dumps({"meta": {"video": "data/games/FZAUuuuREg0.mp4", "commit": "x",

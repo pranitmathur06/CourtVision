@@ -90,3 +90,33 @@ def test_ptz_params_reproduce_an_exact_camera():
     truth = _camera_frame([30, 60, 0])
     params, cost = ptz_params(np.linalg.inv(truth), CENTRE, SIZE, _grid())
     assert cost < 0.01
+
+
+def _other_camera_frame(target):
+    other = np.array([25.0, -30.0, 20.0])
+    forward = np.asarray(target, float) - other
+    forward /= np.linalg.norm(forward)
+    right = np.cross(forward, [0, 0, -1.0]); right /= np.linalg.norm(right)
+    rotation = np.vstack([right, np.cross(forward, right), forward])
+    rvec = cv2.Rodrigues(rotation)[0].ravel()
+    return np.linalg.inv(ptz_matrix(np.r_[rvec, np.log(1300)], other, SIZE))
+
+
+def test_too_few_agreeing_frames_give_no_centre_rather_than_a_bad_one():
+    """Six frames, two from another camera: dropping them leaves four, under
+    MIN_FRAMES. The old loop kept all six and called them six inliers."""
+    rng = np.random.default_rng(1)
+    fits = [(_camera_frame([rng.uniform(15, 35), rng.uniform(10, 84), 0]), _grid()) for _ in range(4)]
+    fits += [(_other_camera_frame(t), _grid()) for t in ([25, 30, 0], [20, 20, 0])]
+    camera, report = estimate_centre(fits, SIZE)
+    assert camera is None, report
+    assert report.get("inliers", 0) < 6, report
+
+
+def test_reported_inliers_are_the_frames_actually_kept():
+    rng = np.random.default_rng(2)
+    fits = [(_camera_frame([rng.uniform(15, 35), rng.uniform(10, 84), 0]), _grid()) for _ in range(8)]
+    fits += [(_other_camera_frame(t), _grid()) for t in ([25, 30, 0], [20, 20, 0])]
+    camera, report = estimate_centre(fits, SIZE)
+    assert camera is not None, report
+    assert report["inliers"] == 8 and report["worst_px"] <= 3.0, report

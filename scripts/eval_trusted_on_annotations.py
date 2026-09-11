@@ -30,6 +30,20 @@ whose centre is solved from the FREE production registrations of the game's
 OTHER test images -- leave-one-out, no annotations. An image whose game yields
 no centre keeps the free registration and is counted as such. A camera fit
 that is refused asserts nothing, exactly as a refused free fit.
+
+Revised after an independent review, before any re-run:
+- Leave-one-CLIP-out. The images come in short clips of consecutive frames;
+  Kaseya's seven are one 5-second clip, so "the other test images" were six
+  near-duplicates of the frame being scored -- nothing like production, where
+  scripts/estimate_camera.py samples a whole game. A centre now comes only from
+  images of OTHER clips of the same game; a game with one clip gets no camera
+  and keeps its free registration, counted as such.
+- `--split valid` scores the valid split's two arenas that appear in no
+  training game: Crypto.com Arena (LAL-MIN g1) and Toyota Center (GSW-HOU g1).
+  The landmark model used the valid split for model selection, so its start
+  there is slightly optimistic; the refinement and camera never saw it.
+- Error is also reported per clip, because points within an image and frames
+  within a clip are not independent: the clip is the unit of evidence.
 """
 
 from __future__ import annotations
@@ -41,11 +55,24 @@ from pathlib import Path
 
 import numpy as np
 
-DATA = Path("data/labeled/court_keypoints_by_game/test")
-ARENAS = {"boston-celtics-new-york-knicks-game-1": ("TD Garden", True),
-          "cleveland-cavaliers-miami-heat-game-3": ("Kaseya Center", True),
-          "indiana-pacers-milwaukee-bucks-game-4": ("Fiserv Forum", True),
-          "los-angeles-lakers-minnesota-timberwolve-game-3": ("Target Center", False)}
+ROOT = Path("data/labeled/court_keypoints_by_game")
+ARENAS = {"test": {"boston-celtics-new-york-knicks-game-1": ("TD Garden", True),
+                   "cleveland-cavaliers-miami-heat-game-3": ("Kaseya Center", True),
+                   "indiana-pacers-milwaukee-bucks-game-4": ("Fiserv Forum", True),
+                   "los-angeles-lakers-minnesota-timberwolve-game-3": ("Target Center", False)},
+          "valid": {"los-angeles-lakers-minnesota-timberwolve-game-1": ("Crypto.com Arena", True),
+                    "golden-state-warriors-houston-rockets-game-1": ("Toyota Center", True),
+                    "boston-celtics-new-york-knicks-game-4": ("Madison Square Garden", False)}}
+
+
+def clip_of(name: str) -> str:
+    """The clip an image was cut from: everything before its frame number."""
+    return name.split("_mp4-")[0]
+
+
+def arena_of(game: str, split: str):
+    return next(((name, unseen) for prefix, (name, unseen) in ARENAS[split].items()
+                 if game.startswith(prefix)), (game, False))
 HOOPS = (8, 34)
 TARGET_FT = 0.30
 
@@ -57,6 +84,7 @@ def main() -> int:
     parser.add_argument("--conf", type=float, default=0.6)
     parser.add_argument("--dump", default="outputs/trusted_on_annotations.json")
     parser.add_argument("--camera", choices=("none", "loo"), default="none")
+    parser.add_argument("--split", choices=("test", "valid"), default="test")
     args = parser.parse_args()
 
     import cv2
@@ -99,8 +127,9 @@ def main() -> int:
     radius = court_refine.TRUST_RADIUS_FT
     model, detector, device = YOLO(args.weights), YOLO(args.detector), resolve_device()
     rows, pending = [], []
-    for path in sorted((DATA / "images").glob("*.jpg")):
-        label = DATA / "labels" / (path.stem + ".txt")
+    data = ROOT / args.split
+    for path in sorted((data / "images").glob("*.jpg")):
+        label = data / "labels" / (path.stem + ".txt")
         if not label.exists():
             continue
         width, height = Image.open(path).size
@@ -111,7 +140,8 @@ def main() -> int:
         if reference is None:
             continue
         frame = cv2.imread(str(path))
-        row = {"image": path.name, "game": game_of(path.name), "registered": False}
+        row = {"image": path.name, "game": arena_of(game_of(path.name), args.split)[0],
+               "clip": clip_of(path.name), "n_points": len(floor), "registered": False}
         rows.append(row)
         result = model.predict(frame, device=device, verbose=False)[0]
         if result.keypoints is None or len(result.keypoints) == 0:
@@ -138,10 +168,10 @@ def main() -> int:
         for row, frame, start, boxes, floor, reference, matrix, info in pending:
             if info["refined"]:
                 free.setdefault(row["game"], []).append(
-                    (row["image"], matrix, court_refine._POINTS[info["support"]]))
+                    (row["clip"], matrix, court_refine._POINTS[info["support"]]))
         for row, frame, start, boxes, floor, reference, matrix, info in pending:
-            others = [(m, pts) for name, m, pts in free.get(row["game"], [])
-                      if name != row["image"]]
+            others = [(m, pts) for clip, m, pts in free.get(row["game"], [])
+                      if clip != row["clip"]]
             camera, report = estimate_centre(others, (frame.shape[1], frame.shape[0]))
             row["camera"] = report
             if camera is not None:
@@ -152,30 +182,48 @@ def main() -> int:
                         "min_peak_ratio": court_refine.MIN_PEAK_RATIO,
                         **code_provenance(court_refine.__file__)}, "rows": rows},
               open(args.dump, "w"), indent=1)
-    print(f"TRUST_RADIUS_FT {radius}   MIN_PEAK_RATIO {court_refine.MIN_PEAK_RATIO}")
-    print("  arena            images  refined  points trusted  feet trusted   "
-          "trusted p50   p75    within 0.3   untrusted p50   landmark p50   verdict")
+    print(f"{args.split} split   camera {args.camera}   TRUST_RADIUS_FT {radius}   "
+          f"MIN_PEAK_RATIO {court_refine.MIN_PEAK_RATIO}")
+    print("  arena                    images clips  camera  refined  points trusted  feet trusted  "
+          "trusted p50   p75   within 0.3   clips<=0.3   untrusted p50  landmark p50  verdict")
     verdicts = []
-    for game, (name, unseen) in ARENAS.items():
-        group = [r for r in rows if r["game"] == game and r["registered"]]
+    for name, unseen in ARENAS[args.split].values():
+        everything = [r for r in rows if r["game"] == name]
+        group = [r for r in everything if r["registered"]]
         if not group:
             continue
         err = np.concatenate([r["err"] for r in group])
         dist = np.concatenate([r["dist"] for r in group])
         lm = np.concatenate([r["landmark_err"] for r in group])
-        feet = np.concatenate([r["feet_dist"] for r in group]) if any(r["feet_dist"] for r in group) else np.zeros(0)
+        feet = (np.concatenate([r["feet_dist"] for r in group])
+                if any(r["feet_dist"] for r in group) else np.zeros(0))
         t = dist <= radius
+        # Coverage over EVERY annotated point, including images the landmark
+        # model could not start on -- they assert nothing.
+        total_points = sum(r["n_points"] for r in everything)
         p50 = float(np.median(err[t])) if t.any() else float("inf")
+        clips = sorted({r["clip"] for r in everything})
+        clip_p50 = []
+        for clip in clips:
+            members = [r for r in group if r["clip"] == clip]
+            if members:
+                e = np.concatenate([r["err"] for r in members])
+                d = np.concatenate([r["dist"] for r in members])
+                if (d <= radius).any():
+                    clip_p50.append(float(np.median(e[d <= radius])))
+        cameras = sum(1 for r in everything if (r.get("camera") or {}).get("centre"))
         verdict = "PASS" if p50 <= TARGET_FT else "FAIL"
         if unseen:
             verdicts.append(verdict)
-        print(f"  {name:15s}{'' if unseen else ' (seen)':7s} {len(group):3d}   "
-              f"{np.mean([r['refined'] for r in group]):5.0%}    {t.mean():5.0%}          "
-              f"{np.mean(feet <= radius) if len(feet) else float('nan'):5.0%}          "
-              f"{p50:5.2f}    {np.percentile(err[t], 75) if t.any() else float('nan'):5.2f}   "
-              f"{np.mean(err[t] <= TARGET_FT) if t.any() else 0:5.0%}         "
-              f"{np.median(err[~t]) if (~t).any() else float('nan'):5.2f}          "
-              f"{np.median(lm):5.2f}        {verdict}")
+        print(f"  {name:22s}{'' if unseen else ' (seen)':7s}{len(everything):4d}  {len(clips):4d}  "
+              f"{cameras:5d}   {np.mean([r['refined'] for r in group]):5.0%}   "
+              f"{t.sum() / max(total_points, 1):6.0%}        "
+              f"{np.mean(feet <= radius) if len(feet) else float('nan'):6.0%}       "
+              f"{p50:5.2f}     {np.percentile(err[t], 75) if t.any() else float('nan'):5.2f}  "
+              f"{np.mean(err[t] <= TARGET_FT) if t.any() else 0:5.0%}      "
+              f"{sum(c <= TARGET_FT for c in clip_p50):3d}/{len(clip_p50):<3d}      "
+              f"{np.median(err[~t]) if (~t).any() else float('nan'):5.2f}         "
+              f"{np.median(lm):5.2f}      {verdict}")
     print(f"  unseen arenas passing: {verdicts.count('PASS')} of {len(verdicts)}")
     return 0 if verdicts and all(v == "PASS" for v in verdicts) else 2
 

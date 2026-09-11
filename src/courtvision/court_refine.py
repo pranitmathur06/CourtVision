@@ -183,12 +183,14 @@ BOX_MARGIN_PX = 6
 #: of used line samples are asserted, the rest are flagged as extrapolated.
 #: Selected by scripts/select_trust_radius.py on the OKC calibration game
 #: (outputs/trust_okc_cam.json, commit 62e5ea4, fixed-camera model, production
-#: polarity rule): the largest candidate whose held-out trusted median is at or
-#: under 0.25 ft. Every candidate qualified (0.16-0.27 ft), so the largest was
-#: taken: 12 ft, p50 0.24, 79% of visible held-out paint and 79% of players'
-#: feet trusted. With the camera model error barely grows with distance from
-#: paint, which is why a radius this wide still passes.
-TRUST_RADIUS_FT = 12.0
+#: polarity rule). The first selection took 12 ft and described every
+#: candidate as passing; that was false -- 4, 6 and 8 ft failed the 0.25 ft
+#: calibration target (0.27, 0.27, 0.26) and 12 ft passed only because the
+#: families it newly admitted pulled the pooled median down, while the ground
+#: 8-12 ft from support was itself ~0.47 ft off. The rule now requires every
+#: radius up to the chosen one to pass, which gives 3 ft (p50 0.16). Error DOES
+#: grow with distance from used paint, camera model or not.
+TRUST_RADIUS_FT = 3.0
 
 
 def _line_samples(spacing_ft: float = SAMPLE_SPACING_FT):

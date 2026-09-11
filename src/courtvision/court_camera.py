@@ -161,7 +161,13 @@ def estimate_centre(fits, size, outlier_px=OUTLIER_PX):
         return None, {"frames": len(frames), "reason": "too few frames"}
     centre = np.median(np.array([c for *_, c in frames]), axis=0)
     keep = list(range(len(frames)))
-    for _ in range(3):
+    # The outlier rule is always allowed to fire. An earlier version kept every
+    # frame whenever dropping the outliers would leave fewer than MIN_FRAMES,
+    # and still reported them all as inliers: a centre solved from six
+    # near-duplicate frames, four of them over the limit, was reported as 6/6
+    # and carried a test arena's pass. Too few frames agreeing on one centre
+    # now means no centre.
+    for _ in range(6):
         params = [ptz_params(frames[i][0], centre, size, frames[i][1])[0] for i in keep]
 
         def residuals(p):
@@ -180,11 +186,12 @@ def estimate_centre(fits, size, outlier_px=OUTLIER_PX):
             per_frame.append(float(np.median(np.hypot(*(_project(model, frames[i][1])
                                                         - frames[i][2]).T))))
         inliers = [i for i, e in zip(keep, per_frame) if e <= outlier_px]
-        if len(inliers) == len(keep) or len(inliers) < MIN_FRAMES:
-            break
+        report = {"frames": len(frames), "inliers": len(inliers),
+                  "centre": centre.tolist(), "residual_px": float(np.median(per_frame)),
+                  "worst_px": float(max(per_frame))}
+        if len(inliers) == len(keep):
+            return FixedCamera(centre, size), report
+        if len(inliers) < MIN_FRAMES:
+            return None, dict(report, reason="too few frames agree on one centre")
         keep = inliers
-    if len(keep) < MIN_FRAMES:
-        return None, {"frames": len(frames), "reason": "too few consistent frames"}
-    return FixedCamera(centre, size), {"frames": len(frames), "inliers": len(keep),
-                                       "centre": centre.tolist(),
-                                       "residual_px": float(np.median(per_frame))}
+    return None, dict(report, reason="outlier removal did not settle")
