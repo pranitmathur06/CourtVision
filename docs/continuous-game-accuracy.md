@@ -4720,3 +4720,42 @@ the half-diagonal. A two-term radial model centred on the image centre does
 not account for all of it; an off-centre principal point, tangential terms, or
 how paint is found near the frame edge remain open. On the whole-game labels
 the lens changed nothing measurable (0.39 ft before and after).
+
+## Round 63 - Phase 2 opens: the rim is projected, and the timeline is read
+
+Phase 1 was accepted at ~0.3 ft on trusted ground over a whole game. Phase 2
+(the ball at the rim during a shot) starts from two things Phase 1 makes
+possible.
+
+**The rim projects (129d2f5).** A homography maps the floor and nothing else,
+but with the game's centre fixed a frame's registration IS a camera, so any 3D
+court point projects -- the rim at 10 ft included, through the game's lens.
+Checked against the four-class detector's own rim boxes over the whole 1080p
+Toyota Center game, with no labels: 84 sampled frames, 60 fitted, the detector
+sees a rim on 53 and the projected rim is in view on all 53; over 52 pairs the
+projected rim centre sits **5.7 px from the detected one (p75 7.4), 0.13 ft
+(p75 0.18), every pair inside one rim width.** That is both the Phase 2 unlock
+-- rim availability goes from the detector's 0.364 of frames to every fitted
+frame -- and a label-free check of the registration at a point no homography
+can place.
+
+**The timeline reads (c27e453).** The official shot chart is keyed to period
+and game clock, so the video's own clock has to be read. scripts/read_game_clock
+locates the clock (the region that reads as digits and ticks), learns its
+digits from the seconds counting down, and reads every second: 3,707 of 9,356
+sampled seconds on Finals G7, four periods, game time rising with video time on
+99.9% of steps, spanning 125-2869 s against the chart's 16-2855.
+
+Four period rules were tried and three failed on real footage: any upward jump
+as a reset gave 20 periods (replays show an earlier clock); requiring the
+previous reading near zero merged three quarters (the broadcast cuts away);
+requiring the new quarter at 12:00 missed one first seen at 11:24; and
+resolving the last minute's "35.9" by preferring tenths under a minute turned
+"1:05" into 10.5 and split every quarter. What works uses only that the clock
+falls within a period.
+
+**Alignment:** all 157 official attempts map onto the video and **126 (80%)
+sit within 2 s of a clock reading**, their video times rising with game time on
+every consecutive pair. Those 126 are the evaluation set; the rest fall where
+the clock is not on screen. Tuning will use the first half, scoring the second,
+as the 0.396 measurement did.
