@@ -551,3 +551,45 @@ def estimate_lens(samples):
         return None
     k1, k2 = np.linalg.lstsq(b[keep], o[keep], rcond=None)[0]
     return float(k1), float(k2)
+
+
+# -- Points off the floor -------------------------------------------------------
+#
+# A homography maps the floor and nothing else; the rim is 10 ft up. With the
+# game's fixed centre, a frame's registration IS a camera -- pan, tilt, roll,
+# zoom about a known point -- so any 3D point projects. Court frame: x across
+# (0..50), y along (0..94), z up in feet.
+
+#: Rim centres, 10 ft above the floor, 5.25 ft in from each baseline.
+RIMS_3D = ((25.0, 5.25, 10.0), (25.0, 88.75, 10.0))
+
+
+def project_3d(camera, image_to_court, points_3d, support=None):
+    """Recorded-image pixels of court points in 3D, under a registration.
+
+    `image_to_court` is a `register_frame` result on pinhole pixels. Its
+    pan/tilt/roll/zoom is recovered about the game's centre, the points are
+    projected, and the game's lens (if known) is applied to land on the
+    recorded frame. `support` (court points) limits the pose fit to where the
+    registration rests; without it a grid over the visible floor is used.
+    """
+    import cv2
+    court_to_image = np.linalg.inv(image_to_court)
+    if support is None:
+        grid = np.array([[x, y] for x in np.linspace(0, 50, 6) for y in np.linspace(0, 94, 11)])
+        h = np.c_[grid, np.ones(len(grid))] @ court_to_image.T
+        support = grid[h[:, 2] > 0]
+    params, _ = ptz_params(court_to_image, camera.centre, camera.size, np.asarray(support, np.float64))
+    rotation = cv2.Rodrigues(np.asarray(params[:3], np.float64))[0]
+    focal = np.exp(params[3])
+    width, height = camera.size
+    cam = (np.asarray(points_3d, np.float64).reshape(-1, 3) - camera.centre) @ rotation.T
+    in_front = cam[:, 2] > 1e-6
+    pinhole = np.full((len(cam), 2), np.nan)
+    pinhole[in_front] = np.c_[focal * cam[in_front, 0] / cam[in_front, 2] + width / 2.0,
+                              focal * cam[in_front, 1] / cam[in_front, 2] + height / 2.0]
+    out = pinhole.copy()
+    if in_front.any():
+        out[in_front] = distort_points(pinhole[in_front], getattr(camera, "k1", None),
+                                       camera.size, getattr(camera, "k2", None))
+    return out

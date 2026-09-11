@@ -217,3 +217,19 @@ def test_a_distorted_frame_is_registered_through_the_lens():
     expected = cv2.perspectiveTransform(corners.reshape(-1, 1, 2), truth).reshape(-1, 2)
     got = to_court(matrix, info, recorded_px, SIZE)
     assert np.median(np.hypot(*(got - expected).T)) < 0.15
+
+
+def test_a_point_off_the_floor_projects_where_the_camera_sees_it():
+    """The rim is 10 ft up: a homography cannot place it, the camera can."""
+    import cv2
+    from courtvision.court_camera import RIMS_3D, project_3d
+    rvec = cv2.Rodrigues(_look_at([25, 15, 0]))[0].ravel()
+    params = np.r_[rvec, np.log(1300.0)]
+    image_to_court = np.linalg.inv(ptz_matrix(params, CENTRE, SIZE))
+    got = project_3d(FixedCamera(CENTRE, SIZE), image_to_court, [RIMS_3D[0]])[0]
+    R = cv2.Rodrigues(rvec)[0]
+    cam = (np.array(RIMS_3D[0]) - CENTRE) @ R.T
+    expected = np.array([1300 * cam[0] / cam[2] + 500, 1300 * cam[1] / cam[2] + 350])
+    assert np.allclose(got, expected, atol=0.5), (got, expected)
+    floor_point = project_3d(FixedCamera(CENTRE, SIZE), image_to_court, [(25.0, 5.25, 0.0)])[0]
+    assert got[1] < floor_point[1]          # the rim is above the spot under it
