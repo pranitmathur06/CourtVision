@@ -90,6 +90,42 @@ PRIOR_PX = 40.0
 #: allowing about two and a half times the p90 covers its tail while still
 #: refusing a relock onto paint half the court away.
 MAX_DRIFT_FT = 8.0
+#: The final pass is iterated until the fit stops moving. Each pass observes
+#: under the previous fit and then fits once, so a single final pass stops
+#: short of convergence: one more plain 3 px pass took a synthetic white-lined
+#: floor from 0.107 to 0.032 ft and a painted one from 0.033 to 0.026.
+FINAL_ITERATIONS = 12
+#: Converged when the visible line samples move less than this, median, in px.
+FINAL_TOL_PX = 0.05
+#: Support expansion. After the coarse-to-fine passes the fit is dominated by
+#: whatever it locked onto first -- usually the key -- and paint further away
+#: can sit a few pixels off its prediction. The narrow final windows cannot
+#: reach it, so the evidence that would correct the far side is dropped and the
+#: error persists because it is ignored. On the held-out test arenas, 83-91% of
+#: annotated points more than 6 ft from used paint had visible paint 3-12 px
+#: from the fit that the 3 px pass never matched (local error 0.23-0.62 ft).
+#: So the fit is re-observed at EXPANSION_PX and newly found samples join it,
+#: round after round, until too few new ones do.
+#:
+#: Only STRAIGHT segments may join: nothing protects a curve at 12 px -- a
+#: free-throw circle's diameter is the key's top edge and its sides run 2 ft
+#: from the lane. On a synthetic painted floor, 39% of the samples an
+#: unrestricted expansion admitted sat on the wrong paint, almost all on
+#: circles and restricted arcs.
+#:
+#: The joining samples are refitted at the same narrow robust scale as the
+#: final pass. A looser one was the real cause of an expansion regression on
+#: the painted floor (0.033 to 0.055 ft), established by ablation: with NO new
+#: samples at all, the looser refit alone went 0.033 to 0.048, because it
+#: changes which ridges are matched at 3 px. Three earlier fixes aimed at WHICH
+#: samples join -- a paint-count acceptance check, straight segments only, and
+#: excluding segments the fit already explained -- rested on a selection-effect
+#: premise the ablation refuted; the last had no measurable effect and was
+#: removed.
+EXPANSION_PX = 12
+EXPANSION_ROUNDS = 3
+EXPANSION_MIN_NEW = 10
+EXPANSION_ROBUST_PX = 0.75
 #: Extra starts, in court feet, tried around the landmark registration.
 #:
 #: Parallel lines on a court sit as little as 3 ft apart -- the sideline and the
@@ -161,6 +197,10 @@ def _line_samples(spacing_ft: float = SAMPLE_SPACING_FT):
 
 _POINTS, _TANGENTS, _LINE_IDS, _SEGMENTS = _line_samples()
 _NORMALS = np.stack([-_TANGENTS[:, 1], _TANGENTS[:, 0]], axis=1)
+_segment_ids, _segment_sizes = np.unique(_SEGMENTS, return_counts=True)
+#: Samples on straight segments -- the ones segment consensus protects. Arcs
+#: and circles are drawn as runs of one-sample segments and fall outside it.
+_STRAIGHT = np.isin(_SEGMENTS, _segment_ids[_segment_sizes >= 5])
 
 
 def _segment_consensus(profile, segments, offsets, slack_px):
@@ -465,6 +505,62 @@ def _refine_from(response, structure, start, prior, keep, boxes, passes):
         inverse, residual = _fit(base, observed, index, prior_points,
                                  robust_px=max(half_width / 4.0, LINE_SIGMA_PX),
                                  prior_inverse=prior_inverse)
+    for _ in range(FINAL_ITERATIONS - 1):
+        more_obs, more_idx, _ = _observe(response, structure, inverse, passes[-1],
+                                         keep, boxes)
+        if len(more_idx) < MIN_SAMPLES:
+            break
+        visible = _POINTS[more_idx]
+        lo, hi = visible.min(axis=0), visible.max(axis=0)
+        prior_points = np.array([[x, y] for x in np.linspace(lo[0], hi[0], 3)
+                                 for y in np.linspace(lo[1], hi[1], 3)])
+        moved_inverse, moved_residual = _fit(
+            base, more_obs, more_idx, prior_points,
+            robust_px=max(passes[-1] / 4.0, LINE_SIGMA_PX), prior_inverse=prior_inverse)
+        before_px, _ = _project(inverse, _POINTS[more_idx])
+        after_px, _ = _project(moved_inverse, _POINTS[more_idx])
+        observed, index = more_obs, more_idx
+        inverse, residual = moved_inverse, moved_residual
+        if np.median(np.hypot(*(after_px - before_px).T)) < FINAL_TOL_PX:
+            break
+    for _ in range(EXPANSION_ROUNDS):
+        # A round is kept only if the refit then sits on MORE paint at the
+        # narrowest window; otherwise it is reverted and expansion stops. This
+        # is a cheap self-consistency guard. It did not catch the painted-floor
+        # regression -- that round found more paint at 3 px and was still
+        # worse; the cause was the refit's robust scale, above.
+        before = (inverse, observed, index, residual)
+        near_obs, near_idx, _ = _observe(response, structure, inverse, passes[-1],
+                                         keep, boxes)
+        wide_obs, wide_idx, _ = _observe(response, structure, inverse,
+                                         EXPANSION_PX, keep & _STRAIGHT, boxes)
+        new = ~np.isin(wide_idx, near_idx)
+        if new.sum() < EXPANSION_MIN_NEW or len(near_idx) < MIN_SAMPLES:
+            break
+        union_obs = np.vstack([near_obs, wide_obs[new]])
+        union_idx = np.concatenate([near_idx, wide_idx[new]])
+        visible = _POINTS[union_idx]
+        lo, hi = visible.min(axis=0), visible.max(axis=0)
+        prior_points = np.array([[x, y] for x in np.linspace(lo[0], hi[0], 3)
+                                 for y in np.linspace(lo[1], hi[1], 3)])
+        inverse, residual = _fit(base, union_obs, union_idx, prior_points,
+                                 robust_px=EXPANSION_ROBUST_PX,
+                                 prior_inverse=prior_inverse)
+        # Close on a narrow pass, so what is reported -- samples, residual,
+        # drift -- describes paint the final fit actually sits on.
+        final_obs, final_idx, _ = _observe(response, structure, inverse,
+                                           passes[-1], keep, boxes)
+        if len(final_idx) < MIN_SAMPLES:
+            inverse, observed, index, residual = before
+            break
+        observed, index = final_obs, final_idx
+        inverse, residual = _fit(base, observed, index, prior_points,
+                                 robust_px=max(passes[-1] / 4.0, LINE_SIGMA_PX),
+                                 prior_inverse=prior_inverse)
+        _, settled, _ = _observe(response, structure, inverse, passes[-1], keep, boxes)
+        if len(settled) <= len(near_idx):
+            inverse, observed, index, residual = before
+            break
     refined = np.linalg.inv(inverse)
     refined /= refined[2, 2]
     return (refined, observed, index, residual), ""

@@ -347,3 +347,41 @@ def test_hypotheses_are_compared_on_the_court_they_both_see():
              shared | set(range(100, 400)), "wrong")              # but sees 4x the court
     best, score = court_refine._choose([right, wrong])
     assert best == "right" and abs(score - 0.8) < 1e-9
+
+
+def test_support_expansion_does_not_make_any_refinement_worse(monkeypatch):
+    """A regression guard: every synthetic start already covered must converge at
+    least as well with expansion as without it. The case expansion exists for --
+    a fit locked onto the key leaving far paint a few pixels out of the final
+    windows' reach -- is measured on real footage, where it arises."""
+    import courtvision.court_refine as court_refine
+    truth = _truth()
+    for image in (_render(truth), _render_painted(truth)):
+        for dx, dy, degrees in ((1.5, -1.0, 1.0), (-2.0, 1.5, -1.5), (0.0, 3.0, 0.0)):
+            start = _perturb(truth, dx, dy, degrees)
+            monkeypatch.setattr(court_refine, "PAINT_POLARITY", "all")
+            monkeypatch.setattr(court_refine, "EXPANSION_ROUNDS", 0)
+            without, info0 = refine(image, start, starts=((0.0, 0.0),))
+            monkeypatch.setattr(court_refine, "EXPANSION_ROUNDS", 3)
+            with_it, info1 = refine(image, start, starts=((0.0, 0.0),))
+            if info0["refined"]:
+                assert info1["refined"], (dx, dy, info1)
+                assert _court_error(with_it, truth) <= _court_error(without, truth) + 0.02
+
+
+def test_the_final_pass_is_iterated_to_convergence(monkeypatch):
+    """A single final pass observes under the previous fit and fits once, so it
+    stops short: on this start one pass leaves 0.107 ft that iterating removes."""
+    import courtvision.court_refine as court_refine
+    truth = _truth()
+    image = _render(truth)
+    start = _perturb(truth, 0.0, 3.0, 0.0)
+    monkeypatch.setattr(court_refine, "PAINT_POLARITY", "all")
+    monkeypatch.setattr(court_refine, "EXPANSION_ROUNDS", 0)
+    monkeypatch.setattr(court_refine, "FINAL_ITERATIONS", 1)
+    once, _ = refine(image, start, starts=((0.0, 0.0),))
+    monkeypatch.setattr(court_refine, "FINAL_ITERATIONS", 12)
+    converged, info = refine(image, start, starts=((0.0, 0.0),))
+    assert info["refined"]
+    assert _court_error(once, truth) > 0.08
+    assert _court_error(converged, truth) < 0.05
