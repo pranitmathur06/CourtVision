@@ -170,6 +170,19 @@ MIN_PEAK_RATIO = 2.0
 MIN_GROUP_SAMPLES = 40
 #: Margin around a player box inside which samples are ignored.
 BOX_MARGIN_PX = 6
+#: How far, in court feet, a point may lie from the paint the fit rests on and
+#: still be trusted.
+#:
+#: A fit is only as good as its support. On the test arenas refined error was
+#: 0.21 ft within 3 ft of used paint and 1.16 ft beyond 12 ft, and a fit resting
+#: only on lines near one basket drew the far sideline diagonally across the
+#: floor -- while its peak ratio, which judges sharpness on the paint the fit
+#: used, looked as good as any correct fit's. Sharpness at the paint says
+#: nothing about paint the fit never saw, so no frame-level score can certify
+#: the far side. Trust is therefore per point: coordinates within this radius
+#: of used line samples are asserted, the rest are flagged as extrapolated.
+#: Selected by scripts/select_trust_radius.py on the OKC calibration game.
+TRUST_RADIUS_FT = 6.0
 
 
 def _line_samples(spacing_ft: float = SAMPLE_SPACING_FT):
@@ -617,7 +630,7 @@ def refine(image, matrix, boxes=None, exclude_lines=(), passes=SEARCH_PX,
     keep = ~np.isin(_LINE_IDS, list(exclude_lines))
     info = {"refined": False, "samples": 0, "residual_px": None,
             "drift_ft": None, "coverage": None, "peak_ratio": None,
-            "explained": None, "reason": ""}
+            "explained": None, "reason": "", "support": None}
 
     candidates, last_reason = [], ""
     for dx, dy in starts:
@@ -644,7 +657,7 @@ def refine(image, matrix, boxes=None, exclude_lines=(), passes=SEARCH_PX,
     drift = float(np.median(np.hypot(*(after - before).T)))
     peak = _peak_sharpness(response, structure, refined, keep, boxes,
                            passes[-1])
-    info.update(samples=int(len(index)),
+    info.update(samples=int(len(index)), support=np.asarray(index, dtype=int),
                 residual_px=float(np.median(residual)), drift_ft=drift,
                 coverage=peak["coverage"], peak_ratio=peak["ratio"],
                 explained=float(best_score))
@@ -660,6 +673,40 @@ def refine(image, matrix, boxes=None, exclude_lines=(), passes=SEARCH_PX,
         return matrix, info
     info["refined"] = True
     return refined, info
+
+
+def support_distance(support, court_points):
+    """Court feet from each point to the nearest line sample a fit rests on.
+
+    `support` is `info["support"]` from `refine`: the samples found at the
+    final, narrowest window under the returned fit. Infinite when there is none.
+    """
+    from scipy.spatial import cKDTree
+
+    points = np.asarray(court_points, dtype=np.float64).reshape(-1, 2)
+    if support is None or len(support) == 0:
+        return np.full(len(points), np.inf)
+    distance, _ = cKDTree(_POINTS[np.asarray(support, dtype=int)]).query(points)
+    return distance
+
+
+def trusted(info, court_points, radius=None):
+    """Which court points a registration may assert, by `TRUST_RADIUS_FT`.
+
+    Nothing is trusted from a refused refinement: its matrix is the landmark
+    fit, whose error (~1.6 ft) is not what this module certifies.
+    """
+    points = np.asarray(court_points, dtype=np.float64).reshape(-1, 2)
+    if not info.get("refined") or info.get("support") is None:
+        return np.zeros(len(points), dtype=bool)
+    limit = TRUST_RADIUS_FT if radius is None else radius
+    return support_distance(info["support"], points) <= limit
+
+
+def family_samples(lines):
+    """Line-sample indices of the given court lines, and their court points."""
+    index = np.flatnonzero(np.isin(_LINE_IDS, list(lines)))
+    return index, _POINTS[index]
 
 
 def held_out_offsets(image, matrix, lines, boxes=None, half_width: int = 24,

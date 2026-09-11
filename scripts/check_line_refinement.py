@@ -54,9 +54,13 @@ def main() -> int:
                              "refused refits and their ratios are recorded, so "
                              "the selection script can apply each candidate to "
                              "frames AND refits exactly")
-    parser.add_argument("--polarity", choices=("bright", "both", "all"), default=None,
+    parser.add_argument("--polarity", choices=("bright", "both", "all", "rule"),
+                        default=None,
                         help="which ridges count as paint; default is the "
-                             "module's PAINT_POLARITY")
+                             "module's PAINT_POLARITY. 'rule' is production: "
+                             "every fit is tried with bright and all evidence "
+                             "and the sharper accepted one kept, as "
+                             "court_register.register_frame does")
     parser.add_argument("--dump", default=None,
                         help="write every (frame, family) measurement to JSON, "
                              "so a tail can be traced to its cause -- a far-off "
@@ -69,9 +73,12 @@ def main() -> int:
 
     from courtvision.court_keypoints import KEYPOINTS, homography_from_keypoints
     import courtvision.court_refine as court_refine
-    from courtvision.court_refine import (HOLD_OUT, held_out_offsets, prepare,
-                                          refine, sample_normals)
-    if args.polarity:
+    from courtvision.court_refine import (HOLD_OUT, _structure, family_samples,
+                                          held_out_offsets, paint_response,
+                                          refine, sample_normals,
+                                          support_distance)
+    from courtvision.court_register import POLARITIES
+    if args.polarity and args.polarity != "rule":
         court_refine.PAINT_POLARITY = args.polarity
     if args.min_peak_ratio is not None:
         court_refine.MIN_PEAK_RATIO = args.min_peak_ratio
@@ -117,15 +124,37 @@ def main() -> int:
         found = detector.predict(frame, device=device, verbose=False)[0].boxes
         boxes = (found.xyxy.cpu().numpy()[found.cls.cpu().numpy() == 0]
                  if found is not None and len(found) else None)
-        prepared = prepare(frame)
+        kinds = POLARITIES if args.polarity == "rule" else (court_refine.PAINT_POLARITY,)
+        preps = {}
+        for kind in kinds:
+            response = paint_response(frame, kind)
+            preps[kind] = (response, _structure(response))
 
-        full, info = refine(frame, start, boxes=boxes, prepared=prepared,
-                            **starts)
+        def fit(**kw):
+            """Refine with each evidence kind; keep the sharper accepted fit.
+
+            With one kind this is plain `refine`. When none is accepted, the
+            attempt with the highest ratio is reported, so a refused refit's
+            ratio is still recorded for threshold simulation.
+            """
+            best = None
+            for kind, prep in preps.items():
+                m, i = refine(frame, start, boxes=boxes, prepared=prep, **kw, **starts)
+                key = (bool(i["refined"]), i["peak_ratio"] or 0.0)
+                if best is None or key > best[0]:
+                    best = (key, m, i, kind)
+            return best[1], best[2], best[3]
+
+        full, info, kind = fit()
+        prepared = preps[kind]          # the frame's measuring stick
         frame_list.append({"t": float(t), "refined": bool(info["refined"]),
                            "peak_ratio": info["peak_ratio"],
-                           "reason": info["reason"]})
+                           "reason": info["reason"], "polarity": kind})
         if info["coverage"] is not None:
             coverage.append(info["coverage"])
+        # Feet on every registered frame, so a refused frame's players count
+        # against the trust radius's coverage instead of vanishing from it.
+        frame_list[-1]["feet_n"] = 0 if boxes is None else int(len(boxes))
         if not info["refined"]:
             reasons[info["reason"].split(";")[0][:40]] = reasons.get(
                 info["reason"].split(";")[0][:40], 0) + 1
@@ -135,16 +164,30 @@ def main() -> int:
         frame_info = {"t": float(t), "drift_ft": info["drift_ft"],
                       "peak_ratio": info["peak_ratio"],
                       "explained": info.get("explained"),
-                      "residual_px": info["residual_px"]}
+                      "residual_px": info["residual_px"], "polarity": kind}
+        # Where players stand, relative to the paint the full fit rests on:
+        # the share of feet a trust radius would certify is its coverage
+        # where it matters.
+        if boxes is not None and len(boxes):
+            feet = np.c_[(boxes[:, 0] + boxes[:, 2]) / 2, boxes[:, 3]].astype(np.float32)
+            feet_court = cv2.perspectiveTransform(feet.reshape(-1, 1, 2), full).reshape(-1, 2)
+            inside = ((feet_court[:, 0] > -3) & (feet_court[:, 0] < 53)
+                      & (feet_court[:, 1] > -3) & (feet_court[:, 1] < 97))
+            frame_list[-1]["feet_n"] = int(inside.sum())
+            frame_list[-1]["feet_dist"] = np.round(
+                support_distance(info["support"], feet_court[inside]), 2).tolist()
 
         for family, lines in HOLD_OUT.items():
             base = held_out_offsets(frame, start, lines, boxes, prepared=prepared)
             if len(base) < MIN_PER_FAMILY:
                 continue          # the family is not visible in this frame
             attempted += 1
-            fitted, finfo = refine(frame, start, boxes=boxes, exclude_lines=lines,
-                                   prepared=prepared, **starts)
+            fitted, finfo, _ = fit(exclude_lines=lines)
+            _, base_index = held_out_offsets(frame, start, lines, boxes,
+                                             prepared=prepared, details=True)
+            family_index, family_points = family_samples(lines)
             record = dict(frame_info, family=family,
+                          base_idx=base_index.tolist(),
                           landmark_err=float(np.median(np.abs(base))),
                           refit_ratio=finfo["peak_ratio"],
                           refit_reason=finfo["reason"],
@@ -160,6 +203,13 @@ def main() -> int:
             offsets, index = held_out_offsets(frame, fitted, lines, boxes,
                                               prepared=prepared, details=True)
             record["found"] = int(len(offsets))
+            # Per held-out sample: distance to the paint this refit rests on,
+            # so any trust radius can be applied to the dump exactly.
+            record["family_idx"] = family_index.tolist()
+            record["dist"] = np.round(support_distance(finfo["support"],
+                                                       family_points), 2).tolist()
+            record["fit_idx"] = index.tolist()
+            record["fit_off"] = np.round(np.abs(offsets), 3).tolist()
             if len(offsets) < MIN_PER_FAMILY:
                 record["refined_err"] = None
                 # Visible, but its paint is not near where the refined fit
@@ -200,7 +250,8 @@ def main() -> int:
         meta = {"video": args.video, "args": vars(args),
                 **code_provenance(court_refine.__file__),
                 "min_peak_ratio": court_refine.MIN_PEAK_RATIO,
-                "polarity": court_refine.PAINT_POLARITY,
+                "polarity": args.polarity or court_refine.PAINT_POLARITY,
+                "trust_radius_ft": court_refine.TRUST_RADIUS_FT,
                 "court_frames": court_frames, "registered": registered,
                 "accepted": accepted, "control": control,
                 "frames": frame_list}

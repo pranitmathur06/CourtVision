@@ -385,3 +385,35 @@ def test_the_final_pass_is_iterated_to_convergence(monkeypatch):
     assert info["refined"]
     assert _court_error(once, truth) > 0.08
     assert _court_error(converged, truth) < 0.05
+
+
+def test_points_far_from_the_paint_the_fit_used_are_not_trusted():
+    """A fit resting only on one end of the floor certifies that end.
+
+    The far half's lines are withheld, so the far baseline is pure
+    extrapolation: it must come back untrusted however sharp the fit is,
+    while the near key it rests on is trusted.
+    """
+    from courtvision.court_refine import family_samples, support_distance, trusted
+    truth = _truth()
+    image = _render(truth, clutter=False)
+    far = (0, 1, 2, 9, 10, 11, 12, 13, 14)          # boundary too: it holds the far baseline
+    refined, info = refine(image, _perturb(truth, 1.0, -1.0, 0.5), exclude_lines=far)
+    assert info["refined"], info
+    near_key = np.array([[19.0, 5.0], [31.0, 5.0], [25.0, 19.0]])
+    far_baseline = np.array([[10.0, 94.0], [25.0, 94.0], [40.0, 94.0]])
+    assert trusted(info, near_key).all()
+    assert not trusted(info, far_baseline).any()
+    assert (support_distance(info["support"], far_baseline) > 20).all()
+    _, lane = family_samples((3,))
+    assert trusted(info, lane).mean() > 0.9
+
+
+def test_a_refused_refinement_trusts_nothing():
+    from courtvision.court_refine import trusted
+    truth = _truth()
+    blank = np.full((700, 1000, 3), (150, 190, 215), np.uint8)
+    _, info = refine(blank, truth)
+    assert not info["refined"]
+    assert not trusted(info, np.array([[25.0, 5.0]])).any()
+    assert not trusted({"refined": False}, np.array([[25.0, 5.0]])).any()
