@@ -4391,3 +4391,19 @@ Next: temporal fusion (court_fusion.py). A lock belongs to one frame's paint
 and start; carried by frame-to-frame tracking, the window's median should
 outvote it. Settings fixed before running on the labels: +/-2 s at 5 fps,
 >= 3 candidates.
+
+**Temporal fusion does not rescue it** (7dc5e1a, settings fixed beforehand):
+
+    arm      frames refined   trusted p50   all points p50   frames <= 0.3
+    fused     10/11           0.73 ft       0.73 ft           0%
+
+Per frame it helps the worst (t=3461 3.45 -> 1.23 ft, t=1751 2.18 -> 1.73)
+and hurts others (t=761 0.68 -> 1.32). The locks are not one-frame accidents:
+at t=1166 the window's candidates agree to 0.22 ft and are 1.0 ft wrong
+together; elsewhere they disagree by 1.3-2.2 ft, so a median has nothing to
+recover. On this floor at this resolution the error is systematic.
+
+Two limits on the test itself. Even the best frames score 0.35-0.5 ft, and the
+labels' own leave-one-out noise is 0.43 ft per point -- at 480p a hand click is
+about a pixel, a third of a foot on the far side -- so this reference cannot
+certify 0.3 ft even for a perfect registration. And 11 frames is thin.
