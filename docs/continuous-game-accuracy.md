@@ -4118,3 +4118,47 @@ few hundredths. Subtracting the reference's ~0.13 ft of noise would nominally
 bring Fiserv to about 0.30; that is not claimed, because the subtraction
 assumes independence the data cannot confirm. Next: whether the error at the
 periphery is missing support or the fit actively bending the far side.
+
+## Round 54 - the remaining error is evidence the refinement throws away
+
+Diagnosis on the test images (none of it re-reported as an unseen-arena
+result). Every annotated floor point was binned by its distance, in court feet,
+from the nearest line sample the fit actually used:
+
+    distance from used paint   points   refined p50   landmark p50   refined worse
+    0-3 ft                     1,179    0.21 ft       1.68 ft        3%
+    3-6 ft                       233    0.30 ft       1.79 ft        9%
+    6-12 ft                      104    0.45 ft       2.06 ft       11%
+    12+ ft                        25    1.16 ft       1.66 ft       40%
+
+The fit is excellent near the paint it rests on and degrades smoothly away from
+it. It is **missing support, not bending** the far side: the landmarks are far
+worse than even the extrapolated fit out to 12 ft, so fitting jointly with them
+would hurt, and was not built. Fiserv has a second gap as well: 0.26 ft even
+within 3 ft of paint, against TD Garden's 0.18.
+
+**Where players stand.** Both registrations are homographies, so their
+disagreement is defined at detected feet. Restricted to feet within 6 ft of an
+annotated point, where the human reference is itself well supported: TD Garden
+0.19 ft (77% within 0.3), Fiserv 0.27 (57%), Kaseya 0.36 (34%, from 29 feet in
+7 images), all arenas 0.22 ft, p90 0.57. Players stand near paint -- 88-94% of
+feet are within 6 ft of used lines -- so this is the product-relevant figure,
+and it is reported beside the landmark metric, not instead of it.
+
+**Why the far side lacks support.** For annotated points more than 6 ft from
+used paint, painted lines lie within 6 ft of them almost always (open wood
+0-5%). A first version of this diagnostic called 71-100% of those lines
+"visible but missed" -- but it judged "missed" with a 3 px window under the
+refined fit, which cannot tell a line the detector cannot find from a line the
+fit places a few pixels off. Re-searched with wider windows, **83-91% of that
+paint is found within 3-12 px**, and only 3-17% is not found even at 24 px. The
+paint is there and detectable; the fit is simply off there, by 0.23-0.62 ft.
+
+The refinement discards that evidence by construction. The fit locks onto the
+key first; each pass narrows the window, and by the 6 and 3 px passes far paint
+3-12 px from the prediction is out of reach, so those samples drop, the far
+side is never corrected, and it stays off because it is ignored. The fix --
+support expansion, re-observing at 12 px (below the ~3 ft spacing of parallel
+lines everywhere in a broadcast frame) and letting newly found samples join the
+fit until none do -- is being validated on the OKC calibration game before it
+touches the test arenas.
