@@ -4162,3 +4162,73 @@ support expansion, re-observing at 12 px (below the ~3 ft spacing of parallel
 lines everywhere in a broadcast frame) and letting newly found samples join the
 fit until none do -- is being validated on the OKC calibration game before it
 touches the test arenas.
+
+## Round 55 - convergence fixed; the far side is still the weak point, and the guard cannot see it
+
+**The expansion regression and its real cause.** Support expansion (Round 54)
+made the painted Toyota Center floor worse. Three fixes were tried on a wrong
+premise before an ablation isolated the cause: the refit after expansion ran at
+the wide-pass robust scale and never converged. The fix (efae531) iterates the
+final pass to convergence (12 iterations, 0.05 px tolerance), expands only on
+straight segments, and refits at 0.75 px. On the Toyota Center dev footage,
+"all" polarity, held-out lines, old to new code:
+
+    conservative (failures infinite)   3.21 -> 1.52 ft
+    measured only                      1.33 -> 0.70 ft
+    interior families, measured        0.58 -> 0.19 ft
+    boundary family, measured          2.14 ft
+
+Interior failures there: 14% refit refused, 25% paint not found (far arcs in
+half-court views). OKC (v3): 83% of frames accepted, control 0.497 ft; interior
+measured 0.30 / conservative 0.45 ft, boundary measured 0.63 ft.
+
+**The threshold rule picked 10.0 on OKC and it was not adopted.** Bootstrapped
+over frames, 10.0 is chosen 56% of the time, keeps 17% of frames, and has only
+a 59% chance of a median at or under 0.30 ft (2.0: 74% of frames at p50 0.57;
+3.0: 62% at 0.39). On the unseen arenas it collapses coverage -- at 10.0 TD
+Garden is refined on 0% of images and reads 1.72 ft with fallback. Production
+stays at 2.0; the coverage-for-accuracy trade is the user's decision, not the
+rule's.
+
+**Unseen arenas, current code** (efae531 plus the uncommitted provenance change;
+a re-run, weaker evidence than the declared one), per-frame polarity rule,
+fallback to landmarks counted:
+
+    arena            n    refined   p50      p90      within 0.3 ft
+    TD Garden        63   100%      0.19 ft  0.32     87%
+    Fiserv Forum     44    98%      0.29 ft  0.48     55%
+    Kaseya            7   100%      0.34 ft  0.52     29%
+    Target Center    20    95%      0.24 ft  0.50     60%   (seen arena)
+
+Two of three unseen arenas meet 0.3 ft at the median; Kaseya misses on seven
+images. Thresholds 2.0 and 3.0 are identical here; 5.0 and 10.0 lose coverage.
+
+**Provenance.** Runs from a worktree recorded the main repository's HEAD. Dumps
+now record the commit of the imported module's own repository (d5826de);
+`hou_all_old.json` is annotated as having actually run 6d302e4.
+
+**The boundary image.** A frame at t=3772.9 s shown to the user drew the court
+boundary as a Λ across the floor. My explanations went wrong twice
+("measurement contamination", then "corners behind the camera"); both were
+refuted on the exact frame -- all four court corners project in front of the
+camera. The picture is the *held-out test refit*, fitted with every boundary
+line hidden, and on this frame it genuinely extrapolates the far sideline
+diagonally across the floor. The production fit on the same frame, with every
+line available, lies along the red band. The earlier claim that bad boundary
+numbers were "mostly the measuring stick" was wrong for this frame; band edges
+and wordmarks do contaminate some others.
+
+This is not a drawing artifact to explain away: the held-out refit is exactly
+production on a frame where the boundary paint is not found (occluded, under a
+band edge, off screen). What it shows is that **with support only near one
+basket, the fit misplaces the far side by feet, and the acceptance guard does
+not notice**. Of accepted held-out refits, 38% are more than 1 ft off on Toyota
+Center (13 of 14 in the boundary family) and 16% on OKC. Their peak ratios
+overlap the good fits' almost entirely (Toyota bad p50 4.1, 10-90% 2.2-12.4;
+good p50 7.3, 2.9-19.2), as do their drifts. Sharpness at the paint the fit
+rests on says nothing about paint it never saw.
+
+Open: a far-field guard or constraint that does not depend on the paint the
+fit already used -- e.g. refusing or flagging frames whose used samples span
+too little of the court, or requiring that far lines predicted in view are
+found near where the fit puts them.
