@@ -65,6 +65,17 @@ labels are tried as given and with the lane pairs swapped, the sides swapped,
 or both, and the variant whose clicks agree best (most RANSAC inliers, then the
 smallest leave-one-out residual) is used. The choice reads only the labels.
 
+DIRECT (the headline, added with the second labeller's file and committed
+before any registration was scored against it): no reference homography at
+all. Each click is mapped to the court by the registration and compared with
+its landmark's court position; after --repair and per-frame symmetry
+alignment, the error is the registration's plus one click's own noise (about a
+pixel at 1080p). The reference-based ROBUST arm gates frames on a leave-one-out
+residual, which with 8-10 clicks against an 8-parameter homography is inflated
+by leverage (~3x) and rejected all but one precisely labelled frame; it is
+still printed. PASS: direct p50 <= 0.30 ft over all clicks of registered
+frames, with coverage (frames registered of frames labelled) reported beside it.
+
 `--fuse` (added after the diagnosis that a third of usable frames were
 accepted 1.6-3.5 ft off, before fusion was run on any labelled frame): a third
 arm registers every frame within court_fusion.WINDOW_S of the labelled one,
@@ -305,7 +316,10 @@ def main() -> int:
                 robust_err = min(options, key=np.median).tolist()
             dist = (support_distance(info["support"], estimate) if info["refined"]
                     else np.full(len(truth), np.inf))
+            options = [np.hypot(*(estimate - symmetric(truth, fx, fy)).T) for fx, fy in SYMMETRIES]
+            direct = min(options, key=np.median)
             row["arms"][arm] = {"refined": bool(info["refined"]), "err": err.tolist(),
+                                "direct_err": direct.tolist() if info["refined"] else None,
                                 "dist": dist.tolist(), "robust_err": robust_err,
                                 "robust_dist": (dist[robust[0]].tolist()
                                                 if robust_err is not None else None)}
@@ -342,6 +356,17 @@ def main() -> int:
           f"scored, {unusable} marked unusable, {unlabelled} unlabelled or under {MIN_POINTS} points")
     noise = [r["reference_loo_ft"] for r in rows]
     print(f"  reference leave-one-out noise p50 {np.nanmedian(noise):.2f} ft")
+    for arm in ("free", "camera"):
+        scored = [r for r in rows if arm in r["arms"]]
+        refined = [r for r in scored if r["arms"][arm]["refined"]]
+        if not refined:
+            continue
+        err = np.concatenate([r["arms"][arm]["direct_err"] for r in refined])
+        per_frame = [float(np.median(r["arms"][arm]["direct_err"])) for r in refined]
+        print(f"  DIRECT {arm:6s} frames registered {len(refined)}/{len(rows)}  clicks {len(err)}  "
+              f"p50 {np.median(err):.2f}  p75 {np.percentile(err, 75):.2f}  within 0.3 {np.mean(err <= TARGET_FT):.0%}"
+              f"  |  per-frame p50 {np.median(per_frame):.2f}, frames <= 0.3 {np.mean(np.array(per_frame) <= TARGET_FT):.0%}"
+              f"  -> {'PASS' if np.median(err) <= TARGET_FT else 'FAIL'}")
     good = [r for r in rows if r["robust_loo_ft"] is not None and r["robust_loo_ft"] <= MAX_REFERENCE_FT]
     print(f"  robust reference: {len(good)}/{len(rows)} frames usable, "
           f"{sum(sum(r['inliers']) for r in good)} of {sum(r['n_points'] for r in good)} "
