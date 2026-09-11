@@ -25,13 +25,13 @@ def lens_k1(camera, lens, register_frame):
     are re-registered with the camera just solved -- four parameters, which
     cannot absorb a radial bend -- and k1 is measured on those.
     """
-    from courtvision.court_camera import estimate_k1
+    from courtvision.court_camera import estimate_lens
     samples = []
     for frame, matrix, boxes in lens:
         refit, info = register_frame(frame, matrix, boxes=boxes, camera=camera, search=False)
         if info["refined"]:
             samples.append((frame, refit, boxes))
-    return estimate_k1(samples)
+    return estimate_lens(samples)
 
 
 def main() -> int:
@@ -84,7 +84,7 @@ def main() -> int:
         if info["refined"]:
             fits.append((matrix, court_refine._POINTS[info["support"]]))
             signatures.append(floor_signature(frame, matrix, boxes))
-            if len(lens) < 40 and len(fits) % 2:        # every other fit, for the lens
+            if len(lens) < 80:                           # frames for the lens estimate
                 lens.append((frame, matrix, boxes))
             times.append(float(t))
             size = (frame.shape[1], frame.shape[0])
@@ -93,7 +93,8 @@ def main() -> int:
     out.parent.mkdir(parents=True, exist_ok=True)
     json.dump({"video": args.video, "centre": camera.centre.tolist() if camera else None,
                "floor": game_floor(signatures) if signatures else None,
-               "k1": lens_k1(camera, lens, register_frame) if (camera and lens) else None,
+               **dict(zip(("k1", "k2"), (lens_k1(camera, lens, register_frame)
+                                          if (camera and lens) else None) or (None, None))),
                "size": list(size) if size else None, "report": report, "times": times,
                **code_provenance(court_refine.__file__)}, open(out, "w"), indent=1)
     print(f"{args.video}: {len(fits)} refined frames -> {report}")

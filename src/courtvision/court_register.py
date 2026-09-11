@@ -74,11 +74,12 @@ def register_frame(frame, landmark_matrix, boxes=None, polarities=POLARITIES,
     # found on the recorded frame; it is only a start, a few pixels off at the
     # edges, well inside the first 48 px pass.
     k1 = getattr(camera, "k1", None) if camera is not None else None
-    if k1:
+    k2 = getattr(camera, "k2", None) if camera is not None else None
+    if k1 or k2:
         size = (frame.shape[1], frame.shape[0])
-        frame = undistort_image(frame, k1)
+        frame = undistort_image(frame, k1, k2)
         if boxes is not None and len(boxes):
-            corners = undistort_points(np.asarray(boxes, np.float64).reshape(-1, 2), k1, size)
+            corners = undistort_points(np.asarray(boxes, np.float64).reshape(-1, 2), k1, size, k2)
             boxes = corners.reshape(-1, 4)
 
     best_matrix, best_info, tried = None, None, {}
@@ -123,15 +124,16 @@ def register_frame(frame, landmark_matrix, boxes=None, polarities=POLARITIES,
         if best_info is None or info["peak_ratio"] > best_info["peak_ratio"]:
             best_matrix, best_info = matrix, dict(info, polarity=polarity)
     if best_info is None:
-        return landmark_matrix, {"refined": False, "polarity": None, "tried": tried, "k1": k1}
+        return landmark_matrix, {"refined": False, "polarity": None, "tried": tried,
+                                 "k1": k1, "k2": k2}
     best_info["tried"] = tried
-    best_info["k1"] = k1
+    best_info["k1"], best_info["k2"] = k1, k2
     return best_matrix, best_info
 
 
 def to_court(matrix, info, pixels, size):
     """Court feet of recorded-image pixels under a `register_frame` result."""
     from .court_camera import undistort_points
-    pts = undistort_points(pixels, info.get("k1"), size)
+    pts = undistort_points(pixels, info.get("k1"), size, info.get("k2"))
     h = np.c_[pts, np.ones(len(pts))] @ np.asarray(matrix).T
     return h[:, :2] / h[:, 2:3]

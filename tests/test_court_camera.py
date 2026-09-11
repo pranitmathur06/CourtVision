@@ -189,6 +189,8 @@ def test_undistortion_inverts_the_lens():
     pts = np.array([[10.0, 10.0], [500.0, 350.0], [990.0, 690.0], [100.0, 600.0]])
     back = undistort_points(distort_points(pts, 0.0055, SIZE), 0.0055, SIZE)
     assert np.allclose(back, pts, atol=0.01)
+    back = undistort_points(distort_points(pts, -0.0015, SIZE, 0.012), -0.0015, SIZE, 0.012)
+    assert np.allclose(back, pts, atol=0.01)
 
 
 def test_a_distorted_frame_is_registered_through_the_lens():

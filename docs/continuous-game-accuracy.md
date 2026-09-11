@@ -4660,3 +4660,25 @@ registration error over the whole game: above the goal, by this estimate.
 Next, declared in scripts/eval_two_labellers.py before running: score against
 the average of the two labellers' clicks on the spots both made (noise
 ~0.25 / sqrt 2 = 0.18 ft), keeping each frame's label consensus.
+
+**Against the average of two labellers (declared, eval_two_labellers.py):**
+19 frames, 132 spots where both 1080p labellers clicked and the averaged spots
+agree with their frame's consensus. Camera registration (one-term lens,
+k1 = 0.0037): **p50 0.39 ft, p75 0.62, 35% within 0.3 -- FAIL.** Per-frame
+medians 0.20-0.58 ft, one frame 1.6. The averaged clicks carry ~0.18 ft of
+their own noise, so the registration's own error over the whole game is
+~0.35 ft: close to the goal, not under it. This is the cleanest whole-game
+number the labels can give.
+
+**Where the excess comes from: the frame edges, and not the boundary.** On the
+stored fixed-camera fits of all 63 fitted frames, straight painted lines lie
+~0 px from the straight model out to 0.6 of the half-diagonal and then bow
+outward -- interior straights as much as the boundary (+1.95 / +5.6 px beyond
+0.7 / 0.85, against +2.4 / +3.2 for the boundary), on the left (+1.9), right
+(+2.9) and lower edge (+3.4) alike, and NOT along the score graphic's band
+(-0.4). The one-term lens (k1 = 0.0037, estimated on the boundary alone) barely
+moved it (2.32 -> 1.97 px, 3.25 -> 2.93 px): the bend rises far faster than
+r^3. A two-term model (k1 r^2 + k2 r^4), fitted on boundary and interior
+straights from two halves of the frames, agrees between halves (k1 -0.0018 /
+-0.0008, k2 +0.0117 / +0.0128) and takes the held-out far-edge offsets from ~4
+px to 1-2 px. It is now the lens model; estimate_camera fits both terms.

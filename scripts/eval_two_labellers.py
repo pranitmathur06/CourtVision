@@ -101,7 +101,7 @@ def main() -> int:
     other = json.load(open(args.other))
     court_of = {p["id"]: (p["x"], p["y"]) for p in reference["points"]}
     entry = json.load(open(f"outputs/camera/{Path(manifest['video']).stem}.json"))
-    camera = FixedCamera(entry["centre"], entry["size"], entry.get("floor"), entry.get("k1"))
+    camera = FixedCamera(entry["centre"], entry["size"], entry.get("floor"), entry.get("k1"), entry.get("k2"))
     model, detector, device = YOLO(args.weights), YOLO(args.detector), resolve_device()
     rows = []
     for item in manifest["frames"]:
