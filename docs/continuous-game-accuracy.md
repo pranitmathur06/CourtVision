@@ -4550,3 +4550,37 @@ overhead and rim cameras, wipes, one baseline camera); ~6 main-camera views
 unfitted (centre court, motion blur). Main-camera coverage ~60/66, ~91%.
 Accuracy on this game remains measured only as ~0.5 ft against labels that
 cannot resolve 0.3.
+
+## Round 60 - a second labeller, the same failure, and the diagram that caused it
+
+A second labeller used the precise 1080p labeller (line intersections only,
+names on screen) on 42 frames across the whole Toyota Center game: 25 frames
+with 8+ clicks, 227 clicks. Every frame's clicks disagreed with themselves by
+feet -- ~20 ft leave-one-out -- and no frame gave a usable reference.
+
+The clicks were mostly on the right spots with the wrong names. Sidelines and
+corners were named consistently, but the two sides of the lane (x = 17 and 33)
+the other way round; elsewhere a centre-court click carried the far sideline's
+id, a baseline corner the opposite corner's. Label-only repairs, each committed
+before scoring any registration: a per-frame lane/side swap (7f87f6b) chose a
+corrected reading on 22 of 25 frames but left conventions mixed within frames;
+a per-click reading among each landmark's mirror images (47052c1) found only 49
+of 226 clicks agreeing on one reading.
+
+Two eval bugs surfaced on the way and are fixed: frames with no landmark start
+were skipped instead of registered by the search (ae24f63), and a frame with
+no start and no accepted fit crashed the script (b697bfb). A reference-free
+DIRECT metric was added (3df083e): each click through the registration against
+its landmark, after repair and symmetry alignment. On the swap-repaired clicks
+it read 0.66 ft with the camera (1.29 free), but that number is carried by
+labels: on the three worst frames (10-50 ft) the camera fit lies on the paint
+and the clicks carry the wrong landmark.
+
+**Why both labellers mirrored.** The labeller drew the court with its length
+vertical; the broadcast shows it horizontal, near sideline at the bottom. Every
+click meant rotating the diagram by 90 degrees in one's head, and both people
+did it inconsistently. The camera model says which way this game's court lies
+in every main-camera frame -- court length to the right, the far sideline
+(x = 0) at the top -- so the v3 labeller (data/labeling/court_toyota_1080_v3)
+draws the diagram exactly so and names every landmark by where it is in the
+picture ("left free-throw line: top end", "bottom sideline: right hash").
