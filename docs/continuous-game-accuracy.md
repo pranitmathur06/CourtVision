@@ -4476,3 +4476,18 @@ Four ordinary views stay refused (a centre-court jump ball, a blurred pan, two
 centre-court views); one of them only by the check, at 3.0 px against the
 3.0 limit. Genuine frames checked at 0.9-2.9 px and foreign ones at 7.9-11.5,
 so the limit sits close to the genuine side; it was not moved.
+
+**Over the whole game the camera check did more harm than good**, and is now
+off by default. Search and check together, all 84 sampled frames: 50 fitted,
+the same count as before. Gained 10 (8 with no landmark start, 2 previously
+refused); lost 10 -- the two halftime highlights, correctly, and eight genuine
+frames whose camera fits were on the paint, refused at 3.2-12.2 px against the
+foreign frames' 7.9-11.5. The check trusts the free fit to judge the camera
+fit, and the free fit is the one known to lock onto ad boards. With the check
+off the search alone should give ~58 of 84 (to be re-measured), and frames
+from other games need a test that does not rest on geometry -- the floor's
+own colours (a red key, a navy one) are the obvious witness.
+
+Against the whole-game labels at 1080p the search changes little (camera arm
+0.51 ft trusted, 0.52 all), as expected: those frames mostly had landmark
+starts.

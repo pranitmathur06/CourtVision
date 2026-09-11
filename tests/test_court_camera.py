@@ -152,5 +152,5 @@ def test_a_frame_from_another_camera_is_refused():
     image = _render(other, clutter=False)
     start = _perturb(other, 0.5, -0.5, 0.3)
     matrix, info = register_frame(image, start, camera=FixedCamera(CENTRE, SIZE),
-                                  polarities=("bright",), search=False)
+                                  polarities=("bright",), search=False, verify=True)
     assert not info["refined"] or _court_error(matrix, other) < 0.3, info

@@ -27,7 +27,7 @@ POLARITIES = ("bright", "all")
 
 
 def register_frame(frame, landmark_matrix, boxes=None, polarities=POLARITIES,
-                   camera=None, search=True, verify=True):
+                   camera=None, search=True, verify=False):
     """Refine a landmark registration with each kind of paint evidence.
 
     Returns `(matrix, info)`. When `info["refined"]` is False no evidence type
@@ -42,10 +42,15 @@ def register_frame(frame, landmark_matrix, boxes=None, polarities=POLARITIES,
       landmark model gives none -- on a whole game at Toyota Center it gave
       none on ~20 of ~65 ordinary game views. Within one kind of evidence the
       fit resting on the most paint wins.
-    - `verify`: the accepted fit is re-fitted without the camera; if this
-      game's camera cannot reproduce that free fit, the frame is refused -- it
-      is another camera, or another game (halftime highlights from other
-      arenas were otherwise accepted).
+    - `verify` (off by default): the accepted fit is re-fitted without the
+      camera, and the frame refused if this game's camera cannot reproduce the
+      free fit. Measured over a whole game it does not separate the cases it
+      is for: two halftime highlights from other arenas read 7.9-11.5 px, but
+      eight genuine frames whose camera fits sit on the paint read 3.2-12.2 px
+      and were refused with them. The free fit is the less trustworthy of the
+      two -- it is the one that locks onto ad boards and extrapolates the far
+      side -- so its disagreement is not evidence against the camera. Other
+      games need a check that does not rest on geometry.
     """
     from .court_camera import search_starts
     from .court_refine import _POINTS
