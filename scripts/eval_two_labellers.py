@@ -24,6 +24,13 @@ two independent clicks of the same spot divides that noise by sqrt(2), ~0.18 ft.
   by tens of feet and cannot hide a sub-foot error).
 - PASS: median over all spots <= 0.30 ft. Reported beside it: p75, share
   within 0.3, per-frame medians, and how many frames were registered.
+
+Added after the first two runs, before this reporting was seen: the TRUSTED
+score -- spots whose registered court position lies within TRUST_RADIUS_FT of
+the paint the fit rests on, which is what the system asserts; the rest it
+flags as extrapolated. The first runs put free-throw-line spots at 0.24 ft and
+sideline spots at 1.54 ft, and the trust radius exists for exactly that
+difference. Reported beside the declared all-spots verdict, which is unchanged.
 """
 
 from __future__ import annotations
@@ -132,6 +139,8 @@ def main() -> int:
             estimate = to_court(matrix, info, px, (frame.shape[1], frame.shape[0]))
             options = [np.hypot(*(estimate - symmetric(truth, fx, fy)).T) for fx, fy in SYMMETRIES]
             row["err"] = min(options, key=np.median).tolist()
+            from courtvision.court_refine import support_distance
+            row["dist"] = support_distance(info["support"], estimate).tolist()
         rows.append(row)
     json.dump({"meta": {"reference": args.reference, "other": args.other, "camera": entry,
                         **code_provenance(court_refine.__file__)}, "rows": rows},
@@ -146,6 +155,14 @@ def main() -> int:
     print(f"  spots {len(err)}  p50 {p50:.2f} ft  p75 {np.percentile(err, 75):.2f}  "
           f"within 0.3 {np.mean(err <= TARGET_FT):.0%}  -> {'PASS' if p50 <= TARGET_FT else 'FAIL'}")
     print(f"  per-frame medians: {per_frame}")
+    radius = court_refine.TRUST_RADIUS_FT
+    dist = np.concatenate([r["dist"] for r in scored])
+    trusted = dist <= radius
+    if trusted.any():
+        print(f"  TRUSTED (within {radius:g} ft of used paint): {trusted.sum()}/{len(err)} spots  "
+              f"p50 {np.median(err[trusted]):.2f} ft  p75 {np.percentile(err[trusted], 75):.2f}  "
+              f"within 0.3 {np.mean(err[trusted] <= TARGET_FT):.0%}   |   flagged: "
+              f"p50 {np.median(err[~trusted]) if (~trusted).any() else float('nan'):.2f} ft")
     return 0 if p50 <= TARGET_FT else 2
 
 
