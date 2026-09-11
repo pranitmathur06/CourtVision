@@ -4432,3 +4432,47 @@ with 8 points and none consistent enough to use. The whole-game test is
 therefore INCONCLUSIVE at 1080p, not passed: the registration is visibly on
 the paint, and the reference is too coarse to measure whether that is 0.2 ft
 or 0.5.
+
+## Round 59 - a whole game needs starts and a guard, not only accuracy
+
+Drawing the fixed-camera fit over all 84 sampled frames of the 1080p Toyota
+Center game showed two problems larger than 0.3 vs 0.5 ft:
+
+- **Coverage.** 31 of 84 frames got no landmark start. Many are not court
+  views (close-ups, crowd, ads, overhead rim cameras, wipes), but ~20 are
+  ordinary game views -- mostly centre-court views showing the R logo and few
+  key corners. With no start there is no registration at all.
+- **Other games.** Two halftime highlights from other arenas (a Clippers game,
+  a Pelicans game) were registered with this game's camera and accepted.
+
+**Landmark-free starts (182060b).** With the centre fixed a frame is four
+numbers -- where the camera looks, its zoom, a small roll -- so they can be
+searched. Three versions:
+
+1. Paint hits within a 16 px window: top starts 17-50 ft off. The first
+   `look_at` also built an upside-down camera (crossed with world-down); the
+   synthetic test shared the mistake, so it is now checked against real fits
+   (0.1-0.5 degrees).
+2. A smooth chamfer score to the painted ridges: worse, 44-72 ft. The
+   strongest ridges in a broadcast frame are the score graphic, ad boards and
+   crowd; the true pose scored 89 against 260 for a pose throwing the court
+   into the stands.
+3. **Overlap of the projected court with the floor mask** (wood or court
+   paint, players filled in, lanes in or out): top start 0.4-0.8 ft from the
+   landmark-started fit on two of three real frames, in under a second. The
+   refinement finishes; within one kind of evidence the fit resting on the
+   most paint wins, landmark start or searched.
+
+**The camera check.** Every accepted camera fit is re-fitted without the
+camera; if this game's camera cannot reproduce the free fit within 3 px, the
+frame is refused. On 17 real frames:
+
+    frames                                 before          now
+    ordinary views, no landmark start      0 / 12 fitted   8 / 12 fitted, all on the paint by eye
+    halftime highlights, other arenas      2 / 2 accepted  0 / 2 (free fit 7.9-11.5 px from the camera)
+    normal frames                          3 / 3           3 / 3 (check 1.2-1.5 px)
+
+Four ordinary views stay refused (a centre-court jump ball, a blurred pan, two
+centre-court views); one of them only by the check, at 3.0 px against the
+3.0 limit. Genuine frames checked at 0.9-2.9 px and foreign ones at 7.9-11.5,
+so the limit sits close to the genuine side; it was not moved.
