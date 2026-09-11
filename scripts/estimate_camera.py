@@ -15,6 +15,25 @@ from pathlib import Path
 import numpy as np
 
 
+def lens_k1(camera, lens, register_frame):
+    """Lens distortion from fits that cannot bend to it.
+
+    A free homography has eight parameters and partly curves itself to follow
+    lines bent near the frame edges, hiding the distortion: measured on this
+    script's own free fits the Toyota Center game read k1 = 0.0007, against
+    0.0052-0.0055 on fixed-camera fits of the same game. So the sample frames
+    are re-registered with the camera just solved -- four parameters, which
+    cannot absorb a radial bend -- and k1 is measured on those.
+    """
+    from courtvision.court_camera import estimate_k1
+    samples = []
+    for frame, matrix, boxes in lens:
+        refit, info = register_frame(frame, matrix, boxes=boxes, camera=camera, search=False)
+        if info["refined"]:
+            samples.append((frame, refit, boxes))
+    return estimate_k1(samples)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--video", required=True)
@@ -32,7 +51,7 @@ def main() -> int:
     from ultralytics import YOLO
 
     import courtvision.court_refine as court_refine
-    from courtvision.court_camera import estimate_centre, estimate_k1, floor_signature, game_floor
+    from courtvision.court_camera import estimate_centre, floor_signature, game_floor
     from courtvision.court_keypoints import KEYPOINTS, homography_from_keypoints
     from courtvision.court_register import register_frame
     from courtvision.court_tracking import has_court
@@ -74,7 +93,7 @@ def main() -> int:
     out.parent.mkdir(parents=True, exist_ok=True)
     json.dump({"video": args.video, "centre": camera.centre.tolist() if camera else None,
                "floor": game_floor(signatures) if signatures else None,
-               "k1": estimate_k1(lens) if lens else None,
+               "k1": lens_k1(camera, lens, register_frame) if (camera and lens) else None,
                "size": list(size) if size else None, "report": report, "times": times,
                **code_provenance(court_refine.__file__)}, open(out, "w"), indent=1)
     print(f"{args.video}: {len(fits)} refined frames -> {report}")
