@@ -5248,3 +5248,49 @@ to 95 candidates, and nothing tried so far can dig it out.
 That is the honest state: the RIM is at 0.840 and improving on a method that
 works, the BALL is around 0.4 on a sample too small to pin, and its selection
 problem is unsolved rather than nearly solved.
+
+## Round 72 - seven ways to pick the ball, and what the failures add up to
+
+Everything here was built, measured against hand-located balls, and rejected.
+They are listed because the list is now the most useful thing known about this
+problem.
+
+    1  court-volume ray test        rejected 0 candidates: a test that cannot fail
+    2  motion as a filter           premise false; held balls are still (86->78% cover)
+    3  motion as a preference       still picked a moving defender over a held ball
+    4  large inference + confidence worse end to end; picks the corner of the picture
+    5  two-scale agreement          0 of 5, and fires on hair and on a nose
+    6  handler-box proximity        rank unchanged or worse
+    7  a learned patch ranker       mean rank of the true ball 1.0 -> 2.0
+
+The ranker is the interesting failure. It was trained on 290 ball labels found
+by motion-compensated tracking -- the Round 62 Viterbi idea with the fix that
+it now runs in camera-compensated pixels rather than raw ones -- against the
+other candidates in the same frames as hard negatives, split by TIME so it
+could not be scored on what it memorised. It learns something real: validation
+average precision 0.247 against a 0.145 baseline. It still ranks the true ball
+WORSE than the detector's own confidence does.
+
+Getting those labels took two attempts of its own, and both were caught only by
+rendering a sample and looking at it:
+
+- labelled from the shot chart, using the rim from the nearest grid frame up to
+  30 s away while the camera pans: every label was on a shirt or in the crowd.
+- labelled from smooth tracks at a 14 px/frame speed floor: 58% correct,
+  because A RUNNING PLAYER'S SHOULDER traces just as smooth a path as a ball.
+  At a 40 px floor -- only a ball in flight -- 83% correct.
+
+**What the failures add up to.** On five balls located by eye on frames chosen
+by grid position, the cached detector has NO candidate within 28 px on three of
+them (92, 36 and 190 px away) and ranks the ball FIRST on the other two. So on
+that detector the shipped selection is already optimal, and 0.400 is its
+ceiling rather than its shortfall. Run large the ceiling is higher -- a
+candidate 3-16 px from the truth on five of seven frames -- but buried at
+confidence 0.05-0.11 among 60-95 proposals, and none of the seven rules above
+can dig it out.
+
+That is the shape of the problem, stated as plainly as it can be: the ball is
+small, often held still, often occluded, and surrounded by objects that look
+like it at the resolution it occupies. The rim is at 0.840 and rising on a
+method that works. The ball is at 0.400 and every method tried on it has been
+measured and rejected.
