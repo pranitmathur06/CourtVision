@@ -16,11 +16,15 @@ This picks the frames worth that person's time:
 
 Mined blind, that mostly yields mid-court views and close-ups with no rim in
 them at all -- good negatives, but the positives are what is scarce. So
-`--after-shots` aims the search: a made basket is followed by a replay, and a
-replay of a basket is shot from the cameras that look AT the basket. The
-official shot chart already sits on the video's timeline from Round 65, and it
-knows nothing about which frames this pipeline finds hard, so it cannot flatter
-the result.
+`--after-shots` aimed the search at the seconds after a made basket, on the
+theory that a replay follows one. It does not: that window lands on the
+opponent's inbound and the transition back, and 8 of 8 frames sampled from it
+had no rim in them at all.
+
+`--clock-stopped` is the prior that works. A replay airs when the game clock
+is NOT running, and the clock was already read off the scoreboard in Round 65
+by a pass that knows nothing about which frames this pipeline finds hard, so
+it cannot flatter the result.
 
 Frames are rendered large -- these are the close-ups, and the whole point is
 that the rim is big in them -- with a grid overlay so a centre and a width can
@@ -60,6 +64,9 @@ def main() -> int:
                         help="align_shots_to_video.py output; look just after makes")
     parser.add_argument("--after-window", default="3,14",
                         help="seconds after a made shot to search")
+    parser.add_argument("--clock-stopped", default=None,
+                        help="read_game_clock.py output; search only where the game "
+                             "clock is NOT running, which is when replays air")
     parser.add_argument("--out-dir", required=True)
     parser.add_argument("--per-sheet", type=int, default=4)
     args = parser.parse_args()
@@ -87,6 +94,14 @@ def main() -> int:
     capture = cv2.VideoCapture(args.video)
     duration = capture.get(cv2.CAP_PROP_FRAME_COUNT) / capture.get(cv2.CAP_PROP_FPS)
 
+    stopped = None
+    if args.clock_stopped:
+        import sys as _sys
+        _sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from detect_shots import live_play
+        running = live_play(json.load(open(args.clock_stopped))["readings"])
+        stopped = lambda when: not running(when)      # noqa: E731
+
     if args.after_shots:
         shots = [s["t"] for s in json.load(open(args.after_shots))
                  if s.get("made") and s.get("gap_s", 0) <= 2.0]
@@ -102,6 +117,8 @@ def main() -> int:
         if t < args.start_s or t >= duration:
             continue
         if round(t, 1) in posed or detector_has_rim(t):
+            continue
+        if stopped is not None and not stopped(t):
             continue
         if t - last < args.spacing_s:
             continue
