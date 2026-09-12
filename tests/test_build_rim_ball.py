@@ -71,8 +71,9 @@ def test_a_direction_seen_all_game_is_a_fixture_and_a_passing_ball_is_not():
 
 
 def test_a_short_run_cannot_manufacture_a_fixture():
-    frames = [[(3, 3)] for _ in range(10)]
-    assert ball.find_fixtures(frames, posed_frames=10) == set()
+    """Below FIXTURE_MIN_FRAMES a handful of detections is not evidence of furniture."""
+    frames = [[(3, 3)] for _ in range(ball.FIXTURE_MIN_FRAMES - 1)]
+    assert ball.find_fixtures(frames, posed_frames=len(frames)) == set()
 
 
 def _row(t, candidates, dirs=None):
@@ -134,3 +135,19 @@ def test_a_frame_whose_only_candidate_is_furniture_reports_no_ball():
     rows = [_row(0.0, [{"centre": [1, 1], "conf": 0.9}], [_dir(0)])]
     decided, _ = ball.choose_balls(rows, {fixture}, 15.0)
     assert decided[0][0] is None
+
+
+def test_a_busy_direction_at_the_basket_is_never_called_furniture():
+    """The rim sits as still as the rack ball; the game ball visits it all game."""
+    to_rim = ball.rim_directions(CENTRE)
+    busy = ball.cell_of(to_rim[0])
+    frames = [[busy] for _ in range(200)]
+    assert busy in ball.find_fixtures(frames, 200)
+    assert busy not in ball.find_fixtures(frames, 200, protect=to_rim)
+
+
+def test_furniture_away_from_the_baskets_is_still_caught_with_the_guard_on():
+    to_rim = ball.rim_directions(CENTRE)
+    away = ball.cell_of(_dir(200))
+    frames = [[away] for _ in range(200)]
+    assert away in ball.find_fixtures(frames, 200, protect=to_rim)

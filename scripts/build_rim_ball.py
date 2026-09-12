@@ -48,11 +48,19 @@ MAX_CONTINUITY_GAP_S = 1.0
 #: Ray directions are counted in cells this wide.
 CELL_DEG = 0.6
 #: A cell producing candidates on more than this share of posed frames is
-#: furniture. The game ball cannot hold one direction for 1% of a game.
-FIXTURE_SHARE = 0.01
+#: furniture. Set from the SHAPE of the counts, which the labels never enter:
+#: ranked by occupancy the cells on G7's grid run 34, 12, 9, 8, 7, ... and the
+#: one holding 34 spans the whole game, 638 s to 7088 s. The threshold goes in
+#: that gap. See scripts/show_ball_fixtures.py.
+FIXTURE_SHARE = 0.15
 #: ...and never fewer than this many frames, so a short pose run cannot
 #: manufacture a fixture out of two detections.
-FIXTURE_MIN_FRAMES = 40
+FIXTURE_MIN_FRAMES = 8
+#: A direction this close to a basket is NEVER called furniture. The rim sits
+#: still in the world exactly as the scorer's-table ball does, and the game
+#: ball visits it on every attempt -- so on a dense pass the rule would learn
+#: to throw away the ball at the rim, which is the one place Phase 2 needs it.
+RIM_GUARD_DEG = 4.0
 
 
 def ray_directions(params, centre, size, pixels, k1=None, k2=None):
@@ -93,15 +101,43 @@ def angle_between(a, b):
     return float(np.degrees(np.arccos(np.clip(float(np.dot(a, b)), -1.0, 1.0))))
 
 
-def find_fixtures(cells_per_frame, posed_frames,
-                  share=FIXTURE_SHARE, minimum=FIXTURE_MIN_FRAMES):
-    """Direction cells that keep producing candidates -- furniture, not the ball."""
+def rim_directions(centre):
+    """Unit vectors from the camera centre to each basket."""
+    from courtvision.court_camera import RIMS_3D
+    out = []
+    for point in RIMS_3D:
+        d = np.asarray(point, np.float64) - np.asarray(centre, np.float64)
+        out.append(d / np.linalg.norm(d))
+    return out
+
+
+def find_fixtures(cells_per_frame, posed_frames, share=FIXTURE_SHARE,
+                  minimum=FIXTURE_MIN_FRAMES, protect=(), cell_deg=CELL_DEG,
+                  guard_deg=RIM_GUARD_DEG):
+    """Direction cells that keep producing candidates -- furniture, not the ball.
+
+    Directions within `guard_deg` of a basket are protected however busy they
+    are: a rim is as still in the world as the scorer's-table ball, and the
+    game ball visits it on every attempt.
+    """
     counts: dict[tuple[int, int], int] = {}
     for cells in cells_per_frame:
         for cell in set(cells):
             counts[cell] = counts.get(cell, 0) + 1
     floor = max(minimum, int(share * max(posed_frames, 1)))
-    return {cell for cell, n in counts.items() if n >= floor}
+    found = {cell for cell, n in counts.items() if n >= floor}
+    if not protect:
+        return found
+    safe = set()
+    for cell in found:
+        azimuth = (cell[0] + 0.5) * cell_deg
+        elevation = (cell[1] + 0.5) * cell_deg
+        direction = np.array([np.cos(np.radians(elevation)) * np.cos(np.radians(azimuth)),
+                              np.cos(np.radians(elevation)) * np.sin(np.radians(azimuth)),
+                              np.sin(np.radians(elevation))])
+        if min(angle_between(direction, r) for r in protect) > guard_deg:
+            safe.add(cell)
+    return safe
 
 
 def choose_balls(rows, fixtures, max_step_deg, use_continuity=True,
@@ -203,7 +239,8 @@ def main() -> int:
         rows.append(entry)
 
     fixtures = set() if args.no_fixtures else \
-        find_fixtures([r["cells"] for r in rows], posed)
+        find_fixtures([r["cells"] for r in rows], posed,
+                      protect=rim_directions(centre))
 
     # Pass 2: choose one ball per frame.
     decided, dropped = choose_balls(rows, fixtures, args.max_step_deg,
