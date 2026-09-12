@@ -80,6 +80,11 @@ import numpy as np
 MIN_CONF = 0.10
 #: A detector rim this confident is believed ahead of the projection.
 RIM_TRUST_CONF = 0.40
+#: The dedicated rim detector's floor. It finds rims the four-class detector
+#: cannot -- 6 of 7 frames that nothing else locates -- but it also fires on
+#: red patches, water coolers and orange shoes, so it goes BELOW the four-class
+#: detector in the order and its false alarms are reported, never netted off.
+RIM_SCALE_CONF = 0.35
 #: A projected rim further than this from a believed detection is the OTHER
 #: basket, and is kept; nearer than this it is the same rim seen twice.
 SAME_RIM_WIDTHS = 2.0
@@ -235,6 +240,13 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--poses", required=True, help="track_camera.py output")
     parser.add_argument("--detections", required=True)
+    parser.add_argument("--rim-detections", default=None,
+                        help="a dedicated rim detector's boxes (train_rim_scale.py). "
+                             "Believed after the four-class detector and before the "
+                             "projection: on main-camera frames it agrees with the "
+                             "four-class boxes to 0.04 rim widths against the "
+                             "projection's 0.13, and it has no upward bias.")
+    parser.add_argument("--rim-conf", type=float, default=RIM_SCALE_CONF)
     parser.add_argument("--camera", required=True)
     parser.add_argument("--min-conf", type=float, default=MIN_CONF)
     parser.add_argument("--max-step-deg", type=float, default=MAX_STEP_DEG)
@@ -259,6 +271,12 @@ def main() -> int:
     cache = json.load(open(args.detections))
     by_time = {round(row["t"], 3): row for row in cache["frames"]}
     cache_times = np.array(sorted(by_time)) if by_time else np.array([])
+
+    rim_extra, rim_extra_times = {}, np.array([])
+    if args.rim_detections:
+        found = json.load(open(args.rim_detections))
+        rim_extra = {round(r["t"], 3): r for r in found["frames"]}
+        rim_extra_times = np.array(sorted(rim_extra))
 
     def boxes_near(t, kind, floor):
         if not len(cache_times):
@@ -305,6 +323,11 @@ def main() -> int:
     for row, (chosen, survivors) in zip(rows, decided):
         detected_rims = [centre_of(b) for b in boxes_near(row["t"], "rim", 0.25)]
         trusted = boxes_near(row["t"], "rim", RIM_TRUST_CONF)
+        if not trusted and len(rim_extra_times):
+            j = int(np.argmin(np.abs(rim_extra_times - row["t"])))
+            if abs(rim_extra_times[j] - row["t"]) <= 0.3:
+                trusted = [b for b in rim_extra[rim_extra_times[j]]["boxes"]
+                           if b["conf"] >= args.rim_conf]
         rim = [centre_of(b) for b in trusted]
         widths = [max(b["xyxy"][2] - b["xyxy"][0], 1.0) for b in trusted]
         for point in row["rims"]:

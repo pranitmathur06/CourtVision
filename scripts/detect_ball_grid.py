@@ -1,4 +1,4 @@
-"""Re-detect the ball on the evaluation grid at a chosen inference size.
+"""Re-detect on the evaluation grid at a chosen inference size, any detector.
 
 The cached whole-game detections were made at the detector's default size, and
 on that cache a ball box at 0.25 confidence appears on 53-62% of frames. No
@@ -85,13 +85,15 @@ def main() -> int:
     json.dump({"video": args.video, "detector": args.detector, "imgsz": args.imgsz,
                "conf": args.conf, "fps": None, "frames": rows,
                **code_provenance(__file__)}, open(out, "w"))
-    balls = [sum(1 for b in r["boxes"] if b["cls"] == "ball") for r in rows]
-    for floor in (0.10, 0.25, 0.50):
-        have = sum(1 for r in rows
-                   if any(b["cls"] == "ball" and b["conf"] >= floor for b in r["boxes"]))
-        print(f"imgsz {args.imgsz}: ball box at conf>={floor:.2f} on "
-              f"{have}/{len(rows)} frames ({have / max(len(rows), 1):.1%})")
-    print(f"{np.mean(balls):.2f} ball candidates a frame at conf>={args.conf}")
+    classes = sorted({b["cls"] for r in rows for b in r["boxes"]})
+    for name in classes:
+        counts = [sum(1 for b in r["boxes"] if b["cls"] == name) for r in rows]
+        for floor in (0.10, 0.25, 0.50):
+            have = sum(1 for r in rows
+                       if any(b["cls"] == name and b["conf"] >= floor for b in r["boxes"]))
+            print(f"imgsz {args.imgsz}: {name} box at conf>={floor:.2f} on "
+                  f"{have}/{len(rows)} frames ({have / max(len(rows), 1):.1%})")
+        print(f"  {np.mean(counts):.2f} {name} candidates a frame at conf>={args.conf}")
     return 0
 
 
