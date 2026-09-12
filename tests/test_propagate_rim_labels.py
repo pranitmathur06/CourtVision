@@ -11,7 +11,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 from propagate_rim_labels import (  # noqa: E402
-    acceptable, carried_box, nearby, shares_a_shot,
+    acceptable, carried_box, nearby, shares_a_shot, supported_at_the_rim,
 )
 
 
@@ -105,3 +105,26 @@ def test_an_unrelated_frame_does_not_share_a_shot():
 def test_nothing_to_compare_against_shares_nothing():
     rng = np.random.default_rng(0)
     assert not shares_a_shot(rng.integers(0, 255, (240, 320), dtype=np.uint8), [])
+
+
+def test_inliers_clustered_on_the_ring_are_support():
+    points = np.array([[100.0 + dx, 80.0 + dy]
+                       for dx in (-10, 0, 10) for dy in (-10, 0, 10)])
+    assert supported_at_the_rim(points, (100.0, 80.0), 40.0)
+
+
+def test_inliers_far_from_the_ring_are_not_support():
+    # A fit held up entirely by the scoreboard and the crowd.
+    points = np.array([[900.0, 40.0], [1000.0, 60.0], [1100.0, 30.0],
+                       [950.0, 700.0], [1010.0, 690.0], [880.0, 660.0]])
+    assert not supported_at_the_rim(points, (100.0, 80.0), 40.0)
+
+
+def test_a_couple_of_nearby_inliers_are_not_enough():
+    points = np.array([[100.0, 80.0], [104.0, 84.0]])
+    assert not supported_at_the_rim(points, (100.0, 80.0), 40.0)
+
+
+def test_no_inliers_at_all_is_not_support():
+    assert not supported_at_the_rim(np.zeros((0, 2)), (100.0, 80.0), 40.0)
+    assert not supported_at_the_rim(None, (100.0, 80.0), 40.0)

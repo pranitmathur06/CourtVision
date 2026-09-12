@@ -34,6 +34,14 @@ WHAT STOPS IT LABELLING RUBBISH, all declared here before it was run:
   margin, its width within [MIN_SCALE, MAX_SCALE] of the anchor's, and its
   four carried corners still convex and near-square. A homography that has
   gone wrong makes a bow-tie or a sliver, and those are cheap to catch.
+- MIN_LOCAL_INLIERS of the fit's inliers must lie within LOCAL_RADIUS_WIDTHS
+  of the anchor's rim. A homography is only trustworthy where it has
+  evidence, and carrying a rim on features 500 px away is extrapolation. The
+  first run without this gate put 2 of 24 sampled boxes in open crowd -- one
+  where a moving under-basket camera let parallax break a fit the background
+  still supported, and one across a hard cut to a celebration close-up where
+  RANSAC found a consensus among false matches. Both had no inlier anywhere
+  near the ring, which is the thing that distinguishes them.
 - SAME-TAKE EXCLUSION from every evaluation frame. The first version of this
   held frames out by clock distance, and it produced ZERO labels: the
   evaluation grid samples every 25 s, so a 30 s radius blankets all 9,355 s
@@ -77,6 +85,10 @@ MAX_RESIDUAL_PX = 3.0
 MIN_SCALE, MAX_SCALE = 0.45, 2.2
 #: Carried corners: shortest side over longest, so a sliver or a bow-tie dies.
 MIN_SQUARENESS = 0.45
+#: The fit must have evidence where it is being used: this many inliers within
+#: this many rim widths of the anchor's ring.
+MIN_LOCAL_INLIERS = 6
+LOCAL_RADIUS_WIDTHS = 3.0
 EDGE_MARGIN_PX = 4
 #: How far to look for an evaluation frame that might share a shot with a
 #: candidate. Beyond this no broadcast take survives, so no ORB test is needed.
@@ -93,13 +105,15 @@ def fit_with_report(grey_source, grey_target, min_inliers=MIN_INLIERS,
     and the residual on the inliers have to be visible. Same detector, same
     ratio test, same RANSAC threshold -- only the report is added.
 
-    Returns (homography, inliers, ratio, residual_px) or (None, 0, 0.0, inf).
+    Returns (homography, inliers, ratio, residual_px, source_inlier_points).
+    The source points come back because the caller has to check that the fit
+    has support where the rim is, not merely somewhere in the picture.
     """
     import cv2
 
     from courtvision.court_tracking import ORB_FEATURES, RATIO
 
-    nothing = (None, 0, 0.0, float("inf"))
+    nothing = (None, 0, 0.0, float("inf"), np.zeros((0, 2)))
     orb = cv2.ORB_create(nfeatures=ORB_FEATURES)
     keys_source, desc_source = orb.detectAndCompute(grey_source, None)
     keys_target, desc_target = orb.detectAndCompute(grey_target, None)
@@ -123,13 +137,13 @@ def fit_with_report(grey_source, grey_target, min_inliers=MIN_INLIERS,
     count = int(mask.sum())
     ratio = count / float(len(good))
     if count < min_inliers or ratio < min_ratio:
-        return None, count, ratio, float("inf")
+        return None, count, ratio, float("inf"), np.zeros((0, 2))
 
     carried = cv2.perspectiveTransform(src[mask], matrix).reshape(-1, 2)
     residual = float(np.median(np.hypot(*(carried - dst[mask].reshape(-1, 2)).T)))
     if residual > max_residual:
-        return None, count, ratio, residual
-    return matrix, count, ratio, residual
+        return None, count, ratio, residual, np.zeros((0, 2))
+    return matrix, count, ratio, residual, src[mask].reshape(-1, 2)
 
 
 def carried_box(homography, centre, width):
@@ -165,6 +179,22 @@ def carried_box(homography, centre, width):
     w = (out[:, 0].max() - out[:, 0].min())
     h = (out[:, 1].max() - out[:, 1].min())
     return float(cx), float(cy), float(w), float(h)
+
+
+def supported_at_the_rim(source_points, centre, width,
+                         need=MIN_LOCAL_INLIERS, radius=LOCAL_RADIUS_WIDTHS):
+    """Does the fit have inliers near the rim it is being asked to carry?
+
+    Away from its evidence a homography is extrapolating, and extrapolation is
+    how a rim ends up in the crowd. Nearby inliers also share the ring's depth,
+    so this is the same test that catches parallax on a camera that moves
+    rather than merely turns.
+    """
+    if source_points is None or not len(source_points):
+        return False
+    points = np.asarray(source_points, np.float64).reshape(-1, 2)
+    gaps = np.hypot(points[:, 0] - centre[0], points[:, 1] - centre[1])
+    return int((gaps <= radius * max(width, 1e-6)).sum()) >= need
 
 
 def acceptable(box, anchor_width, frame_shape,
@@ -249,7 +279,7 @@ def main() -> int:
         return (frame, cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)) if ok else (None, None)
 
     found, samples, started = [], [], time.time()
-    tried = excluded_anchors = excluded_frames = 0
+    tried = excluded_anchors = excluded_frames = unsupported = 0
     for n, anchor in enumerate(anchors):
         at = float(anchor["t"])
         frame_a, grey_a = grey_at(at)
@@ -276,8 +306,11 @@ def main() -> int:
             if shares_a_shot(grey_b, watch):
                 excluded_frames += 1
                 continue
-            hop, inliers, ratio, residual = fit_with_report(grey_a, grey_b)
+            hop, inliers, ratio, residual, support = fit_with_report(grey_a, grey_b)
             if hop is None:
+                continue
+            if not supported_at_the_rim(support, centre, width):
+                unsupported += 1
                 continue
             box = carried_box(hop, centre, width)
             if not acceptable(box, width, frame_b.shape):
@@ -315,7 +348,8 @@ def main() -> int:
             print(f"  sample sheet: {sample_dir / 'propagated_rims.jpg'}")
     print(f"{tried} frames tried, {len(found)} labels carried "
           f"({len(found) / max(tried, 1):.1%}); {excluded_anchors} anchors and "
-          f"{excluded_frames} frames dropped for sharing a shot with the evaluation")
+          f"{excluded_frames} frames dropped for sharing a shot with the "
+          f"evaluation and {unsupported} for having no inlier near the ring")
     print(f"  {out}")
     return 0
 
