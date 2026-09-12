@@ -80,11 +80,14 @@ import numpy as np
 MIN_CONF = 0.10
 #: A detector rim this confident is believed ahead of the projection.
 RIM_TRUST_CONF = 0.40
-#: The dedicated rim detector's floor. It finds rims the four-class detector
-#: cannot -- 6 of 7 frames that nothing else locates -- but it also fires on
-#: red patches, water coolers and orange shoes, so it goes BELOW the four-class
-#: detector in the order and its false alarms are reported, never netted off.
-RIM_SCALE_CONF = 0.35
+#: The dedicated rim detector's floor. Trained out, it finds 3 of 7 frames
+#: that nothing else in the repo locates and raises NO false alarm on 8 frames
+#: known to hold no rim. Every floor from 0.10 to 0.30 gives exactly that, so
+#: this sits on a plateau rather than on a point fitted to those 15 frames;
+#: an under-trained checkpoint at 0.20 reached 6 of 7 but also fired on a
+#: referee's red patch, a water cooler and an orange shoe. It still goes BELOW
+#: the four-class detector, and its false alarms are reported, never netted off.
+RIM_SCALE_CONF = 0.25
 #: A projected rim further than this from a believed detection is the OTHER
 #: basket, and is kept; nearer than this it is the same rim seen twice.
 SAME_RIM_WIDTHS = 2.0

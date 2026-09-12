@@ -53,7 +53,12 @@ def main() -> int:
                 # trainer scale again mostly undoes the point of them.
                 scale=0.2, mosaic=0.3, fraction=args.fraction, verbose=True)
     OUT.mkdir(parents=True, exist_ok=True)
-    best = Path("runs/detect/outputs/train") / args.name / "weights" / "best.pt"
+    # Ultralytics nests `project` under its own runs dir, so the weights land
+    # one level deeper than `project` says. Look for both.
+    candidates = [Path("runs/detect/outputs/train") / args.name / "weights" / "best.pt",
+                  Path("runs/detect/runs/detect/outputs/train") / args.name
+                  / "weights" / "best.pt"]
+    best = next((c for c in candidates if c.exists()), candidates[0])
     if best.exists():
         import shutil
         shutil.copy(best, OUT / "best.pt")
