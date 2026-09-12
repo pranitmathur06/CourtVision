@@ -5448,3 +5448,44 @@ built and measured. What remains is not an idea but a quantity: hand-drawn ball
 boxes on the frames that are hard, in the thousands, which no automatic source
 can supply because every one of them -- the shot chart, tracking, the rim --
 finds the ball only where it is already found.
+
+## Round 76 - what the hand-labelling actually costs, measured
+
+Round 75 ended by saying the only thing left is hand-drawn boxes on the hard
+frames. That is a claim about cost, so it was measured rather than asserted.
+
+`mine_hard_ball_frames.py` defines hard WITHOUT knowing the answer, so the set
+cannot be circular: a frame is hard when the detector's most confident ball
+candidate is below 0.35. There are 560 such frames in G7's game span at 11 s
+spacing, with a median top confidence of 0.23.
+
+Nine of them were rendered at full resolution with a 50 px measuring grid and
+worked through by eye:
+
+    1 frame had no ball in it at all
+    3 frames had a ball that could be located confidently
+    5 frames had a ball that could NOT be located, by a person looking as long
+      as they liked
+
+So the yield is about one usable label per frame-triple, or roughly ONE LABEL
+PER SHEET READ. Getting the few thousand that a detector needs is therefore a
+few thousand careful looks -- and more than half of the hard frames cannot be
+labelled at all, because the thing that makes them hard for the detector (the
+ball is 15 px, held inside a hand, blurred by a pan, or lost against a crowd
+of its own colour) makes them hard for a person too.
+
+That is the honest cost of the remaining work, and it is why it did not get
+done here rather than a judgement that it should not be. The three labels that
+were obtained are kept in `data/labeling/rim_ball/ball_truth_hard.json`; they
+are the only labels in this repository that come from the population the
+detector actually fails on.
+
+**The gate, finally:**
+
+    object   accuracy   95% CI          gate    this session
+    rim        0.840   0.653-0.936      0.95    0.769 -> 0.840
+    ball       0.300   0.108-0.603      0.95    measured honestly for the first time
+
+Nine ball approaches built and measured, two of which moved the ceiling (large
+inference, gap-filling) and none of which moved delivery. The rim improved on a
+method that works and has a known, laborious path to the rest.
