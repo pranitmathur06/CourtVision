@@ -77,27 +77,53 @@ SNAP_MAX_PX = 12.0
 ORB_SCALE = 0.5
 
 
-def hop_at_scale(source, target, source_boxes, target_boxes, scale):
-    """`pairwise_homography` on shrunk frames, returned in full-size pixels."""
-    import cv2
+def back_offsets(lead_s, step_s, fine_s=2.0, coarse_s=1.0):
+    """How far back to look for an anchor: every frame at first, then sparsely.
 
+    Nearly every usable anchor is within a second or two, and a hop over that
+    gap is short enough to be accurate; beyond it the search is a long shot
+    worth only a few tries.
+    """
+    fine = list(np.arange(0.0, min(fine_s, lead_s) + 1e-9, step_s))
+    coarse = list(np.arange(fine[-1] + coarse_s, lead_s + 1e-9, coarse_s))
+    return [float(v) for v in fine + coarse]
+
+
+def shrink_image(grey, scale):
+    """The frame ORB actually matches on."""
+    import cv2
+    if scale >= 0.999:
+        return grey
+    return cv2.resize(grey, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+
+
+def hop_between(source_small, target_small, source_boxes, target_boxes, scale):
+    """`pairwise_homography` on ALREADY-shrunk frames, in full-size pixels.
+
+    Matching at half size is both quicker and, measured against the detector's
+    own rims, slightly more accurate -- the area-averaged shrink is a denoise.
+    The homography still has to describe the frame rather than the shrunken
+    copy, hence the conjugation.
+    """
     from courtvision.court_tracking import pairwise_homography
 
-    if scale >= 0.999:
-        return pairwise_homography(source, target, source_boxes, target_boxes)
-
-    def small(image):
-        return cv2.resize(image, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
-
-    def shrink(boxes):
+    def to_match(boxes):
         return None if boxes is None else np.asarray(boxes, np.float64) * scale
 
-    found = pairwise_homography(small(source), small(target),
-                                shrink(source_boxes), shrink(target_boxes))
+    found = pairwise_homography(source_small, target_small,
+                                to_match(source_boxes), to_match(target_boxes))
     if found is None:
         return None
+    if scale >= 0.999:
+        return found
     to_small = np.diag([scale, scale, 1.0])
     return np.linalg.inv(to_small) @ found @ to_small
+
+
+def hop_at_scale(source, target, source_boxes, target_boxes, scale):
+    """`hop_between` for callers holding full-size frames."""
+    return hop_between(shrink_image(source, scale), shrink_image(target, scale),
+                       source_boxes, target_boxes, scale)
 
 
 def snap(camera, image_to_court, size):
@@ -175,8 +201,14 @@ def main() -> int:
     parser.add_argument("--step-s", type=float, default=STEP_S)
     parser.add_argument("--anchor-every-s", type=float, default=ANCHOR_EVERY_S)
     parser.add_argument("--orb-scale", type=float, default=ORB_SCALE)
+    parser.add_argument("--anchor-back-step-s", type=float, default=1.0)
     parser.add_argument("--start-s", type=float, default=0.0)
     parser.add_argument("--end-s", type=float, default=None)
+    parser.add_argument("--grid-direct", action="store_true",
+                        help="pose only the evaluation grid's frames, each from the "
+                             "latest anchor at or before it -- the same pose the "
+                             "streaming tracker would carry there, without paying "
+                             "for the frames in between")
     parser.add_argument("--grid-lead-s", type=float, default=None,
                         help="track only a lead-in window before each evaluation-grid "
                              "time instead of the whole video -- same algorithm, a "
@@ -228,6 +260,104 @@ def main() -> int:
 
     rows, anchors, tracked, alarms = [], 0, 0, 0
     started = time.time()
+
+    if args.grid_direct:
+        import sys
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from eval_rim_and_ball import SAMPLE_EVERY_S, sample_times
+
+        def frame_at(when):
+            capture.set(cv2.CAP_PROP_POS_MSEC, when * 1000)
+            ok, image = capture.read()
+            return image if ok else None
+
+        def anchor_at(when):
+            """A full registration at `when`, or None. The landmark gate first."""
+            image = frame_at(when)
+            if image is None:
+                return None
+            players = [b["xyxy"] for b in boxes_near(when, "player")]
+            found_boxes = np.array(players, np.float64) if players else None
+            result = model.predict(image, device=device, verbose=False)[0]
+            begin = None
+            if result.keypoints is not None and len(result.keypoints):
+                xy = result.keypoints.xy[0].cpu().numpy()
+                conf = result.keypoints.conf[0].cpu().numpy()
+                begin, _ = homography_from_keypoints(
+                    {i: tuple(xy[i]) for i in range(len(xy))
+                     if i in KEYPOINTS and conf[i] >= args.conf and (xy[i] > 0).all()})
+            if begin is None:
+                return None
+            matrix, info = register_frame(image, begin, boxes=found_boxes,
+                                          camera=camera, search=False)
+            if matrix is None or not info.get("refined"):
+                return None
+            return image, found_boxes, matrix
+
+        lead = args.grid_lead_s or 8.0
+        for n, grid_t in enumerate(sample_times(end, SAMPLE_EVERY_S)):
+            if grid_t < args.start_s:
+                continue
+            target = frame_at(grid_t)
+            if target is None:
+                continue
+            size = (target.shape[1], target.shape[0])
+            players = [b["xyxy"] for b in boxes_near(grid_t, "player")]
+            target_boxes = np.array(players, np.float64) if players else None
+            target_small = shrink_image(
+                cv2.cvtColor(undistort_image(target, camera.k1, camera.k2),
+                             cv2.COLOR_BGR2GRAY), args.orb_scale)
+
+            pose, source, params, cost = None, None, None, None
+            # Backwards, so the anchor used is the one a forward tracker would
+            # be carrying at this moment -- not a later one it could not know.
+            # Finely at first and coarsely later: the streaming tracker can hop
+            # from an anchor 0.2 s old, and searching at 1 s steps instead cost
+            # it a third of its coverage (50% against 66% on the same stretch).
+            for back in back_offsets(lead, args.step_s):
+                when = grid_t - float(back)
+                if when < 0:
+                    break
+                got = anchor_at(when)
+                if got is None:
+                    continue
+                anchors += 1
+                anchor_image, anchor_boxes, anchor_pose = got
+                if back < 1e-9:
+                    pose, source, cost = anchor_pose, "anchor", 0.0
+                    _, _, params = snap(camera, anchor_pose, size)
+                else:
+                    anchor_small = shrink_image(
+                        cv2.cvtColor(undistort_image(anchor_image, camera.k1, camera.k2),
+                                     cv2.COLOR_BGR2GRAY), args.orb_scale)
+                    hop = hop_between(anchor_small, target_small, anchor_boxes,
+                                      target_boxes, args.orb_scale)
+                    if hop is None or abs(np.linalg.det(hop)) < 1e-12:
+                        continue
+                    carried, cost, params = snap(
+                        camera, anchor_pose @ np.linalg.inv(hop), size)
+                    if carried is None or cost > SNAP_MAX_PX:
+                        continue
+                    pose, source = carried, "anchored-hop"
+                    tracked += 1
+                if disagrees_with_detector(camera, pose, size, boxes_near(grid_t, "rim")):
+                    alarms += 1
+                    pose, source, params, cost = None, None, None, None
+                    continue
+                break
+
+            rows.append({"t": round(float(grid_t), 3),
+                         "pose": pose.tolist() if pose is not None else None,
+                         "source": source, "hops": 0 if source == "anchor" else 1,
+                         "params": params,
+                         "snap_px": round(cost, 2) if cost is not None else None,
+                         "rims": project_rims(camera, pose, size) if pose is not None else []})
+            if (n + 1) % 25 == 0:
+                have = sum(1 for r in rows if r["pose"])
+                print(f"  {grid_t / 60:6.1f} min  {len(rows)} grid frames, pose on "
+                      f"{have} ({have / max(len(rows),1):.0%}), {anchors} anchors, "
+                      f"{(time.time() - started) / 60:.0f} min elapsed", flush=True)
+        segments = []
 
     for segment_start, segment_end in segments:
         # Each window starts cold: no pose may leak across a gap in the walk.
