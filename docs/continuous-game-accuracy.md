@@ -5559,3 +5559,46 @@ mechanical, and the honest remaining cost of the rim half of the gate.
                                                 need labels cannot be labelled
                                                 by anyone; the information is
                                                 not in the picture.
+
+## Round 79 - 23 hand labels, trained, and measured WORSE
+
+Round 78 isolated the rim's remaining gap on 29 rim boxes hand-located from the
+cameras nothing here can register, and said the fix was training on them. It
+was done: 23 of them (six held out for sitting within 30 s of an evaluation
+frame), each written out as 26 crops at random offsets with half flipped, mixed
+into the 8,256 synthetic crops, and trained for 14 epochs.
+
+**It learns the viewpoint.** At 887.5 s -- an under-basket camera with the ring
+filling half the picture, which no detector in this repository has ever fired
+on -- the new model puts a box on the ring's lower-front arc, about 0.2 rim
+widths from its centre, checked by eye. Main-camera accuracy is untouched
+(p50 0.03 rim widths, 100% within one) and its false alarms fall from 1 to 0.
+
+**And it is worse overall.**
+
+    model                                 located   accuracy   95% CI
+    scale crops only                       21/25     0.840   0.653-0.936
+    scale crops + 23 hand labels           19/25     0.760   0.566-0.885
+
+It gained the under-basket class and LOST two distant wides it used to find --
+2012 s and 3412 s, both frames where the rim is small. Twenty-three examples
+over-weighted twenty-six-fold taught it the viewpoints it saw and cost it a
+size it already had. The shipped model is reverted to the better-measured one;
+the hand-trained checkpoint is kept beside it as `checkpoints/rim_scale_hand.pt`.
+
+Worth saying plainly: the verdict files record judgements against a particular
+system, so scoring v7 with them gave a stale 12/13 until the two changed frames
+were checked by hand. The number only fell to 0.760 because that check was
+made. A verdict is not truth; it is truth-about-a-claim.
+
+**What it means for the labelling plan.** The plan was right that these labels
+are the gap and wrong that a few dozen would close it. 23 labels move the model
+from one failure mode to another. Closing it needs enough to cover every
+alternate camera AND hold the sizes already learnt -- hundreds, not dozens, at
+the measured rate of about 1.6 usable labels per six-frame sheet.
+
+**Phase 2, measured:**
+
+    object   accuracy   95% CI          gate
+    rim        0.840   0.653-0.936      0.95
+    ball       0.300   0.108-0.603      0.95
