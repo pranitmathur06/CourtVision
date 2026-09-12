@@ -99,6 +99,13 @@ def best_track(frames, min_length=MIN_LENGTH, min_speed=MIN_SPEED_PX):
     return best
 
 
+def _write(path, video, detections, found):
+    out = Path(path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    json.dump({"video": video, "detections": detections,
+               "min_length": MIN_LENGTH, "frames": found}, open(out, "w"))
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--video", required=True)
@@ -112,6 +119,10 @@ def main() -> int:
                         help="skip windows so the labels are spread over the game")
     parser.add_argument("--orb-scale", type=float, default=0.5)
     parser.add_argument("--limit", type=int, default=400)
+    parser.add_argument("--save-every", type=int, default=40,
+                        help="write the labels found so far this often. Without it a "
+                             "long run can only be stopped by throwing its work away, "
+                             "which is how 407 labels were lost once.")
     parser.add_argument("--out", required=True)
     args = parser.parse_args()
 
@@ -126,7 +137,7 @@ def main() -> int:
             if r["t"] >= args.start_s and (args.end_s is None or r["t"] <= args.end_s)]
     capture = cv2.VideoCapture(args.video)
 
-    found, started = [], time.time()
+    found, saved, started = [], 0, time.time()
     for w in range(0, len(rows) - WINDOW, WINDOW * args.stride_windows):
         window = rows[w:w + WINDOW]
         greys, cands = [], []
@@ -174,15 +185,15 @@ def main() -> int:
                                      if k != pick]})
         if len(found) >= args.limit:
             break
-        if len(found) and len(found) % 50 < len(chain):
+        if len(found) - saved >= args.save_every:
+            _write(args.out, args.video, args.detections, found)
+            saved = len(found)
             print(f"  {len(found)} labelled, {(time.time() - started) / 60:.1f} min",
                   flush=True)
+
     capture.release()
 
-    out = Path(args.out)
-    out.parent.mkdir(parents=True, exist_ok=True)
-    json.dump({"video": args.video, "detections": args.detections,
-               "min_length": MIN_LENGTH, "frames": found}, open(out, "w"))
+    _write(args.out, args.video, args.detections, found)
     confs = [f["conf"] for f in found]
     print(f"{len(found)} ball labels from tracks; confidence p50 "
           f"{np.median(confs) if confs else float('nan'):.2f}, "
