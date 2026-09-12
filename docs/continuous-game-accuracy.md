@@ -5395,3 +5395,56 @@ needs a detector trained on thousands of hand-drawn boxes ON THE HARD FRAMES,
 and the automatic label sources cannot supply those: the shot chart finds the
 ball only at the rim, and tracking finds it only in free flight, unoccluded and
 fast. Both find the ball exactly where it is already found.
+
+## Round 75 - gap-filling raises the ceiling to 0.500 and delivers 0.300
+
+A ninth approach, and the first to move the ceiling on the unbiased truth set.
+
+`rim_track` has filled the rim's gaps from neighbouring frames since Round 63.
+The ball needs the same thing and one extra step: a rim does not move, so its
+gaps interpolate directly, while a ball does, so the neighbours' candidates are
+carried into this frame's pixels by ORB before being pooled.
+
+The detector HAS the balls it misses, just not on the frame being asked about:
+at 4362 s its best candidate on the scored frame is 189 px away and 19 px away
+a fifth of a second later; at 2862 s, 36 px and 14 px.
+
+    on ten hand-located balls          located   accuracy
+    shipped                              3/10      0.300
+    pooled, by confidence                2/10      0.200
+    pooled, own candidates first         3/10      0.300
+    pooled, CEILING (an oracle choosing) 5/10      0.500
+
+So pooling does what it was built to do -- a correct candidate now exists on
+five frames instead of three -- and delivers nothing, because the two it adds
+sit at rank 13 of 18 and rank 13 of 30 by confidence. The three the system
+already found sit at ranks 3, 2 and 1. There is no signal in confidence or in
+age that separates a rank-13 true ball from the twelve things above it; that is
+the same wall every selection rule since Round 70 has hit.
+
+It is kept anyway, off the delivered path, because it is the only thing that
+has moved the ceiling and a future selector would need it.
+
+**The ledger, complete:**
+
+    1  court-volume ray test        vacuous
+    2  motion as a filter           premise false; held balls are still
+    3  motion as a preference       picks a moving defender over a held ball
+    4  large inference + confidence worse end to end
+    5  two-scale agreement          0 of 5
+    6  handler-box proximity        no change
+    7  learned patch ranker         true ball's mean rank 1.0 -> 2.0
+    8  retrained ball detector      3 of 10, unchanged
+    9  temporal gap-filling         ceiling 0.300 -> 0.500, delivered unchanged
+
+**Final measured state of the Phase 2 gate:**
+
+    object   accuracy   95% CI          gate
+    rim        0.840   0.653-0.936      0.95
+    ball       0.300   0.108-0.603      0.95
+
+Every approach that could be built from signals inside this repository has been
+built and measured. What remains is not an idea but a quantity: hand-drawn ball
+boxes on the frames that are hard, in the thousands, which no automatic source
+can supply because every one of them -- the shot chart, tracking, the rim --
+finds the ball only where it is already found.
