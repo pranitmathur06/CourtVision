@@ -5099,3 +5099,70 @@ a threshold anywhere:
 - ball: frames where the detector proposes nothing. Needs the ceiling measured
   at higher inference size and, on that evidence, either a re-detection pass
   or a retrained ball class.
+
+## Round 69 - a rim detector trained on rims it labelled itself
+
+Round 68 left the rim at 0.769 and named the gap: frames where the landmark
+model returns no keypoints AND the four-class detector returns no rim box, at
+confidence 0.01 and at every inference size from 160 to 2560. Nothing left in
+the repo to bootstrap from.
+
+**The training data was made, not labelled.** Part of the gap is scale, and
+that part reproduces on the main camera: crop a frame around its own rim and
+enlarge it and the detector holds at 3x (confidence 0.47-0.78) and collapses to
+nothing at 6x. The same rim, the same pixels, only bigger. So on frames where
+the detector is already confident, its own box is crop-zoomed to make a
+correctly labelled picture of a rim at a size it has never seen -- 8,256
+training crops and 1,638 validation, 4,494 of them negatives so a single-class
+model cannot simply learn to fire on anything orange.
+
+Single class deliberately: folding rim-only crops into the four-class detector
+would teach it "no ball and no player here" on every crop, the fault
+`prepare_detector_dataset.py` already recorded for SportsMOT.
+
+**Scored on the frames it cannot have seen** -- they are frames where the OLD
+detector found nothing, and the training set was built from frames where it was
+confident:
+
+    fires on 3 of 7 frames that nothing else in the repo locates
+    0 false alarms across 8 frames known to hold no rim
+    main camera: 39 of 40 frames, p50 0.04 rim widths from the old detector's box
+
+Every floor from 0.10 to 0.30 gives exactly that, so the threshold is on a
+plateau and not a point fitted to those 15 frames. An UNDER-TRAINED checkpoint
+reached 6 of 7 at a lower floor but also fired on a referee's red patch, a
+water cooler, a graphic and an orange shoe -- the colour failure mode, learnt
+rather than hand-written -- so the recall is not free and the finished model is
+the conservative one.
+
+The three it recovers are WIDE main-camera views where the rim is small and
+far, each checked by eye and on the rim. That is the miss population that only
+became visible when the labelling panel went from 640 to 900 px. The four it
+does not are the true alternate viewpoints -- under-basket, baseline, a rim
+close-up -- which crop-and-zoom cannot synthesise, and which still need hand
+labels.
+
+**Where the gate stands**, on 41 hand-judged in-game frames across two disjoint
+uniform samples:
+
+    object   visible  located  accuracy   95% CI       gate
+    rim        25       21      0.840   0.653-0.936    0.95
+    ball        7        4      0.571   0.250-0.842    0.95
+
+The rim has gone 0.769 -> 0.840 and its interval now reaches the gate, on a
+sample too small to settle it. Both still FAIL.
+
+**The ball is detection-limited and the fix is known but unfinished.** At an
+inference size of 2560 a ball box appears on 93% of grid frames against 80%,
+and on a frame where the cached pass proposed nothing within 55 px of the ball
+a candidate now sits on it -- the ceiling rises. But the same setting proposes
+18 candidates a frame instead of 3, so choosing becomes the limit.
+
+A geometric "is it in play" filter for that choosing was built twice and
+removed both times. The reason is not a bug: worked by hand for a real
+candidate, its ray sits between 10.2 and 17.3 ft above the floor for the whole
+time it is over the court, an ordinary high arc. A ball 15 ft up over the far
+side and a spectator behind it are ON THE SAME RAY. One frame carries no depth
+to separate them; only motion does. That needs dense frames -- a 5 fps
+re-detection pass at 2560 and dense poses to go with it, several hours each,
+started and not finished here.
