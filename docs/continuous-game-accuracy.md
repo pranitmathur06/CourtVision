@@ -5037,3 +5037,65 @@ is ~10 px: 29 of 66 frames could not be judged by eye at all, which makes the
 magnify every candidate, which fixes the judging of a CLAIM, but finding a ball
 the detector never proposed still needs the frame at full resolution. That pass
 is owed before any ball figure is quoted.
+
+## Round 68 - the projection is not the best rim, and the ball's problem is detection
+
+Two corrections to Round 67, both found by looking harder rather than by
+changing anything.
+
+**The projection is beaten by the detector where the detector fires.** Round 66
+reported the projected rim agreeing with a confident detection on 99.5% of a
+180 s probe window. On the uniform GRID it is 90.6%. The probe window was one
+steady stretch of main-camera play; the grid is the honest sample, and the
+difference is a reminder that a window chosen for a smoke test is not a
+measurement.
+
+Of the 12 grid frames where they disagree by more than a rim width, all 8
+inspected by eye had the DETECTOR on the rim and the projection about one rim
+width above it, on the backboard. They are anchors, not drifted hops, several
+at a snap cost of 0.0 -- so it is not tracking error. It is the weakness of
+extrapolating a point 10 ft up from a homography fitted to the FLOOR: a pose
+can match the floor lines with a slightly wrong tilt and only betray it away
+from the floor. Re-fitting the rim's height against the detector puts the
+best median at exactly 10.0 ft, the true height, so it is a biased subset and
+not a global calibration to dial out. The order is now: believe a confident
+detection, fall back to the projection, which still carries most frames and
+the second basket.
+
+Also measured: the snap cost predicts a hop's error well -- 100% within a rim
+width below 2 px, 29% between 4 and 8 -- though capping it costs more coverage
+than it buys.
+
+**The labelling resolution was changing the answer.** At the 640 px panel of
+the first pass, rims that are small or far read as "not in shot", which
+quietly shrank the denominator in the system's favour. Re-labelled at 900 px
+against the detector-first system, in game:
+
+    object   visible  located  accuracy   95% CI
+    rim        13       10      0.769   0.497-0.918
+    ball        7        4      0.571   0.250-0.842
+
+Both FAIL. The rim number did not move much (0.826 -> 0.769) but it moved the
+wrong way under better looking, which is the direction that matters: the first
+pass was flattering.
+
+**The ball's problem is DETECTION, not selection.** All three ball misses had
+no correct candidate on offer at any confidence -- the detector never proposed
+the ball at all. The ray geometry, the fixture rule and the continuity
+preference built in Round 66 all address SELECTION, and selection is not the
+bottleneck. They are not wasted (the fixture rule alone removes the
+scorer's-table ball from 34 frames) but they cannot move this number. Raising
+the ceiling needs a better ball detector, and the same crop-and-zoom test that
+diagnosed the rim should be run for the ball before assuming which axis of it
+is wrong.
+
+**Where the gate stands.** Neither object is at 95%, and the honest gap is not
+a threshold anywhere:
+
+- rim: frames the main camera did not shoot, where the keypoint model returns
+  no keypoints and the detector no boxes. Needs hand-labelled rim boxes on
+  those views -- a rim is unambiguous to label, so this is a defensible place
+  to spend them -- plus scale augmentation, which is free from the projection.
+- ball: frames where the detector proposes nothing. Needs the ceiling measured
+  at higher inference size and, on that evidence, either a re-detection pass
+  or a retrained ball class.
