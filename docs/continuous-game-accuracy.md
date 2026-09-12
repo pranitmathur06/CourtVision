@@ -5893,3 +5893,43 @@ ball-like displacement in neighbouring frames fixes 737.5 s and breaks
     object   located   accuracy   95% CI          gate
     rim       34/38     0.895   0.759-0.958      0.95
     ball       3/10     0.300   0.108-0.603      0.95
+
+## Round 85 - the fifth rim run's "new find" was an advertising hoarding
+
+The 158 propagated labels trained cleanly (mAP50 0.875) and `eval_rim_scale.py`
+reported the first improvement in five runs:
+
+    model                    held-out rims found   false alarms   main camera
+    shipped (scale crops)          3 / 7               0          0.04 widths
+    + 158 propagated labels        4 / 7               0          0.03 widths
+
+That script's own docstring says "positions still need an eye". Zoomed 4x, the
+new find at 2112.5 s is a red State Farm advertising board in the stands -- a
+horizontal red bar at rim scale, nothing to do with a basket.
+
+The real result is 3 of 7, unchanged, plus one false alarm and one main-camera
+frame that lost its box. Reverted, for the fifth time. What IS real: the three
+true finds became much more confident, 0.31 -> 0.72, 0.33 -> 0.46, 0.76 -> 0.82.
+
+**A count of boxes is not a measurement of rims.** Third time in this project a
+metric has moved the right way while the truth did not, and the only thing that
+caught it was rendering the claim and looking at it.
+
+### Why the two biggest rims stay missed, which is now known rather than guessed
+
+887.5 s and 1387.5 s are close-ups with rings 400-600 px across. The anchors
+most like them are 885.0 s (608 px) and 888.0 s (432 px) -- and those are
+exactly the ones the same-shot rule DROPS, because they share a shot with an
+evaluation frame.
+
+That is the hold-out working. Those frames are a fair test of generalising to
+an unseen close-up viewpoint, and the model does not generalise to it. Only 28
+of 158 propagated labels carry a rim over 200 px wide, and the scale dataset's
+big rims are UPSCALED small ones -- blurry where a real close-up is sharp with
+visible net cord. The domain gap is in the texture, not only the size.
+
+**Phase 2, unchanged:**
+
+    object   located   accuracy   95% CI          gate
+    rim       34/38     0.895   0.759-0.958      0.95
+    ball       3/10     0.300   0.108-0.603      0.95
