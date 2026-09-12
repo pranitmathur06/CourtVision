@@ -14,7 +14,13 @@ Judgement lines, one per frame, in a plain text file:
     15 rim=x:120,88 ball=ok     a rim IS there, at panel (120, 88); no right claim
     16 rim=ok;+x:520,90 ball=-  one claim right, a SECOND rim unclaimed at ...
     17 rim=ok ball=x:301,204    the ball is there but the claim missed it
-    18 skip                     unreadable render, dropped from the grid
+    18 rim=ok ball=?            play is plainly on, but the ball cannot be found
+    19 skip                     unreadable render, dropped from the grid
+
+"?" is not "absent". Marking an object absent when it is merely hard to see
+removes a MISS from the denominator and flatters the system; marking it
+present at a guessed point invents truth. Unknowns are excluded from both and
+counted, so the reader can judge whether there were few enough to ignore.
 
 Objects within one judgement are separated by ";" -- the comma belongs to the
 coordinate. `ok` consumes the system's next unused report for that object, in
@@ -44,9 +50,14 @@ DEFAULT_BALL_PX = 18.0
 POINT = re.compile(r"x:(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)")
 
 
+UNKNOWN = "?"
+
+
 def parse_spec(spec, reports, scale, default_px, widths):
-    """One object's judgement -> [{centre, width}] in frame pixels."""
+    """One object's judgement -> [{centre, width}] in frame pixels, or UNKNOWN."""
     out, used = [], 0
+    if spec == UNKNOWN:
+        return UNKNOWN
     if spec in ("-", ""):
         return out
     for piece in spec.split(";"):
@@ -78,7 +89,7 @@ def main() -> int:
     args = parser.parse_args()
 
     rows = json.load(open(args.system))["frames"]
-    frames, skipped = [], 0
+    frames, skipped, unknown = [], 0, 0
     for line in open(args.judgements):
         line = line.split("#")[0].strip()
         if not line:
@@ -95,22 +106,29 @@ def main() -> int:
             specs[key] = value
         rim_reports = row.get("rim") or []
         ball_reports = [row["ball"]] if row.get("ball") else []
+        rim = parse_spec(specs.get("rim", "-"), rim_reports, args.scale,
+                         DEFAULT_RIM_PX, [])
+        ball = parse_spec(specs.get("ball", "-"), ball_reports, args.scale,
+                          DEFAULT_BALL_PX, [])
+        if rim is UNKNOWN or ball is UNKNOWN:
+            unknown += 1
         frames.append({
             "t": row["t"],
-            "rim": parse_spec(specs.get("rim", "-"), rim_reports, args.scale,
-                              DEFAULT_RIM_PX, []),
-            "ball": (parse_spec(specs.get("ball", "-"), ball_reports, args.scale,
-                                DEFAULT_BALL_PX, []) or [None])[0],
+            "rim": None if rim is UNKNOWN else rim,
+            "ball": None if ball is UNKNOWN else (ball or [None])[0],
+            "rim_unknown": rim is UNKNOWN,
+            "ball_unknown": ball is UNKNOWN,
         })
 
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     json.dump({"system": args.system, "scale": args.scale, "skipped": skipped,
-               "frames": frames}, open(out, "w"), indent=0)
+               "unknown": unknown, "frames": frames}, open(out, "w"), indent=0)
     rims = sum(len(f["rim"]) for f in frames)
     balls = sum(1 for f in frames if f["ball"])
-    print(f"{len(frames)} frames labelled ({skipped} skipped); "
-          f"{rims} rims visible, {balls} balls visible")
+    print(f"{len(frames)} frames labelled ({skipped} skipped, {unknown} with an "
+          f"object that could not be determined); {rims} rims visible, "
+          f"{balls} balls visible")
     return 0
 
 

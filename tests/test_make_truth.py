@@ -80,3 +80,20 @@ def test_the_chain_from_judgements_to_a_score_holds_together(tmp_path):
                              "frames_without": 1, "false_alarms": 0}
     assert report["ball"]["visible"] == 2 and report["ball"]["located"] == 1
     assert report["ball"]["false_alarms"] == 1      # the claim on the empty frame
+
+
+def test_unknown_is_neither_present_nor_absent():
+    """Calling a hard-to-see ball absent would delete a miss and flatter the system."""
+    assert make_truth.parse_spec("?", [[1.0, 2.0]], 2.0, 18.0, []) is make_truth.UNKNOWN
+
+
+def test_an_unknown_object_is_left_out_of_both_sides_of_the_score():
+    import sys as _sys
+    _sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+    import eval_rim_and_ball as metric
+
+    truth = [{"t": 0.0, "rim": [], "ball": None, "ball_unknown": True},
+             {"t": 1.0, "rim": [], "ball": {"centre": [10.0, 10.0], "width": 18.0}}]
+    report = metric.score(truth, {0.0: {"ball": [999.0, 999.0]}, 1.0: {"ball": [10.0, 10.0]}})
+    assert report["ball"]["visible"] == 1 and report["ball"]["located"] == 1
+    assert report["ball"]["false_alarms"] == 0     # the unknown frame votes on nothing

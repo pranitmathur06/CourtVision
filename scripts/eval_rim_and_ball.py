@@ -110,6 +110,8 @@ def score(truth_rows, system, tol_rim=TOL_RIM_WIDTHS, tol_ball=TOL_BALL_WIDTHS):
         visible = located_n = claimed = 0
         frames_absent = 0
         for row in truth_rows:
+            if row.get(f"{name}_unknown"):
+                continue            # the labeller could not tell; neither counts it
             truths = _objects(row, name)
             reports = [r for r in _objects(system.get(row["t"], {}), name) if r is not None]
             visible += len(truths)
