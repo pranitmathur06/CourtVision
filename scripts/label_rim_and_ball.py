@@ -130,9 +130,10 @@ def main() -> int:
         side = cv2.resize(side, (ZOOM, TILE_H))
         tile = np.hstack([panel, side])
         cv2.putText(tile, f"#{index} {row['t']:.0f}s "
-                          f"{'REG' if row.get('registered') else 'no-reg'} "
-                          f"rim:{len(row.get('rim') or [])} "
-                          f"ball:{'y' if row.get('ball') else 'n'}",
+                          f"rim:{len(row.get('rim') or [])}"
+                          f"{'p' if row.get('projected') else 'd' if row.get('detected') else ''} "
+                          f"ball:{'y' if row.get('ball') else 'n'}"
+                          f"/{row.get('n_candidates', 0)}",
                     (6, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 255, 255), 2)
         cv2.rectangle(tile, (0, 0), (tile.shape[1] - 1, tile.shape[0] - 1), (255, 255, 255), 1)
         tiles.append(tile)
