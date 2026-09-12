@@ -5166,3 +5166,47 @@ side and a spectator behind it are ON THE SAME RAY. One frame carries no depth
 to separate them; only motion does. That needs dense frames -- a 5 fps
 re-detection pass at 2560 and dense poses to go with it, several hours each,
 started and not finished here.
+
+## Round 70 - two ball rules built, measured, and falsified
+
+Both were meant to answer the ray ambiguity from Round 69: a ball 15 ft up over
+the far side and a spectator behind it lie on the same ray, and only motion can
+separate them. Motion does NOT need the camera's pose -- ORB between a frame
+and its neighbours removes the camera's own movement directly, which turns a
+six-hour dense-pose job into ten minutes. That part worked: across the grid,
+1,220 of 2,717 candidates stand still once the camera is undone, and they are
+heads, shoulders and logos.
+
+**The rule built on it is wrong, because its premise is wrong.** "The game ball
+is never still for a fifth of a second" is false: a player holding the ball at
+the top of the key is very nearly static.
+
+- As a FILTER it discarded held balls and ball coverage fell from 86.4% of
+  frames to 78.3%.
+- Rewritten as a PREFERENCE it still lost them: at 4412 s the ball sits plainly
+  in a player's hands and the claim moved onto a defender; at 6912 s a
+  free-throw shooter holds the ball and the claim moved across the floor.
+
+The common case is the opposite of the premise -- the ball is HELD and still
+while spectators and players move. Motion is off by default, kept behind
+`--use-motion` with the finding attached.
+
+**Raising the ceiling made the end-to-end result worse.** At 2560 a correct
+candidate exists far more often (93% of frames carry a ball box against 80%,
+and a frame that proposed nothing within 55 px of the ball now has one on it).
+But it proposes 18 candidates a frame instead of 3, and confidence alone cannot
+pick among them: at 6912 s the large-inference system picks (79, 81) -- the
+top-left corner of the picture, in the crowd -- where the cached detector's
+narrower candidate set had the ball. So the cached detections remain the
+default for the ball.
+
+That is worth stating plainly because it is the opposite of the obvious
+conclusion from Round 69's ceiling measurement. A better ceiling is only worth
+having with a selector that can use it, and this one cannot.
+
+**Where the gate stands.** Rim 0.840 (21/25), ball 0.571 (4/7), both FAIL. Two
+selection rules are now falsified with evidence rather than argued about, which
+narrows what is left: the ball needs a selector that separates a ball from a
+head WITHOUT assuming the ball moves -- appearance, or agreement between two
+inference scales, or continuity over dense frames where 25 s of grid spacing
+cannot help.

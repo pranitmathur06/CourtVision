@@ -36,6 +36,26 @@ exist only because the camera centre is fixed:
   object looked fast whenever the camera panned, and a shot -- the fastest the
   ball ever moves -- lost to a head that happened to be sitting still. In ray
   space a stationary object IS stationary.
+- MOTION, off by default, and the reason is below. As a PREFERENCE, not a filter. A candidate that stands still
+  between neighbouring frames, once ORB has removed the camera's own movement,
+  is usually a head, a shoulder or a logo -- and motion is the only answer to
+  the ray ambiguity, since a ball 15 ft up and a spectator behind it are on the
+  same ray and only movement tells them apart.
+
+  It was written on the premise that "the game ball is never still for a fifth
+  of a second". THE PREMISE IS FALSE, and the measurement said so twice:
+
+  - As a FILTER it threw away held balls. A player at the top of the key is
+    very nearly static, and ball coverage fell from 86.4% of frames to 78.3%.
+  - Rewritten as a PREFERENCE it still picked a moving distractor over a held
+    ball: at 4412 s the ball sits plainly in a player's hands and the claim
+    moved onto a defender; at 6912 s a free-throw shooter holds the ball and
+    the claim moved onto a player across the floor.
+
+  The common case is the opposite of the premise: the ball is HELD and still,
+  while spectators and players move. Motion is still the only thing that can
+  answer the ray ambiguity, but it cannot be used this way, so it is off by
+  default and kept behind --use-motion with this note attached.
 - FIXTURES. A direction that keeps producing ball boxes all game long is
   furniture: the spare ball on the rack at the scorer's table is a real ball,
   correctly detected, and never the game ball. Measured by eye in Round 65 it
@@ -208,7 +228,7 @@ def choose_balls(rows, fixtures, max_step_deg, use_continuity=True,
     preference and never a cage: the ball does leave the picture and come back,
     so a frame with no candidate near the last one still takes its best.
     """
-    out, dropped, previous, previous_t = [], 0, None, None
+    out, dropped, standing, previous, previous_t = [], 0, 0, None, None
     for row in rows:
         # Continuity only means something across a short gap. After a cut, a
         # replay or a stretch with no pose, the last choice says nothing about
@@ -220,7 +240,13 @@ def choose_balls(rows, fixtures, max_step_deg, use_continuity=True,
             if row["cells"] and row["cells"][i] in fixtures:
                 dropped += 1
                 continue
+
             keep.append((i, candidate))
+        moving = [(i, c) for i, c in keep if not c.get("still")]
+        if moving and len(moving) < len(keep):
+            standing += len(keep) - len(moving)
+            keep = moving
+
         chosen = None
         if keep:
             if previous is not None and row["dirs"] is not None and use_continuity:
@@ -236,7 +262,7 @@ def choose_balls(rows, fixtures, max_step_deg, use_continuity=True,
         elif chosen is None:
             previous, previous_t = None, None
         out.append((chosen, [c for _, c in keep]))
-    return out, dropped
+    return out, dropped, standing
 
 
 def main() -> int:
@@ -250,6 +276,15 @@ def main() -> int:
                              "four-class boxes to 0.04 rim widths against the "
                              "projection's 0.13, and it has no upward bias.")
     parser.add_argument("--rim-conf", type=float, default=RIM_SCALE_CONF)
+    parser.add_argument("--motion", default=None,
+                        help="ball_motion.py output. Candidates that stand still "
+                             "between neighbouring frames, once ORB has removed the "
+                             "camera's own movement, are heads and furniture: the "
+                             "game ball is never still for a fifth of a second.")
+    parser.add_argument("--no-motion", action="store_true", default=True,
+                        help="DEFAULT. Motion measured worse; see the module docstring")
+    parser.add_argument("--use-motion", dest="no_motion", action="store_false",
+                        help="turn the motion preference back on")
     parser.add_argument("--camera", required=True)
     parser.add_argument("--min-conf", type=float, default=MIN_CONF)
     parser.add_argument("--max-step-deg", type=float, default=MAX_STEP_DEG)
@@ -294,6 +329,19 @@ def main() -> int:
         x1, y1, x2, y2 = box["xyxy"]
         return [(x1 + x2) / 2.0, (y1 + y2) / 2.0]
 
+    motion = {}
+    if args.motion and not args.no_motion:
+        found = json.load(open(args.motion))
+        motion = {round(r["t"], 3): r["candidates"] for r in found["frames"]}
+
+    def still_near(t, centre, tolerance=6.0):
+        """Was a candidate at this point judged to be standing still?"""
+        for c in motion.get(round(t, 3), ()):
+            if abs(c["centre"][0] - centre[0]) <= tolerance \
+                    and abs(c["centre"][1] - centre[1]) <= tolerance:
+                return bool(c.get("still"))
+        return False
+
     # Pass 1: candidates and their ray directions.
     rows = []
     posed = 0
@@ -301,7 +349,8 @@ def main() -> int:
         t = row["t"]
         balls = boxes_near(t, "ball", args.min_conf)
         entry = {"t": t, "rims": row.get("rims") or [], "source": row.get("source"),
-                 "candidates": [{"centre": centre_of(b), "conf": b["conf"]} for b in balls],
+                 "candidates": [{"centre": centre_of(b), "conf": b["conf"],
+                                 "still": still_near(t, centre_of(b))} for b in balls],
                  "cells": [], "dirs": None, "hull": None}
         if row.get("params") and balls:
             posed += 1
@@ -318,7 +367,7 @@ def main() -> int:
                       protect=rim_directions(centre))
 
     # Pass 2: choose one ball per frame.
-    decided, dropped = choose_balls(
+    decided, dropped, standing = choose_balls(
         rows, fixtures, args.max_step_deg,
         use_continuity=not args.no_continuity)
 
@@ -381,7 +430,8 @@ def main() -> int:
           f"({sum(1 for f in frames if f['rim']) / n:.1%}); "
           f"ball on {sum(1 for f in frames if f['ball'])} "
           f"({sum(1 for f in frames if f['ball']) / n:.1%}); "
-          f"{len(fixtures)} fixture directions dropped {dropped} candidates")
+          f"{len(fixtures)} fixture directions dropped {dropped} candidates, "
+          f"{standing} more were passed over for standing still")
     return 0
 
 
