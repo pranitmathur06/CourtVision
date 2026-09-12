@@ -1,3 +1,9 @@
+# CORRECTED after re-examining at 2.2-6x. 178: no rim and no backboard anywhere
+# in the frame -- what an earlier pass called 'a rim at frame right' is the green
+# LED strip. 84: the far basket's region holds only photographers, the State Farm
+# board and floor apron; whether a ring is present cannot be settled by eye, which
+# is what '?' is for. The frames marked '-' were re-checked the same way to make
+# sure the scrutiny was not applied only where it helps; they stand.
 # CORRECTED: these were first judged from the sheet's PROJECTED circle rather than
 # the rim the system actually reports. Re-checked against the reported claims and
 # found on the rim. The sheets draw projection and detection both; only the
@@ -14,7 +20,7 @@
 118 rim=ok
 122 rim=ok      # projection sits a rim width above the rim; detector below 0.4   # corrected: claim is on the rim
 174 rim=ok
-178 rim=miss      # close-up contest, rim at the top of frame, nothing fires
+178 rim=-      # close-up contest, rim at the top of frame, nothing fires   # corrected: no rim in this picture
 182 rim=ok
 186 rim=-
 206 rim=-

@@ -27,14 +27,25 @@ signature that separates the population this dataset is missing from the
 population that poisoned it last time, and it is available exactly where the
 speed floor is useless.
 
-So a chain is accepted as a ball when EITHER
+A chain is accepted as a ball when it is a
 
-    FLIGHT    the Round 73 rule, speed in [MIN_FLIGHT_PX, MAX_SPEED_PX] and
-              smoothly turning, or
     DRIBBLE   at least MIN_REVERSALS vertical direction changes, each with an
               amplitude of at least MIN_BOUNCE_PX, with bounded acceleration
               and a total path length over MIN_TRAVEL_PX so that a stationary
               object with detector jitter cannot qualify.
+
+FLIGHT is available behind --accept-flight and is OFF, because the first run
+showed why it should be. It is mis-calibrated here to begin with: 40 px/frame
+at 0.2 s is 200 px/s, and the same constant at 0.1 s demands 400 px/s. Worse,
+the one flight chain it accepted in a whole game was a COACH'S HEAD on a
+close-up sideline shot -- where the depth is shallow and ORB cannot compensate
+the camera, so every object appears to move fast at once and "fast and smooth"
+describes the whole picture.
+
+The dribble rule is immune to that failure, which is the argument for it
+standing alone: a compensation failure makes everything drift together, and
+drift is not a periodic reversal. Nothing in a basketball arena bounces except
+the ball.
 
 Sampled at STEP_S = 0.1 s because a dribble at 2-3 Hz needs several samples per
 cycle; at the 0.2 s of the flight miner a bounce aliases away entirely.
@@ -160,12 +171,16 @@ def best_chain(frames, min_length=MIN_LENGTH):
     return best
 
 
-def classify(points):
-    """'flight', 'dribble' or None for a motion-compensated chain."""
-    if flight_like(points):
-        return "flight"
+def classify(points, accept_flight=False):
+    """'flight', 'dribble' or None for a motion-compensated chain.
+
+    Flight is off by default: see the module docstring. It costs a real ball
+    now and then and it bought a coach's head.
+    """
     if dribble_like(points):
         return "dribble"
+    if accept_flight and flight_like(points):
+        return "flight"
     return None
 
 
@@ -183,6 +198,9 @@ def main() -> int:
     parser.add_argument("--held-out", action="append", default=[],
                         help="repeatable; a window sharing a shot with one of "
                              "these frames is skipped entirely")
+    parser.add_argument("--accept-flight", action="store_true",
+                        help="also take fast smooth chains. Off: the only one a "
+                             "whole game produced was a coach's head.")
     parser.add_argument("--limit", type=int, default=4000)
     parser.add_argument("--save-every", type=int, default=60)
     parser.add_argument("--sample-dir", default=None)
@@ -284,7 +302,7 @@ def main() -> int:
         if chain is None:
             continue
         links, points = chain
-        kind = classify(points)
+        kind = classify(points, args.accept_flight)
         if kind is None:
             continue
         kinds[kind] += 1

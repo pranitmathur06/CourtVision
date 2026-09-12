@@ -1,3 +1,9 @@
+# CORRECTED after re-examining at 2.2-6x. 178: no rim and no backboard anywhere
+# in the frame -- what an earlier pass called 'a rim at frame right' is the green
+# LED strip. 84: the far basket's region holds only photographers, the State Farm
+# board and floor apron; whether a ring is present cannot be settled by eye, which
+# is what '?' is for. The frames marked '-' were re-checked the same way to make
+# sure the scrutiny was not applied only where it helps; they stand.
 # G7, second pass: in-game frames only (stride 4 from #28), judged on 900 px
 # panels instead of 640. Re-scored against the v2 system, which adds the
 # scale-trained rim detector as a third source; the two verdicts it changed
@@ -10,7 +16,7 @@
 40 rim=? ball=?
 76 rim=- ball=miss
 80 rim=ok ball=-        # rim_scale found it; box checked by eye, on the rim
-84 rim=miss ball=?
+84 rim=? ball=?   # corrected: cannot be found by eye
 88 rim=- ball=-
 124 rim=- ball=-
 128 rim=ok ball=?

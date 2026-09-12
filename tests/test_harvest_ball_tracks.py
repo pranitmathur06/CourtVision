@@ -66,10 +66,11 @@ def test_a_player_running_smoothly_is_not_a_dribble():
     assert classify(walk) is None
 
 
-def test_a_ball_in_flight_is_accepted_as_flight():
+def test_flight_is_recognised_but_not_accepted_by_default():
     arc = np.c_[np.arange(8) * 60.0, 300 - np.arange(8) * 40 + np.arange(8) ** 2 * 4]
     assert flight_like(arc)
-    assert classify(arc) == "flight"
+    assert classify(arc) is None
+    assert classify(arc, accept_flight=True) == "flight"
 
 
 def test_a_dribble_is_too_slow_to_pass_the_flight_rule():
