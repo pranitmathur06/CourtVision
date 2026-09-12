@@ -5489,3 +5489,39 @@ detector actually fails on.
 Nine ball approaches built and measured, two of which moved the ceiling (large
 inference, gap-filling) and none of which moved delivery. The rim improved on a
 method that works and has a known, laborious path to the rest.
+
+## Round 77 - the rim's remaining work, priced
+
+The ball's remaining work was priced in Round 76 and found to be worse than
+expensive: more than half the frames that need labels cannot be labelled,
+because what makes them hard for the detector makes them hard for a person.
+
+The rim is the opposite case and worth pricing separately. Rims ARE labelable
+-- large, orange, unambiguous, exactly the property that made hand labels
+defensible here in the first place. Twenty mined frames, on which nothing in
+this repository can find a rim (no keypoints, so no pose; no detector box at
+any threshold), yielded six labels:
+
+    overhead camera, rim and net large      1723 s
+    under-basket camera                     1844 s
+    rim at the frame's left edge            2597 s
+    top edge, partially cut                 1594 s
+    wide view, small and distant            5086 s
+    high wide view                          6951 s
+
+They are in `data/labeling/rim_ball/rim_truth_alternate_cameras.json`, and they
+are the only rim labels here drawn from the population the misses come from.
+
+The yield is about a third -- the mined set is diluted by close-ups and
+graphics holding no rim at all -- so the 50 to 100 labels a retrain would want
+is 150 to 300 frames looked at. That is a bounded, ordinary piece of work with
+a plausible payoff, and it is the difference between the rim's 0.840 and the
+gate. It is the one thing left in Phase 2 that is limited by effort rather than
+by whether the information is in the picture.
+
+**Phase 2, final:**
+
+    object   accuracy   95% CI          gate    limited by
+    rim        0.840   0.653-0.936      0.95    effort: ~200 frames of labelling
+    ball       0.300   0.108-0.603      0.95    information: half the hard frames
+                                                cannot be labelled by anyone
