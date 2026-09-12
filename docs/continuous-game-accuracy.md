@@ -5294,3 +5294,57 @@ small, often held still, often occluded, and surrounded by objects that look
 like it at the resolution it occupies. The rim is at 0.840 and rising on a
 method that works. The ball is at 0.400 and every method tried on it has been
 measured and rejected.
+
+## Round 73 - retraining ball DETECTION, and the end of the ideas
+
+Round 72 established that a ranker cannot help: on three of five hand-located
+balls the detector proposed nothing within 28 px, so there was nothing to
+re-score. Only a better detector fixes that, so one was trained.
+
+**Labels without a labeller.** 602 ball positions from motion-compensated
+tracks across both games -- a ball in flight moves faster than any player can
+run, which is the one thing about its motion a player cannot imitate -- checked
+by eye at 83% correct. Crops cut WITHOUT resizing, so the ball stays the 15-25
+px it will be at inference, with the other candidates riding along inside each
+crop as the hard negatives they are. Single class, alongside the four-class
+detector rather than folded into it.
+
+    validation on its own tracks: precision 0.51, recall 0.45, mAP50 0.464
+
+**On the hand-located balls, which no track label touches: 2 of 5. Unchanged.**
+
+    frame     old detector            new detector
+    1062.5    92.3 px  rank 1/6       nothing proposed
+    1662.5    13.5 px  rank 1/3       14.6 px  rank 1/1
+    2562.5    20.3 px  rank 1/2        6.4 px  rank 1/3
+    2862.5    35.5 px  rank 3/4      106.4 px  rank 1/1
+    4362.5   189.5 px  rank 1/3      910.7 px  rank 1/1
+
+It is a different detector, not a better one. It proposes one to three
+candidates where the old proposes two to six, and it is tighter when right
+(6.4 px against 20.3). It misses the same hard balls and replaces the old
+one's scattered wrong guesses with one confident wrong guess.
+
+**The full ledger for the ball**, every entry built and measured here:
+
+    court-volume ray test        vacuous -- rejected 0 candidates
+    motion as a filter           premise false; held balls are still
+    motion as a preference       picks a moving defender over a held ball
+    large inference + confidence worse end to end
+    two-scale agreement          0 of 5; fires on hair and on a nose
+    handler-box proximity        no change
+    learned patch ranker         true ball's mean rank 1.0 -> 2.0
+    retrained detector           2 of 5, unchanged
+
+**The measured position.** Rim 0.840 and rising on a method that works. Ball
+0.400, and the gap is not a rule waiting to be found: on the frames it misses,
+no detector in this repo -- original, large-inference, or purpose-trained --
+proposes anything within 90 px of the ball. The object is 15-25 px across, is
+frequently held still, is frequently occluded by the hands holding it, and
+shares a broadcast with dozens of objects its own size and colour.
+
+What would move it is a ball detector trained on thousands of hand-drawn boxes
+from this footage. Track labels cannot substitute: they only ever find the ball
+where it is already easy -- in free flight, unoccluded, moving fast -- which is
+precisely not where the misses are. That is the honest boundary of what was
+reachable here.
