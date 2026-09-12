@@ -60,6 +60,10 @@ def main() -> int:
     parser.add_argument("--spacing-s", type=float, default=SPACING_S)
     parser.add_argument("--limit", type=int, default=180)
     parser.add_argument("--start-s", type=float, default=0.0)
+    parser.add_argument("--end-s", type=float, default=None,
+                        help="stop here. Without it --clock-stopped treats everything "
+                             "after the final buzzer as stopped, and a whole batch of "
+                             "sheets came back as trophy presentations.")
     parser.add_argument("--after-shots", default=None,
                         help="align_shots_to_video.py output; look just after makes")
     parser.add_argument("--after-window", default="3,14",
@@ -116,6 +120,8 @@ def main() -> int:
         t = float(t)
         if t < args.start_s or t >= duration:
             continue
+        if args.end_s is not None and t > args.end_s:
+            break
         if round(t, 1) in posed or detector_has_rim(t):
             continue
         if stopped is not None and not stopped(t):

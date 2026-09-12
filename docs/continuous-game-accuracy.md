@@ -5525,3 +5525,37 @@ by whether the information is in the picture.
     rim        0.840   0.653-0.936      0.95    effort: ~200 frames of labelling
     ball       0.300   0.108-0.603      0.95    information: half the hard frames
                                                 cannot be labelled by anyone
+
+## Round 78 - the rim's gap, quantified on labels from the population itself
+
+Round 77 priced the rim's remaining work. This does it: 15 rim boxes hand-located
+on frames where nothing in this repository can find one -- no keypoints so no
+pose, and no detector box at any threshold. Overhead cameras, under-basket
+cameras where the ring fills half the picture, baseline cameras, a court inset
+inside a graphic, and distant wides.
+
+    on those 15 alternate-camera rims, at one rim width
+      the scale-trained rim detector    1 / 15
+      the four-class detector           0 / 15
+
+That is the whole of the rim's remaining 16%, isolated and measured on labels
+drawn from the failing population rather than inferred from the frames that
+work. Two of them are rings 512 and 608 px across -- a rim filling half the
+frame, found by nothing.
+
+The labelling rate is about 1.3 usable labels per six-frame sheet, because the
+mined set is dominated by close-ups and adverts holding no rim. So the 100 or
+so labels a retrain would want is roughly 75 more sheets read by eye: bounded,
+mechanical, and the honest remaining cost of the rim half of the gate.
+
+`data/labeling/rim_ball/rim_truth_alternate_cameras.json`
+
+**Phase 2 as it stands:**
+
+    object   accuracy   95% CI          gate    what limits it
+    rim        0.840   0.653-0.936      0.95    ~75 more sheets of labelling,
+                                                then a retrain. Mechanical.
+    ball       0.300   0.108-0.603      0.95    more than half the frames that
+                                                need labels cannot be labelled
+                                                by anyone; the information is
+                                                not in the picture.
