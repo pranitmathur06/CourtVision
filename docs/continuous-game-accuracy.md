@@ -5680,3 +5680,43 @@ a retrain needs is on the order of a thousand frames looked at by eye. The
 ball's remaining work is not bounded the same way: on the frames it misses no
 detector here proposes anything within 90 px, and more than half of those
 frames have a ball that cannot be located by a person at full resolution.
+
+## Round 82 - proposal verification, hard negatives, and a fourth honest no
+
+Labelling by locating rims yields ~1.6 a sheet and half are disqualified.
+Verifying the detector's OWN low-confidence proposals is twelve judgements a
+sheet instead of two locations, and an accepted box arrives with coordinates
+attached. `propose_rim_labels.py` renders them in a numbered grid.
+
+**The rejections were worth more than the acceptances.** Of 35 proposals
+verified, 4 were rims. The other 31 are dominated by ONE mistake: the shooter's
+square inside the backboard -- a bright rectangle a foot above the ring --
+which the model reads as a rim at confidences up to 0.80. That is a specific,
+nameable error, and 68 crops of it went in as explicit hard negatives: a crop
+with an empty label file is the model being told this rectangle is not a basket.
+
+**And it made the model worse.**
+
+    model                                    held-out rims found   false alarms
+    scale crops only                               3 / 7                0
+    + 23 hand labels                               2 / 7                1
+    + 41 hand labels                               3 / 7                1
+    + 27 hand labels + 68 hard negatives           1 / 7                1
+
+The negatives suppressed the thing they were meant to sharpen. A rim seen from
+under the basket and a shooter's square seen from the stands are not far apart
+in a 640 px crop, and with 68 examples saying "not this" against 27 saying
+"yes that", the model learnt caution. Shipped model reverted to the scale-only
+one for the fourth time; the others are kept beside it.
+
+**Four training runs, four honest measurements, one unchanged number.** The rim
+has sat at 0.840 through 23, 41 and 27+68 labels. Every run improves something
+visible -- the under-basket viewpoint, the false-alarm rate, the validation
+mAP -- and none improves the frames the gate is scored on. That is what a
+label count an order of magnitude too small looks like from the inside.
+
+**Phase 2, as measured:**
+
+    object   accuracy   95% CI          gate
+    rim        0.840   0.653-0.936      0.95
+    ball       0.300   0.108-0.603      0.95
