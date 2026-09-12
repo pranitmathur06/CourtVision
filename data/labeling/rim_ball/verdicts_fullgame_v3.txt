@@ -1,0 +1,24 @@
+# G7 rim verdicts, THIRD evaluation sample: grid frames not previously labelled,
+# judged on 900 px panels against the shipped system. Added because at n=25 a true
+# 0.90 reads as 0.700-0.958 -- the 0.95 gate sat inside the error bars, so the old
+# set could not see the gate at all.
+27 rim=ok
+30 rim=ok
+33 rim=?
+35 rim=miss
+59 rim=ok
+61 rim=?
+63 rim=ok
+65 rim=miss
+95 rim=ok
+97 rim=ok
+99 rim=-
+101 rim=ok
+143 rim=miss
+145 rim=?
+147 rim=ok
+149 rim=-
+191 rim=-
+193 rim=-
+195 rim=ok
+197 rim=ok

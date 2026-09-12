@@ -5720,3 +5720,46 @@ label count an order of magnitude too small looks like from the inside.
     object   accuracy   95% CI          gate
     rim        0.840   0.653-0.936      0.95
     ball       0.300   0.108-0.603      0.95
+
+## Round 83 - the evaluation could not see the gate, so it was widened
+
+Before running a fifth training cycle, a check on the measurement itself. At
+n=25 visible rims, a system whose true accuracy is 0.90 reads as 0.700-0.958:
+
+    n      a true 0.90 reads as      width
+    25       0.700 - 0.958          0.258
+    50       0.786 - 0.957          0.170
+    100      0.826 - 0.945          0.119
+    200      0.851 - 0.934          0.084
+
+The 0.95 gate sat INSIDE the interval. The evaluation could not have told a
+passing system from a failing one, which makes four training runs judged
+against it worth less than they looked.
+
+So 20 more grid frames were labelled for the rim -- a third sample, frames not
+previously touched, judged on 900 px panels:
+
+    RIM over three samples   31/38 = 0.816   95% CI 0.666-0.908
+
+The gate is now OUTSIDE the interval, which is the first time this measurement
+has been able to say so. The point estimate also fell, from 0.840 to 0.816, as
+a bigger sample usually does when the first one was small.
+
+Two of the new misses are worth naming because they are not the alternate-camera
+class at all:
+
+- 1638 s: the projection lands on the BACKBOARD'S TOP EDGE, a rim width above
+  the ring, on an ordinary main-camera close-up.
+- 3588 s: the same, with the detector's own box sitting correctly lower and
+  losing to the projection because it was under the trust threshold.
+
+That is the Round 68 finding again -- extrapolating a point 10 ft up from a
+homography fitted to the floor -- and it means part of the remaining 18% is a
+geometry problem on the MAIN camera, not only a training-data problem on the
+others.
+
+**Phase 2, measured on the widest sample yet:**
+
+    object   located   accuracy   95% CI          gate
+    rim       31/38     0.816   0.666-0.908      0.95
+    ball       3/10     0.300   0.108-0.603      0.95
