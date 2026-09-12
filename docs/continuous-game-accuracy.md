@@ -5763,3 +5763,133 @@ others.
     object   located   accuracy   95% CI          gate
     rim       31/38     0.816   0.666-0.908      0.95
     ball       3/10     0.300   0.108-0.603      0.95
+
+## Round 84 - three verdicts were mine, and the ball detector was measured at the wrong scale
+
+### The rim was understated, because I judged the wrong circle
+
+The labelling sheets draw TWO circles on every frame: the rim projected from
+the camera pose, and the rim the detector reports. Only the second is what the
+system claims and only the second is scored. On three frames I read the
+projected circle, saw it off the ring, and wrote "miss" while the claim the
+system actually makes sat on the rim.
+
+Re-rendering every frame marked "miss" against the reported claim list:
+
+    65   (1638 s)   2 claims, claim 0 on the orange ring     -> ok
+    122  (3062 s)   1 claim, on the rim                      -> ok
+    143  (3588 s)   1 claim, on the rim                      -> ok
+    35   (888 s)    0 claims, under-basket camera            -> miss
+    84   (2112 s)   0 claims, high wide view                 -> miss
+    178  (4462 s)   0 claims, close-up drive                 -> miss
+    218  (5462 s)   0 claims, a TV-schedule graphic          -> miss
+
+    RIM over three samples   34/38 = 0.895   95% CI 0.759-0.958
+
+The 0.95 gate is now INSIDE the interval, which it was not at 0.816. The point
+estimate is still below it and the gate is not met. Frame 218 is a full-screen
+broadcast graphic with a live court inset; it is left as a miss rather than
+reclassified, because a rule invented after seeing which frame it helps is not
+a rule.
+
+### The four real misses are one failure, and crop-and-zoom cannot fix it
+
+All four have `rim: []`, `projected: []` and `detected: []` -- no pose and no
+box. On 887.5 s, an overhead-behind-backboard shot with a ring filling a
+quarter of the picture, the four-class detector proposes NOTHING at conf 0.02
+at 1280, 2560 and 3840 px, and the scale model nothing over a 3x3 tiling.
+
+That is not a threshold. It is a viewpoint the detector has never seen, and
+`build_rim_dataset.py` structurally cannot supply one: it crops around the
+detector's own confident boxes, so every crop it makes comes from a camera the
+detector already handles. Four training runs and one unchanged number follow
+from that directly.
+
+### Carrying the hand labels instead of collecting more
+
+A rim is bolted to the floor and these cameras are bolted to the building, so
+one rim located by hand can be carried by ORB to every other frame that camera
+shot. 49 anchors became 158 labels, and two gates had to be written on the way.
+
+The hold-out first refused everything -- the grid samples every 25 s, so a 30 s
+radius covers all 9,355 s. Widening it would have been a threshold moved after
+seeing the result. What a hold-out is FOR is that the model must not train on a
+picture of an evaluation frame, and ORB states that exactly: a candidate is
+dropped when an evaluation frame registers to it. It removed 30 of 49 anchors,
+because these fixed cameras register to each other across the whole night, and
+0 of 158 labels share a shot with the rim_scale test frames either.
+
+Then 2 of 24 sampled boxes landed in open crowd -- once where a moving
+under-basket camera let parallax break a fit the background still supported,
+once across a hard cut where RANSAC found a consensus among false matches.
+Both had no inlier near the ring. A homography is only trustworthy where it has
+evidence, so the fit must now have inliers within 3 rim widths of the anchor's
+ring. All 24 samples on the re-run are correct.
+
+Also corrected: `data/rim_scale`, called "scale crops only" in Round 82's
+table, already held 314 crops from 16 hand labels. The new set strips every
+earlier hand crop and adds the 158 propagated ones at weight 8.
+
+### The ball: recall is nearly solved, colour points the wrong way
+
+Two entries for the ledger.
+
+TILING. Slicing the frame into tiles and detecting in each is not the "large
+inference" rejected in Round 71: upscaling the whole frame keeps a 15 px ball
+in a crowd of 1,280 px, while a tile gives it its own context at twice the size.
+
+    config                  within tol   the ball's rank by confidence
+    whole 2560                 6/10      9, 15, 44, 52, 54, 62
+    whole 3840                 4/10      6, 17, 40, 60
+    tile 320/0.3 @640          7/10      19, 36, 58, 59, 66, 75, 97
+    tile 256/0.4 @640          5/10      16, 59, 95, 191, 213
+    tile 192/0.4 @640          6/10      23, 49, 51, 112, 124, 170
+    pooled                     9/10
+
+In every configuration the true ball is the top-confidence candidate ZERO
+times. More proposals make recall better and ranking harder: 189 candidates a
+frame to find a ball at rank 170.
+
+COLOUR does not merely fail, it points backwards.
+
+    true balls   n=7    orange share  min 0.000  p50 0.075  max 0.650
+    false above  n=403  orange share             p50 0.000  p90 0.511
+
+Three of seven true balls contain no orange pixel at all. A 15 px
+motion-blurred ball over bright maple is a grey smudge, while the floor,
+players' skin and Indiana's gold kit all sit in the orange band.
+
+Together: AT THIS SIZE A SINGLE PATCH CARRIES ALMOST NO INFORMATION, which is
+why the learned patch ranker moved the true ball's mean rank from 1.0 to 2.0.
+
+### The ball detector had been measured at twice its training scale
+
+`build_ball_detector_dataset.py` cuts 640 px crops WITHOUT resizing, so the
+model learns balls at native size. It was then evaluated at imgsz 2560 on a
+1280x720 frame -- every ball twice the size it was trained on. Round 74's "3 of
+10, unchanged" is that mismatch.
+
+    model       inference      within tol  top-1  candidates  ranks
+    shipped     whole@2560        6/10       0        59      9...62
+    ball_track  whole@2560        3/10       2         2      1, 1, 2
+    ball_track  whole@1280        6/10       3         3      1,1,1,2,2,2
+
+At its own scale the single-class detector proposes THREE candidates instead of
+59, and the ball is rank 1 or 2 on every frame it finds. Ranking stops being a
+search through a hundred distractors and becomes a choice between two.
+
+It also cannot be trusted as measured, because it was trained on track labels
+mined from this same video: the nearest sits 1.7 s from an evaluation frame,
+and 1262.5 s -- one of its rank-1 successes -- is one of those. The same-shot
+filter drops 8-13% of each label file, and the detector is being retrained on
+what is left.
+
+Time, tried on those three candidates, nets to zero: requiring a companion at a
+ball-like displacement in neighbouring frames fixes 737.5 s and breaks
+1262.5 s.
+
+**Phase 2, as measured:**
+
+    object   located   accuracy   95% CI          gate
+    rim       34/38     0.895   0.759-0.958      0.95
+    ball       3/10     0.300   0.108-0.603      0.95
