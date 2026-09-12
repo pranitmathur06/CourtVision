@@ -98,12 +98,17 @@ def main() -> int:
     parser.add_argument("--first", type=int, default=0)
     parser.add_argument("--count", type=int, default=None)
     parser.add_argument("--sheet", type=int, default=PER_SHEET)
+    parser.add_argument("--stride", type=int, default=1,
+                        help="label every Nth grid frame; the sample stays uniform "
+                             "over the video, it just gets coarser")
     args = parser.parse_args()
 
     import cv2
 
     rows = json.load(open(args.system))["frames"]
-    chosen = rows[args.first:args.first + args.count] if args.count else rows[args.first:]
+    picked = list(range(args.first, len(rows), max(args.stride, 1)))
+    if args.count:
+        picked = picked[:args.count]
     capture = cv2.VideoCapture(args.video)
     width = capture.get(cv2.CAP_PROP_FRAME_WIDTH)
     height = capture.get(cv2.CAP_PROP_FRAME_HEIGHT)
@@ -112,8 +117,8 @@ def main() -> int:
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     tiles, made = [], []
-    for k, row in enumerate(chosen):
-        index = args.first + k
+    for index in picked:
+        row = rows[index]
         capture.set(cv2.CAP_PROP_POS_MSEC, row["t"] * 1000)
         ok, frame = capture.read()
         if not ok:
