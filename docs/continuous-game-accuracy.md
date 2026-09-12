@@ -5602,3 +5602,44 @@ the measured rate of about 1.6 usable labels per six-frame sheet.
     object   accuracy   95% CI          gate
     rim        0.840   0.653-0.936      0.95
     ball       0.300   0.108-0.603      0.95
+
+## Round 80 - 41 hand labels, retrained, and the rim does not move
+
+Round 79 trained on 23 hand-located alternate-camera rims and measured worse:
+over-weighted 26-fold they taught the model the viewpoints they showed and cost
+it a rim size it already had. So the set was extended and rebalanced.
+
+**Mining was fixed first.** Filtering mined frames through `has_court` -- the
+wood-fraction gate that already existed to refuse frames before a registration
+search -- raised the labelling yield from about 30% to about 50%. Without it,
+the frames "nothing can find a rim in" are dominated by close-ups, adverts and
+studio shots that hold no rim at all, and most of a sheet is wasted.
+
+41 labels now, 34 trainable and 7 held out for sitting within 30 s of an
+evaluation frame, and the size spread is deliberate: 24 rims under 100 px, 10
+between 100 and 300, and 7 over 300 px. Over-weighting cut from 26 to 12.
+
+**The model improves on the held-out failures and the system does not.**
+
+    on the 7 frames nothing could locate      scale only  23 labels  41 labels
+                                                  3/7        2/7       3/7
+      (mid-training, before the best epoch)                             4/7
+
+    on the 25 labelled evaluation rims        0.840      0.760      0.840
+
+Mid-training it reached 4 of 7 with 3 false alarms; the checkpoint selected by
+validation mAP is the conservative one, 3 of 7 with 1. On the evaluation grid
+exactly one labelled frame changed -- #28, which is labelled "no rim in shot",
+so the change is a FALSE ALARM and not a gain.
+
+**What 41 labels bought: nothing, and a direction.** 23 labels moved the model
+backwards, 41 move it back to level with a better mid-training peak. The
+trajectory says the labels are the right lever and that the quantity is still
+wrong by roughly an order of magnitude -- hundreds, spread across every
+alternate camera and every rim size, not dozens.
+
+**Phase 2, measured, final for this session:**
+
+    object   accuracy   95% CI          gate    over the session
+    rim        0.840   0.653-0.936      0.95    0.769 -> 0.840
+    ball       0.300   0.108-0.603      0.95    0.571 (inflated) -> 0.300 (honest)
