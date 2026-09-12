@@ -11,7 +11,8 @@ gets looked at -- that is where misses hide, and a labelling pass that only
 checks the system's own output can only ever measure precision.
 
 Colours: GREEN a projected rim, RED a detected rim, YELLOW the chosen ball,
-CYAN every other candidate the detector offered. The cyan matters as much as
+CYAN every other candidate the detector offered. Down the right of each tile,
+magnified: the rim claim, the ball claim, then the other candidates. The cyan matters as much as
 the yellow: it separates "the ball was never found" from "the wrong candidate
 was taken", which are different problems with different fixes.
 
@@ -47,8 +48,13 @@ from pathlib import Path
 import numpy as np
 
 TILE_W, TILE_H = 640, 360
-ZOOM = 180
-PER_SHEET = 8
+ZOOM = 120
+#: Zooms down the side: the rim claim, then the ball claim, then the other
+#: candidates. A ball is ~10 px in the panel, which is not enough to judge, and
+#: magnifying the candidates also answers whether a RIGHT one was on offer --
+#: the ceiling -- and not merely whether the chosen one was right.
+STRIP = 3
+PER_SHEET = 6
 
 
 def draw(frame, row, scale):
@@ -71,7 +77,7 @@ def draw(frame, row, scale):
     return small
 
 
-def zoom_on(frame, centre, size=ZOOM, half=45):
+def zoom_on(frame, centre, size=ZOOM, half=32):
     """A magnified square around `centre`, or grey if there is nothing to show."""
     import cv2
     if centre is None:
@@ -124,10 +130,26 @@ def main() -> int:
         if not ok:
             continue
         panel = draw(frame, row, scale)
-        rim_zoom = zoom_on(frame, (row.get("projected") or row.get("detected") or [None])[0])
-        ball_zoom = zoom_on(frame, row.get("ball"))
-        side = np.vstack([rim_zoom, ball_zoom])
-        side = cv2.resize(side, (ZOOM, TILE_H))
+        chosen = row.get("ball")
+        others = [c for c in (row.get("candidates") or [])
+                  if not (chosen and abs(c[0] - chosen[0]) < 1 and abs(c[1] - chosen[1]) < 1)]
+        wanted = [("rim", (row.get("projected") or row.get("detected") or [None])[0]),
+                  ("ball", chosen)]
+        wanted += [(f"c{i}", c) for i, c in enumerate(others[:STRIP - 1])]
+        panes = []
+        for tag, point in wanted[:STRIP + 1]:
+            pane = zoom_on(frame, point, ZOOM)
+            label = tag
+            if point is not None:
+                # Panel coordinates, so a pane judged correct can be written
+                # straight into a judgement without hunting for it in the panel.
+                label = f"{tag} {int(point[0] * scale[0])},{int(point[1] * scale[1])}"
+            cv2.putText(pane, label, (3, 13), cv2.FONT_HERSHEY_SIMPLEX, 0.38,
+                        (0, 255, 255), 1)
+            panes.append(pane)
+        while len(panes) < STRIP + 1:
+            panes.append(np.full((ZOOM, ZOOM, 3), 60, np.uint8))
+        side = cv2.resize(np.vstack(panes), (ZOOM, TILE_H))
         tile = np.hstack([panel, side])
         cv2.putText(tile, f"#{index} {row['t']:.0f}s "
                           f"rim:{len(row.get('rim') or [])}"
