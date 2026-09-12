@@ -5348,3 +5348,50 @@ from this footage. Track labels cannot substitute: they only ever find the ball
 where it is already easy -- in free flight, unoccluded, moving fast -- which is
 precisely not where the misses are. That is the honest boundary of what was
 reachable here.
+
+## Round 74 - the ball measured properly: 0.300, and why that is the answer
+
+Every earlier ball figure was too small a sample or drawn from truth the system
+had supplied. This one is neither: ten ball positions located by eye on a
+1280 px panel with a 50 px grid, on frames chosen by position in the evaluation
+grid, recorded BEFORE any claim was looked at
+(`data/labeling/rim_ball/ball_truth_handlocated.json`).
+
+    system                      located   accuracy   95% CI
+    shipped (cached detector)     3/10      0.300   0.108-0.603
+    retrained ball detector       3/10      0.300   0.108-0.603
+
+They succeed on DIFFERENT frames -- the shipped one at 1662, 2162 and 2562 s,
+the retrained one at 1262, 1662 and 2562 s -- so a perfect oracle choosing
+between them would reach 4 of 10. Choosing between them is the selection
+problem that eight rules have now failed at, so 0.400 is the ceiling of every
+combination available here, and 0.300 is what is actually delivered.
+
+**A note on the labelling itself, which is evidence too.** Of ten in-game
+frames looked at at full resolution with a measuring grid, the ball could be
+confidently located on five, was plainly absent on two, and could not be found
+at all on three -- by a careful human looking as long as it took. The object
+is 15-25 px across, frequently held still inside the hands holding it, and
+shares the picture with dozens of objects of its size and colour. A detector
+being wrong on frames a person cannot solve either is not a tuning failure.
+
+**Final position of the Phase 2 gate.**
+
+    object   accuracy   95% CI          gate    over the session
+    rim        0.840   0.653-0.936      0.95    0.769 -> 0.840
+    ball       0.300   0.108-0.603      0.95    measured properly for the first time
+
+The rim improved on a method that works and its remaining gap is known and
+laborious rather than uncertain: hand-drawn boxes on under-basket, baseline and
+rim-close-up cameras, which crop-and-zoom augmentation cannot synthesise
+because the viewpoint, not the scale, is what differs.
+
+The ball did not improve, and the ledger of what was tried is in Round 72 and
+Round 73. The measured reason it did not: on the frames it misses, no detector
+in this repository -- the original, the same one run at 2560, or one trained
+from scratch on 602 labels from this exact footage -- proposes anything within
+90 px of the ball. There is nothing for a selection rule to select. Closing it
+needs a detector trained on thousands of hand-drawn boxes ON THE HARD FRAMES,
+and the automatic label sources cannot supply those: the shot chart finds the
+ball only at the rim, and tracking finds it only in free flight, unoccluded and
+fast. Both find the ball exactly where it is already found.
