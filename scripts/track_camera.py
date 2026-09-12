@@ -58,6 +58,8 @@ from pathlib import Path
 
 import numpy as np
 
+from courtvision.court_camera import RIMS_3D
+
 #: Sampling step. 5 fps, matching the detection cache.
 STEP_S = 0.2
 #: A fresh anchor is attempted at least this often while tracking holds.
@@ -154,7 +156,7 @@ def snap(camera, image_to_court, size):
 
 def project_rims(camera, image_to_court, size, margin=8.0):
     """Both baskets as recorded-image pixels, keeping those inside the picture."""
-    from courtvision.court_camera import RIMS_3D, project_3d
+    from courtvision.court_camera import project_3d
     try:
         points = project_3d(camera, image_to_court, np.array(RIMS_3D, np.float64))
     except Exception:
@@ -189,6 +191,44 @@ def disagrees_with_detector(camera, image_to_court, size, rim_boxes,
                        (best["xyxy"][1] + best["xyxy"][3]) / 2])
     width = max(best["xyxy"][2] - best["xyxy"][0], 1.0)
     return min(float(np.hypot(*(np.array(p) - centre))) for p in shown) > widths * width
+
+
+def rims_from_homography(image_to_court, size, k1=None, k2=None, margin=8.0):
+    """Both baskets projected WITHOUT the game's camera model.
+
+    A replay or a baseline camera is not a pan of the main one, so the fixed
+    centre cannot describe it and `project_rims` has nothing to say about those
+    frames -- yet the rim is plainly in them, and the metric counts it. Any
+    court-to-image homography carries its own focal length, rotation and centre
+    (`court_camera.decompose`), which is enough to project a point 10 ft above
+    the floor. Less constrained than the fixed model, so it is a fallback and
+    not the main path.
+    """
+    from courtvision.court_camera import decompose, distort_points
+
+    court_to_image = np.linalg.inv(image_to_court)
+    found = decompose(court_to_image, size)
+    if found is None:
+        return []
+    focal, rotation, centre = found
+    if not np.isfinite(focal) or focal <= 0 or not np.isfinite(centre).all():
+        return []
+    intrinsics = np.array([[focal, 0.0, size[0] / 2.0],
+                           [0.0, focal, size[1] / 2.0],
+                           [0.0, 0.0, 1.0]])
+    out = []
+    for point in RIMS_3D:
+        camera_frame = rotation @ (np.asarray(point, np.float64) - centre)
+        if camera_frame[2] <= 0:
+            continue
+        projected = intrinsics @ camera_frame
+        pixel = projected[:2] / projected[2]
+        if k1 or k2:
+            pixel = distort_points(pixel.reshape(1, 2), k1, size, k2)[0]
+        if np.isfinite(pixel).all() and -margin <= pixel[0] <= size[0] + margin \
+                and -margin <= pixel[1] <= size[1] + margin:
+            out.append([float(pixel[0]), float(pixel[1])])
+    return out
 
 
 def main() -> int:

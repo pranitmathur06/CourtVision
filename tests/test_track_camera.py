@@ -96,3 +96,17 @@ def test_a_hop_at_half_scale_comes_back_in_full_size_pixels():
     found = tracker.hop_at_scale(grey, moved, None, None, 0.5)
     assert found is not None
     assert np.allclose(found / found[2, 2], shift, atol=1.5)
+
+
+def test_a_rim_can_be_projected_without_the_fixed_camera_model():
+    """Replay cameras are not pans of the main one, but their rims still count."""
+    pose = _image_to_court((25.0, 14.0))
+    fixed = tracker.project_rims(_camera(), pose, SIZE)
+    free = tracker.rims_from_homography(pose, SIZE)
+    assert fixed and free
+    assert min(np.hypot(*(np.array(a) - np.array(b))) for a in free for b in fixed) < 2.0
+
+
+def test_the_free_projection_also_drops_a_basket_behind_the_camera():
+    free = tracker.rims_from_homography(_image_to_court((25.0, 5.25), 2400.0), SIZE)
+    assert len(free) <= 1
