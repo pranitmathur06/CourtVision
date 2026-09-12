@@ -42,6 +42,9 @@ import numpy as np
 MIN_CONF = 0.10
 #: A ball 47 ft away moving 60 ft/s sweeps ~73 deg/s; at 5 fps that is ~15 deg.
 MAX_STEP_DEG = 15.0
+#: A choice older than this tells you nothing about this frame -- a cut, a
+#: replay or a gap in the poses has intervened.
+MAX_CONTINUITY_GAP_S = 1.0
 #: Ray directions are counted in cells this wide.
 CELL_DEG = 0.6
 #: A cell producing candidates on more than this share of posed frames is
@@ -99,6 +102,46 @@ def find_fixtures(cells_per_frame, posed_frames,
             counts[cell] = counts.get(cell, 0) + 1
     floor = max(minimum, int(share * max(posed_frames, 1)))
     return {cell for cell, n in counts.items() if n >= floor}
+
+
+def choose_balls(rows, fixtures, max_step_deg, use_continuity=True,
+                 max_gap_s=MAX_CONTINUITY_GAP_S):
+    """Per frame, (chosen | None, survivors), and how many candidates were dropped.
+
+    Fixtures go first, then continuity decides among what is left, and
+    confidence decides when continuity has nothing to say. Continuity is a
+    preference and never a cage: the ball does leave the picture and come back,
+    so a frame with no candidate near the last one still takes its best.
+    """
+    out, dropped, previous, previous_t = [], 0, None, None
+    for row in rows:
+        # Continuity only means something across a short gap. After a cut, a
+        # replay or a stretch with no pose, the last choice says nothing about
+        # this frame, and letting it pull would be worse than not looking.
+        if previous_t is not None and row["t"] - previous_t > max_gap_s:
+            previous, previous_t = None, None
+        keep = []
+        for i, candidate in enumerate(row["candidates"]):
+            if row["cells"] and row["cells"][i] in fixtures:
+                dropped += 1
+                continue
+            keep.append((i, candidate))
+        chosen = None
+        if keep:
+            if previous is not None and row["dirs"] is not None and use_continuity:
+                near = [(angle_between(row["dirs"][i], previous), i, c) for i, c in keep]
+                near = [n for n in near if n[0] <= max_step_deg]
+                if near:
+                    _, i, candidate = min(near, key=lambda n: n[0])
+                    chosen = (i, candidate)
+            if chosen is None:
+                chosen = max(keep, key=lambda pair: pair[1]["conf"])
+        if chosen is not None and row["dirs"] is not None:
+            previous, previous_t = row["dirs"][chosen[0]], row["t"]
+        elif chosen is None:
+            previous, previous_t = None, None
+        out.append((chosen, [c for _, c in keep]))
+    return out, dropped
 
 
 def main() -> int:
@@ -163,29 +206,11 @@ def main() -> int:
         find_fixtures([r["cells"] for r in rows], posed)
 
     # Pass 2: choose one ball per frame.
-    frames, dropped, previous = [], 0, None
-    for row in rows:
-        keep = []
-        for i, candidate in enumerate(row["candidates"]):
-            if row["cells"] and row["cells"][i] in fixtures:
-                dropped += 1
-                continue
-            keep.append((i, candidate))
-        chosen = None
-        if keep:
-            if previous is not None and row["dirs"] is not None and not args.no_continuity:
-                near = [(angle_between(row["dirs"][i], previous), i, c) for i, c in keep]
-                near = [n for n in near if n[0] <= args.max_step_deg]
-                if near:
-                    _, i, candidate = min(near, key=lambda n: n[0])
-                    chosen = (i, candidate)
-            if chosen is None:
-                chosen = max(keep, key=lambda pair: pair[1]["conf"])
-        if chosen is not None and row["dirs"] is not None:
-            previous = row["dirs"][chosen[0]]
-        elif chosen is None:
-            previous = None
+    decided, dropped = choose_balls(rows, fixtures, args.max_step_deg,
+                                    use_continuity=not args.no_continuity)
 
+    frames = []
+    for row, (chosen, survivors) in zip(rows, decided):
         detected_rims = [centre_of(b) for b in boxes_near(row["t"], "rim", 0.25)]
         frames.append({"t": row["t"],
                        "rim": row["rims"] or detected_rims,
@@ -199,7 +224,7 @@ def main() -> int:
                        "projected": row["rims"],
                        "detected": detected_rims,
                        "candidates": [c["centre"] for c in row["candidates"]],
-                       "survivors": [c["centre"] for _, c in keep],
+                       "survivors": [c["centre"] for c in survivors],
                        "n_candidates": len(row["candidates"])})
 
     if args.grid_only:

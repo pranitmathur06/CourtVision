@@ -73,3 +73,64 @@ def test_a_direction_seen_all_game_is_a_fixture_and_a_passing_ball_is_not():
 def test_a_short_run_cannot_manufacture_a_fixture():
     frames = [[(3, 3)] for _ in range(10)]
     assert ball.find_fixtures(frames, posed_frames=10) == set()
+
+
+def _row(t, candidates, dirs=None):
+    """A frame as choose_balls wants it: candidates, their cells and rays."""
+    dirs = dirs if dirs is not None else [None] * len(candidates)
+    usable = all(d is not None for d in dirs) and bool(candidates)
+    return {"t": t, "candidates": candidates,
+            "cells": [ball.cell_of(d) for d in dirs] if usable else [],
+            "dirs": np.array(dirs) if usable else None}
+
+
+def _dir(deg):
+    rad = np.radians(deg)
+    return [float(np.cos(rad)), float(np.sin(rad)), 0.0]
+
+
+def test_the_most_confident_survivor_wins_when_nothing_precedes_it():
+    rows = [_row(0.0, [{"centre": [1, 1], "conf": 0.3},
+                       {"centre": [2, 2], "conf": 0.8}])]
+    decided, _ = ball.choose_balls(rows, set(), 15.0)
+    assert decided[0][0][1]["centre"] == [2, 2]
+
+
+def test_continuity_prefers_the_nearer_ray_over_the_louder_candidate():
+    rows = [_row(0.0, [{"centre": [1, 1], "conf": 0.9}], [_dir(0)]),
+            _row(0.2, [{"centre": [9, 9], "conf": 0.9}, {"centre": [2, 2], "conf": 0.2}],
+                 [_dir(60), _dir(3)])]
+    decided, _ = ball.choose_balls(rows, set(), 15.0)
+    assert decided[1][0][1]["centre"] == [2, 2]
+
+
+def test_a_stale_choice_does_not_pull_across_a_gap():
+    """After a cut the previous ball says nothing, so confidence decides again."""
+    rows = [_row(0.0, [{"centre": [1, 1], "conf": 0.9}], [_dir(0)]),
+            _row(9.0, [{"centre": [9, 9], "conf": 0.9}, {"centre": [2, 2], "conf": 0.2}],
+                 [_dir(60), _dir(3)])]
+    decided, _ = ball.choose_balls(rows, set(), 15.0)
+    assert decided[1][0][1]["centre"] == [9, 9]
+
+
+def test_continuity_is_a_preference_not_a_cage():
+    """Nothing near the last ray still yields the best candidate, not nothing."""
+    rows = [_row(0.0, [{"centre": [1, 1], "conf": 0.9}], [_dir(0)]),
+            _row(0.2, [{"centre": [9, 9], "conf": 0.5}], [_dir(80)])]
+    decided, _ = ball.choose_balls(rows, set(), 15.0)
+    assert decided[1][0] is not None and decided[1][0][1]["centre"] == [9, 9]
+
+
+def test_a_fixture_candidate_is_dropped_even_when_it_is_the_most_confident():
+    fixture = ball.cell_of(_dir(0))
+    rows = [_row(0.0, [{"centre": [1, 1], "conf": 0.9}, {"centre": [5, 5], "conf": 0.2}],
+                 [_dir(0), _dir(40)])]
+    decided, dropped = ball.choose_balls(rows, {fixture}, 15.0)
+    assert dropped == 1 and decided[0][0][1]["centre"] == [5, 5]
+
+
+def test_a_frame_whose_only_candidate_is_furniture_reports_no_ball():
+    fixture = ball.cell_of(_dir(0))
+    rows = [_row(0.0, [{"centre": [1, 1], "conf": 0.9}], [_dir(0)])]
+    decided, _ = ball.choose_balls(rows, {fixture}, 15.0)
+    assert decided[0][0] is None
