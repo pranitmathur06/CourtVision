@@ -73,10 +73,17 @@ def main() -> int:
                 if entry["cls"] == "ball":
                     if region is None:
                         region = court_region(frame, erode_px=0)
+                    # Does the box actually touch the floor silhouette? The
+                    # first version of this asked whether any court pixel lay
+                    # BELOW the ball in its column, which is true of almost
+                    # everything in a broadcast frame -- the crowd sits above
+                    # the floor -- and duly flagged 0 of 78k ball boxes as off
+                    # court, so it certified nothing.
+                    x1, y1, x2, y2 = (int(np.clip(v, 0, lim - 1)) for v, lim in
+                                      zip(box, (frame.shape[1], frame.shape[0],
+                                                frame.shape[1], frame.shape[0])))
                     entry["over_court"] = bool(
-                        region is not None
-                        and region[int(np.clip((box[1] + box[3]) / 2, 0, region.shape[0] - 1)):,
-                                   int(np.clip((box[0] + box[2]) / 2, 0, region.shape[1] - 1))].any())
+                        region is not None and region[y1:y2 + 1, x1:x2 + 1].any())
                 row["boxes"].append(entry)
         rows.append(row)
         kept += 1

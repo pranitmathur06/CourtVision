@@ -14,7 +14,13 @@ The rule, each piece from basketball rather than from tuning:
 - Distance is measured in RIM WIDTHS, so it means the same at any zoom: a rim
   is 1.5 ft across.
 - A shot APPROACHES and RECEDES: far, then near, then far. A ball parked by
-  the basket -- a rebound scrum, a held ball -- never approaches.
+  the basket -- a rebound scrum, a held ball -- never approaches. MEASURED,
+  and it earns nothing: against a control that fires on proximity alone this
+  test rejects 0 of 286 candidate events on Game 1 and 2 of 319 on Game 7, and
+  moves F1 on neither. The ball is simply never parked at the rim for the five
+  seconds the windows span. Keep it if you like, but the detector should be
+  described as what it is -- a ball-like box came within APPROACH rim widths
+  of the rim while the clock was running -- not as an arc-shaped rule.
 - One attempt per possession: two minima close together are one shot being
   scored twice, so they are merged.
 

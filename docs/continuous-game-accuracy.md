@@ -4799,10 +4799,13 @@ a clock reading:
 
 **PASS: 0.616 at +/- 3 s on a game nothing was tuned on**, against the 0.60
 gate and the 0.396 this project measured before. The two games agree, which is
-the point of the frozen run.
+the point of the frozen run. [SUPERSEDED by Round 65: a clock misread had
+misplaced 30 of G1's attempts, the framing here is too strong, and the stands
+claim below is wrong. Corrected numbers and the narrower claim are in Round 65.]
 
-**The gate's second half** -- no ball detections on people in the stands -- is
-met where it matters: of the ball detections the rule uses (near the rim), 0 of
+**The gate's second half** -- no ball detections on people in the stands --
+[WRONG, see Round 65: the test behind this flagged 0 of 78,293 boxes and
+certified nothing; the condition is not met] is met where it matters: of the ball detections the rule uses (near the rim), 0 of
 16 sampled sit off the court; 8.3% of the raw stream does, almost all of it
 below 0.45 confidence. cache_detections now marks every ball box with whether
 court lies beneath it (3494611).
@@ -4812,3 +4815,81 @@ of Finals G7's frames and 0.499 of G1's; gap-filling brings the rule's ball+rim
 coverage to 0.35-0.47. The camera model puts a rim on every fitted frame,
 0.13 ft from the detected one (Round 63), which is the obvious next lever for
 recall -- and the measurement above is the baseline it has to beat.
+
+## Round 65 - the review overturns Round 64's framing, and one misread cost a quarter
+
+Round 64's gate was reviewed adversarially before being declared passed, as
+every phase gate in this plan is. It did not survive as written. Four findings,
+each checked here rather than taken on faith:
+
+**1. The clever part of the rule does nothing.** The rule is described as
+"far, then near, then far" -- an arc. A control that fires on proximity alone,
+with no approach-or-recede test, returns the IDENTICAL 286 events on Finals G1
+and 317 of the same 319 on G7. The test rejects two candidate events across two
+whole games and moves F1 on neither. The ball is never parked at the rim for
+the five seconds the windows span, so the condition never binds. The detector
+is, honestly stated: *a ball-like box came within 2.6 rim widths of the rim
+while the game clock was running.* The code keeps the test; its docstring now
+carries the measurement instead of the story.
+
+**2. One misread captured 738 s of Finals G1.** At video 1971 s the clock read
+6:07 as "367". The resolver's rule was "take the largest reading not above the
+previous one", so every later frame -- whose two candidates were "8:06" and
+"80.6" -- had to fall below 367, and the whole rest of the quarter resolved to
+tenths. Q2 was cut in two, a spurious fifth period appeared, and 30 official
+attempts were dropped or misplaced. The fix is confirmation: a reading that
+continues nothing is believed only once the NEXT reading continues it. A
+misread survives one frame; a real jump (a new period) is still there on the
+next one. `_continues` allows the clock to hold or fall at real time, +/-
+CONTINUE_TOL_S = 3.0 for a dropped frame.
+
+    game    periods found        attempts placed within 2 s
+    G1      5  ->  4 (correct)     150  ->  173 of 180
+    G7      8  ->  4 (correct)     126  ->  126 of 157
+
+G7 had been splitting every quarter in two at the last-minute tenths. Both
+games now resolve to exactly four periods running 12:00 -> 0:10. Re-resolving
+costs no video pass (`--from-raw`), which is why the raw candidates are saved.
+
+**3. The score, restated.** With the truth correctly placed:
+
+    game                         tol   predicted  official   P      R      F1
+    Finals G1 (nothing tuned)    3 s      200       173     0.605  0.699  0.649
+    Finals G7 (tuned on its 1st) 3 s      174       126     0.563  0.778  0.653
+
+A block bootstrap over 120 s blocks (resampling whole blocks preserves the
+matching; resampling individual attempts does not, and an earlier attempt at
+this reported a meaningless 0.375-0.456) gives G1 0.597-0.689, 4% of resamples
+below the gate; G7 0.576-0.675, 14% below.
+
+**The honest headline is narrower than Round 64's.** The number is F1 ~0.65
+*within the stretches where the game clock is readable and running* -- 48% of
+G1's video, 27% of G7's. The live-play filter is partly circular: official
+attempts can only be placed where the clock is readable, and the filter allows
+calls only in those same stretches. Without it, G1 is 0.495 and G7 0.447. The
+comparison to "0.396 before" is therefore not like-for-like, and the period
+rule (NEW_PERIOD_SHARE) was added after seeing G1. Phase 2 reads:
+**0.65 within clock-live play, provisional** -- not a clean pass.
+
+**4. The stands condition is NOT met, and Round 64's evidence for it was
+vacuous.** `over_court` asked whether any court pixel lay BELOW the ball in its
+column. In a broadcast frame the crowd sits above the floor, so this is true of
+almost everything: it flagged 0 of 78,293 ball boxes as off court and certified
+nothing. Replacing it with a real overlap test (does the box touch the floor
+silhouette?) flags 34.8% of 400 sampled boxes at >=0.5 confidence -- but that
+condemns every genuine ball in flight, so it does not measure the gate either.
+The court-region mask cannot settle this question in either direction.
+
+What can: looking. Of 40 randomly sampled off-silhouette detections at >=0.5
+confidence, ~23 are one static object -- the spare ball on the rack at the
+scorer's table, among seated courtside people -- ~7 are genuine balls in flight
+or held, and ~10 are on people: heads, arms, torsos, including one
+unmistakably on a spectator's bald head. Scaled to the stream that is roughly
+8-9% of high-confidence ball detections landing on people, matching the
+review's independent 8.7%/10.3%. **The gate's second half fails.** It does not
+appear to cost the shot rule much -- a static rack ball never approaches the
+rim, and the filter keeps calls to live play -- but the claim in Round 64 was
+wrong and the test behind it measured nothing.
+
+**Still not used: the projected rim**, the next lever for recall, unchanged
+from Round 64.

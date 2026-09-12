@@ -1,0 +1,944 @@
+[
+ {
+  "period": 1,
+  "clock_s": 704.0,
+  "made": true,
+  "description": "Andrew Nembhard Pullup Jump shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 689.0,
+  "made": false,
+  "description": "Jalen Williams Step Back Jump shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 671.0,
+  "made": false,
+  "description": "Myles Turner Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 657.0,
+  "made": true,
+  "description": "Shai Gilgeous-Alexander Step Back Jump shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 645.0,
+  "made": true,
+  "description": "Pascal Siakam Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 617.0,
+  "made": false,
+  "description": "Shai Gilgeous-Alexander Pullup Jump shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 599.0,
+  "made": false,
+  "description": "Andrew Nembhard Driving Layup Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 594.0,
+  "made": false,
+  "description": "Pascal Siakam Pullup Jump shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 575.0,
+  "made": true,
+  "description": "Shai Gilgeous-Alexander Pullup Jump shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 561.0,
+  "made": false,
+  "description": "Tyrese Haliburton Driving Layup Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 538.0,
+  "made": true,
+  "description": "Chet Holmgren Turnaround Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 513.0,
+  "made": true,
+  "description": "Tyrese Haliburton Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 491.0,
+  "made": false,
+  "description": "Jalen Williams Driving Floating Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 485.0,
+  "made": true,
+  "description": "Tyrese Haliburton Running Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 466.0,
+  "made": true,
+  "description": "Luguentz Dort Cutting Layup Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 452.0,
+  "made": false,
+  "description": "Pascal Siakam Step Back Jump shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 428.0,
+  "made": false,
+  "description": "Tyrese Haliburton Pullup Jump shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 421.0,
+  "made": true,
+  "description": "Tyrese Haliburton Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 403.0,
+  "made": true,
+  "description": "Alex Caruso Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 373.0,
+  "made": false,
+  "description": "Bennedict Mathurin Pullup Jump shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 348.0,
+  "made": true,
+  "description": "Alex Caruso Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 320.0,
+  "made": false,
+  "description": "Alex Caruso Driving Layup Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 295.0,
+  "made": true,
+  "description": "Jalen Williams Running Dunk Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 272.0,
+  "made": false,
+  "description": "T.J. McConnell Turnaround Fadeaway shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 259.0,
+  "made": false,
+  "description": "Alex Caruso Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 245.0,
+  "made": true,
+  "description": "Pascal Siakam Driving Finger Roll Layup Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 232.0,
+  "made": false,
+  "description": "Shai Gilgeous-Alexander Turnaround Fadeaway shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 221.0,
+  "made": false,
+  "description": "Bennedict Mathurin Driving Floating Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 212.0,
+  "made": false,
+  "description": "Alex Caruso Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 198.0,
+  "made": true,
+  "description": "Shai Gilgeous-Alexander Pullup Jump shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 186.0,
+  "made": false,
+  "description": "Obi Toppin Driving Floating Bank Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 168.0,
+  "made": true,
+  "description": "Chet Holmgren Driving Floating Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 146.0,
+  "made": true,
+  "description": "Pascal Siakam Pullup Jump shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 119.0,
+  "made": false,
+  "description": "Shai Gilgeous-Alexander Pullup Jump shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 79.0,
+  "made": false,
+  "description": "Cason Wallace Pullup Jump shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 69.0,
+  "made": false,
+  "description": "T.J. McConnell Pullup Jump shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 59.0,
+  "made": false,
+  "description": "Kenrich Williams Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 37.0,
+  "made": false,
+  "description": "Bennedict Mathurin Driving Layup Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 34.0,
+  "made": true,
+  "description": "Bennedict Mathurin Putback Layup Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 22.0,
+  "made": true,
+  "description": "Jalen Williams Driving Layup Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 0.0,
+  "made": false,
+  "description": "Pascal Siakam Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 707.0,
+  "made": false,
+  "description": "Isaiah Hartenstein Alley Oop Dunk Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 699.0,
+  "made": true,
+  "description": "Bennedict Mathurin Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 645.0,
+  "made": false,
+  "description": "Jalen Williams Step Back Jump shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 634.0,
+  "made": true,
+  "description": "Alex Caruso Cutting Dunk Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 605.0,
+  "made": false,
+  "description": "Jalen Williams Driving Layup Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 603.0,
+  "made": false,
+  "description": "Alex Caruso Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 595.0,
+  "made": true,
+  "description": "Isaiah Hartenstein Cutting Layup Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 547.0,
+  "made": false,
+  "description": "Pascal Siakam Step Back Jump shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 485.0,
+  "made": false,
+  "description": "Shai Gilgeous-Alexander Step Back Jump shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 469.0,
+  "made": false,
+  "description": "Obi Toppin Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 466.0,
+  "made": true,
+  "description": "Aaron Nesmith Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 450.0,
+  "made": false,
+  "description": "Luguentz Dort Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 436.0,
+  "made": true,
+  "description": "Shai Gilgeous-Alexander Step Back Jump shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 412.0,
+  "made": false,
+  "description": "Bennedict Mathurin Driving Layup Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 406.0,
+  "made": true,
+  "description": "Cason Wallace Running Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 377.0,
+  "made": false,
+  "description": "T.J. McConnell Pullup Jump shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 365.0,
+  "made": false,
+  "description": "Cason Wallace Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 348.0,
+  "made": true,
+  "description": "T.J. McConnell Driving Reverse Layup Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 336.0,
+  "made": false,
+  "description": "Chet Holmgren Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 323.0,
+  "made": true,
+  "description": "Andrew Nembhard Driving Layup Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 309.0,
+  "made": false,
+  "description": "Jalen Williams Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 299.0,
+  "made": false,
+  "description": "Aaron Nesmith Running Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 286.0,
+  "made": true,
+  "description": "Luguentz Dort Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 265.0,
+  "made": true,
+  "description": "Myles Turner Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 253.0,
+  "made": false,
+  "description": "Luguentz Dort Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 233.0,
+  "made": true,
+  "description": "T.J. McConnell Pullup Jump shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 220.0,
+  "made": false,
+  "description": "Chet Holmgren Driving Layup Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 212.0,
+  "made": false,
+  "description": "Myles Turner Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 201.0,
+  "made": false,
+  "description": "Shai Gilgeous-Alexander Driving Layup Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 175.0,
+  "made": true,
+  "description": "Shai Gilgeous-Alexander Driving Finger Roll Layup Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 164.0,
+  "made": false,
+  "description": "Andrew Nembhard Pullup Jump shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 142.0,
+  "made": false,
+  "description": "Luguentz Dort Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 122.0,
+  "made": true,
+  "description": "Bennedict Mathurin Pullup Jump shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 90.0,
+  "made": false,
+  "description": "Obi Toppin Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 67.0,
+  "made": false,
+  "description": "Shai Gilgeous-Alexander Step Back Jump shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 49.0,
+  "made": false,
+  "description": "Andrew Nembhard Step Back Jump shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 39.0,
+  "made": true,
+  "description": "Isaiah Hartenstein Cutting Layup Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 4.0,
+  "made": true,
+  "description": "Andrew Nembhard Step Back Jump shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 0.0,
+  "made": false,
+  "description": "Shai Gilgeous-Alexander Pullup Jump shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 697.0,
+  "made": false,
+  "description": "Shai Gilgeous-Alexander Pullup Jump shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 693.0,
+  "made": false,
+  "description": "Shai Gilgeous-Alexander Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 690.0,
+  "made": true,
+  "description": "Chet Holmgren Putback Layup Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 662.0,
+  "made": false,
+  "description": "Jalen Williams Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 646.0,
+  "made": true,
+  "description": "Luguentz Dort Pullup Jump shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 634.0,
+  "made": false,
+  "description": "Bennedict Mathurin Driving Floating Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 630.0,
+  "made": true,
+  "description": "Pascal Siakam Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 600.0,
+  "made": false,
+  "description": "Alex Caruso Cutting Layup Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 597.0,
+  "made": true,
+  "description": "Alex Caruso Tip Layup Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 583.0,
+  "made": false,
+  "description": "Andrew Nembhard Pullup Jump shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 574.0,
+  "made": false,
+  "description": "Luguentz Dort Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 560.0,
+  "made": true,
+  "description": "Jalen Williams Running Layup Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 550.0,
+  "made": false,
+  "description": "Bennedict Mathurin Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 544.0,
+  "made": false,
+  "description": "Aaron Nesmith Driving Floating Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 524.0,
+  "made": false,
+  "description": "Jalen Williams Driving Floating Bank Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 512.0,
+  "made": true,
+  "description": "Myles Turner Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 496.0,
+  "made": true,
+  "description": "Shai Gilgeous-Alexander Step Back Jump shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 465.0,
+  "made": true,
+  "description": "Chet Holmgren Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 436.0,
+  "made": true,
+  "description": "Jalen Williams Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 415.0,
+  "made": true,
+  "description": "T.J. McConnell Driving Layup Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 393.0,
+  "made": true,
+  "description": "Shai Gilgeous-Alexander Driving Layup Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 349.0,
+  "made": false,
+  "description": "Jalen Williams Driving Finger Roll Layup Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 338.0,
+  "made": true,
+  "description": "T.J. McConnell Driving Finger Roll Layup Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 323.0,
+  "made": false,
+  "description": "Shai Gilgeous-Alexander Step Back Jump shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 308.0,
+  "made": true,
+  "description": "T.J. McConnell Pullup Jump shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 296.0,
+  "made": true,
+  "description": "Chet Holmgren Cutting Dunk Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 281.0,
+  "made": true,
+  "description": "T.J. McConnell Driving Layup Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 258.0,
+  "made": false,
+  "description": "Andrew Nembhard Step Back Jump shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 249.0,
+  "made": false,
+  "description": "Luguentz Dort Running Pull-Up Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 245.0,
+  "made": false,
+  "description": "Alex Caruso Tip Dunk Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 234.0,
+  "made": true,
+  "description": "T.J. McConnell Pullup Jump shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 218.0,
+  "made": false,
+  "description": "Luguentz Dort Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 180.0,
+  "made": true,
+  "description": "Cason Wallace Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 162.0,
+  "made": true,
+  "description": "Cason Wallace Running Layup Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 143.0,
+  "made": false,
+  "description": "Thomas Bryant Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 122.0,
+  "made": true,
+  "description": "Jalen Williams Driving Finger Roll Layup Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 106.0,
+  "made": true,
+  "description": "T.J. McConnell Pullup Jump shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 87.0,
+  "made": true,
+  "description": "Jalen Williams Step Back Jump shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 70.0,
+  "made": false,
+  "description": "Ben Sheppard Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 56.0,
+  "made": false,
+  "description": "Jalen Williams Pullup Jump shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 44.0,
+  "made": false,
+  "description": "T.J. McConnell Driving Layup Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 30.0,
+  "made": false,
+  "description": "Shai Gilgeous-Alexander Pullup Jump shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 29.0,
+  "made": true,
+  "description": "Isaiah Hartenstein Tip Layup Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 5.0,
+  "made": false,
+  "description": "Pascal Siakam Pullup Jump shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 0.0,
+  "made": false,
+  "description": "Shai Gilgeous-Alexander Pullup Jump shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 709.0,
+  "made": false,
+  "description": "Andrew Nembhard Driving Layup Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 702.0,
+  "made": false,
+  "description": "Obi Toppin Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 682.0,
+  "made": true,
+  "description": "Shai Gilgeous-Alexander Step Back Jump shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 646.0,
+  "made": false,
+  "description": "Shai Gilgeous-Alexander Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 630.0,
+  "made": false,
+  "description": "Pascal Siakam Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 609.0,
+  "made": false,
+  "description": "Aaron Wiggins Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 581.0,
+  "made": false,
+  "description": "Aaron Nesmith Pullup Jump shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 576.0,
+  "made": false,
+  "description": "Pascal Siakam Turnaround Fadeaway Bank Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 555.0,
+  "made": true,
+  "description": "Cason Wallace Layup Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 535.0,
+  "made": false,
+  "description": "Aaron Nesmith Reverse Layup Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 521.0,
+  "made": false,
+  "description": "Shai Gilgeous-Alexander Pullup Jump shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 509.0,
+  "made": true,
+  "description": "Jalen Williams Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 478.0,
+  "made": false,
+  "description": "Shai Gilgeous-Alexander Step Back Jump shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 465.0,
+  "made": false,
+  "description": "Jalen Williams Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 449.0,
+  "made": true,
+  "description": "Pascal Siakam Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 414.0,
+  "made": false,
+  "description": "Bennedict Mathurin Putback Layup Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 410.0,
+  "made": false,
+  "description": "Pascal Siakam Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 392.0,
+  "made": false,
+  "description": "Shai Gilgeous-Alexander Pullup Jump shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 320.0,
+  "made": false,
+  "description": "Jalen Williams Turnaround Fadeaway shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 308.0,
+  "made": false,
+  "description": "Shai Gilgeous-Alexander Step Back Jump shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 287.0,
+  "made": true,
+  "description": "Bennedict Mathurin Driving Layup Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 265.0,
+  "made": false,
+  "description": "T.J. McConnell Fadeaway Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 256.0,
+  "made": false,
+  "description": "Jalen Williams Driving Layup Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 232.0,
+  "made": false,
+  "description": "Shai Gilgeous-Alexander Step Back Jump shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 189.0,
+  "made": false,
+  "description": "Shai Gilgeous-Alexander Driving Floating Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 169.0,
+  "made": false,
+  "description": "Jalen Williams Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 152.0,
+  "made": true,
+  "description": "Andrew Nembhard Step Back Jump shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 144.0,
+  "made": true,
+  "description": "Chet Holmgren Cutting Dunk Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 136.0,
+  "made": true,
+  "description": "Bennedict Mathurin Driving Layup Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 56.0,
+  "made": false,
+  "description": "Bennedict Mathurin Running Pull-Up Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 33.0,
+  "made": false,
+  "description": "Luguentz Dort Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 25.0,
+  "made": true,
+  "description": "Bennedict Mathurin Driving Layup Shot"
+ }
+]

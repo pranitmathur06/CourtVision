@@ -1,0 +1,1082 @@
+[
+ {
+  "period": 1,
+  "clock_s": 699.0,
+  "made": false,
+  "description": "MISS Dort 29' 3PT Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 687.0,
+  "made": false,
+  "description": "MISS Turner 25' 3PT Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 675.0,
+  "made": true,
+  "description": "Gilgeous-Alexander 1' Driving Reverse Layup (2 PTS)"
+ },
+ {
+  "period": 1,
+  "clock_s": 655.0,
+  "made": false,
+  "description": "MISS Nembhard 27' 3PT Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 641.0,
+  "made": true,
+  "description": "Holmgren 2' Driving Layup (2 PTS) (Gilgeous-Alexander 1 AST)"
+ },
+ {
+  "period": 1,
+  "clock_s": 619.0,
+  "made": false,
+  "description": "MISS Nesmith 3PT Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 606.0,
+  "made": false,
+  "description": "MISS Gilgeous-Alexander 4' Driving Layup"
+ },
+ {
+  "period": 1,
+  "clock_s": 599.0,
+  "made": false,
+  "description": "MISS Dort 10' Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 587.0,
+  "made": false,
+  "description": "MISS Haliburton 8' Driving Floating Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 580.0,
+  "made": true,
+  "description": "Jal. Williams 26' 3PT Running Pull-Up Jump Shot (3 PTS)"
+ },
+ {
+  "period": 1,
+  "clock_s": 556.0,
+  "made": false,
+  "description": "MISS Jal. Williams 16' Turnaround Fadeaway Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 536.0,
+  "made": true,
+  "description": "Siakam 2' Driving Layup (2 PTS) (Haliburton 1 AST)"
+ },
+ {
+  "period": 1,
+  "clock_s": 527.0,
+  "made": false,
+  "description": "MISS Dort 3PT Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 476.0,
+  "made": true,
+  "description": "Siakam 14' Pullup Jump Shot (4 PTS) (Nembhard 1 AST)"
+ },
+ {
+  "period": 1,
+  "clock_s": 463.0,
+  "made": true,
+  "description": "Gilgeous-Alexander 26' 3PT Pullup Jump Shot (5 PTS)"
+ },
+ {
+  "period": 1,
+  "clock_s": 450.0,
+  "made": true,
+  "description": "Turner 15' Pullup Jump Shot (3 PTS)"
+ },
+ {
+  "period": 1,
+  "clock_s": 435.0,
+  "made": false,
+  "description": "MISS Jal. Williams 20' Pullup Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 427.0,
+  "made": true,
+  "description": "Nembhard 3PT Running Jump Shot (3 PTS) (Siakam 1 AST)"
+ },
+ {
+  "period": 1,
+  "clock_s": 411.0,
+  "made": false,
+  "description": "MISS Jal. Williams 22' Pullup Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 378.0,
+  "made": true,
+  "description": "Gilgeous-Alexander 8' Driving Floating Jump Shot (7 PTS)"
+ },
+ {
+  "period": 1,
+  "clock_s": 355.0,
+  "made": false,
+  "description": "MISS Gilgeous-Alexander 12' Running Pull-Up Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 346.0,
+  "made": false,
+  "description": "MISS Holmgren 4' Driving Layup"
+ },
+ {
+  "period": 1,
+  "clock_s": 333.0,
+  "made": false,
+  "description": "MISS Turner 26' 3PT Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 312.0,
+  "made": false,
+  "description": "MISS Wallace 26' 3PT Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 305.0,
+  "made": false,
+  "description": "MISS Holmgren 2' Driving Layup"
+ },
+ {
+  "period": 1,
+  "clock_s": 300.0,
+  "made": true,
+  "description": "Gilgeous-Alexander 2' Driving Finger Roll Layup (9 PTS)"
+ },
+ {
+  "period": 1,
+  "clock_s": 283.0,
+  "made": false,
+  "description": "MISS Nesmith 4' Layup"
+ },
+ {
+  "period": 1,
+  "clock_s": 282.0,
+  "made": false,
+  "description": "MISS Haliburton 3PT Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 272.0,
+  "made": false,
+  "description": "MISS Gilgeous-Alexander 20' Pullup Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 246.0,
+  "made": true,
+  "description": "Joe 15' Step Back Jump Shot (2 PTS)"
+ },
+ {
+  "period": 1,
+  "clock_s": 217.0,
+  "made": false,
+  "description": "MISS Gilgeous-Alexander 4' Driving Floating Bank Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 210.0,
+  "made": true,
+  "description": "Haliburton 25' 3PT Running Pull-Up Jump Shot (3 PTS) (McConn"
+ },
+ {
+  "period": 1,
+  "clock_s": 188.0,
+  "made": true,
+  "description": "Caruso 25' 3PT Jump Shot (3 PTS) (Dort 1 AST)"
+ },
+ {
+  "period": 1,
+  "clock_s": 167.0,
+  "made": false,
+  "description": "MISS Gilgeous-Alexander 12' Fadeaway Jumper"
+ },
+ {
+  "period": 1,
+  "clock_s": 137.0,
+  "made": true,
+  "description": "McConnell 2' Driving Finger Roll Layup (2 PTS)"
+ },
+ {
+  "period": 1,
+  "clock_s": 111.0,
+  "made": false,
+  "description": "MISS Nembhard 3PT Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 102.0,
+  "made": false,
+  "description": "MISS Gilgeous-Alexander 4' Driving Floating Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 99.0,
+  "made": true,
+  "description": "Hartenstein 1' Putback Layup (4 PTS)"
+ },
+ {
+  "period": 1,
+  "clock_s": 75.0,
+  "made": false,
+  "description": "MISS Mathurin 7' Driving Layup"
+ },
+ {
+  "period": 1,
+  "clock_s": 65.0,
+  "made": true,
+  "description": "Gilgeous-Alexander 14' Step Back Jump Shot (11 PTS)"
+ },
+ {
+  "period": 1,
+  "clock_s": 49.7,
+  "made": true,
+  "description": "McConnell 8' Turnaround Fadeaway (4 PTS)"
+ },
+ {
+  "period": 1,
+  "clock_s": 39.1,
+  "made": true,
+  "description": "Hartenstein 1' Driving Reverse Layup (6 PTS)"
+ },
+ {
+  "period": 1,
+  "clock_s": 30.5,
+  "made": true,
+  "description": "Toppin 25' 3PT Jump Shot (3 PTS) (McConnell 2 AST)"
+ },
+ {
+  "period": 1,
+  "clock_s": 2.0,
+  "made": false,
+  "description": "MISS Gilgeous-Alexander 3' Driving Layup"
+ },
+ {
+  "period": 2,
+  "clock_s": 701.0,
+  "made": true,
+  "description": "Toppin 3PT Jump Shot (6 PTS) (Mathurin 1 AST)"
+ },
+ {
+  "period": 2,
+  "clock_s": 684.0,
+  "made": true,
+  "description": "Wiggins 6' Fadeaway Bank Shot (2 PTS)"
+ },
+ {
+  "period": 2,
+  "clock_s": 663.0,
+  "made": false,
+  "description": "MISS Toppin 25' 3PT Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 646.0,
+  "made": false,
+  "description": "MISS Jal. Williams 19' Pullup Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 626.0,
+  "made": true,
+  "description": "Caruso 1' Driving Finger Roll Layup (5 PTS) (Jal. Williams 1"
+ },
+ {
+  "period": 2,
+  "clock_s": 613.0,
+  "made": false,
+  "description": "MISS Mathurin 15' Driving Floating Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 594.0,
+  "made": true,
+  "description": "Sheppard 24' 3PT Jump Shot (3 PTS) (Siakam 2 AST)"
+ },
+ {
+  "period": 2,
+  "clock_s": 581.0,
+  "made": false,
+  "description": "MISS Hartenstein 2' Driving Layup"
+ },
+ {
+  "period": 2,
+  "clock_s": 577.0,
+  "made": false,
+  "description": "MISS Wiggins 24' 3PT Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 559.0,
+  "made": false,
+  "description": "MISS Siakam 12' Turnaround Fadeaway Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 532.0,
+  "made": false,
+  "description": "MISS Sheppard 27' 3PT Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 509.0,
+  "made": false,
+  "description": "MISS Turner 3' Layup"
+ },
+ {
+  "period": 2,
+  "clock_s": 496.0,
+  "made": false,
+  "description": "MISS Mitchell 4' Driving Layup"
+ },
+ {
+  "period": 2,
+  "clock_s": 490.0,
+  "made": false,
+  "description": "MISS Wallace 7' Driving Layup"
+ },
+ {
+  "period": 2,
+  "clock_s": 484.0,
+  "made": false,
+  "description": "MISS Mitchell 26' 3PT Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 481.0,
+  "made": false,
+  "description": "MISS Mitchell 3' Driving Floating Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 471.0,
+  "made": true,
+  "description": "Haliburton 26' 3PT Pullup Jump Shot (6 PTS)"
+ },
+ {
+  "period": 2,
+  "clock_s": 450.0,
+  "made": true,
+  "description": "Gilgeous-Alexander 21' Step Back Jump Shot (14 PTS)"
+ },
+ {
+  "period": 2,
+  "clock_s": 428.0,
+  "made": false,
+  "description": "MISS Nesmith 25' 3PT Pullup Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 417.0,
+  "made": false,
+  "description": "MISS Holmgren 5' Driving Hook Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 383.0,
+  "made": false,
+  "description": "MISS Joe 2' Driving Layup"
+ },
+ {
+  "period": 2,
+  "clock_s": 362.0,
+  "made": false,
+  "description": "MISS Gilgeous-Alexander 26' 3PT Step Back Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 348.0,
+  "made": false,
+  "description": "MISS Nembhard 24' 3PT Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 339.0,
+  "made": false,
+  "description": "MISS Wallace 3' Driving Floating Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 331.0,
+  "made": true,
+  "description": "Siakam 1' Driving Reverse Layup (8 PTS)"
+ },
+ {
+  "period": 2,
+  "clock_s": 313.0,
+  "made": true,
+  "description": "Dort 3PT Jump Shot (3 PTS) (Jal. Williams 2 AST)"
+ },
+ {
+  "period": 2,
+  "clock_s": 287.0,
+  "made": false,
+  "description": "MISS Gilgeous-Alexander 27' 3PT Step Back Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 270.0,
+  "made": false,
+  "description": "MISS Holmgren 3PT Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 253.0,
+  "made": true,
+  "description": "Dort 24' 3PT Jump Shot (6 PTS) (Jal. Williams 3 AST)"
+ },
+ {
+  "period": 2,
+  "clock_s": 229.0,
+  "made": false,
+  "description": "MISS Siakam 18' Pullup Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 216.0,
+  "made": false,
+  "description": "MISS Caruso 3PT Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 182.0,
+  "made": false,
+  "description": "MISS Jal. Williams 26' 3PT Running Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 171.0,
+  "made": false,
+  "description": "MISS Toppin 28' 3PT Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 159.0,
+  "made": true,
+  "description": "Dort 3PT Jump Shot (9 PTS) (Caruso 1 AST)"
+ },
+ {
+  "period": 2,
+  "clock_s": 141.0,
+  "made": false,
+  "description": "MISS Gilgeous-Alexander 26' 3PT Step Back Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 128.0,
+  "made": true,
+  "description": "McConnell 26' 3PT Jump Shot (7 PTS) (Haliburton 2 AST)"
+ },
+ {
+  "period": 2,
+  "clock_s": 110.0,
+  "made": true,
+  "description": "Jal. Williams 2' Driving Floating Bank Jump Shot (7 PTS)"
+ },
+ {
+  "period": 2,
+  "clock_s": 99.0,
+  "made": true,
+  "description": "Nesmith 3PT Jump Shot (4 PTS) (Haliburton 3 AST)"
+ },
+ {
+  "period": 2,
+  "clock_s": 78.0,
+  "made": true,
+  "description": "Gilgeous-Alexander 3' Driving Layup (16 PTS)"
+ },
+ {
+  "period": 2,
+  "clock_s": 62.0,
+  "made": true,
+  "description": "McConnell 8' Jump Shot (9 PTS) (Toppin 1 AST)"
+ },
+ {
+  "period": 2,
+  "clock_s": 46.2,
+  "made": true,
+  "description": "Gilgeous-Alexander 26' 3PT Jump Shot (19 PTS) (Jal. Williams"
+ },
+ {
+  "period": 2,
+  "clock_s": 33.3,
+  "made": false,
+  "description": "MISS McConnell 6' Driving Layup"
+ },
+ {
+  "period": 2,
+  "clock_s": 28.6,
+  "made": false,
+  "description": "MISS Siakam 11' Driving Floating Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 16.4,
+  "made": false,
+  "description": "MISS Holmgren 2' Cutting Layup Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 0.2,
+  "made": false,
+  "description": "MISS Caruso 4' Cutting Finger Roll Layup Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 701.0,
+  "made": false,
+  "description": "MISS Nembhard 3' Driving Finger Roll Layup"
+ },
+ {
+  "period": 3,
+  "clock_s": 698.0,
+  "made": false,
+  "description": "MISS Turner 1' Tip Layup Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 691.0,
+  "made": false,
+  "description": "MISS Haliburton 28' 3PT Pullup Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 674.0,
+  "made": true,
+  "description": "Gilgeous-Alexander 14' Step Back Jump Shot (21 PTS)"
+ },
+ {
+  "period": 3,
+  "clock_s": 658.0,
+  "made": true,
+  "description": "Turner 2' Layup (7 PTS) (Haliburton 4 AST)"
+ },
+ {
+  "period": 3,
+  "clock_s": 639.0,
+  "made": false,
+  "description": "MISS Holmgren 2' Driving Layup"
+ },
+ {
+  "period": 3,
+  "clock_s": 619.0,
+  "made": false,
+  "description": "MISS Jal. Williams 3PT Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 604.0,
+  "made": false,
+  "description": "MISS Siakam 5' Driving Hook Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 593.0,
+  "made": true,
+  "description": "Gilgeous-Alexander 16' Pullup Jump Shot (23 PTS)"
+ },
+ {
+  "period": 3,
+  "clock_s": 579.0,
+  "made": false,
+  "description": "MISS Haliburton 25' 3PT Step Back Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 572.0,
+  "made": false,
+  "description": "MISS Siakam 21' Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 561.0,
+  "made": false,
+  "description": "MISS Gilgeous-Alexander 9' Turnaround Fadeaway Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 554.0,
+  "made": true,
+  "description": "Siakam 1' Running Finger Roll Layup (11 PTS) (Haliburton 5 A"
+ },
+ {
+  "period": 3,
+  "clock_s": 536.0,
+  "made": true,
+  "description": "Wallace 2' Driving Finger Roll Layup (2 PTS)"
+ },
+ {
+  "period": 3,
+  "clock_s": 525.0,
+  "made": true,
+  "description": "Nesmith 25' 3PT Jump Shot (7 PTS) (Siakam 3 AST)"
+ },
+ {
+  "period": 3,
+  "clock_s": 510.0,
+  "made": true,
+  "description": "Jal. Williams 2' Alley Oop Dunk (9 PTS) (Wallace 1 AST)"
+ },
+ {
+  "period": 3,
+  "clock_s": 476.0,
+  "made": false,
+  "description": "MISS Jal. Williams 1' Driving Finger Roll Layup"
+ },
+ {
+  "period": 3,
+  "clock_s": 453.0,
+  "made": false,
+  "description": "MISS Nesmith 3PT Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 449.0,
+  "made": true,
+  "description": "Siakam 2' Putback Layup (13 PTS)"
+ },
+ {
+  "period": 3,
+  "clock_s": 439.0,
+  "made": true,
+  "description": "Wallace 1' Cutting Layup Shot (4 PTS) (Gilgeous-Alexander 2 "
+ },
+ {
+  "period": 3,
+  "clock_s": 401.0,
+  "made": false,
+  "description": "MISS Wallace 7' Driving Floating Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 400.0,
+  "made": false,
+  "description": "MISS Jal. Williams Tip Layup Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 393.0,
+  "made": true,
+  "description": "Haliburton 12' Pullup Jump Shot (8 PTS)"
+ },
+ {
+  "period": 3,
+  "clock_s": 380.0,
+  "made": true,
+  "description": "Dort 25' 3PT Step Back Jump Shot (12 PTS)"
+ },
+ {
+  "period": 3,
+  "clock_s": 354.0,
+  "made": true,
+  "description": "Toppin 3PT Jump Shot (9 PTS) (Nembhard 2 AST)"
+ },
+ {
+  "period": 3,
+  "clock_s": 342.0,
+  "made": true,
+  "description": "Dort 27' 3PT Jump Shot (15 PTS) (Jal. Williams 5 AST)"
+ },
+ {
+  "period": 3,
+  "clock_s": 331.0,
+  "made": true,
+  "description": "Nembhard 3' Driving Layup (6 PTS)"
+ },
+ {
+  "period": 3,
+  "clock_s": 322.0,
+  "made": true,
+  "description": "Holmgren 1' Cutting Dunk Shot (6 PTS) (Gilgeous-Alexander 3 "
+ },
+ {
+  "period": 3,
+  "clock_s": 306.0,
+  "made": true,
+  "description": "Haliburton 14' Driving Floating Jump Shot (10 PTS)"
+ },
+ {
+  "period": 3,
+  "clock_s": 292.0,
+  "made": false,
+  "description": "MISS Gilgeous-Alexander 14' Pullup Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 280.0,
+  "made": false,
+  "description": "MISS Jal. Williams 3' Driving Dunk"
+ },
+ {
+  "period": 3,
+  "clock_s": 270.0,
+  "made": false,
+  "description": "MISS Haliburton 32' 3PT Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 249.0,
+  "made": false,
+  "description": "MISS Toppin 26' 3PT Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 233.0,
+  "made": true,
+  "description": "Gilgeous-Alexander 9' Step Back Jump Shot (25 PTS)"
+ },
+ {
+  "period": 3,
+  "clock_s": 220.0,
+  "made": true,
+  "description": "Toppin 3' Layup (11 PTS) (Nembhard 3 AST)"
+ },
+ {
+  "period": 3,
+  "clock_s": 168.0,
+  "made": false,
+  "description": "MISS Siakam 13' Turnaround Fadeaway Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 160.0,
+  "made": false,
+  "description": "MISS Caruso 3' Running Finger Roll Layup"
+ },
+ {
+  "period": 3,
+  "clock_s": 158.0,
+  "made": true,
+  "description": "Hartenstein Tip Dunk Shot (9 PTS)"
+ },
+ {
+  "period": 3,
+  "clock_s": 144.0,
+  "made": true,
+  "description": "Bryant 1' Cutting Dunk Shot (2 PTS) (Mathurin 2 AST)"
+ },
+ {
+  "period": 3,
+  "clock_s": 130.0,
+  "made": false,
+  "description": "MISS Caruso 3PT Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 115.0,
+  "made": false,
+  "description": "MISS Siakam 26' 3PT Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 104.0,
+  "made": false,
+  "description": "MISS Caruso 3PT Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 73.0,
+  "made": false,
+  "description": "MISS Gilgeous-Alexander 7' Pullup Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 69.0,
+  "made": true,
+  "description": "Joe 26' 3PT Jump Shot (5 PTS) (Caruso 2 AST)"
+ },
+ {
+  "period": 3,
+  "clock_s": 57.0,
+  "made": true,
+  "description": "Bryant 3PT Jump Shot (5 PTS) (McConnell 3 AST)"
+ },
+ {
+  "period": 3,
+  "clock_s": 33.9,
+  "made": false,
+  "description": "MISS Gilgeous-Alexander 17' Step Back Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 17.3,
+  "made": true,
+  "description": "Siakam 3PT Jump Shot (16 PTS) (McConnell 4 AST)"
+ },
+ {
+  "period": 3,
+  "clock_s": 1.2,
+  "made": true,
+  "description": "Gilgeous-Alexander 26' 3PT Pullup Jump Shot (28 PTS)"
+ },
+ {
+  "period": 4,
+  "clock_s": 692.0,
+  "made": false,
+  "description": "MISS McConnell 6' Pullup Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 674.0,
+  "made": true,
+  "description": "Jal. Williams 2' Driving Layup (11 PTS)"
+ },
+ {
+  "period": 4,
+  "clock_s": 634.0,
+  "made": true,
+  "description": "Mathurin 1' Driving Finger Roll Layup (5 PTS)"
+ },
+ {
+  "period": 4,
+  "clock_s": 622.0,
+  "made": true,
+  "description": "Jal. Williams 2' Driving Layup (13 PTS)"
+ },
+ {
+  "period": 4,
+  "clock_s": 590.0,
+  "made": false,
+  "description": "MISS Siakam 3' Driving Floating Bank Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 587.0,
+  "made": false,
+  "description": "MISS Mathurin 4' Putback Layup"
+ },
+ {
+  "period": 4,
+  "clock_s": 586.0,
+  "made": false,
+  "description": "MISS Mathurin 2' Tip Layup Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 582.0,
+  "made": true,
+  "description": "Jal. Williams 2' Running Dunk (15 PTS)"
+ },
+ {
+  "period": 4,
+  "clock_s": 567.0,
+  "made": true,
+  "description": "Nembhard 5' Driving Layup (8 PTS)"
+ },
+ {
+  "period": 4,
+  "clock_s": 551.0,
+  "made": false,
+  "description": "MISS Wallace 24' 3PT Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 538.0,
+  "made": true,
+  "description": "Caruso 4' Driving Layup (11 PTS)"
+ },
+ {
+  "period": 4,
+  "clock_s": 527.0,
+  "made": true,
+  "description": "Toppin 27' 3PT Jump Shot (14 PTS) (Nembhard 4 AST)"
+ },
+ {
+  "period": 4,
+  "clock_s": 503.0,
+  "made": false,
+  "description": "MISS Jal. Williams 7' Pullup Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 493.0,
+  "made": false,
+  "description": "MISS Nembhard 3' Driving Layup"
+ },
+ {
+  "period": 4,
+  "clock_s": 478.0,
+  "made": false,
+  "description": "MISS Hartenstein 7' Floating Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 467.0,
+  "made": true,
+  "description": "Turner 3PT Jump Shot (10 PTS) (Haliburton 6 AST)"
+ },
+ {
+  "period": 4,
+  "clock_s": 452.0,
+  "made": true,
+  "description": "Wallace 1' Cutting Layup Shot (6 PTS) (Jal. Williams 6 AST)"
+ },
+ {
+  "period": 4,
+  "clock_s": 426.0,
+  "made": false,
+  "description": "MISS Wallace 26' 3PT Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 410.0,
+  "made": true,
+  "description": "Toppin 25' 3PT Jump Shot (17 PTS) (Nesmith 1 AST)"
+ },
+ {
+  "period": 4,
+  "clock_s": 391.0,
+  "made": false,
+  "description": "MISS Dort 25' 3PT Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 382.0,
+  "made": false,
+  "description": "MISS Nesmith 3PT Running Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 376.0,
+  "made": true,
+  "description": "Turner 24' 3PT Step Back Bank Jump Shot (13 PTS) (Nembhard 5"
+ },
+ {
+  "period": 4,
+  "clock_s": 342.0,
+  "made": true,
+  "description": "Turner 16' Jump Shot (15 PTS) (Nembhard 6 AST)"
+ },
+ {
+  "period": 4,
+  "clock_s": 315.0,
+  "made": false,
+  "description": "MISS Nembhard 3' Driving Layup"
+ },
+ {
+  "period": 4,
+  "clock_s": 299.0,
+  "made": false,
+  "description": "MISS Jal. Williams 2' Driving Layup"
+ },
+ {
+  "period": 4,
+  "clock_s": 291.0,
+  "made": true,
+  "description": "Haliburton 3' Running Finger Roll Layup (12 PTS)"
+ },
+ {
+  "period": 4,
+  "clock_s": 279.0,
+  "made": false,
+  "description": "MISS Holmgren 1' Driving Layup"
+ },
+ {
+  "period": 4,
+  "clock_s": 260.0,
+  "made": false,
+  "description": "MISS Turner 26' 3PT Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 241.0,
+  "made": true,
+  "description": "Gilgeous-Alexander 2' Driving Layup (32 PTS)"
+ },
+ {
+  "period": 4,
+  "clock_s": 219.0,
+  "made": false,
+  "description": "MISS Haliburton 27' 3PT Step Back Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 188.0,
+  "made": false,
+  "description": "MISS Haliburton 4' Driving Floating Bank Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 158.0,
+  "made": true,
+  "description": "Nesmith 3PT Jump Shot (10 PTS) (Toppin 2 AST)"
+ },
+ {
+  "period": 4,
+  "clock_s": 136.0,
+  "made": false,
+  "description": "MISS Jal. Williams 26' 3PT Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 119.0,
+  "made": true,
+  "description": "Nembhard 26' 3PT Step Back Jump Shot (12 PTS)"
+ },
+ {
+  "period": 4,
+  "clock_s": 104.0,
+  "made": false,
+  "description": "MISS Dort 26' 3PT Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 93.0,
+  "made": false,
+  "description": "MISS Nesmith 6' Driving Layup"
+ },
+ {
+  "period": 4,
+  "clock_s": 87.0,
+  "made": true,
+  "description": "Gilgeous-Alexander 1' Running Layup (38 PTS)"
+ },
+ {
+  "period": 4,
+  "clock_s": 67.0,
+  "made": false,
+  "description": "MISS Gilgeous-Alexander 3' Driving Layup"
+ },
+ {
+  "period": 4,
+  "clock_s": 50.4,
+  "made": false,
+  "description": "MISS Nembhard 28' 3PT Step Back Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 48.6,
+  "made": true,
+  "description": "Siakam 2' Putback Layup (19 PTS)"
+ },
+ {
+  "period": 4,
+  "clock_s": 24.9,
+  "made": false,
+  "description": "MISS Jal. Williams 7' Driving Floating Bank Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 11.1,
+  "made": false,
+  "description": "MISS Gilgeous-Alexander 15' Fadeaway Jumper"
+ },
+ {
+  "period": 4,
+  "clock_s": 0.3,
+  "made": true,
+  "description": "Haliburton 21' Pullup Jump Shot (14 PTS)"
+ }
+]

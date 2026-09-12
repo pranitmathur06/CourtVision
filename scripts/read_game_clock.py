@@ -47,6 +47,8 @@ import numpy as np
 
 PERIOD_S = 720.0
 OT_S = 300.0
+#: A reading may miss the running clock by this much and still continue it.
+CONTINUE_TOL_S = 3.0
 #: An upward jump this large ends a run of readings.
 RESET_JUMP_S = 30.0
 #: A run this short is a replay or a misread, not a period.
@@ -73,19 +75,50 @@ def readings_from(text: str | None):
     return out
 
 
+def _continues(previous, previous_t, value, t):
+    """Could `value` at time `t` be the same clock last seen as `previous`?
+
+    A game clock either holds (a stoppage) or falls at real time, so a reading
+    may sit anywhere between the previous one and the previous one minus the
+    video time since, give or take CONTINUE_TOL_S for a dropped frame.
+    """
+    elapsed = max(0.0, t - previous_t)
+    return previous - elapsed - CONTINUE_TOL_S <= value <= previous + CONTINUE_TOL_S
+
+
 def resolve(candidates):
-    """[(t, [possible seconds])] -> [(t, seconds)], settling ties by continuity."""
-    out, running = [], None
-    for t, options in candidates:
-        if not options:
-            continue
+    """[(t, [possible seconds])] -> [(t, seconds)], settling ties by continuity.
+
+    Ties go to the reading that continues the running clock, and a reading
+    that continues nothing has to be confirmed by the next one before it is
+    believed. Without that confirmation a single misread captures the clock:
+    on Finals Game 1 one bad frame read 6:07 as 367 s, and every later "8:06 /
+    80.6" pair then had to fall below it, so the rest of the quarter -- 738 s
+    of it -- resolved to tenths and four official attempts landed in the wrong
+    place. A misread survives one frame; a real jump (a new period) is still
+    there on the next.
+    """
+    rows = [(t, options) for t, options in candidates if options]
+    out, running, running_t = [], None, None
+    for i, (t, options) in enumerate(rows):
         if running is None:
             seconds = max(options)
         else:
-            below = [v for v in options if v <= running + 1.0]
-            seconds = max(below) if below else max(options)
+            fits = [v for v in options if _continues(running, running_t, v, t)]
+            if fits:
+                seconds = max(fits)
+            else:
+                following = rows[i + 1] if i + 1 < len(rows) else None
+                confirmed = [
+                    v for v in options
+                    if following
+                    and any(_continues(v, t, w, following[0]) for w in following[1])
+                ]
+                if not confirmed:
+                    continue                    # unconfirmed misread: drop it
+                seconds = max(confirmed)
         out.append((t, seconds))
-        running = seconds
+        running, running_t = seconds, t
     return out
 
 
@@ -138,11 +171,20 @@ def elapsed(period: int, seconds: float) -> float:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--video", required=True)
+    parser.add_argument("--from-raw", default=None,
+                        help="re-resolve the candidates saved by an earlier run, no video pass")
     parser.add_argument("--step", type=float, default=1.0)
     parser.add_argument("--learn-start", type=float, default=900.0)
     parser.add_argument("--learn-seconds", type=int, default=120)
     parser.add_argument("--out", default=None)
     args = parser.parse_args()
+
+    if args.from_raw:
+        saved = json.load(open(args.from_raw))
+        candidates = [(r["t"], r["options"]) for r in saved["raw"]]
+        sampled = len(candidates)
+        location_roi, step = saved.get("roi"), saved.get("step", args.step)
+        return _write(args, candidates, sampled, location_roi, step)
 
     import cv2
 
@@ -181,16 +223,22 @@ def main() -> int:
         options = readings_from(text)
         if options:
             candidates.append((float(t), options))
+    return _write(args, candidates, len(np.arange(0.0, duration, args.step)),
+                  list(location.roi), args.step)
+
+
+def _write(args, candidates, sampled, roi, step):
+    """Resolve the candidates, split them into periods, save and report."""
     raw = resolve(candidates)
     rows, misreads = assign_periods(raw)
     out = Path(args.out or f"outputs/clock/{Path(args.video).stem}.json")
     out.parent.mkdir(parents=True, exist_ok=True)
-    json.dump({"video": args.video, "roi": list(location.roi), "step": args.step,
+    json.dump({"video": args.video, "roi": roi, "step": step,
                "raw": [{"t": t, "options": options} for t, options in candidates],
                "readings": [{"t": t, "period": p, "seconds": s, "elapsed": elapsed(p, s)}
                             for t, p, s in rows]}, open(out, "w"), indent=0)
     periods = sorted({p for _, p, _ in rows})
-    print(f"{len(np.arange(0.0, duration, args.step))} frames sampled; {len(raw)} read; "
+    print(f"{sampled} frames sampled; {len(raw)} read; "
           f"{misreads} dropped in short runs ({misreads / max(len(raw), 1):.1%}); periods seen {periods}")
     for p in periods:
         run = [(t, s) for t, q, s in rows if q == p]
