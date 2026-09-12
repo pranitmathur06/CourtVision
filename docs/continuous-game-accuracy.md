@@ -4893,3 +4893,84 @@ wrong and the test behind it measured nothing.
 
 **Still not used: the projected rim**, the next lever for recall, unchanged
 from Round 64.
+
+## Round 66 - the rim comes off the camera, and a denominator written first
+
+The owner's gate for Phase 2: rim accuracy 95%, ball accuracy 95%. Round 65
+had just shown that a gate condition can be "met" by a test that cannot fail,
+so the denominator is written before any number exists.
+
+**The metric** (`scripts/eval_rim_and_ball.py`, declared before it was run):
+frames on a fixed 25 s grid over the WHOLE video -- not around shots, not where
+registration worked, not where the clock was readable. Every sampled frame is
+labelled and counted. A frame where the object is not visible is not a miss --
+nothing can be found there -- so it moves to the false-alarm denominator
+instead, and both numbers are always printed:
+
+    accuracy    = located / visible
+    false alarm = reported where nothing was
+
+"Located" is within one object width of the true centre: a rim is 1.5 ft
+across, a ball 0.79 ft, so the tolerance follows the zoom. A point on the WRONG
+basket, or on a spectator's head, is a miss AND a false alarm. Both baskets
+count separately when both are shown, because picking "the" rim would have
+meant choosing which one counted after seeing which one was found. What counts
+as visible is fixed in `label_rim_and_ball.py` before labelling, replays and
+other cameras included: a system that cannot register the baseline camera has
+MISSED the rim in it, and excusing those frames would measure the main camera
+and call it the game. Pre-game frames stay in; the report splits at the span
+between the first and last clock reading, which this pipeline never touches.
+
+**The rim now comes from the camera, not the detector.** Phase 2 had never used
+what Phase 1 built. The detector sees a rim on 36.5% of G7's frames and 48.5%
+of G1's, and dropping its confidence floor from 0.25 to 0.10 adds 0.7% and
+1.4% -- it is saturated, not thresholded. Registering each frame from its own
+paint costs 5-35 s and succeeds on about a third. But the centre is fixed, so
+`track_camera.py` anchors rarely and carries the pose cheaply:
+
+    method                                   pose      within 1 rim width
+    per-frame registration                    36%      --
+    anchor + chained frame-to-frame hops      69%      82%
+    anchor + DIRECT hops, half-scale ORB      66%      99.5%
+
+Three things were tried and rejected on measurement, not argument:
+
+- *Chaining* consecutive frames: 0.47 rim widths median, 0 of 11 chained
+  frames within one. Matching each frame to its ANCHOR is one hop of error
+  instead of N.
+- *Two-phase, bidirectional*: read each segment, then let every frame use the
+  best anchor in either direction. It should rescue a frame whose camera move
+  began moments earlier. It measured 65.3% and 90.8% against 66.1% and 99.5%;
+  the poses it added came from hops across larger gaps, and capping the gap
+  only cost coverage. Reverted, with the reason in the docstring.
+- *A lower landmark-confidence floor*, to widen the gate anchors pass through:
+  0.6 to 0.2 moved starts from 61% to 63% of frames. The landmark model is not
+  being thresholded out; it simply does not fire on the rest.
+
+What did work: half-scale ORB matching is both quicker AND slightly more
+accurate (the area-averaged shrink denoises); re-fitting the carried
+homography to the camera's four parameters every frame, so drift in the other
+four is discarded instead of accumulated; and refusing any pose the DETECTOR
+contradicts by more than 1.5 rim widths -- the one audit using evidence the
+tracker never touches. Hops stay accurate to about 2-3 s and are then rejected
+by the snap cost on their own (0.49 px at 0.2 s, 7.3 at 2 s, 18.3 at 4 s), so
+the range limits itself rather than being set by hand.
+
+**The ball is a selection problem before it is a detection one.** At the
+cache's 0.10 floor a ball box appears on 80-83% of frames with ~3 candidates
+each; at 0.25 it is 53-62%. On a first labelling sheet the chosen candidate
+was repeatedly the spare ball on the rack at the scorer's table. Two tests,
+both available only because the centre is fixed:
+
+- A RAY, not a pixel: with the centre fixed, a world direction is the one
+  description of an image point that camera motion cannot change. This is
+  exactly what defeated the earlier image-space tracker, which scored
+  smoothness in pixels and so made a stationary object look fast whenever the
+  camera panned.
+- FIXTURES: a direction producing ball boxes all game long is furniture. The
+  rack ball is a real ball, correctly detected, and never the game ball.
+
+No selection rule can beat the candidates it is given, so the ceiling gets
+measured before any more work on choosing: `detect_ball_grid.py` re-detects the
+grid at a larger inference size, the lever that took ball coverage 0.733 to
+0.892 in an earlier round.
