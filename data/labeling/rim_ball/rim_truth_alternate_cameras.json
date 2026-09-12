@@ -1,0 +1,330 @@
+{
+ "note": "Rim boxes hand-located on frames where NOTHING in this repository can find one -- no keypoints so no pose, and no detector box at any threshold. Overhead, under-basket, behind-backboard, baseline, graphic insets and distant wides. Two of them are rings over 440 px across: a rim filling half the frame, found by nothing.",
+ "frame_size": [
+  1280,
+  720
+ ],
+ "measured_gap": "On these, the scale-trained rim detector finds 1 and the four-class detector 0, at a one-rim-width tolerance.",
+ "held_out": "Labels within 30 s of an evaluation frame are marked train=false and excluded from training, so the frames the gate is scored on stay unseen.",
+ "frames": [
+  {
+   "t": 876.0,
+   "rim": [
+    528,
+    32
+   ],
+   "width": 192,
+   "note": "under-basket, cut at top",
+   "held_out_gap_s": 11.5,
+   "train": false
+  },
+  {
+   "t": 885.0,
+   "rim": [
+    960,
+    320
+   ],
+   "width": 608,
+   "note": "under-basket, rim fills frame",
+   "held_out_gap_s": 2.5,
+   "train": false
+  },
+  {
+   "t": 892.0,
+   "rim": [
+    480,
+    256
+   ],
+   "width": 112,
+   "note": "baseline free throw",
+   "held_out_gap_s": 4.5,
+   "train": false
+  },
+  {
+   "t": 1055.0,
+   "rim": [
+    656,
+    208
+   ],
+   "width": 72,
+   "note": "behind a Finals logo transition",
+   "held_out_gap_s": 7.5,
+   "train": false
+  },
+  {
+   "t": 1168.0,
+   "rim": [
+    624,
+    176
+   ],
+   "width": 56,
+   "note": "wide, rim at top",
+   "held_out_gap_s": 105.5,
+   "train": true
+  },
+  {
+   "t": 1186.0,
+   "rim": [
+    608,
+    215
+   ],
+   "width": 48,
+   "note": "court inset in a graphic",
+   "held_out_gap_s": 123.5,
+   "train": true
+  },
+  {
+   "t": 1594.0,
+   "rim": [
+    1008,
+    15
+   ],
+   "width": 64,
+   "note": "top edge, partially cut",
+   "held_out_gap_s": 206.5,
+   "train": true
+  },
+  {
+   "t": 1723.0,
+   "rim": [
+    648,
+    480
+   ],
+   "width": 176,
+   "note": "overhead camera",
+   "held_out_gap_s": 289.5,
+   "train": true
+  },
+  {
+   "t": 1807.0,
+   "rim": [
+    664,
+    216
+   ],
+   "width": 32,
+   "note": "court inset in a graphic",
+   "held_out_gap_s": 205.5,
+   "train": true
+  },
+  {
+   "t": 1842.0,
+   "rim": [
+    728,
+    120
+   ],
+   "width": 112,
+   "note": "under-basket",
+   "held_out_gap_s": 170.5,
+   "train": true
+  },
+  {
+   "t": 1844.0,
+   "rim": [
+    528,
+    90
+   ],
+   "width": 96,
+   "note": "under-basket",
+   "held_out_gap_s": 168.5,
+   "train": true
+  },
+  {
+   "t": 2073.0,
+   "rim": [
+    624,
+    688
+   ],
+   "width": 176,
+   "note": "overhead camera",
+   "held_out_gap_s": 39.5,
+   "train": true
+  },
+  {
+   "t": 2104.0,
+   "rim": [
+    568,
+    135
+   ],
+   "width": 64,
+   "note": "wide",
+   "held_out_gap_s": 8.5,
+   "train": false
+  },
+  {
+   "t": 2561.0,
+   "rim": [
+    568,
+    680
+   ],
+   "width": 120,
+   "note": "overhead camera",
+   "held_out_gap_s": 448.5,
+   "train": true
+  },
+  {
+   "t": 2577.0,
+   "rim": [
+    432,
+    443
+   ],
+   "width": 448,
+   "note": "behind-backboard, rim fills frame",
+   "held_out_gap_s": 464.5,
+   "train": true
+  },
+  {
+   "t": 2593.0,
+   "rim": [
+    216,
+    312
+   ],
+   "width": 80,
+   "note": "low baseline",
+   "held_out_gap_s": 480.5,
+   "train": true
+  },
+  {
+   "t": 2597.0,
+   "rim": [
+    80,
+    376
+   ],
+   "width": 72,
+   "note": "rim at frame left",
+   "held_out_gap_s": 484.5,
+   "train": true
+  },
+  {
+   "t": 2735.0,
+   "rim": [
+    272,
+    520
+   ],
+   "width": 512,
+   "note": "behind-backboard, rim fills frame",
+   "held_out_gap_s": 622.5,
+   "train": true
+  },
+  {
+   "t": 2883.0,
+   "rim": [
+    864,
+    328
+   ],
+   "width": 72,
+   "note": "baseline camera",
+   "held_out_gap_s": 529.5,
+   "train": true
+  },
+  {
+   "t": 3472.0,
+   "rim": [
+    624,
+    680
+   ],
+   "width": 136,
+   "note": "overhead camera",
+   "held_out_gap_s": 59.5,
+   "train": true
+  },
+  {
+   "t": 3760.0,
+   "rim": [
+    387,
+    267
+   ],
+   "width": 328,
+   "note": "behind-backboard",
+   "held_out_gap_s": 34.0,
+   "train": true
+  },
+  {
+   "t": 3820.0,
+   "rim": [
+    544,
+    120
+   ],
+   "width": 120,
+   "note": "baseline, motion blurred",
+   "held_out_gap_s": 26.0,
+   "train": false
+  },
+  {
+   "t": 4287.0,
+   "rim": [
+    88,
+    360
+   ],
+   "width": 80,
+   "note": "free throw, rim at left",
+   "held_out_gap_s": 493.0,
+   "train": true
+  },
+  {
+   "t": 5086.0,
+   "rim": [
+    552,
+    275
+   ],
+   "width": 24,
+   "note": "wide, small and distant",
+   "held_out_gap_s": 1292.0,
+   "train": true
+  },
+  {
+   "t": 5338.0,
+   "rim": [
+    912,
+    248
+   ],
+   "width": 88,
+   "note": "baseline",
+   "held_out_gap_s": 1544.0,
+   "train": true
+  },
+  {
+   "t": 5356.0,
+   "rim": [
+    728,
+    224
+   ],
+   "width": 56,
+   "note": "wide",
+   "held_out_gap_s": 1562.0,
+   "train": true
+  },
+  {
+   "t": 5775.0,
+   "rim": [
+    888,
+    32
+   ],
+   "width": 128,
+   "note": "rim at top, partially cut",
+   "held_out_gap_s": 1981.0,
+   "train": true
+  },
+  {
+   "t": 5844.0,
+   "rim": [
+    616,
+    160
+   ],
+   "width": 56,
+   "note": "wide",
+   "held_out_gap_s": 2050.0,
+   "train": true
+  },
+  {
+   "t": 6951.0,
+   "rim": [
+    720,
+    240
+   ],
+   "width": 32,
+   "note": "high wide view",
+   "held_out_gap_s": 3157.0,
+   "train": true
+  }
+ ]
+}

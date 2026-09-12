@@ -1,0 +1,9 @@
+{
+  "note": "Ball positions hand-located on HARD frames -- ones where the detector's most confident ball candidate is below 0.35, so the ball is either absent from its proposals or buried in them. Located by eye on a 1280 px panel with a 50 px grid. These are the labels no automatic source can supply.",
+  "yield": "3 usable labels from 9 hard frames looked at: 1 frame had no ball in it, 5 had a ball that could not be confidently located even by a person looking as long as they liked.",
+  "frames": [
+    {"t": 1044.4, "ball": [1112, 464], "note": "loose-ball scramble"},
+    {"t": 1055.6, "ball": [648, 446],  "note": "held by the dribbler"},
+    {"t": 1389.6, "ball": [491, 289],  "note": "in flight, low wide camera"}
+  ]
+}

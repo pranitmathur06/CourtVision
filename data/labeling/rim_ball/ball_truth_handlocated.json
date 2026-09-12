@@ -1,0 +1,16 @@
+{
+  "note": "Ball positions located by eye on a 1280 px panel with a 50 px grid, on frames chosen by position in the evaluation grid and BEFORE any system's claim was looked at. The earlier figure of 0.571 used truth of which four of seven points were copied from a system's own correct claims.",
+  "tolerance_px": 28.0,
+  "frames": [
+    {"t": 737.5,  "ball": [367, 421]},
+    {"t": 812.5,  "ball": [438, 487]},
+    {"t": 1062.5, "ball": [532, 304]},
+    {"t": 1262.5, "ball": [265, 260]},
+    {"t": 1637.5, "ball": [285, 618]},
+    {"t": 1662.5, "ball": [916, 324]},
+    {"t": 2162.5, "ball": [742, 487]},
+    {"t": 2562.5, "ball": [960, 118]},
+    {"t": 2862.5, "ball": [520, 250]},
+    {"t": 4362.5, "ball": [1061, 313]}
+  ]
+}

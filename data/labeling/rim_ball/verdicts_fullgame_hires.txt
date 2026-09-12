@@ -1,0 +1,30 @@
+# G7, second pass: in-game frames only (stride 4 from #28), judged on 900 px
+# panels instead of 640. Re-scored against the v2 system, which adds the
+# scale-trained rim detector as a third source; the two verdicts it changed
+# (80, 136) were each re-checked by eye and its box is on the rim.
+# The wider panel changes the answer: rims that are small or far were being
+# overlooked as "not in shot" at 640 px, which flattered the first pass.
+28 rim=- ball=-
+32 rim=- ball=-
+36 rim=- ball=-
+40 rim=? ball=?
+76 rim=- ball=miss
+80 rim=ok ball=-        # rim_scale found it; box checked by eye, on the rim
+84 rim=miss ball=?
+88 rim=- ball=-
+124 rim=- ball=-
+128 rim=ok ball=?
+132 rim=ok ball=miss
+136 rim=ok ball=?      # rim_scale found it; box checked by eye, on the rim
+172 rim=ok ball=?
+176 rim=ok ball=ok
+180 rim=ok ball=?
+184 rim=- ball=?
+220 rim=ok ball=ok
+224 rim=- ball=-
+228 rim=ok ball=miss
+232 rim=- ball=-
+268 rim=- ball=-
+272 rim=ok ball=ok
+276 rim=ok ball=ok
+280 rim=ok ball=?

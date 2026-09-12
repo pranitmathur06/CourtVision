@@ -1,0 +1,19 @@
+# UNBIASED ball verdicts. The frames were chosen by position on the grid, not
+# by any system's success, and the ball was located by eye on an unmarked
+# 1300 px panel BEFORE the claims were looked at. This matters: the earlier
+# ball figure of 0.571 used truth positions of which four of seven were taken
+# from v2's own correct claims, so v2 scored zero error there by construction.
+#
+# A = v2, cached detections   B = v5, 2560 by confidence   C = v6, 2560 + agreement
+#
+# idx   t       ball visible?   A       B       C
+30    762.0   ?               -       -       -     # ball possibly mid-dribble, could not pin it
+42   1062.0   yes(540,1040)   miss    miss    miss  # held by #9; all three 80-90 px away
+54   1362.0   ?               -       -       -     # scrum in the paint
+66   1662.0   yes(930,1060)   ok      miss    miss
+102  2562.0   yes(975,120)    ok      none    miss  # ball in flight, overhead camera
+114  2862.0   yes(528,985)    miss    miss    miss
+174  4362.0   yes(1078,318)   miss    miss    miss  # dribbled; all three in the crowd
+186  4662.0   no              none    none    FALSE # C fires on a player's hair
+222  5562.0   no              none    none    FALSE # C fires on a nose
+234  5862.0   ?               -       -       -     # ball occluded by the shooter's arm

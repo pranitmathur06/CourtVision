@@ -1,0 +1,19 @@
+# G7, third pass: a DISJOINT uniform in-game sample (stride 4 from #30), judged
+# on 900 px panels against the v2 system -- four-class detector, then the
+# scale-trained rim detector, then the projection.
+46 rim=-
+50 rim=-
+54 rim=ok
+58 rim=ok
+110 rim=ok
+114 rim=ok
+118 rim=ok
+122 rim=miss      # projection sits a rim width above the rim; detector below 0.4
+174 rim=ok
+178 rim=miss      # close-up contest, rim at the top of frame, nothing fires
+182 rim=ok
+186 rim=-
+206 rim=-
+210 rim=ok
+214 rim=ok
+218 rim=miss      # court inset inside a TV-schedule graphic
