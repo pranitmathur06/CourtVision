@@ -66,6 +66,8 @@ ANCHOR_EVERY_S = 20.0
 ANCHOR_RETRY_S = 1.0
 #: The detector's rim this far from the carried one means the pose is stale.
 DRIFT_WIDTHS = 1.5
+#: Only a detection this confident may contradict a pose.
+DETECTOR_TRUST_CONF = 0.4
 #: A snap costing more than this many pixels means the carried homography is
 #: no longer a pose of this camera at all, and the pose is dropped.
 SNAP_MAX_PX = 12.0
@@ -137,6 +139,30 @@ def project_rims(camera, image_to_court, size, margin=8.0):
                 and -margin <= p[1] <= size[1] + margin:
             out.append([float(p[0]), float(p[1])])
     return out
+
+
+def disagrees_with_detector(camera, image_to_court, size, rim_boxes,
+                            floor=DETECTOR_TRUST_CONF, widths=DRIFT_WIDTHS):
+    """Does an independently detected rim contradict this pose?
+
+    The detector never sees the pose and the pose never sees the detector, so
+    this is the one test here that can catch a confidently wrong pose. A pose
+    projecting NO rim where the detector plainly found one is contradicted too.
+    A faint detection gets no vote: below `floor` the detector fires on the
+    net, the backboard and the stanchion, and letting those veto a good pose
+    would trade a real registration for a guess.
+    """
+    rims = [b for b in rim_boxes if b["conf"] >= floor]
+    if not rims:
+        return False
+    shown = project_rims(camera, image_to_court, size)
+    if not shown:
+        return True
+    best = max(rims, key=lambda b: b["conf"])
+    centre = np.array([(best["xyxy"][0] + best["xyxy"][2]) / 2,
+                       (best["xyxy"][1] + best["xyxy"][3]) / 2])
+    width = max(best["xyxy"][2] - best["xyxy"][0], 1.0)
+    return min(float(np.hypot(*(np.array(p) - centre))) for p in shown) > widths * width
 
 
 def main() -> int:
@@ -241,22 +267,9 @@ def main() -> int:
                         tracked += 1
 
             # ALARM: an independently detected rim far from the carried one.
-            stale = False
-            if pose is not None:
-                rims = [b for b in boxes_near(t, "rim") if b["conf"] >= 0.4]
-                if rims:
-                    shown = project_rims(camera, pose, size)
-                    if shown:
-                        b = max(rims, key=lambda b: b["conf"])
-                        centre = np.array([(b["xyxy"][0] + b["xyxy"][2]) / 2,
-                                           (b["xyxy"][1] + b["xyxy"][3]) / 2])
-                        width = max(b["xyxy"][2] - b["xyxy"][0], 1.0)
-                        if min(np.hypot(*(np.array(p) - centre)) for p in shown) > \
-                                DRIFT_WIDTHS * width:
-                            stale = True
-                            alarms += 1
-                    else:
-                        stale = True
+            stale = pose is not None and disagrees_with_detector(
+                camera, pose, size, boxes_near(t, "rim"))
+            alarms += int(stale)
 
             due = (pose is None and t - last_try >= ANCHOR_RETRY_S) or \
                   (pose is not None and t - anchored_at >= args.anchor_every_s) or stale
