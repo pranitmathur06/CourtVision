@@ -43,3 +43,40 @@ def test_confirming_a_report_that_was_never_made_is_an_error():
 def test_an_unreadable_spec_is_an_error_not_a_guess():
     with pytest.raises(ValueError):
         make_truth.parse_spec("probably-fine", [], 2.0, 34.0, [])
+
+
+def test_the_chain_from_judgements_to_a_score_holds_together(tmp_path):
+    """system -> judgements -> truth -> score, on a case worked out by hand."""
+    import json
+    import sys as _sys
+
+    _sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+    import eval_rim_and_ball as metric
+
+    system = {"frames": [
+        {"t": 12.5, "rim": [[100.0, 50.0]], "ball": [300.0, 200.0]},   # both right
+        {"t": 37.5, "rim": [[700.0, 60.0]], "ball": None},             # rim right, ball missed
+        {"t": 62.5, "rim": [], "ball": [640.0, 360.0]},                # nothing there at all
+    ]}
+    system_path = tmp_path / "system.json"
+    system_path.write_text(json.dumps(system))
+
+    judgements = tmp_path / "judgements.txt"
+    judgements.write_text(
+        "0 rim=ok ball=ok\n"
+        "1 rim=ok ball=x:200,150\n"       # a ball is there; panel coords double
+        "2 rim=- ball=-\n")
+
+    out = tmp_path / "truth.json"
+    _sys.argv = ["make_truth", "--judgements", str(judgements),
+                 "--system", str(system_path), "--out", str(out)]
+    assert make_truth.main() == 0
+
+    truth = json.loads(out.read_text())["frames"]
+    assert truth[1]["ball"]["centre"] == [400.0, 300.0]
+
+    report = metric.score(truth, {r["t"]: r for r in system["frames"]})
+    assert report["rim"] == {"visible": 2, "located": 2, "missed": 0, "accuracy": 1.0,
+                             "frames_without": 1, "false_alarms": 0}
+    assert report["ball"]["visible"] == 2 and report["ball"]["located"] == 1
+    assert report["ball"]["false_alarms"] == 1      # the claim on the empty frame
