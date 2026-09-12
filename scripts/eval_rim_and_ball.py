@@ -35,6 +35,14 @@ every truth rim must be matched by a reported one, and every reported rim that
 matches no truth rim is a false alarm. Picking "the" rim would have meant
 choosing which basket counted, after seeing which one the system found.
 
+A broadcast file is not all game: it opens on pre-game and closes after the
+final buzzer, and those frames are on the grid like any other. They are NOT
+dropped -- dropping the frames a system finds hard is how a denominator gets
+chosen after the fact. Instead the report splits at the game's span, taken
+from the FIRST and LAST game-clock reading, which is an independent signal the
+rim and ball pipeline never touches. Both halves are printed; the whole-video
+number is the headline.
+
 TRUTH comes from `label_rim_and_ball.py`: for each sampled frame a human says
 whether each object is visible and where its centre is. Proposals from the
 detector and from the projected rim are shown to make that a confirmation
@@ -143,30 +151,51 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--truth", required=True, help="label_rim_and_ball.py output")
     parser.add_argument("--system", required=True, help="{t: {rim, ball}} per frame")
+    parser.add_argument("--clock", default=None,
+                        help="read_game_clock.py output; splits the report at the "
+                             "game's span without dropping anything from it")
     args = parser.parse_args()
 
     truth_rows = json.load(open(args.truth))["frames"]
     raw = json.load(open(args.system))
     system = {float(t): v for t, v in (raw["frames"].items() if isinstance(raw.get("frames"), dict)
                                        else ((r["t"], r) for r in raw["frames"]))}
-    report = score(truth_rows, system)
+    spans = [("whole video", truth_rows)]
+    if args.clock:
+        readings = json.load(open(args.clock))["readings"]
+        first, last = min(r["t"] for r in readings), max(r["t"] for r in readings)
+        spans.append((f"in game ({first:.0f}-{last:.0f} s)",
+                      [r for r in truth_rows if first <= r["t"] <= last]))
+        spans.append(("outside the game",
+                      [r for r in truth_rows if not first <= r["t"] <= last]))
 
-    print(f"{len(truth_rows)} frames on a {SAMPLE_EVERY_S:.0f} s grid\n")
     passed = True
+    for label, rows in spans:
+        if not rows:
+            continue
+        print(f"--- {label}: {len(rows)} frames on a {SAMPLE_EVERY_S:.0f} s grid")
+        passed &= _report(rows, system, headline=(label == "whole video"))
+    print("PASS - both objects at or above the gate" if passed else
+          "FAIL - below the gate")
+    return 0 if passed else 1
+
+
+def _report(truth_rows, system, headline):
+    report = score(truth_rows, system)
+    ok = True
     for name in ("rim", "ball"):
         r = report[name]
         lo, hi = wilson(r["located"], r["visible"])
         mark = "PASS" if r["accuracy"] >= GATE else "FAIL"
-        passed &= r["accuracy"] >= GATE
+        if headline:
+            ok &= bool(r["accuracy"] >= GATE)
         print(f"{name.upper():5s} visible {r['visible']:4d}  located {r['located']:4d}  "
               f"missed {r['missed']:4d}")
         print(f"      accuracy {r['accuracy']:.3f}  (95% CI {lo:.3f}-{hi:.3f})  "
               f"gate {GATE:.2f}  {mark}")
         print(f"      false alarms {r['false_alarms']:4d}  "
               f"({r['frames_without']} frames had no {name} at all)\n")
-    print("PASS - both objects at or above the gate" if passed else
-          "FAIL - below the gate")
-    return 0 if passed else 1
+    return ok
 
 
 if __name__ == "__main__":

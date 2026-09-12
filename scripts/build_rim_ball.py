@@ -192,6 +192,14 @@ def main() -> int:
                        "ball": chosen[1]["centre"] if chosen else None,
                        "rim_source": "projected" if row["rims"] else
                                      ("detector" if detected_rims else None),
+                       # Every candidate the detector offered, kept so a
+                       # labelling pass can measure the CEILING as well as the
+                       # choice: a miss because no candidate existed and a miss
+                       # because the wrong one was taken need different work.
+                       "projected": row["rims"],
+                       "detected": detected_rims,
+                       "candidates": [c["centre"] for c in row["candidates"]],
+                       "survivors": [c["centre"] for _, c in keep],
                        "n_candidates": len(row["candidates"])})
 
     if args.grid_only:

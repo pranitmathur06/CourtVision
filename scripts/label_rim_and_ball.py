@@ -10,7 +10,11 @@ overruled by the labeller, and a frame where the system says nothing still
 gets looked at -- that is where misses hide, and a labelling pass that only
 checks the system's own output can only ever measure precision.
 
-Colours: GREEN a projected rim, RED a detected rim, YELLOW the chosen ball.
+Colours: GREEN a projected rim, RED a detected rim, YELLOW the chosen ball,
+CYAN every other candidate the detector offered. The cyan matters as much as
+the yellow: it separates "the ball was never found" from "the wrong candidate
+was taken", which are different problems with different fixes.
+
 The index printed on each tile is the frame's position in the grid, which is
 what the labels are keyed by.
 """
@@ -36,6 +40,11 @@ def draw(frame, row, scale):
         cv2.circle(small, (int(x * scale[0]), int(y * scale[1])), 13, (0, 255, 0), 2)
     for x, y in row.get("detected") or []:
         cv2.circle(small, (int(x * scale[0]), int(y * scale[1])), 9, (0, 0, 255), 2)
+    for x, y in row.get("candidates") or []:
+        if row.get("ball") and abs(x - row["ball"][0]) < 1 and abs(y - row["ball"][1]) < 1:
+            continue
+        cv2.rectangle(small, (int(x * scale[0]) - 6, int(y * scale[1]) - 6),
+                      (int(x * scale[0]) + 6, int(y * scale[1]) + 6), (255, 255, 0), 1)
     if row.get("ball"):
         x, y = row["ball"]
         cv2.rectangle(small, (int(x * scale[0]) - 9, int(y * scale[1]) - 9),
