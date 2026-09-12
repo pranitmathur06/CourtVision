@@ -21,6 +21,16 @@ frame to frame instead of re-derived:
   such frames were within one, so it bought about a percent of coverage at no
   accuracy at all. Where the view has panned off the anchor, the answer is a
   new anchor, not a longer chain.
+A TWO-PHASE variant was built and measured and rejected: read each segment
+first, find its anchors, then give every frame the best anchor in EITHER
+direction, which should help a frame whose camera move began moments before
+it. On the same 180 s it posed 65.3% of frames against 66.1%, and landed
+within a rim width on 90.8% against 99.5%. The poses it added came from hops
+across larger time gaps, and capping the gap only cost coverage without
+recovering the accuracy. Anchoring forward and re-anchoring the moment the
+detector contradicts the carried pose is better on both axes, so that is what
+this does.
+
 - SNAP (every frame): the carried homography is re-fitted to the four
   parameters the fixed camera allows. A chain of hops drifts in eight degrees
   of freedom; the camera only has four, so projecting back onto the model each
