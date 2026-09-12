@@ -17,6 +17,25 @@ was taken", which are different problems with different fixes.
 
 The index printed on each tile is the frame's position in the grid, which is
 what the labels are keyed by.
+
+WHAT COUNTS AS VISIBLE, fixed here before any labelling, because this is the
+denominator and a denominator settled afterwards settles the answer:
+
+- A RIM is visible when any part of the ring is in the picture, occluded by
+  players or not. The backboard alone is not a rim, and neither is a rim so
+  blurred by a whip-pan that its position cannot be pointed at. Both baskets
+  count separately when both are shown.
+- The BALL is visible when any part of it can be seen well enough to point at
+  its centre -- a ball half behind an arm counts, a ball entirely behind a
+  body does not, and a ball reduced to a smear by motion blur does not.
+- A REPLAY or a cut to another camera is an ordinary frame: if a rim is in it,
+  the rim is visible, and a system that cannot register that camera has missed
+  it. Excusing those frames would measure the main camera and call it the game.
+- Studio, graphics and crowd shots simply have neither object, and count only
+  against false alarms.
+
+The hard cases are rare but they are real, and deciding them per frame while
+looking at the answer is how a denominator drifts. These rules decide them.
 """
 
 from __future__ import annotations
