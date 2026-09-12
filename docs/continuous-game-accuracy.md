@@ -4974,3 +4974,66 @@ No selection rule can beat the candidates it is given, so the ceiling gets
 measured before any more work on choosing: `detect_ball_grid.py` re-detects the
 grid at a larger inference size, the lever that took ball coverage 0.733 to
 0.892 in an earlier round.
+
+## Round 67 - the rim measured, and exactly what the remaining 17% is
+
+The gate: rim 95%, ball 95%. Measured on the declared grid, by eye, against
+`outputs/rim_ball/fullgame_grid.json` (verdicts in
+`data/labeling/rim_ball/verdicts_fullgame.txt`):
+
+    denominator                       visible  located  accuracy   95% CI
+    whole video                          33      25      0.758   0.590-0.872
+    in game (680-7276 s)                 23      19      0.826   0.629-0.930
+    in game, main camera only            19      19      1.000   0.832-1.000
+
+**FAIL on the gate as written.** But the third line is the whole story: every
+single in-game miss is a frame the main camera did not shoot. The four are an
+under-basket camera (888 s), a baseline camera (1062 s), a rim close-up that
+fills half the picture (1388 s), and a replay inside a picture-in-picture
+graphic (1812 s). Where the game's camera applies at all, the rim was found on
+every labelled frame.
+
+The third line is reported as context and NOT as the headline, deliberately. A
+"main camera during live play" denominator is arguably the right one for Phase
+2 -- the live-play filter already discards replays -- but it is a denominator
+that would have been chosen after seeing which frames failed, which is exactly
+the move that produced Round 64's false pass.
+
+**Why those frames fail, measured rather than guessed.** Both halves of the rim
+pipeline are blind to them, for the same reason:
+
+- The landmark keypoint model returns ZERO keypoints on every alternate-camera
+  frame tested (888, 1062, 1388, 2562, 5338, 5788 s). So neither the fixed
+  camera nor a free homography can register them -- which also retires the
+  free-homography projection built in Round 66 for exactly this case. It was
+  built on a guess and the measurement says it does not apply.
+- The four-class detector returns ZERO rim boxes on the same frames at
+  confidence 0.01 and inference size 2560 -- and at 1280, 640, 320 and 160,
+  so it is not a threshold or a resolution setting.
+
+Part of the gap is plainly SCALE, and that part is reproducible on the main
+camera: crop a frame around its own projected rim and enlarge it, and the
+detector holds at 3x (confidence 0.47-0.78) and collapses to nothing at 6x.
+The same rim, the same pixels, only bigger. The rest is viewpoint -- an
+under-basket camera sees the ring from below, through the net -- and
+shrinking those frames does not recover them, so crop-and-zoom augmentation
+alone will not close it.
+
+A label-free orange-ring finder was prototyped for the close-ups and rejected:
+it finds the rim at 888 s and 1062 s but fires 30,744 px of "rim" on a branded
+title card, and Indiana's gold kit sits next to rim orange in hue. This project
+has been burnt by colour heuristics before.
+
+**What would actually meet the gate**: rim boxes on alternate-camera frames,
+which no existing signal in this repo can supply, so they have to be labelled
+by hand. A rim is unambiguous to label -- unlike a screen, which is what the
+original plan was right to refuse -- so this is a defensible place to spend
+hand labels. Scale augmentation from the projected rim is free and should ride
+along with them, since the 3x/6x result says scale is a real part of it.
+
+**The ball is not yet measured.** At the 640 px panel the sheets render, a ball
+is ~10 px: 29 of 66 frames could not be judged by eye at all, which makes the
+2/7 reading meaningless and it is not reported as a number. The sheets now
+magnify every candidate, which fixes the judging of a CLAIM, but finding a ball
+the detector never proposed still needs the frame at full resolution. That pass
+is owed before any ball figure is quoted.
