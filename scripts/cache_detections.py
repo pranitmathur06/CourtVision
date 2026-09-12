@@ -34,6 +34,12 @@ def main() -> int:
     parser.add_argument("--fps", type=float, default=5.0)
     parser.add_argument("--conf", type=float, default=0.10,
                         help="low: a missed ball cannot be recovered later, a false one can be filtered")
+    parser.add_argument("--imgsz", type=int, default=None,
+                        help="inference size. The default misses the ball: at 2560 a "
+                             "ball box appears on 93%% of grid frames against 80%%, and "
+                             "on frames where the old pass proposed nothing at all a "
+                             "correct candidate now exists. It also proposes far more "
+                             "junk, so selection becomes the limit instead.")
     parser.add_argument("--out", default=None)
     args = parser.parse_args()
 
@@ -62,7 +68,9 @@ def main() -> int:
         if not ok:
             break
         t = (index - 1) / source_fps
-        found = model.predict(frame, device=device, verbose=False, conf=args.conf)[0].boxes
+        extra = {"imgsz": args.imgsz} if args.imgsz else {}
+        found = model.predict(frame, device=device, verbose=False,
+                              conf=args.conf, **extra)[0].boxes
         row = {"t": round(float(t), 3), "boxes": []}
         region = None
         if found is not None and len(found):
@@ -92,6 +100,7 @@ def main() -> int:
     out = Path(args.out or f"outputs/detections/{Path(args.video).stem}.json")
     out.parent.mkdir(parents=True, exist_ok=True)
     json.dump({"video": args.video, "fps": args.fps, "conf": args.conf,
+               "imgsz": args.imgsz,
                "detector": args.detector, "frames": rows}, open(out, "w"))
     counts = {name: sum(1 for r in rows if any(b["cls"] == name for b in r["boxes"])) for name in names.values()}
     print(f"{kept} frames at {args.fps} fps from {args.video}")

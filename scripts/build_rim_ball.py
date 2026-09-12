@@ -42,6 +42,27 @@ exist only because the camera centre is fixed:
   was ~23 of 40 sampled off-court detections. It holds one ray for the whole
   game; the game ball holds none.
 
+A GEOMETRIC "is it in play" TEST WAS TRIED AND DOES NOT EXIST. The idea was
+that a ball must lie inside the court footprint raised to a high arc, so a
+candidate on a face in the tenth row could be thrown out. Two versions were
+built and both rejected:
+
+- "does the ray pass over the court at SOME height" rejected NOTHING. This
+  camera sits 64 ft off the sideline and only 26 ft up, so its rays are
+  shallow: sweeping a ray's height from 0 to 18 ft drags its landing point
+  from x = -75 ft to x = -3 ft, and nearly every ray crosses the court box
+  somewhere. A test that cannot fail is the exact fault Round 64 shipped.
+- the silhouette of that box, projected into the picture, is degenerate --
+  its far corners pass near the horizon and project to coordinates like
+  (-17592, 520), so the hull swallows the frame.
+
+The reason is not a bug to fix. Worked by hand for one real candidate: its ray
+is between 10.2 and 17.3 ft above the floor for the whole time it is over the
+court, which is an ordinary high arc. A ball 15 ft up over the far side and a
+spectator's head behind it are ON THE SAME RAY. One frame does not carry the
+depth to separate them; only motion does, and motion needs neighbouring
+frames, which the 25 s evaluation grid does not have.
+
 Among the survivors the candidate nearest the previous frame's choice wins if
 it is within MAX_STEP_DEG, and otherwise the most confident does -- the ball
 does leave and re-enter, so continuity is a preference and never a cage.
@@ -78,6 +99,14 @@ FIXTURE_SHARE = 0.15
 #: ...and never fewer than this many frames, so a short pose run cannot
 #: manufacture a fixture out of two detections.
 FIXTURE_MIN_FRAMES = 8
+#: The playing surface, in feet.
+COURT_W, COURT_L = 50.0, 94.0
+#: A ball in play is over the floor and under a high arc. The margin is
+#: generous: a ball can be held out of bounds for a throw-in, and the pose
+#: itself carries error, so this is meant to exclude the tenth row and not to
+#: adjudicate the sideline.
+PLAY_MARGIN_FT = 12.0
+PLAY_MAX_HEIGHT_FT = 18.0
 #: A direction this close to a basket is NEVER called furniture. The rim sits
 #: still in the world exactly as the scorer's-table ball does, and the game
 #: ball visits it on every attempt -- so on a dense pass the rule would learn
@@ -218,10 +247,13 @@ def main() -> int:
     parser.add_argument("--out", required=True)
     args = parser.parse_args()
 
+    from courtvision.court_camera import FixedCamera
+
     spec = json.load(open(args.camera))
     centre = np.array(spec["centre"], np.float64)
     size = tuple(spec["size"])
     k1, k2 = spec.get("k1", 0.0), spec.get("k2", 0.0)
+    camera = FixedCamera(centre, size, floor=spec.get("floor"), k1=k1, k2=k2)
 
     poses = json.load(open(args.poses))
     cache = json.load(open(args.detections))
@@ -249,7 +281,7 @@ def main() -> int:
         balls = boxes_near(t, "ball", args.min_conf)
         entry = {"t": t, "rims": row.get("rims") or [], "source": row.get("source"),
                  "candidates": [{"centre": centre_of(b), "conf": b["conf"]} for b in balls],
-                 "cells": [], "dirs": None}
+                 "cells": [], "dirs": None, "hull": None}
         if row.get("params") and balls:
             posed += 1
             directions = ray_directions(row["params"], centre, size,
@@ -265,8 +297,9 @@ def main() -> int:
                       protect=rim_directions(centre))
 
     # Pass 2: choose one ball per frame.
-    decided, dropped = choose_balls(rows, fixtures, args.max_step_deg,
-                                    use_continuity=not args.no_continuity)
+    decided, dropped = choose_balls(
+        rows, fixtures, args.max_step_deg,
+        use_continuity=not args.no_continuity)
 
     frames = []
     for row, (chosen, survivors) in zip(rows, decided):
