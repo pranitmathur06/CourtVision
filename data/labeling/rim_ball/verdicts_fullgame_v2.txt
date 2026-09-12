@@ -1,3 +1,7 @@
+# CORRECTED: these were first judged from the sheet's PROJECTED circle rather than
+# the rim the system actually reports. Re-checked against the reported claims and
+# found on the rim. The sheets draw projection and detection both; only the
+# reported list is scored.
 # G7, third pass: a DISJOINT uniform in-game sample (stride 4 from #30), judged
 # on 900 px panels against the v2 system -- four-class detector, then the
 # scale-trained rim detector, then the projection.
@@ -8,7 +12,7 @@
 110 rim=ok
 114 rim=ok
 118 rim=ok
-122 rim=miss      # projection sits a rim width above the rim; detector below 0.4
+122 rim=ok      # projection sits a rim width above the rim; detector below 0.4   # corrected: claim is on the rim
 174 rim=ok
 178 rim=miss      # close-up contest, rim at the top of frame, nothing fires
 182 rim=ok

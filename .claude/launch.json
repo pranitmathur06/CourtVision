@@ -1,0 +1,41 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "court-labeller",
+      "runtimeExecutable": "/Users/sanikakapoor/CourtVision/.venv/bin/python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8765",
+        "--directory",
+        "data/labeling/court_toyota"
+      ],
+      "port": 8765
+    },
+    {
+      "name": "court-labeller-1080",
+      "runtimeExecutable": "/Users/sanikakapoor/CourtVision/.venv/bin/python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8766",
+        "--directory",
+        "data/labeling/court_toyota_1080_precise"
+      ],
+      "port": 8766
+    },
+    {
+      "name": "court-labeller-v3",
+      "runtimeExecutable": "/Users/sanikakapoor/CourtVision/.venv/bin/python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8767",
+        "--directory",
+        "data/labeling/court_toyota_1080_v3"
+      ],
+      "port": 8767
+    }
+  ]
+}

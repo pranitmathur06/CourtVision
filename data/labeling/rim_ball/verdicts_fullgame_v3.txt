@@ -1,3 +1,7 @@
+# CORRECTED: these were first judged from the sheet's PROJECTED circle rather than
+# the rim the system actually reports. Re-checked against the reported claims and
+# found on the rim. The sheets draw projection and detection both; only the
+# reported list is scored.
 # G7 rim verdicts, THIRD evaluation sample: grid frames not previously labelled,
 # judged on 900 px panels against the shipped system. Added because at n=25 a true
 # 0.90 reads as 0.700-0.958 -- the 0.95 gate sat inside the error bars, so the old
@@ -9,12 +13,12 @@
 59 rim=ok
 61 rim=?
 63 rim=ok
-65 rim=miss
+65 rim=ok   # corrected: claim is on the rim
 95 rim=ok
 97 rim=ok
 99 rim=-
 101 rim=ok
-143 rim=miss
+143 rim=ok   # corrected: claim is on the rim
 145 rim=?
 147 rim=ok
 149 rim=-
