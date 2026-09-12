@@ -5,7 +5,7 @@
   720
  ],
  "measured_gap": "On these, the scale-trained rim detector finds 1 and the four-class detector 0, at a one-rim-width tolerance.",
- "held_out": "Labels within 30 s of an evaluation frame are marked train=false and excluded from training, so the frames the gate is scored on stay unseen.",
+ "held_out": "Labels within 30 s of ANY frame the gate is scored on are excluded from training. Earlier rounds held out only the 7 rim_scale test frames and not the 25 labelled grid frames, which is the set the gate is actually measured on -- so those runs could have leaked. They did not help, so the 0.840 was not inflated by it, but the criterion was wrong and is now the union of both.",
  "frames": [
   {
    "t": 876.0,
@@ -16,6 +16,17 @@
    "width": 192,
    "note": "under-basket, cut at top",
    "held_out_gap_s": 11.5,
+   "train": false
+  },
+  {
+   "t": 884.0,
+   "rim": [
+    995,
+    355
+   ],
+   "width": 536,
+   "note": "behind-backboard, fills frame",
+   "held_out_gap_s": 3.5,
    "train": false
   },
   {
@@ -30,6 +41,17 @@
    "train": false
   },
   {
+   "t": 888.0,
+   "rim": [
+    824,
+    360
+   ],
+   "width": 432,
+   "note": "behind-backboard",
+   "held_out_gap_s": 0.5,
+   "train": false
+  },
+  {
    "t": 892.0,
    "rim": [
     480,
@@ -38,6 +60,28 @@
    "width": 112,
    "note": "baseline free throw",
    "held_out_gap_s": 4.5,
+   "train": false
+  },
+  {
+   "t": 900.0,
+   "rim": [
+    648,
+    220
+   ],
+   "width": 56,
+   "note": "wide",
+   "held_out_gap_s": 12.5,
+   "train": false
+  },
+  {
+   "t": 904.0,
+   "rim": [
+    648,
+    210
+   ],
+   "width": 56,
+   "note": "wide",
+   "held_out_gap_s": 8.5,
    "train": false
   },
   {
@@ -59,7 +103,7 @@
    ],
    "width": 32,
    "note": "high wide",
-   "held_out_gap_s": 62.5,
+   "held_out_gap_s": 37.5,
    "train": true
   },
   {
@@ -70,8 +114,8 @@
    ],
    "width": 48,
    "note": "baseline",
-   "held_out_gap_s": 101.5,
-   "train": true
+   "held_out_gap_s": 1.5,
+   "train": false
   },
   {
    "t": 1168.0,
@@ -81,8 +125,8 @@
    ],
    "width": 56,
    "note": "wide, rim at top",
-   "held_out_gap_s": 105.5,
-   "train": true
+   "held_out_gap_s": 5.5,
+   "train": false
   },
   {
    "t": 1186.0,
@@ -92,8 +136,8 @@
    ],
    "width": 48,
    "note": "court inset in graphic",
-   "held_out_gap_s": 123.5,
-   "train": true
+   "held_out_gap_s": 23.5,
+   "train": false
   },
   {
    "t": 1392.0,
@@ -114,7 +158,18 @@
    ],
    "width": 64,
    "note": "top edge, cut",
-   "held_out_gap_s": 206.5,
+   "held_out_gap_s": 131.5,
+   "train": true
+  },
+  {
+   "t": 1716.0,
+   "rim": [
+    651,
+    216
+   ],
+   "width": 56,
+   "note": "wide",
+   "held_out_gap_s": 196.5,
    "train": true
   },
   {
@@ -125,7 +180,7 @@
    ],
    "width": 176,
    "note": "overhead",
-   "held_out_gap_s": 289.5,
+   "held_out_gap_s": 189.5,
    "train": true
   },
   {
@@ -136,7 +191,7 @@
    ],
    "width": 40,
    "note": "court inset in graphic",
-   "held_out_gap_s": 209.5,
+   "held_out_gap_s": 109.5,
    "train": true
   },
   {
@@ -147,7 +202,7 @@
    ],
    "width": 32,
    "note": "court inset in graphic",
-   "held_out_gap_s": 205.5,
+   "held_out_gap_s": 105.5,
    "train": true
   },
   {
@@ -158,7 +213,7 @@
    ],
    "width": 56,
    "note": "court inset in graphic",
-   "held_out_gap_s": 204.5,
+   "held_out_gap_s": 104.5,
    "train": true
   },
   {
@@ -169,7 +224,7 @@
    ],
    "width": 112,
    "note": "under-basket",
-   "held_out_gap_s": 170.5,
+   "held_out_gap_s": 70.5,
    "train": true
   },
   {
@@ -180,8 +235,30 @@
    ],
    "width": 96,
    "note": "under-basket",
-   "held_out_gap_s": 168.5,
+   "held_out_gap_s": 68.5,
    "train": true
+  },
+  {
+   "t": 2006.0,
+   "rim": [
+    1051,
+    544
+   ],
+   "width": 328,
+   "note": "behind-backboard",
+   "held_out_gap_s": 6.5,
+   "train": false
+  },
+  {
+   "t": 2010.0,
+   "rim": [
+    784,
+    392
+   ],
+   "width": 448,
+   "note": "behind-backboard",
+   "held_out_gap_s": 2.5,
+   "train": false
   },
   {
    "t": 2073.0,
@@ -206,6 +283,17 @@
    "train": false
   },
   {
+   "t": 2112.0,
+   "rim": [
+    467,
+    168
+   ],
+   "width": 48,
+   "note": "wide",
+   "held_out_gap_s": 0.5,
+   "train": false
+  },
+  {
    "t": 2347.0,
    "rim": [
     568,
@@ -213,7 +301,7 @@
    ],
    "width": 120,
    "note": "baseline, cut at top",
-   "held_out_gap_s": 234.5,
+   "held_out_gap_s": 134.5,
    "train": true
   },
   {
@@ -224,7 +312,7 @@
    ],
    "width": 64,
    "note": "graphic with court strip",
-   "held_out_gap_s": 250.5,
+   "held_out_gap_s": 150.5,
    "train": true
   },
   {
@@ -235,7 +323,7 @@
    ],
    "width": 120,
    "note": "overhead",
-   "held_out_gap_s": 448.5,
+   "held_out_gap_s": 201.5,
    "train": true
   },
   {
@@ -246,7 +334,7 @@
    ],
    "width": 448,
    "note": "behind-backboard, fills frame",
-   "held_out_gap_s": 464.5,
+   "held_out_gap_s": 185.5,
    "train": true
   },
   {
@@ -257,7 +345,7 @@
    ],
    "width": 344,
    "note": "behind-backboard",
-   "held_out_gap_s": 468.5,
+   "held_out_gap_s": 181.5,
    "train": true
   },
   {
@@ -268,7 +356,7 @@
    ],
    "width": 80,
    "note": "low baseline",
-   "held_out_gap_s": 480.5,
+   "held_out_gap_s": 169.5,
    "train": true
   },
   {
@@ -279,7 +367,7 @@
    ],
    "width": 72,
    "note": "rim at frame left",
-   "held_out_gap_s": 484.5,
+   "held_out_gap_s": 165.5,
    "train": true
   },
   {
@@ -290,7 +378,7 @@
    ],
    "width": 368,
    "note": "behind-backboard",
-   "held_out_gap_s": 589.5,
+   "held_out_gap_s": 60.5,
    "train": true
   },
   {
@@ -301,8 +389,8 @@
    ],
    "width": 512,
    "note": "behind-backboard, fills frame",
-   "held_out_gap_s": 622.5,
-   "train": true
+   "held_out_gap_s": 27.5,
+   "train": false
   },
   {
    "t": 2883.0,
@@ -312,8 +400,8 @@
    ],
    "width": 72,
    "note": "baseline",
-   "held_out_gap_s": 529.5,
-   "train": true
+   "held_out_gap_s": 20.5,
+   "train": false
   },
   {
    "t": 3472.0,
@@ -389,8 +477,8 @@
    ],
    "width": 80,
    "note": "free throw, rim at left",
-   "held_out_gap_s": 493.0,
-   "train": true
+   "held_out_gap_s": 25.5,
+   "train": false
   },
   {
    "t": 5086.0,
@@ -400,7 +488,7 @@
    ],
    "width": 24,
    "note": "wide, small and distant",
-   "held_out_gap_s": 1292.0,
+   "held_out_gap_s": 76.5,
    "train": true
   },
   {
@@ -411,8 +499,8 @@
    ],
    "width": 88,
    "note": "baseline",
-   "held_out_gap_s": 1544.0,
-   "train": true
+   "held_out_gap_s": 24.5,
+   "train": false
   },
   {
    "t": 5356.0,
@@ -422,8 +510,8 @@
    ],
    "width": 56,
    "note": "wide",
-   "held_out_gap_s": 1562.0,
-   "train": true
+   "held_out_gap_s": 6.5,
+   "train": false
   },
   {
    "t": 5775.0,
@@ -433,7 +521,7 @@
    ],
    "width": 128,
    "note": "rim at top, cut",
-   "held_out_gap_s": 1981.0,
+   "held_out_gap_s": 37.5,
    "train": true
   },
   {
@@ -444,7 +532,7 @@
    ],
    "width": 56,
    "note": "wide",
-   "held_out_gap_s": 2050.0,
+   "held_out_gap_s": 31.5,
    "train": true
   },
   {
@@ -455,7 +543,7 @@
    ],
    "width": 32,
    "note": "high wide",
-   "held_out_gap_s": 3157.0,
+   "held_out_gap_s": 38.5,
    "train": true
   }
  ],

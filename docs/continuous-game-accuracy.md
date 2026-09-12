@@ -5643,3 +5643,40 @@ alternate camera and every rim size, not dozens.
     object   accuracy   95% CI          gate    over the session
     rim        0.840   0.653-0.936      0.95    0.769 -> 0.840
     ball       0.300   0.108-0.603      0.95    0.571 (inflated) -> 0.300 (honest)
+
+## Round 81 - a leak in my own held-out rule, and the corrected count
+
+While extending the rim labels to 49, the held-out rule turned out to be wrong.
+Rounds 79 and 80 excluded labels within 30 s of the seven `rim_scale` test
+frames -- but the GATE is scored on the 25 labelled grid frames, which is a
+different set. Eight labels sat within 30 s of a grid frame and were used in
+training anyway.
+
+It did not inflate anything: those runs measured 0.760 and 0.840 against a
+0.840 baseline, so the leak bought nothing. But the criterion was wrong and it
+is now the union of both sets, which cuts the trainable labels from 35 to 27:
+
+    49 hand labels
+    27 trainable  (15 small under 100 px, 7 from 100-300, 5 over 300)
+    22 held out   within 30 s of a frame the gate is scored on
+
+And that is its own finding. The behind-backboard and under-basket views -- the
+biggest rims, the hardest class, the ones worth most -- CLUSTER around the
+frames the evaluation already flagged as failures, because both are picked out
+by the same thing: a replay. So the labels most worth having are the ones most
+often disqualified, and a bigger labelled set has to come from a wider sweep of
+the game rather than from more looks near the known failures.
+
+**Phase 2, final for this session:**
+
+    object   accuracy   95% CI          gate    over the session
+    rim        0.840   0.653-0.936      0.95    0.769 -> 0.840
+    ball       0.300   0.108-0.603      0.95    0.571 (inflated) -> 0.300 (honest)
+
+Neither meets the gate. The rim's remaining work is bounded and mechanical and
+now has a measured rate: ~1.6 usable labels per six-frame sheet, roughly half
+of them disqualified by the held-out rule, so the few hundred trainable labels
+a retrain needs is on the order of a thousand frames looked at by eye. The
+ball's remaining work is not bounded the same way: on the frames it misses no
+detector here proposes anything within 90 px, and more than half of those
+frames have a ball that cannot be located by a person at full resolution.
