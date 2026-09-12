@@ -73,6 +73,10 @@ def main() -> int:
                              "clock is NOT running, which is when replays air")
     parser.add_argument("--out-dir", required=True)
     parser.add_argument("--per-sheet", type=int, default=4)
+    parser.add_argument("--needs-court", action="store_true",
+                        help="keep only frames showing enough floor. Without it the "
+                             "mined set is dominated by close-ups, adverts and studio "
+                             "shots holding no rim, and the labelling yield is ~30%.")
     args = parser.parse_args()
 
     import cv2
@@ -130,8 +134,21 @@ def main() -> int:
             continue
         wanted.append(t)
         last = t
-    step = max(1, len(wanted) // args.limit)
-    wanted = wanted[::step][:args.limit]
+    step = max(1, len(wanted) // max(args.limit * (3 if args.needs_court else 1), 1))
+    wanted = wanted[::step]
+    if not args.needs_court:
+        wanted = wanted[:args.limit]
+
+    if args.needs_court:
+        from courtvision.court_tracking import has_court
+        kept = []
+        for t in wanted:
+            capture.set(cv2.CAP_PROP_POS_MSEC, t * 1000)
+            ok, frame = capture.read()
+            if ok and has_court(frame):
+                kept.append(t)
+        print(f"  {len(kept)} of {len(wanted)} mined frames show enough floor")
+        wanted = kept[:args.limit]
 
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)

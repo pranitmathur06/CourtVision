@@ -25,7 +25,7 @@
     320
    ],
    "width": 608,
-   "note": "under-basket, rim fills frame",
+   "note": "under-basket, fills frame",
    "held_out_gap_s": 2.5,
    "train": false
   },
@@ -47,9 +47,31 @@
     208
    ],
    "width": 72,
-   "note": "behind a Finals logo transition",
+   "note": "behind a logo transition",
    "held_out_gap_s": 7.5,
    "train": false
+  },
+  {
+   "t": 1125.0,
+   "rim": [
+    544,
+    264
+   ],
+   "width": 32,
+   "note": "high wide",
+   "held_out_gap_s": 62.5,
+   "train": true
+  },
+  {
+   "t": 1164.0,
+   "rim": [
+    635,
+    225
+   ],
+   "width": 48,
+   "note": "baseline",
+   "held_out_gap_s": 101.5,
+   "train": true
   },
   {
    "t": 1168.0,
@@ -69,9 +91,20 @@
     215
    ],
    "width": 48,
-   "note": "court inset in a graphic",
+   "note": "court inset in graphic",
    "held_out_gap_s": 123.5,
    "train": true
+  },
+  {
+   "t": 1392.0,
+   "rim": [
+    704,
+    172
+   ],
+   "width": 80,
+   "note": "baseline",
+   "held_out_gap_s": 4.5,
+   "train": false
   },
   {
    "t": 1594.0,
@@ -80,7 +113,7 @@
     15
    ],
    "width": 64,
-   "note": "top edge, partially cut",
+   "note": "top edge, cut",
    "held_out_gap_s": 206.5,
    "train": true
   },
@@ -91,8 +124,19 @@
     480
    ],
    "width": 176,
-   "note": "overhead camera",
+   "note": "overhead",
    "held_out_gap_s": 289.5,
+   "train": true
+  },
+  {
+   "t": 1803.0,
+   "rim": [
+    376,
+    325
+   ],
+   "width": 40,
+   "note": "court inset in graphic",
+   "held_out_gap_s": 209.5,
    "train": true
   },
   {
@@ -102,8 +146,19 @@
     216
    ],
    "width": 32,
-   "note": "court inset in a graphic",
+   "note": "court inset in graphic",
    "held_out_gap_s": 205.5,
+   "train": true
+  },
+  {
+   "t": 1808.0,
+   "rim": [
+    656,
+    205
+   ],
+   "width": 56,
+   "note": "court inset in graphic",
+   "held_out_gap_s": 204.5,
    "train": true
   },
   {
@@ -135,7 +190,7 @@
     688
    ],
    "width": 176,
-   "note": "overhead camera",
+   "note": "overhead",
    "held_out_gap_s": 39.5,
    "train": true
   },
@@ -151,13 +206,35 @@
    "train": false
   },
   {
+   "t": 2347.0,
+   "rim": [
+    568,
+    40
+   ],
+   "width": 120,
+   "note": "baseline, cut at top",
+   "held_out_gap_s": 234.5,
+   "train": true
+  },
+  {
+   "t": 2363.0,
+   "rim": [
+    568,
+    136
+   ],
+   "width": 64,
+   "note": "graphic with court strip",
+   "held_out_gap_s": 250.5,
+   "train": true
+  },
+  {
    "t": 2561.0,
    "rim": [
     568,
     680
    ],
    "width": 120,
-   "note": "overhead camera",
+   "note": "overhead",
    "held_out_gap_s": 448.5,
    "train": true
   },
@@ -168,8 +245,19 @@
     443
    ],
    "width": 448,
-   "note": "behind-backboard, rim fills frame",
+   "note": "behind-backboard, fills frame",
    "held_out_gap_s": 464.5,
+   "train": true
+  },
+  {
+   "t": 2581.0,
+   "rim": [
+    491,
+    459
+   ],
+   "width": 344,
+   "note": "behind-backboard",
+   "held_out_gap_s": 468.5,
    "train": true
   },
   {
@@ -195,13 +283,24 @@
    "train": true
   },
   {
+   "t": 2702.0,
+   "rim": [
+    472,
+    611
+   ],
+   "width": 368,
+   "note": "behind-backboard",
+   "held_out_gap_s": 589.5,
+   "train": true
+  },
+  {
    "t": 2735.0,
    "rim": [
     272,
     520
    ],
    "width": 512,
-   "note": "behind-backboard, rim fills frame",
+   "note": "behind-backboard, fills frame",
    "held_out_gap_s": 622.5,
    "train": true
   },
@@ -212,7 +311,7 @@
     328
    ],
    "width": 72,
-   "note": "baseline camera",
+   "note": "baseline",
    "held_out_gap_s": 529.5,
    "train": true
   },
@@ -223,8 +322,41 @@
     680
    ],
    "width": 136,
-   "note": "overhead camera",
+   "note": "overhead",
    "held_out_gap_s": 59.5,
+   "train": true
+  },
+  {
+   "t": 3598.0,
+   "rim": [
+    1016,
+    300
+   ],
+   "width": 48,
+   "note": "wide",
+   "held_out_gap_s": 185.5,
+   "train": true
+  },
+  {
+   "t": 3602.0,
+   "rim": [
+    992,
+    305
+   ],
+   "width": 48,
+   "note": "wide",
+   "held_out_gap_s": 189.5,
+   "train": true
+  },
+  {
+   "t": 3756.0,
+   "rim": [
+    363,
+    339
+   ],
+   "width": 616,
+   "note": "behind-backboard, fills frame",
+   "held_out_gap_s": 38.0,
    "train": true
   },
   {
@@ -300,7 +432,7 @@
     32
    ],
    "width": 128,
-   "note": "rim at top, partially cut",
+   "note": "rim at top, cut",
    "held_out_gap_s": 1981.0,
    "train": true
   },
@@ -322,9 +454,10 @@
     240
    ],
    "width": 32,
-   "note": "high wide view",
+   "note": "high wide",
    "held_out_gap_s": 3157.0,
    "train": true
   }
- ]
+ ],
+ "yield": "41 usable labels from roughly 150 mined frames. Filtering the mined set with has_court (enough floor for a registration to mean anything) raised the yield from ~30% to ~50%: without it the set is dominated by close-ups, adverts and studio shots holding no rim."
 }
