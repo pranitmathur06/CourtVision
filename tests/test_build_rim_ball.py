@@ -93,7 +93,7 @@ def _dir(deg):
 def test_the_most_confident_survivor_wins_when_nothing_precedes_it():
     rows = [_row(0.0, [{"centre": [1, 1], "conf": 0.3},
                        {"centre": [2, 2], "conf": 0.8}])]
-    decided, _, _ = ball.choose_balls(rows, set(), 15.0)
+    decided, _, _, _ = ball.choose_balls(rows, set(), 15.0)
     assert decided[0][0][1]["centre"] == [2, 2]
 
 
@@ -101,7 +101,7 @@ def test_continuity_prefers_the_nearer_ray_over_the_louder_candidate():
     rows = [_row(0.0, [{"centre": [1, 1], "conf": 0.9}], [_dir(0)]),
             _row(0.2, [{"centre": [9, 9], "conf": 0.9}, {"centre": [2, 2], "conf": 0.2}],
                  [_dir(60), _dir(3)])]
-    decided, _, _ = ball.choose_balls(rows, set(), 15.0)
+    decided, _, _, _ = ball.choose_balls(rows, set(), 15.0)
     assert decided[1][0][1]["centre"] == [2, 2]
 
 
@@ -110,7 +110,7 @@ def test_a_stale_choice_does_not_pull_across_a_gap():
     rows = [_row(0.0, [{"centre": [1, 1], "conf": 0.9}], [_dir(0)]),
             _row(9.0, [{"centre": [9, 9], "conf": 0.9}, {"centre": [2, 2], "conf": 0.2}],
                  [_dir(60), _dir(3)])]
-    decided, _, _ = ball.choose_balls(rows, set(), 15.0)
+    decided, _, _, _ = ball.choose_balls(rows, set(), 15.0)
     assert decided[1][0][1]["centre"] == [9, 9]
 
 
@@ -118,7 +118,7 @@ def test_continuity_is_a_preference_not_a_cage():
     """Nothing near the last ray still yields the best candidate, not nothing."""
     rows = [_row(0.0, [{"centre": [1, 1], "conf": 0.9}], [_dir(0)]),
             _row(0.2, [{"centre": [9, 9], "conf": 0.5}], [_dir(80)])]
-    decided, _, _ = ball.choose_balls(rows, set(), 15.0)
+    decided, _, _, _ = ball.choose_balls(rows, set(), 15.0)
     assert decided[1][0] is not None and decided[1][0][1]["centre"] == [9, 9]
 
 
@@ -126,14 +126,14 @@ def test_a_fixture_candidate_is_dropped_even_when_it_is_the_most_confident():
     fixture = ball.cell_of(_dir(0))
     rows = [_row(0.0, [{"centre": [1, 1], "conf": 0.9}, {"centre": [5, 5], "conf": 0.2}],
                  [_dir(0), _dir(40)])]
-    decided, dropped, _ = ball.choose_balls(rows, {fixture}, 15.0)
+    decided, dropped, _, _ = ball.choose_balls(rows, {fixture}, 15.0)
     assert dropped == 1 and decided[0][0][1]["centre"] == [5, 5]
 
 
 def test_a_frame_whose_only_candidate_is_furniture_reports_no_ball():
     fixture = ball.cell_of(_dir(0))
     rows = [_row(0.0, [{"centre": [1, 1], "conf": 0.9}], [_dir(0)])]
-    decided, _, _ = ball.choose_balls(rows, {fixture}, 15.0)
+    decided, _, _, _ = ball.choose_balls(rows, {fixture}, 15.0)
     assert decided[0][0] is None
 
 
@@ -157,7 +157,7 @@ def test_a_candidate_standing_still_is_not_the_ball():
     """The only answer to the ray ambiguity: a spectator does not move."""
     rows = [_row(0.0, [{"centre": [1, 1], "conf": 0.9, "still": True},
                        {"centre": [5, 5], "conf": 0.2, "still": False}])]
-    decided, _, standing = ball.choose_balls(rows, set(), 15.0)
+    decided, _, standing, _ = ball.choose_balls(rows, set(), 15.0)
     assert standing == 1 and decided[0][0][1]["centre"] == [5, 5]
 
 
@@ -165,6 +165,21 @@ def test_a_frame_of_nothing_but_still_candidates_still_reports_its_best():
     """A held ball IS still; treating stillness as disqualifying lost them."""
     rows = [_row(0.0, [{"centre": [1, 1], "conf": 0.9, "still": True},
                        {"centre": [2, 2], "conf": 0.4, "still": True}])]
-    decided, _, standing = ball.choose_balls(rows, set(), 15.0)
+    decided, _, standing, _ = ball.choose_balls(rows, set(), 15.0)
     assert decided[0][0] is not None and decided[0][0][1]["centre"] == [1, 1]
     assert standing == 0
+
+
+def test_a_candidate_seen_at_both_inference_sizes_beats_a_louder_one():
+    """Run large, the true ball is buried at 0.05-0.11 among 60+ candidates."""
+    rows = [_row(0.0, [{"centre": [1, 1], "conf": 0.9, "agreed": False},
+                       {"centre": [5, 5], "conf": 0.08, "agreed": True}])]
+    decided, _, _, passed = ball.choose_balls(rows, set(), 15.0)
+    assert decided[0][0][1]["centre"] == [5, 5] and passed == 1
+
+
+def test_agreement_is_skipped_when_nothing_agrees():
+    rows = [_row(0.0, [{"centre": [1, 1], "conf": 0.9, "agreed": False},
+                       {"centre": [5, 5], "conf": 0.2, "agreed": False}])]
+    decided, _, _, passed = ball.choose_balls(rows, set(), 15.0)
+    assert decided[0][0][1]["centre"] == [1, 1] and passed == 0

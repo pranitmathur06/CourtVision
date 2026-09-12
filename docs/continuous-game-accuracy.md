@@ -5210,3 +5210,41 @@ narrows what is left: the ball needs a selector that separates a ball from a
 head WITHOUT assuming the ball moves -- appearance, or agreement between two
 inference scales, or continuity over dense frames where 25 s of grid spacing
 cannot help.
+
+## Round 71 - the ball figure was inflated by its own truth set
+
+Round 68's ball accuracy of 0.571 is wrong, and the fault is in how its truth
+was built. Of the seven frames, four had their "true" ball position taken from
+a v2 claim that had been judged correct. A system scores zero error against
+truth copied from itself, so four of the seven were decided before they were
+scored.
+
+**Re-measured without that.** Frames chosen by position on the grid, the ball
+located by eye on an unmarked 1300 px panel BEFORE any claim was looked at:
+
+    system                                    located   accuracy   95% CI
+    A  cached detections (the shipped one)      2/5       0.400   0.118-0.769
+    B  2560 by confidence                       0/5       0.000   0.000-0.434
+    C  2560 with two-scale agreement            0/5       0.000   0.000-0.434
+
+Five confirmed balls is far too few to settle anything, and the intervals say
+so. What it does settle is the direction: the ball is nowhere near 0.571, and
+the two large-inference variants are worse than the one in use, not better. On
+the frames they miss they are not close -- at 1062 s the ball sits plainly in a
+player's hands and all three claims are 80-90 px away; at 4362 s it is being
+dribbled and all three are in the crowd.
+
+Both of the large-inference variants also fire on empty frames where the
+shipped one correctly says nothing: on a player's hair at 4662 s and on a nose
+at 5562 s.
+
+**What this changes.** Three ball approaches have now been built, measured and
+rejected -- motion (Round 70), raw large-inference selection (Round 70), and
+two-scale agreement (here) -- and the measured position is worse than was
+reported. The detector proposes the ball; on the frames checked at a 0.03 floor
+it sits 3-16 px from the truth. It is buried at confidence 0.05-0.11 among 60
+to 95 candidates, and nothing tried so far can dig it out.
+
+That is the honest state: the RIM is at 0.840 and improving on a method that
+works, the BALL is around 0.4 on a sample too small to pin, and its selection
+problem is unsolved rather than nearly solved.

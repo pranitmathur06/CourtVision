@@ -36,6 +36,14 @@ exist only because the camera centre is fixed:
   object looked fast whenever the camera panned, and a shot -- the fastest the
   ball ever moves -- lost to a head that happened to be sitting still. In ray
   space a stationary object IS stationary.
+- AGREEMENT between two inference sizes. Run large, the detector proposes the
+  real ball far more often but buries it: measured against hand-located balls,
+  the true one sits 3-16 px away at a confidence of 0.05-0.11 and ranks 20th to
+  50th of 63-95 candidates. Confidence alone cannot find that. But the detector
+  run at its ORDINARY size proposes few candidates and good ones, and where the
+  two agree the candidate is real. So a large-inference candidate with an
+  ordinary-inference candidate beside it is preferred over anything without
+  one, whatever the confidences say.
 - MOTION, off by default, and the reason is below. As a PREFERENCE, not a filter. A candidate that stands still
   between neighbouring frames, once ORB has removed the camera's own movement,
   is usually a head, a shoulder or a logo -- and motion is the only answer to
@@ -98,6 +106,8 @@ import numpy as np
 
 #: The cache floor. Selection, not detection, is meant to be the limit here.
 MIN_CONF = 0.10
+#: Two inference passes agreeing this closely are seeing the same object.
+AGREE_PX = 18.0
 #: A detector rim this confident is believed ahead of the projection.
 RIM_TRUST_CONF = 0.40
 #: The dedicated rim detector's floor. Trained out, it finds 3 of 7 frames
@@ -228,7 +238,7 @@ def choose_balls(rows, fixtures, max_step_deg, use_continuity=True,
     preference and never a cage: the ball does leave the picture and come back,
     so a frame with no candidate near the last one still takes its best.
     """
-    out, dropped, standing, previous, previous_t = [], 0, 0, None, None
+    out, dropped, standing, agreed_kept, previous, previous_t = [], 0, 0, 0, None, None
     for row in rows:
         # Continuity only means something across a short gap. After a cut, a
         # replay or a stretch with no pose, the last choice says nothing about
@@ -242,6 +252,11 @@ def choose_balls(rows, fixtures, max_step_deg, use_continuity=True,
                 continue
 
             keep.append((i, candidate))
+        confirmed = [(i, c) for i, c in keep if c.get("agreed")]
+        if confirmed:
+            agreed_kept += len(keep) - len(confirmed)
+            keep = confirmed
+
         moving = [(i, c) for i, c in keep if not c.get("still")]
         if moving and len(moving) < len(keep):
             standing += len(keep) - len(moving)
@@ -262,7 +277,7 @@ def choose_balls(rows, fixtures, max_step_deg, use_continuity=True,
         elif chosen is None:
             previous, previous_t = None, None
         out.append((chosen, [c for _, c in keep]))
-    return out, dropped, standing
+    return out, dropped, standing, agreed_kept
 
 
 def main() -> int:
@@ -276,6 +291,11 @@ def main() -> int:
                              "four-class boxes to 0.04 rim widths against the "
                              "projection's 0.13, and it has no upward bias.")
     parser.add_argument("--rim-conf", type=float, default=RIM_SCALE_CONF)
+    parser.add_argument("--agree-with", default=None,
+                        help="a second detection pass at a DIFFERENT inference size. "
+                             "Candidates the two passes agree on are preferred over "
+                             "any they do not, before confidence is consulted.")
+    parser.add_argument("--agree-px", type=float, default=AGREE_PX)
     parser.add_argument("--motion", default=None,
                         help="ball_motion.py output. Candidates that stand still "
                              "between neighbouring frames, once ORB has removed the "
@@ -329,6 +349,26 @@ def main() -> int:
         x1, y1, x2, y2 = box["xyxy"]
         return [(x1 + x2) / 2.0, (y1 + y2) / 2.0]
 
+    agree = {}
+    if args.agree_with:
+        found = json.load(open(args.agree_with))
+        agree = {round(r["t"], 3): [b for b in r["boxes"] if b["cls"] == "ball"]
+                 for r in found["frames"]}
+    agree_times = np.array(sorted(agree)) if agree else np.array([])
+
+    def agreed(t, centre):
+        """Does a pass at the other inference size see something here too?"""
+        if not len(agree_times):
+            return False
+        j = int(np.argmin(np.abs(agree_times - t)))
+        if abs(agree_times[j] - t) > 0.3:
+            return False
+        for b in agree[agree_times[j]]:
+            x, y = (b["xyxy"][0] + b["xyxy"][2]) / 2, (b["xyxy"][1] + b["xyxy"][3]) / 2
+            if np.hypot(x - centre[0], y - centre[1]) <= args.agree_px:
+                return True
+        return False
+
     motion = {}
     if args.motion and not args.no_motion:
         found = json.load(open(args.motion))
@@ -350,7 +390,8 @@ def main() -> int:
         balls = boxes_near(t, "ball", args.min_conf)
         entry = {"t": t, "rims": row.get("rims") or [], "source": row.get("source"),
                  "candidates": [{"centre": centre_of(b), "conf": b["conf"],
-                                 "still": still_near(t, centre_of(b))} for b in balls],
+                                 "still": still_near(t, centre_of(b)),
+                                 "agreed": agreed(t, centre_of(b))} for b in balls],
                  "cells": [], "dirs": None, "hull": None}
         if row.get("params") and balls:
             posed += 1
@@ -367,7 +408,7 @@ def main() -> int:
                       protect=rim_directions(centre))
 
     # Pass 2: choose one ball per frame.
-    decided, dropped, standing = choose_balls(
+    decided, dropped, standing, agreed_kept = choose_balls(
         rows, fixtures, args.max_step_deg,
         use_continuity=not args.no_continuity)
 
@@ -431,7 +472,8 @@ def main() -> int:
           f"ball on {sum(1 for f in frames if f['ball'])} "
           f"({sum(1 for f in frames if f['ball']) / n:.1%}); "
           f"{len(fixtures)} fixture directions dropped {dropped} candidates, "
-          f"{standing} more were passed over for standing still")
+          f"{standing} more were passed over for standing still, "
+          f"{agreed_kept} for not being seen at both inference sizes")
     return 0
 
 
