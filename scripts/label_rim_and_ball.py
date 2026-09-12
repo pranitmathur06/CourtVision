@@ -57,10 +57,10 @@ STRIP = 3
 PER_SHEET = 6
 
 
-def draw(frame, row, scale):
+def draw(frame, row, scale, size=(TILE_W, TILE_H)):
     """The whole picture at `scale`, with every proposal marked."""
     import cv2
-    small = cv2.resize(frame, (TILE_W, TILE_H))
+    small = cv2.resize(frame, size)
     for x, y in row.get("projected") or []:
         cv2.circle(small, (int(x * scale[0]), int(y * scale[1])), 13, (0, 255, 0), 2)
     for x, y in row.get("detected") or []:
@@ -104,6 +104,14 @@ def main() -> int:
     parser.add_argument("--first", type=int, default=0)
     parser.add_argument("--count", type=int, default=None)
     parser.add_argument("--sheet", type=int, default=PER_SHEET)
+    parser.add_argument("--cols", type=int, default=2,
+                        help="1 stacks tiles vertically, so a wide panel is not "
+                             "shrunk again by the viewer")
+    parser.add_argument("--panel-w", type=int, default=TILE_W,
+                        help="wider panels make the BALL judgeable: at 640 it is "
+                             "~10 px and 29 of 66 frames could not be judged")
+    parser.add_argument("--zoom", type=int, default=ZOOM)
+    parser.add_argument("--strip", type=int, default=STRIP)
     parser.add_argument("--stride", type=int, default=1,
                         help="label every Nth grid frame; the sample stays uniform "
                              "over the video, it just gets coarser")
@@ -118,7 +126,9 @@ def main() -> int:
     capture = cv2.VideoCapture(args.video)
     width = capture.get(cv2.CAP_PROP_FRAME_WIDTH)
     height = capture.get(cv2.CAP_PROP_FRAME_HEIGHT)
-    scale = (TILE_W / width, TILE_H / height)
+    panel_w = args.panel_w
+    panel_h = int(round(panel_w * height / width))
+    scale = (panel_w / width, panel_h / height)
 
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -129,16 +139,16 @@ def main() -> int:
         ok, frame = capture.read()
         if not ok:
             continue
-        panel = draw(frame, row, scale)
+        panel = draw(frame, row, scale, (panel_w, panel_h))
         chosen = row.get("ball")
         others = [c for c in (row.get("candidates") or [])
                   if not (chosen and abs(c[0] - chosen[0]) < 1 and abs(c[1] - chosen[1]) < 1)]
         wanted = [("rim", (row.get("projected") or row.get("detected") or [None])[0]),
                   ("ball", chosen)]
-        wanted += [(f"c{i}", c) for i, c in enumerate(others[:STRIP - 1])]
+        wanted += [(f"c{i}", c) for i, c in enumerate(others[:args.strip - 1])]
         panes = []
-        for tag, point in wanted[:STRIP + 1]:
-            pane = zoom_on(frame, point, ZOOM)
+        for tag, point in wanted[:args.strip + 1]:
+            pane = zoom_on(frame, point, args.zoom)
             label = tag
             if point is not None:
                 # Panel coordinates, so a pane judged correct can be written
@@ -147,9 +157,9 @@ def main() -> int:
             cv2.putText(pane, label, (3, 13), cv2.FONT_HERSHEY_SIMPLEX, 0.38,
                         (0, 255, 255), 1)
             panes.append(pane)
-        while len(panes) < STRIP + 1:
-            panes.append(np.full((ZOOM, ZOOM, 3), 60, np.uint8))
-        side = cv2.resize(np.vstack(panes), (ZOOM, TILE_H))
+        while len(panes) < args.strip + 1:
+            panes.append(np.full((args.zoom, args.zoom, 3), 60, np.uint8))
+        side = cv2.resize(np.vstack(panes), (args.zoom, panel_h))
         tile = np.hstack([panel, side])
         cv2.putText(tile, f"#{index} {row['t']:.0f}s "
                           f"rim:{len(row.get('rim') or [])}"
@@ -160,10 +170,10 @@ def main() -> int:
         cv2.rectangle(tile, (0, 0), (tile.shape[1] - 1, tile.shape[0] - 1), (255, 255, 255), 1)
         tiles.append(tile)
         if len(tiles) == args.sheet:
-            made.append(_write(out_dir, len(made), tiles))
+            made.append(_write(out_dir, len(made), tiles, args.cols))
             tiles = []
     if tiles:
-        made.append(_write(out_dir, len(made), tiles))
+        made.append(_write(out_dir, len(made), tiles, args.cols))
     capture.release()
     print(f"{len(made)} sheets in {out_dir}")
     for path in made:
@@ -171,9 +181,10 @@ def main() -> int:
     return 0
 
 
-def _write(out_dir, n, tiles):
+def _write(out_dir, n, tiles, cols=2):
     import cv2
-    rows = [np.hstack(tiles[i:i + 2]) for i in range(0, len(tiles), 2)]
+    rows = [np.hstack(tiles[i:i + cols]) if cols > 1 else tiles[i]
+            for i in range(0, len(tiles), cols)]
     width = max(r.shape[1] for r in rows)
     rows = [np.pad(r, ((0, 0), (0, width - r.shape[1]), (0, 0))) for r in rows]
     path = out_dir / f"sheet{n:02d}.jpg"

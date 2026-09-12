@@ -5,8 +5,25 @@ it could, and `cache_detections.py` has already run the detector, so this pass
 is a join -- which means the rules below can be changed and re-measured in
 seconds instead of hours.
 
-THE RIM is the pair of baskets projected through the pose, with the detector's
-own rim as the fallback wherever no pose exists.
+THE RIM prefers the DETECTOR where it is confident, and falls back to the pair
+of baskets projected through the pose.
+
+That order is the opposite of the obvious one, and it is measured. The
+projection agrees with a confident detector box within one rim width on 90.6%
+of grid frames; on the 12 that disagree, all 8 inspected by eye had the
+detector on the rim and the projection about one rim width ABOVE it, on the
+backboard. They are ANCHORS, not drifted hops -- several at a snap cost of
+0.0 -- so this is not tracking error but the known weakness of extrapolating a
+point 10 ft up from a homography fitted to the FLOOR: the floor lines can be
+matched well by a pose whose tilt is slightly wrong, and the error shows up
+only away from the floor. Fitting the rim's height to the detector confirms
+the model is right on typical frames (the median error is smallest at exactly
+10.0 ft) and that a subset is biased, so it is not a global calibration error
+to be dialled out.
+
+A detection is direct evidence and a projection is inference. The projection
+earns its place on the frames where the detector sees nothing at all -- which
+is most of them -- and on the second basket when the detector found only one.
 
 THE BALL is chosen from the detector's candidates, and the choosing is the
 whole problem: at the cache's 0.10 floor there are ~3 "ball" boxes a frame and
@@ -40,6 +57,11 @@ import numpy as np
 
 #: The cache floor. Selection, not detection, is meant to be the limit here.
 MIN_CONF = 0.10
+#: A detector rim this confident is believed ahead of the projection.
+RIM_TRUST_CONF = 0.40
+#: A projected rim further than this from a believed detection is the OTHER
+#: basket, and is kept; nearer than this it is the same rim seen twice.
+SAME_RIM_WIDTHS = 2.0
 #: A ball 47 ft away moving 60 ft/s sweeps ~73 deg/s; at 5 fps that is ~15 deg.
 MAX_STEP_DEG = 15.0
 #: A choice older than this tells you nothing about this frame -- a cut, a
@@ -249,11 +271,22 @@ def main() -> int:
     frames = []
     for row, (chosen, survivors) in zip(rows, decided):
         detected_rims = [centre_of(b) for b in boxes_near(row["t"], "rim", 0.25)]
+        trusted = boxes_near(row["t"], "rim", RIM_TRUST_CONF)
+        rim = [centre_of(b) for b in trusted]
+        widths = [max(b["xyxy"][2] - b["xyxy"][0], 1.0) for b in trusted]
+        for point in row["rims"]:
+            # Keep a projected basket only where no believed detection already
+            # stands: the other end of the floor, or a rim the detector missed.
+            if all(np.hypot(point[0] - r[0], point[1] - r[1]) > SAME_RIM_WIDTHS * w
+                   for r, w in zip(rim, widths)):
+                rim.append(point)
         frames.append({"t": row["t"],
-                       "rim": row["rims"] or detected_rims,
+                       "rim": rim or detected_rims,
                        "ball": chosen[1]["centre"] if chosen else None,
-                       "rim_source": "projected" if row["rims"] else
-                                     ("detector" if detected_rims else None),
+                       "rim_source": ("detector+projected" if trusted and row["rims"]
+                                      else "detector" if trusted
+                                      else "projected" if row["rims"]
+                                      else "detector-weak" if detected_rims else None),
                        # Every candidate the detector offered, kept so a
                        # labelling pass can measure the CEILING as well as the
                        # choice: a miss because no candidate existed and a miss
