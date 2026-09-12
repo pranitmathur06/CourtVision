@@ -5933,3 +5933,69 @@ visible net cord. The domain gap is in the texture, not only the size.
     object   located   accuracy   95% CI          gate
     rim       34/38     0.895   0.759-0.958      0.95
     ball       3/10     0.300   0.108-0.603      0.95
+
+## Round 86 - the ball moves for the first time, by fixing two measurement faults
+
+Not a new idea. Two faults in how the existing ball detector was built and
+measured, and the number moves once both are repaired.
+
+**The scale mismatch.** `build_ball_detector_dataset.py` cuts 640 px crops
+WITHOUT resizing, on purpose -- "the ball is 15-25 px across and its whole
+difficulty is its size". The model was then evaluated at imgsz 2560 on a
+1280x720 frame, showing it every ball at twice the size it learned.
+
+**The leak.** Its track labels were mined from the same video the gate is
+measured on. The nearest sits 1.7 s from an evaluation frame, and 1262.5 s --
+one of the detector's rank-1 successes -- is one of those.
+
+`filter_labels_by_shot.py` dropped 8-13% of each label file and the detector
+was retrained on what was left, at yolo11n batch 8 rather than yolo11s batch
+16, because the machine had been in swap at 15.9 GB of 16 GB and both earlier
+runs were crawling for that reason and not from GPU contention.
+
+    on 13 hand-located balls        ceiling   delivered   ranks
+    shipped (4-class @2560)          -          0.300     -
+    ball_track, leaky, @1280        6/13       3/13 0.231  1,1,1,2,2,2
+    ball_clean, leak-free, @1280    7/13       4/13 0.308  1,1,1,1,2,3,5
+
+Two things worth separating, which one figure had been hiding. At native scale
+the single-class detector proposes FOUR candidates a frame instead of the
+four-class detector's fifty-nine, and the ball is rank 1 on four of the seven
+frames where it is proposed. Ranking stops being a search through a hundred
+distractors and becomes a choice among four.
+
+Honestly: 4/13 against 3/13 is one frame, and at n=13 the intervals are
+0.127-0.576 and 0.082-0.503. The direction is right and the leak is gone; the
+size of the gain is not measurable at this sample size.
+
+### The twelfth approach, and why it looked right
+
+Rendered at 4x, the candidates that outscore the true ball are HUMAN HEADS --
+a bald head at 0.82 against the ball's 0.34, a spectator's head at 0.52 against
+0.05. At 20 px a head is round, skin-toned and textureless. That is also the
+explanation for Round 84's colour result: heads are orange.
+
+What separates them to a person is the crowd around them, so the ranker was
+rebuilt on a 192 px NEIGHBOURHOOD instead of the 30 px of context the Round 72
+ranker had. It reached validation average precision 0.313 against a class
+balance of 0.171 -- it learned something -- and it DELIVERED WORSE:
+
+    delivered, by confidence    4/10  0.400   ranks 1, 1, 1, 1, 2, 3
+    delivered, by the ranker    3/10  0.300   ranks 1, 1, 1, 2, 4, 4
+
+It broke 1262.5 s from rank 1 to 2 and pushed two others down. Twelfth
+approach, rejected, kept beside the eleven others.
+
+**The ceiling is the thing to notice.** With this detector a correct candidate
+exists on 7 of 13 frames, so 0.538 is what a PERFECT selector would deliver.
+The 0.95 gate is not reachable by selection at all; it needs recall, on an
+object that is 12-18 px in a 1280x720 broadcast. There is no higher-resolution
+copy of this game -- the 1080p file on disk is a different fixture, Houston in
+the regular season.
+
+**Phase 2, as measured:**
+
+    object   located   accuracy   95% CI          gate
+    rim       34/38     0.895   0.759-0.958      0.95
+    ball       4/13     0.308   0.127-0.576      0.95
+    ball ceiling with this detector    0.538
