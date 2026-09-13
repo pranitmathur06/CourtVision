@@ -43,3 +43,15 @@ def test_nothing_is_returned_when_everything_is_judged():
 def test_the_picks_are_distinct():
     picked = unlabelled(_grid(300), {}, want=25)
     assert len(set(picked)) == len(picked)
+
+
+def test_frames_after_the_whistle_can_be_excluded():
+    grid = _grid(100)                      # t = 12.5 + 25i, so #100 is 2512.5 s
+    picked = unlabelled(grid, {}, want=100, end_s=1000.0)
+    assert picked
+    assert all(grid[i]["t"] <= 1000.0 for i in picked)
+
+
+def test_without_an_end_the_whole_video_is_in_scope():
+    grid = _grid(100)
+    assert len(unlabelled(grid, {}, want=100)) == 100

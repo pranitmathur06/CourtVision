@@ -5999,3 +5999,63 @@ the regular season.
     rim       34/38     0.895   0.759-0.958      0.95
     ball       4/13     0.308   0.127-0.576      0.95
     ball ceiling with this detector    0.538
+
+## Round 87 - a fifth rim sample takes 0.958 back down to 0.932
+
+The fourth sample put the in-game rim at 46/48 = 0.958 with an interval of
+0.860-0.988: the gate met at the point estimate, on a sample far too small to
+say so. A fifth sample of 24 more in-game grid frames was drawn to find out
+whether it held.
+
+It did not.
+
+    samples 1-3, in game      34/36   0.944   CI 0.819-0.985
+    samples 1-4, in game      46/48   0.958   CI 0.860-0.988
+    samples 1-5, IN GAME      55/59   0.932   CI 0.838-0.973
+    samples 1-5, whole video  55/61   0.902   CI 0.802-0.954
+
+0.958 was a small-sample fluctuation and widening the sample removed it. This
+is the fourth time in this project that a number good enough to stop on has
+dissolved under more measurement, and the only defence has been to keep
+measuring after the number looked right rather than before.
+
+### The residual is one camera, named
+
+The four in-game misses are no longer a miscellany:
+
+    35   (888 s)   overhead behind the backboard, ring filling a quarter of
+                   the frame                                     0 claims
+    115  (2887 s)  low under-basket, backboard and ring and net in plain view
+                   with a player shooting                         0 claims
+    231  (5787 s)  the same camera, ring and net in plain view    0 claims
+    218  (5462 s)  a TV-schedule graphic with a live inset        0 claims
+
+Three of four are the low/under-basket camera. On all three, every model this
+project owns returns nothing at confidence 0.05 across inference sizes 320,
+640, 960, 1280 and 1920 -- the four-class detector, the scale-trained model and
+the propagation-trained model alike. One exception at 0.07, which is noise.
+
+That is worth stating precisely because it is not a tuning problem and not a
+scale problem. Round 85 established the same for the giant close-ups by running
+them from 128 px to 960 px and finding nothing anywhere. It is a viewpoint the
+training distribution does not contain, and the frames most like the
+evaluation's examples of it are exactly the ones the same-shot hold-out
+correctly withholds.
+
+### What the verdicts cost to get right
+
+Five judgements in sample four were made twice, and three changed -- two
+towards the system and two against it. Reading a verdict off a contact sheet
+has now been wrong five times in this project. Reading it off a magnified pane
+of the claim the system actually reports has not yet been.
+
+`render_rim_sheets.py` therefore draws ONE thing: every entry in the frame's
+reported `rim` list. The old diagnostic sheets drew the projected rim beside
+the detected one and that cost three frames in Round 84. Anything else on the
+picture is something to mistake for the answer.
+
+**Phase 2, as measured:**
+
+    object   located   accuracy   95% CI          gate
+    rim       55/59     0.932   0.838-0.973      0.95    in game
+    rim       55/61     0.902   0.802-0.954      0.95    whole video

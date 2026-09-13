@@ -26,10 +26,18 @@ from pathlib import Path
 import numpy as np
 
 
-def unlabelled(grid, verdicts, want, start=0):
-    """Indices of grid frames with no rim verdict yet, spread through the game."""
+def unlabelled(grid, verdicts, want, start=0, end_s=None):
+    """Indices of grid frames with no rim verdict yet, spread through the game.
+
+    `end_s` stops the selection at the final whistle. The first three verdict
+    files declare themselves in-game only, and the fourth found that the two
+    populations behave differently -- after the whistle the court fills with
+    people and the claims land on the advertising boarding -- so which one is
+    being sampled has to be a decision and not an accident.
+    """
     have = {i for i, row in verdicts.items() if "rim" in row}
-    free = [i for i in range(start, len(grid)) if i not in have]
+    free = [i for i in range(start, len(grid)) if i not in have
+            and (end_s is None or float(grid[i]["t"]) <= end_s)]
     if len(free) <= want:
         return free
     step = len(free) / float(want)
@@ -43,6 +51,9 @@ def main() -> int:
     parser.add_argument("--verdicts", action="append", default=[],
                         help="repeatable; frames already judged are skipped")
     parser.add_argument("--count", type=int, default=24)
+    parser.add_argument("--end-s", type=float, default=None,
+                        help="stop at the final whistle; the in-game convention "
+                             "the first three verdict files declare")
     parser.add_argument("--per-sheet", type=int, default=4)
     parser.add_argument("--pane", type=int, default=150)
     parser.add_argument("--out-dir", required=True)
@@ -58,7 +69,7 @@ def main() -> int:
     verdicts = {}
     for path in args.verdicts:
         verdicts.update(parse(path))
-    wanted = unlabelled(grid, verdicts, args.count)
+    wanted = unlabelled(grid, verdicts, args.count, end_s=args.end_s)
     print(f"{len(grid)} grid frames, {len(verdicts)} already judged; "
           f"rendering {len(wanted)}")
 
