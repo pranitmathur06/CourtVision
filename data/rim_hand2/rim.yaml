@@ -1,0 +1,5 @@
+path: /Users/sanikakapoor/CourtVision/data/rim_hand2
+train: images/train
+val: images/val
+names:
+  0: rim

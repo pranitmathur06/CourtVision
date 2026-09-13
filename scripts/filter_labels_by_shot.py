@@ -10,8 +10,9 @@ is the same possession, the same camera and very nearly the same picture.
 So the ball detector's 6 of 10 could not be trusted as measured, and this is
 the filter that makes the re-measurement honest. The criterion is the one
 `propagate_rim_labels.py` argues for: not clock distance, which a 25 s
-evaluation grid makes unusable, but whether the two frames are THE SAME SHOT,
-with ORB registration as the operational test.
+evaluation grid makes unusable, and not ORB registration alone, which means
+"the same fixed camera" and holds across a whole night in these arenas -- but
+BOTH, the frames registering AND being within SAME_TAKE_S of each other.
 
 Works on any label file shaped {"frames": [{"t": ..., ...}, ...]}, which is
 every mined-label file in this repository.
@@ -64,7 +65,12 @@ def main() -> int:
             if v not in loaded:
                 loaded[v] = grey_at(v)
             if loaded[v] is not None:
-                watch.append(loaded[v])
+                # (frame, seconds apart): shares_a_shot needs BOTH the picture
+                # and the gap, because registration alone means "the same fixed
+                # camera", which these arenas satisfy all night. Passing a bare
+                # frame silently reverts to that stricter, wrong rule -- it
+                # dropped 156 of 196 hand labels before this was fixed.
+                watch.append((loaded[v], v - t))
         if not watch:
             kept.append(row)
             continue

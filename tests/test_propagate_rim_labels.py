@@ -152,3 +152,26 @@ def test_a_couple_of_nearby_inliers_are_not_enough():
 def test_no_inliers_at_all_is_not_support():
     assert not supported_at_the_rim(np.zeros((0, 2)), (100.0, 80.0), 40.0)
     assert not supported_at_the_rim(None, (100.0, 80.0), 40.0)
+
+
+def test_a_bare_frame_is_treated_as_coincident():
+    # Callers holding only pictures keep the stricter behaviour rather than
+    # silently skipping the time test.
+    rng = np.random.default_rng(0)
+    picture = rng.integers(0, 255, (240, 320), dtype=np.uint8)
+    assert shares_a_shot(np.roll(picture, 7, axis=1), [picture])
+
+
+def test_a_registering_frame_far_apart_in_time_is_a_different_take():
+    # The same fixed camera, a quarter of an hour later. It registers, and it
+    # is not the same take -- this is the case that wrongly dropped 156 of 196
+    # hand labels when the caller passed bare frames.
+    rng = np.random.default_rng(0)
+    picture = rng.integers(0, 255, (240, 320), dtype=np.uint8)
+    assert not shares_a_shot(np.roll(picture, 7, axis=1), [(picture, 900.0)])
+
+
+def test_a_registering_frame_seconds_away_is_the_same_take():
+    rng = np.random.default_rng(0)
+    picture = rng.integers(0, 255, (240, 320), dtype=np.uint8)
+    assert shares_a_shot(np.roll(picture, 7, axis=1), [(picture, 3.0)])

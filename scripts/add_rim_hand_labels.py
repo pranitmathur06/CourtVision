@@ -37,6 +37,16 @@ def main() -> int:
     parser.add_argument("--labels", required=True)
     parser.add_argument("--out", required=True, help="existing dataset to add to")
     parser.add_argument("--repeats", type=int, default=REPEATS)
+    parser.add_argument("--negatives", default=None,
+                        help="a labels file whose rim:null rows are frames CONFIRMED to "
+                             "hold no rim. Written as crops with an empty label file, "
+                             "which is the model being told this picture is not a basket. "
+                             "They matter most when the positives were mined by COLOUR: "
+                             "the queue's own false positives -- the scoreboard, red "
+                             "hoardings, the centre-court logo -- are drawn from exactly "
+                             "the distribution that made the sixth training run fire on "
+                             "an ESPN graphic at 0.80.")
+    parser.add_argument("--negative-repeats", type=int, default=1)
     parser.add_argument("--valid-fraction", type=float, default=0.15)
     parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
@@ -86,8 +96,35 @@ def main() -> int:
             with open(out / "labels" / split / f"{name}.txt", "w") as handle:
                 handle.write("0 %.6f %.6f %.6f %.6f\n" % (bx, by, bw, bh))
             made[split] += 1
+    negatives = 0
+    if args.negatives:
+        empty = [r for r in json.load(open(args.negatives))["frames"] if not r.get("rim")]
+        capture = cv2.VideoCapture(args.video)
+        for row in empty:
+            capture.set(cv2.CAP_PROP_POS_MSEC, row["t"] * 1000)
+            ok, frame = capture.read()
+            if not ok:
+                continue
+            split = "val" if rng.random() < args.valid_fraction else "train"
+            for k in range(args.negative_repeats):
+                size = min(CROP, frame.shape[0], frame.shape[1])
+                if frame.shape[1] - size < 0 or frame.shape[0] - size < 0:
+                    continue
+                x0 = rng.randint(0, frame.shape[1] - size)
+                y0 = rng.randint(0, frame.shape[0] - size)
+                patch = frame[y0:y0 + size, x0:x0 + size]
+                if patch.shape[0] != size or patch.shape[1] != size:
+                    continue
+                name = f"neg_{int(row['t'] * 1000)}_{k}"
+                cv2.imwrite(str(out / "images" / split / f"{name}.jpg"), patch,
+                            [cv2.IMWRITE_JPEG_QUALITY, 94])
+                (out / "labels" / split / f"{name}.txt").write_text("")
+                made[split] += 1
+                negatives += 1
+        capture.release()
     capture.release()
-    print(f"{len(rows)} hand labels -> train {made['train']}, val {made['val']} crops")
+    print(f"{len(rows)} hand labels -> train {made['train']}, val {made['val']} crops"
+          f"{f', of which {negatives} are negatives' if negatives else ''}")
     return 0
 
 
