@@ -1,0 +1,3591 @@
+{
+ "note": "Rims located by hand by the user in data/labeling/rim_wide/label.html, two clicks per ring, plus frames confirmed to hold no rim.\n\nWIDTHS WERE CORRECTED, and the reason is a fault in my instructions rather than in the labelling. 'The leftmost point of the orange ring' is ambiguous between the ring's outer extent and the opening it encircles, and the two labellers read it differently. Measured on 34 rings we both labelled within 2 s:\n    centres agree to 0.12 rim widths (median) -- the gate's tolerance is 1.0\n    widths differ by a factor of 0.70 (median), systematically\nSo the POSITIONS, which are the judgement and the hard part, agree closely. Only the size convention differed.\n\nThe correction is size-banded because a single factor does not fit: x1.5 was rendered over the rings and lands exactly on the outer edge for rings under ~120 px (15->22, 18->27, 30->45, 49->74 all checked), while on close-ups it overshoots badly (531->799 spills well past the ring). Rings at or above 120 px are therefore left as labelled; they sit within ~0.8 of mine, inside the tolerance that matters.\n\nAn automatic alternative was tried and rejected: snapping each width to the orange blob at the click. It brought the two labellers' median agreement to 1.00 but merged the ring with the backboard's red padding on distant rims (12 -> 46) and occasionally seized the wrong component (486 -> 1122).",
+ "video": "data/raw_clips/fullgame.mp4",
+ "frame_size": [
+  1280,
+  720
+ ],
+ "queue": "outputs/rim_ball/big_rim_queue_wide.json",
+ "labeller": "user",
+ "dropped": [
+  {
+   "t": 2662,
+   "width": 9,
+   "why": "under 12 px; at that size the click cannot mean anything, and one was a blurred frame corner with no rim in it"
+  },
+  {
+   "t": 4209,
+   "width": 11,
+   "why": "under 12 px; at that size the click cannot mean anything, and one was a blurred frame corner with no rim in it"
+  }
+ ],
+ "frames": [
+  {
+   "t": 747,
+   "rim": [
+    300,
+    192
+   ],
+   "width": 24,
+   "source": "hand",
+   "file": "t000747.0.jpg",
+   "width_as_labelled": 16,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 811,
+   "rim": [
+    47,
+    179
+   ],
+   "width": 27,
+   "source": "hand",
+   "file": "t000811.0.jpg",
+   "width_as_labelled": 18,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 878,
+   "rim": [
+    543,
+    114
+   ],
+   "width": 87,
+   "source": "hand",
+   "file": "t000878.0.jpg",
+   "width_as_labelled": 58,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 888,
+   "rim": [
+    804,
+    284
+   ],
+   "width": 352,
+   "source": "hand",
+   "file": "t000888.0.jpg",
+   "width_as_labelled": 352,
+   "convention": "outer extent, as labelled"
+  },
+  {
+   "t": 1164,
+   "rim": [
+    637,
+    194
+   ],
+   "width": 26,
+   "source": "hand",
+   "file": "t001164.0.jpg",
+   "width_as_labelled": 17,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 1357,
+   "rim": [
+    125,
+    186
+   ],
+   "width": 28,
+   "source": "hand",
+   "file": "t001357.0.jpg",
+   "width_as_labelled": 19,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 1370,
+   "rim": [
+    464,
+    133
+   ],
+   "width": 99,
+   "source": "hand",
+   "file": "t001370.0.jpg",
+   "width_as_labelled": 66,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 1389,
+   "rim": [
+    674,
+    136
+   ],
+   "width": 295,
+   "source": "hand",
+   "file": "t001389.0.jpg",
+   "width_as_labelled": 295,
+   "convention": "outer extent, as labelled"
+  },
+  {
+   "t": 1418,
+   "rim": [
+    1240,
+    195
+   ],
+   "width": 22,
+   "source": "hand",
+   "file": "t001418.0.jpg",
+   "width_as_labelled": 15,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 1432,
+   "rim": [
+    1134,
+    206
+   ],
+   "width": 22,
+   "source": "hand",
+   "file": "t001432.0.jpg",
+   "width_as_labelled": 15,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 1500,
+   "rim": [
+    951,
+    194
+   ],
+   "width": 18,
+   "source": "hand",
+   "file": "t001500.0.jpg",
+   "width_as_labelled": 12,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 1518,
+   "rim": [
+    1098,
+    172
+   ],
+   "width": 27,
+   "source": "hand",
+   "file": "t001518.0.jpg",
+   "width_as_labelled": 18,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 1522,
+   "rim": [
+    124,
+    171
+   ],
+   "width": 21,
+   "source": "hand",
+   "file": "t001522.0.jpg",
+   "width_as_labelled": 14,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 1616,
+   "rim": [
+    1130,
+    195
+   ],
+   "width": 20,
+   "source": "hand",
+   "file": "t001616.0.jpg",
+   "width_as_labelled": 13,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 1635,
+   "rim": [
+    203,
+    189
+   ],
+   "width": 27,
+   "source": "hand",
+   "file": "t001635.0.jpg",
+   "width_as_labelled": 18,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 1922,
+   "rim": [
+    458,
+    443
+   ],
+   "width": 260,
+   "source": "hand",
+   "file": "t001922.0.jpg",
+   "width_as_labelled": 260,
+   "convention": "outer extent, as labelled"
+  },
+  {
+   "t": 1925,
+   "rim": [
+    453,
+    425
+   ],
+   "width": 320,
+   "source": "hand",
+   "file": "t001925.0.jpg",
+   "width_as_labelled": 320,
+   "convention": "outer extent, as labelled"
+  },
+  {
+   "t": 1928,
+   "rim": [
+    463,
+    439
+   ],
+   "width": 256,
+   "source": "hand",
+   "file": "t001928.0.jpg",
+   "width_as_labelled": 256,
+   "convention": "outer extent, as labelled"
+  },
+  {
+   "t": 1934,
+   "rim": [
+    455,
+    442
+   ],
+   "width": 245,
+   "source": "hand",
+   "file": "t001934.0.jpg",
+   "width_as_labelled": 245,
+   "convention": "outer extent, as labelled"
+  },
+  {
+   "t": 1951,
+   "rim": [
+    1207,
+    185
+   ],
+   "width": 28,
+   "source": "hand",
+   "file": "t001951.0.jpg",
+   "width_as_labelled": 19,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 1984,
+   "rim": [
+    1140,
+    181
+   ],
+   "width": 27,
+   "source": "hand",
+   "file": "t001984.0.jpg",
+   "width_as_labelled": 18,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 2009,
+   "rim": [
+    791,
+    342
+   ],
+   "width": 358,
+   "source": "hand",
+   "file": "t002009.0.jpg",
+   "width_as_labelled": 358,
+   "convention": "outer extent, as labelled"
+  },
+  {
+   "t": 2092,
+   "rim": [
+    1007,
+    173
+   ],
+   "width": 57,
+   "source": "hand",
+   "file": "t002092.0.jpg",
+   "width_as_labelled": 38,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 2143,
+   "rim": [
+    1133,
+    170
+   ],
+   "width": 27,
+   "source": "hand",
+   "file": "t002143.0.jpg",
+   "width_as_labelled": 18,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 2262,
+   "rim": [
+    17,
+    175
+   ],
+   "width": 26,
+   "source": "hand",
+   "file": "t002262.0.jpg",
+   "width_as_labelled": 17,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 2410,
+   "rim": [
+    1245,
+    187
+   ],
+   "width": 22,
+   "source": "hand",
+   "file": "t002410.0.jpg",
+   "width_as_labelled": 15,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 2532,
+   "rim": [
+    970,
+    206
+   ],
+   "width": 22,
+   "source": "hand",
+   "file": "t002532.0.jpg",
+   "width_as_labelled": 15,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 2541,
+   "rim": [
+    1027,
+    198
+   ],
+   "width": 20,
+   "source": "hand",
+   "file": "t002541.0.jpg",
+   "width_as_labelled": 13,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 2574,
+   "rim": [
+    495,
+    446
+   ],
+   "width": 240,
+   "source": "hand",
+   "file": "t002574.0.jpg",
+   "width_as_labelled": 240,
+   "convention": "outer extent, as labelled"
+  },
+  {
+   "t": 2577,
+   "rim": [
+    498,
+    448
+   ],
+   "width": 263,
+   "source": "hand",
+   "file": "t002577.0.jpg",
+   "width_as_labelled": 263,
+   "convention": "outer extent, as labelled"
+  },
+  {
+   "t": 2580,
+   "rim": [
+    497,
+    444
+   ],
+   "width": 264,
+   "source": "hand",
+   "file": "t002580.0.jpg",
+   "width_as_labelled": 264,
+   "convention": "outer extent, as labelled"
+  },
+  {
+   "t": 2594,
+   "rim": [
+    201,
+    334
+   ],
+   "width": 57,
+   "source": "hand",
+   "file": "t002594.0.jpg",
+   "width_as_labelled": 38,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 2645,
+   "rim": [
+    1065,
+    173
+   ],
+   "width": 22,
+   "source": "hand",
+   "file": "t002645.0.jpg",
+   "width_as_labelled": 15,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 2648,
+   "rim": [
+    840,
+    157
+   ],
+   "width": 28,
+   "source": "hand",
+   "file": "t002648.0.jpg",
+   "width_as_labelled": 19,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 2665,
+   "rim": [
+    334,
+    206
+   ],
+   "width": 24,
+   "source": "hand",
+   "file": "t002665.0.jpg",
+   "width_as_labelled": 16,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 2672,
+   "rim": [
+    401,
+    198
+   ],
+   "width": 26,
+   "source": "hand",
+   "file": "t002672.0.jpg",
+   "width_as_labelled": 17,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 2676,
+   "rim": [
+    1097,
+    213
+   ],
+   "width": 18,
+   "source": "hand",
+   "file": "t002676.0.jpg",
+   "width_as_labelled": 12,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 2699,
+   "rim": [
+    701,
+    150
+   ],
+   "width": 84,
+   "source": "hand",
+   "file": "t002699.0.jpg",
+   "width_as_labelled": 56,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 2702,
+   "rim": [
+    283,
+    639
+   ],
+   "width": 479,
+   "source": "hand",
+   "file": "t002702.0.jpg",
+   "width_as_labelled": 479,
+   "convention": "outer extent, as labelled"
+  },
+  {
+   "t": 2706,
+   "rim": [
+    425,
+    234
+   ],
+   "width": 486,
+   "source": "hand",
+   "file": "t002706.0.jpg",
+   "width_as_labelled": 486,
+   "convention": "outer extent, as labelled"
+  },
+  {
+   "t": 2709,
+   "rim": [
+    400,
+    291
+   ],
+   "width": 283,
+   "source": "hand",
+   "file": "t002709.0.jpg",
+   "width_as_labelled": 283,
+   "convention": "outer extent, as labelled"
+  },
+  {
+   "t": 2750,
+   "rim": [
+    421,
+    178
+   ],
+   "width": 28,
+   "source": "hand",
+   "file": "t002750.0.jpg",
+   "width_as_labelled": 19,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 2758,
+   "rim": [
+    206,
+    167
+   ],
+   "width": 40,
+   "source": "hand",
+   "file": "t002758.0.jpg",
+   "width_as_labelled": 27,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 2765,
+   "rim": [
+    869,
+    167
+   ],
+   "width": 42,
+   "source": "hand",
+   "file": "t002765.0.jpg",
+   "width_as_labelled": 28,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 2771,
+   "rim": [
+    332,
+    175
+   ],
+   "width": 27,
+   "source": "hand",
+   "file": "t002771.0.jpg",
+   "width_as_labelled": 18,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 2782,
+   "rim": [
+    407,
+    173
+   ],
+   "width": 36,
+   "source": "hand",
+   "file": "t002782.0.jpg",
+   "width_as_labelled": 24,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 2787,
+   "rim": [
+    889,
+    174
+   ],
+   "width": 30,
+   "source": "hand",
+   "file": "t002787.0.jpg",
+   "width_as_labelled": 20,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 2802,
+   "rim": [
+    1029,
+    157
+   ],
+   "width": 33,
+   "source": "hand",
+   "file": "t002802.0.jpg",
+   "width_as_labelled": 22,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 2805,
+   "rim": [
+    48,
+    178
+   ],
+   "width": 32,
+   "source": "hand",
+   "file": "t002805.0.jpg",
+   "width_as_labelled": 21,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 2816,
+   "rim": [
+    1137,
+    184
+   ],
+   "width": 32,
+   "source": "hand",
+   "file": "t002816.0.jpg",
+   "width_as_labelled": 21,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 2819,
+   "rim": [
+    847,
+    172
+   ],
+   "width": 30,
+   "source": "hand",
+   "file": "t002819.0.jpg",
+   "width_as_labelled": 20,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 2827,
+   "rim": [
+    898,
+    168
+   ],
+   "width": 30,
+   "source": "hand",
+   "file": "t002827.0.jpg",
+   "width_as_labelled": 20,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 2830,
+   "rim": [
+    910,
+    170
+   ],
+   "width": 34,
+   "source": "hand",
+   "file": "t002830.0.jpg",
+   "width_as_labelled": 23,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 2835,
+   "rim": [
+    1019,
+    157
+   ],
+   "width": 42,
+   "source": "hand",
+   "file": "t002835.0.jpg",
+   "width_as_labelled": 28,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 2841,
+   "rim": [
+    340,
+    186
+   ],
+   "width": 30,
+   "source": "hand",
+   "file": "t002841.0.jpg",
+   "width_as_labelled": 20,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 2847,
+   "rim": [
+    393,
+    193
+   ],
+   "width": 30,
+   "source": "hand",
+   "file": "t002847.0.jpg",
+   "width_as_labelled": 20,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 2853,
+   "rim": [
+    924,
+    199
+   ],
+   "width": 44,
+   "source": "hand",
+   "file": "t002853.0.jpg",
+   "width_as_labelled": 29,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 2859,
+   "rim": [
+    309,
+    213
+   ],
+   "width": 27,
+   "source": "hand",
+   "file": "t002859.0.jpg",
+   "width_as_labelled": 18,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 2868,
+   "rim": [
+    1116,
+    222
+   ],
+   "width": 38,
+   "source": "hand",
+   "file": "t002868.0.jpg",
+   "width_as_labelled": 25,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 2891,
+   "rim": [
+    404,
+    67
+   ],
+   "width": 90,
+   "source": "hand",
+   "file": "t002891.0.jpg",
+   "width_as_labelled": 60,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 2894,
+   "rim": [
+    505,
+    68
+   ],
+   "width": 75,
+   "source": "hand",
+   "file": "t002894.0.jpg",
+   "width_as_labelled": 50,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 2948,
+   "rim": [
+    944,
+    604
+   ],
+   "width": 401,
+   "source": "hand",
+   "file": "t002948.0.jpg",
+   "width_as_labelled": 401,
+   "convention": "outer extent, as labelled"
+  },
+  {
+   "t": 2962,
+   "rim": [
+    1151,
+    159
+   ],
+   "width": 44,
+   "source": "hand",
+   "file": "t002962.0.jpg",
+   "width_as_labelled": 29,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 3040,
+   "rim": [
+    1202,
+    182
+   ],
+   "width": 30,
+   "source": "hand",
+   "file": "t003040.0.jpg",
+   "width_as_labelled": 20,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 3116,
+   "rim": [
+    777,
+    192
+   ],
+   "width": 90,
+   "source": "hand",
+   "file": "t003116.0.jpg",
+   "width_as_labelled": 60,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 3120,
+   "rim": [
+    779,
+    177
+   ],
+   "width": 99,
+   "source": "hand",
+   "file": "t003120.0.jpg",
+   "width_as_labelled": 66,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 3123,
+   "rim": [
+    746,
+    130
+   ],
+   "width": 93,
+   "source": "hand",
+   "file": "t003123.0.jpg",
+   "width_as_labelled": 62,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 3240,
+   "rim": [
+    608,
+    134
+   ],
+   "width": 93,
+   "source": "hand",
+   "file": "t003240.0.jpg",
+   "width_as_labelled": 62,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 3271,
+   "rim": [
+    138,
+    166
+   ],
+   "width": 34,
+   "source": "hand",
+   "file": "t003271.0.jpg",
+   "width_as_labelled": 23,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 3302,
+   "rim": [
+    310,
+    162
+   ],
+   "width": 27,
+   "source": "hand",
+   "file": "t003302.0.jpg",
+   "width_as_labelled": 18,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 3393,
+   "rim": [
+    1073,
+    175
+   ],
+   "width": 45,
+   "source": "hand",
+   "file": "t003393.0.jpg",
+   "width_as_labelled": 30,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 3519,
+   "rim": [
+    249,
+    176
+   ],
+   "width": 18,
+   "source": "hand",
+   "file": "t003519.0.jpg",
+   "width_as_labelled": 12,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 3523,
+   "rim": [
+    1114,
+    193
+   ],
+   "width": 26,
+   "source": "hand",
+   "file": "t003523.0.jpg",
+   "width_as_labelled": 17,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 3608,
+   "rim": [
+    987,
+    199
+   ],
+   "width": 28,
+   "source": "hand",
+   "file": "t003608.0.jpg",
+   "width_as_labelled": 19,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 3755,
+   "rim": [
+    268,
+    354
+   ],
+   "width": 531,
+   "source": "hand",
+   "file": "t003755.0.jpg",
+   "width_as_labelled": 531,
+   "convention": "outer extent, as labelled"
+  },
+  {
+   "t": 3758,
+   "rim": [
+    400,
+    79
+   ],
+   "width": 301,
+   "source": "hand",
+   "file": "t003758.0.jpg",
+   "width_as_labelled": 301,
+   "convention": "outer extent, as labelled"
+  },
+  {
+   "t": 3761,
+   "rim": [
+    382,
+    384
+   ],
+   "width": 271,
+   "source": "hand",
+   "file": "t003761.0.jpg",
+   "width_as_labelled": 271,
+   "convention": "outer extent, as labelled"
+  },
+  {
+   "t": 3806,
+   "rim": [
+    551,
+    105
+   ],
+   "width": 64,
+   "source": "hand",
+   "file": "t003806.0.jpg",
+   "width_as_labelled": 43,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 3809,
+   "rim": [
+    555,
+    108
+   ],
+   "width": 70,
+   "source": "hand",
+   "file": "t003809.0.jpg",
+   "width_as_labelled": 47,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 3812,
+   "rim": [
+    552,
+    105
+   ],
+   "width": 63,
+   "source": "hand",
+   "file": "t003812.0.jpg",
+   "width_as_labelled": 42,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 3815,
+   "rim": [
+    545,
+    104
+   ],
+   "width": 62,
+   "source": "hand",
+   "file": "t003815.0.jpg",
+   "width_as_labelled": 41,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 3818,
+   "rim": [
+    561,
+    110
+   ],
+   "width": 57,
+   "source": "hand",
+   "file": "t003818.0.jpg",
+   "width_as_labelled": 38,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 3821,
+   "rim": [
+    560,
+    110
+   ],
+   "width": 62,
+   "source": "hand",
+   "file": "t003821.0.jpg",
+   "width_as_labelled": 41,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 4071,
+   "rim": [
+    310,
+    165
+   ],
+   "width": 28,
+   "source": "hand",
+   "file": "t004071.0.jpg",
+   "width_as_labelled": 19,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 4107,
+   "rim": [
+    1191,
+    166
+   ],
+   "width": 32,
+   "source": "hand",
+   "file": "t004107.0.jpg",
+   "width_as_labelled": 21,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 4167,
+   "rim": [
+    1127,
+    180
+   ],
+   "width": 40,
+   "source": "hand",
+   "file": "t004167.0.jpg",
+   "width_as_labelled": 27,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 4179,
+   "rim": [
+    238,
+    186
+   ],
+   "width": 38,
+   "source": "hand",
+   "file": "t004179.0.jpg",
+   "width_as_labelled": 25,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 4217,
+   "rim": [
+    246,
+    190
+   ],
+   "width": 39,
+   "source": "hand",
+   "file": "t004217.0.jpg",
+   "width_as_labelled": 26,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 4307,
+   "rim": [
+    1118,
+    203
+   ],
+   "width": 40,
+   "source": "hand",
+   "file": "t004307.0.jpg",
+   "width_as_labelled": 27,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 4346,
+   "rim": [
+    1167,
+    196
+   ],
+   "width": 45,
+   "source": "hand",
+   "file": "t004346.0.jpg",
+   "width_as_labelled": 30,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 4388,
+   "rim": [
+    508,
+    365
+   ],
+   "width": 277,
+   "source": "hand",
+   "file": "t004388.0.jpg",
+   "width_as_labelled": 277,
+   "convention": "outer extent, as labelled"
+  },
+  {
+   "t": 4609,
+   "rim": [
+    495,
+    446
+   ],
+   "width": 295,
+   "source": "hand",
+   "file": "t004609.0.jpg",
+   "width_as_labelled": 295,
+   "convention": "outer extent, as labelled"
+  },
+  {
+   "t": 4651,
+   "rim": [
+    1218,
+    163
+   ],
+   "width": 42,
+   "source": "hand",
+   "file": "t004651.0.jpg",
+   "width_as_labelled": 28,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 4936,
+   "rim": [
+    150,
+    173
+   ],
+   "width": 46,
+   "source": "hand",
+   "file": "t004936.0.jpg",
+   "width_as_labelled": 31,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 4940,
+   "rim": [
+    74,
+    173
+   ],
+   "width": 56,
+   "source": "hand",
+   "file": "t004940.0.jpg",
+   "width_as_labelled": 37,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 4961,
+   "rim": [
+    1149,
+    174
+   ],
+   "width": 38,
+   "source": "hand",
+   "file": "t004961.0.jpg",
+   "width_as_labelled": 25,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 5011,
+   "rim": [
+    152,
+    172
+   ],
+   "width": 40,
+   "source": "hand",
+   "file": "t005011.0.jpg",
+   "width_as_labelled": 27,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 5085,
+   "rim": [
+    1214,
+    148
+   ],
+   "width": 57,
+   "source": "hand",
+   "file": "t005085.0.jpg",
+   "width_as_labelled": 38,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 5232,
+   "rim": [
+    1041,
+    202
+   ],
+   "width": 50,
+   "source": "hand",
+   "file": "t005232.0.jpg",
+   "width_as_labelled": 33,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 5252,
+   "rim": [
+    304,
+    210
+   ],
+   "width": 34,
+   "source": "hand",
+   "file": "t005252.0.jpg",
+   "width_as_labelled": 23,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 5273,
+   "rim": [
+    1130,
+    231
+   ],
+   "width": 30,
+   "source": "hand",
+   "file": "t005273.0.jpg",
+   "width_as_labelled": 20,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 5277,
+   "rim": [
+    847,
+    215
+   ],
+   "width": 36,
+   "source": "hand",
+   "file": "t005277.0.jpg",
+   "width_as_labelled": 24,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 5286,
+   "rim": [
+    973,
+    191
+   ],
+   "width": 56,
+   "source": "hand",
+   "file": "t005286.0.jpg",
+   "width_as_labelled": 37,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 5359,
+   "rim": [
+    143,
+    195
+   ],
+   "width": 45,
+   "source": "hand",
+   "file": "t005359.0.jpg",
+   "width_as_labelled": 30,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 5363,
+   "rim": [
+    482,
+    197
+   ],
+   "width": 38,
+   "source": "hand",
+   "file": "t005363.0.jpg",
+   "width_as_labelled": 25,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 5367,
+   "rim": [
+    335,
+    184
+   ],
+   "width": 38,
+   "source": "hand",
+   "file": "t005367.0.jpg",
+   "width_as_labelled": 25,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 5387,
+   "rim": [
+    873,
+    199
+   ],
+   "width": 33,
+   "source": "hand",
+   "file": "t005387.0.jpg",
+   "width_as_labelled": 22,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 5390,
+   "rim": [
+    905,
+    195
+   ],
+   "width": 60,
+   "source": "hand",
+   "file": "t005390.0.jpg",
+   "width_as_labelled": 40,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 5393,
+   "rim": [
+    814,
+    186
+   ],
+   "width": 36,
+   "source": "hand",
+   "file": "t005393.0.jpg",
+   "width_as_labelled": 24,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 5403,
+   "rim": [
+    1025,
+    195
+   ],
+   "width": 56,
+   "source": "hand",
+   "file": "t005403.0.jpg",
+   "width_as_labelled": 37,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 5406,
+   "rim": [
+    981,
+    180
+   ],
+   "width": 57,
+   "source": "hand",
+   "file": "t005406.0.jpg",
+   "width_as_labelled": 38,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 5416,
+   "rim": [
+    916,
+    175
+   ],
+   "width": 50,
+   "source": "hand",
+   "file": "t005416.0.jpg",
+   "width_as_labelled": 33,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 5433,
+   "rim": [
+    456,
+    113
+   ],
+   "width": 303,
+   "source": "hand",
+   "file": "t005433.0.jpg",
+   "width_as_labelled": 303,
+   "convention": "outer extent, as labelled"
+  },
+  {
+   "t": 5436,
+   "rim": [
+    480,
+    191
+   ],
+   "width": 316,
+   "source": "hand",
+   "file": "t005436.0.jpg",
+   "width_as_labelled": 316,
+   "convention": "outer extent, as labelled"
+  },
+  {
+   "t": 5439,
+   "rim": [
+    494,
+    24
+   ],
+   "width": 341,
+   "source": "hand",
+   "file": "t005439.0.jpg",
+   "width_as_labelled": 341,
+   "convention": "outer extent, as labelled"
+  },
+  {
+   "t": 5488,
+   "rim": [
+    94,
+    193
+   ],
+   "width": 42,
+   "source": "hand",
+   "file": "t005488.0.jpg",
+   "width_as_labelled": 28,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 5499,
+   "rim": [
+    271,
+    158
+   ],
+   "width": 57,
+   "source": "hand",
+   "file": "t005499.0.jpg",
+   "width_as_labelled": 38,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 5502,
+   "rim": [
+    1084,
+    184
+   ],
+   "width": 42,
+   "source": "hand",
+   "file": "t005502.0.jpg",
+   "width_as_labelled": 28,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 5507,
+   "rim": [
+    918,
+    177
+   ],
+   "width": 36,
+   "source": "hand",
+   "file": "t005507.0.jpg",
+   "width_as_labelled": 24,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 5510,
+   "rim": [
+    919,
+    179
+   ],
+   "width": 51,
+   "source": "hand",
+   "file": "t005510.0.jpg",
+   "width_as_labelled": 34,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 5541,
+   "rim": [
+    406,
+    186
+   ],
+   "width": 45,
+   "source": "hand",
+   "file": "t005541.0.jpg",
+   "width_as_labelled": 30,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 5625,
+   "rim": [
+    482,
+    142
+   ],
+   "width": 93,
+   "source": "hand",
+   "file": "t005625.0.jpg",
+   "width_as_labelled": 62,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 5628,
+   "rim": [
+    487,
+    146
+   ],
+   "width": 92,
+   "source": "hand",
+   "file": "t005628.0.jpg",
+   "width_as_labelled": 61,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 5691,
+   "rim": [
+    826,
+    548
+   ],
+   "width": 315,
+   "source": "hand",
+   "file": "t005691.0.jpg",
+   "width_as_labelled": 315,
+   "convention": "outer extent, as labelled"
+  },
+  {
+   "t": 5694,
+   "rim": [
+    776,
+    404
+   ],
+   "width": 271,
+   "source": "hand",
+   "file": "t005694.0.jpg",
+   "width_as_labelled": 271,
+   "convention": "outer extent, as labelled"
+  },
+  {
+   "t": 5738,
+   "rim": [
+    334,
+    175
+   ],
+   "width": 38,
+   "source": "hand",
+   "file": "t005738.0.jpg",
+   "width_as_labelled": 25,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 5749,
+   "rim": [
+    930,
+    193
+   ],
+   "width": 21,
+   "source": "hand",
+   "file": "t005749.0.jpg",
+   "width_as_labelled": 14,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 5755,
+   "rim": [
+    939,
+    176
+   ],
+   "width": 40,
+   "source": "hand",
+   "file": "t005755.0.jpg",
+   "width_as_labelled": 27,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 5758,
+   "rim": [
+    1067,
+    184
+   ],
+   "width": 33,
+   "source": "hand",
+   "file": "t005758.0.jpg",
+   "width_as_labelled": 22,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 5761,
+   "rim": [
+    424,
+    223
+   ],
+   "width": 50,
+   "source": "hand",
+   "file": "t005761.0.jpg",
+   "width_as_labelled": 33,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 5920,
+   "rim": [
+    527,
+    72
+   ],
+   "width": 106,
+   "source": "hand",
+   "file": "t005920.0.jpg",
+   "width_as_labelled": 71,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 6026,
+   "rim": [
+    325,
+    273
+   ],
+   "width": 174,
+   "source": "hand",
+   "file": "t006026.0.jpg",
+   "width_as_labelled": 174,
+   "convention": "outer extent, as labelled"
+  },
+  {
+   "t": 6029,
+   "rim": [
+    439,
+    317
+   ],
+   "width": 243,
+   "source": "hand",
+   "file": "t006029.0.jpg",
+   "width_as_labelled": 243,
+   "convention": "outer extent, as labelled"
+  },
+  {
+   "t": 6037,
+   "rim": [
+    701,
+    89
+   ],
+   "width": 93,
+   "source": "hand",
+   "file": "t006037.0.jpg",
+   "width_as_labelled": 62,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 6040,
+   "rim": [
+    684,
+    75
+   ],
+   "width": 98,
+   "source": "hand",
+   "file": "t006040.0.jpg",
+   "width_as_labelled": 65,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 6157,
+   "rim": [
+    680,
+    141
+   ],
+   "width": 110,
+   "source": "hand",
+   "file": "t006157.0.jpg",
+   "width_as_labelled": 73,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 6339,
+   "rim": [
+    771,
+    91
+   ],
+   "width": 134,
+   "source": "hand",
+   "file": "t006339.0.jpg",
+   "width_as_labelled": 89,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 6528,
+   "rim": [
+    847,
+    194
+   ],
+   "width": 75,
+   "source": "hand",
+   "file": "t006528.0.jpg",
+   "width_as_labelled": 50,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 6672,
+   "rim": [
+    190,
+    205
+   ],
+   "width": 40,
+   "source": "hand",
+   "file": "t006672.0.jpg",
+   "width_as_labelled": 27,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 6675,
+   "rim": [
+    1222,
+    219
+   ],
+   "width": 46,
+   "source": "hand",
+   "file": "t006675.0.jpg",
+   "width_as_labelled": 31,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 6770,
+   "rim": [
+    1085,
+    203
+   ],
+   "width": 45,
+   "source": "hand",
+   "file": "t006770.0.jpg",
+   "width_as_labelled": 30,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 6797,
+   "rim": [
+    1241,
+    206
+   ],
+   "width": 39,
+   "source": "hand",
+   "file": "t006797.0.jpg",
+   "width_as_labelled": 26,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 6964,
+   "rim": [
+    497,
+    327
+   ],
+   "width": 245,
+   "source": "hand",
+   "file": "t006964.0.jpg",
+   "width_as_labelled": 245,
+   "convention": "outer extent, as labelled"
+  },
+  {
+   "t": 6967,
+   "rim": [
+    498,
+    359
+   ],
+   "width": 295,
+   "source": "hand",
+   "file": "t006967.0.jpg",
+   "width_as_labelled": 295,
+   "convention": "outer extent, as labelled"
+  },
+  {
+   "t": 6970,
+   "rim": [
+    515,
+    351
+   ],
+   "width": 237,
+   "source": "hand",
+   "file": "t006970.0.jpg",
+   "width_as_labelled": 237,
+   "convention": "outer extent, as labelled"
+  },
+  {
+   "t": 7028,
+   "rim": [
+    1058,
+    195
+   ],
+   "width": 51,
+   "source": "hand",
+   "file": "t007028.0.jpg",
+   "width_as_labelled": 34,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 7093,
+   "rim": [
+    1042,
+    39
+   ],
+   "width": 156,
+   "source": "hand",
+   "file": "t007093.0.jpg",
+   "width_as_labelled": 156,
+   "convention": "outer extent, as labelled"
+  },
+  {
+   "t": 7145,
+   "rim": [
+    1152,
+    507
+   ],
+   "width": 148,
+   "source": "hand",
+   "file": "t007145.0.jpg",
+   "width_as_labelled": 99,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 7273,
+   "rim": [
+    1080,
+    190
+   ],
+   "width": 56,
+   "source": "hand",
+   "file": "t007273.0.jpg",
+   "width_as_labelled": 37,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 7518,
+   "rim": [
+    284,
+    131
+   ],
+   "width": 32,
+   "source": "hand",
+   "file": "t007518.0.jpg",
+   "width_as_labelled": 21,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 7529,
+   "rim": [
+    984,
+    251
+   ],
+   "width": 68,
+   "source": "hand",
+   "file": "t007529.0.jpg",
+   "width_as_labelled": 45,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 7532,
+   "rim": [
+    1027,
+    237
+   ],
+   "width": 58,
+   "source": "hand",
+   "file": "t007532.0.jpg",
+   "width_as_labelled": 39,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 7536,
+   "rim": [
+    883,
+    268
+   ],
+   "width": 44,
+   "source": "hand",
+   "file": "t007536.0.jpg",
+   "width_as_labelled": 29,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 7540,
+   "rim": [
+    852,
+    269
+   ],
+   "width": 50,
+   "source": "hand",
+   "file": "t007540.0.jpg",
+   "width_as_labelled": 33,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 7546,
+   "rim": [
+    905,
+    224
+   ],
+   "width": 38,
+   "source": "hand",
+   "file": "t007546.0.jpg",
+   "width_as_labelled": 25,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 7555,
+   "rim": [
+    985,
+    178
+   ],
+   "width": 75,
+   "source": "hand",
+   "file": "t007555.0.jpg",
+   "width_as_labelled": 50,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 7562,
+   "rim": [
+    935,
+    249
+   ],
+   "width": 76,
+   "source": "hand",
+   "file": "t007562.0.jpg",
+   "width_as_labelled": 51,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 7565,
+   "rim": [
+    954,
+    224
+   ],
+   "width": 74,
+   "source": "hand",
+   "file": "t007565.0.jpg",
+   "width_as_labelled": 49,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 7604,
+   "rim": [
+    780,
+    284
+   ],
+   "width": 33,
+   "source": "hand",
+   "file": "t007604.0.jpg",
+   "width_as_labelled": 22,
+   "convention": "outer extent, corrected x1.5"
+  },
+  {
+   "t": 685,
+   "rim": null,
+   "width": 0,
+   "file": "t000685.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 696,
+   "rim": null,
+   "width": 0,
+   "file": "t000696.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 701,
+   "rim": null,
+   "width": 0,
+   "file": "t000701.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 838,
+   "rim": null,
+   "width": 0,
+   "file": "t000838.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 853,
+   "rim": null,
+   "width": 0,
+   "file": "t000853.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 869,
+   "rim": null,
+   "width": 0,
+   "file": "t000869.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 872,
+   "rim": null,
+   "width": 0,
+   "file": "t000872.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 875,
+   "rim": null,
+   "width": 0,
+   "file": "t000875.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 910,
+   "rim": null,
+   "width": 0,
+   "file": "t000910.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 913,
+   "rim": null,
+   "width": 0,
+   "file": "t000913.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 924,
+   "rim": null,
+   "width": 0,
+   "file": "t000924.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 951,
+   "rim": null,
+   "width": 0,
+   "file": "t000951.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 971,
+   "rim": null,
+   "width": 0,
+   "file": "t000971.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 975,
+   "rim": null,
+   "width": 0,
+   "file": "t000975.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 978,
+   "rim": null,
+   "width": 0,
+   "file": "t000978.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 981,
+   "rim": null,
+   "width": 0,
+   "file": "t000981.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 1011,
+   "rim": null,
+   "width": 0,
+   "file": "t001011.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 1038,
+   "rim": null,
+   "width": 0,
+   "file": "t001038.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 1051,
+   "rim": null,
+   "width": 0,
+   "file": "t001051.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 1074,
+   "rim": null,
+   "width": 0,
+   "file": "t001074.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 1090,
+   "rim": null,
+   "width": 0,
+   "file": "t001090.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 1106,
+   "rim": null,
+   "width": 0,
+   "file": "t001106.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 1114,
+   "rim": null,
+   "width": 0,
+   "file": "t001114.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 1122,
+   "rim": null,
+   "width": 0,
+   "file": "t001122.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 1161,
+   "rim": null,
+   "width": 0,
+   "file": "t001161.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 1194,
+   "rim": null,
+   "width": 0,
+   "file": "t001194.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 1245,
+   "rim": null,
+   "width": 0,
+   "file": "t001245.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 1305,
+   "rim": null,
+   "width": 0,
+   "file": "t001305.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 1559,
+   "rim": null,
+   "width": 0,
+   "file": "t001559.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 1605,
+   "rim": null,
+   "width": 0,
+   "file": "t001605.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 1638,
+   "rim": null,
+   "width": 0,
+   "file": "t001638.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 1669,
+   "rim": null,
+   "width": 0,
+   "file": "t001669.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 1721,
+   "rim": null,
+   "width": 0,
+   "file": "t001721.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 1742,
+   "rim": null,
+   "width": 0,
+   "file": "t001742.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 1745,
+   "rim": null,
+   "width": 0,
+   "file": "t001745.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 1749,
+   "rim": null,
+   "width": 0,
+   "file": "t001749.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 1788,
+   "rim": null,
+   "width": 0,
+   "file": "t001788.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 1791,
+   "rim": null,
+   "width": 0,
+   "file": "t001791.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 1794,
+   "rim": null,
+   "width": 0,
+   "file": "t001794.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 1848,
+   "rim": null,
+   "width": 0,
+   "file": "t001848.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 1851,
+   "rim": null,
+   "width": 0,
+   "file": "t001851.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 1866,
+   "rim": null,
+   "width": 0,
+   "file": "t001866.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 1906,
+   "rim": null,
+   "width": 0,
+   "file": "t001906.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 1937,
+   "rim": null,
+   "width": 0,
+   "file": "t001937.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 1994,
+   "rim": null,
+   "width": 0,
+   "file": "t001994.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 2153,
+   "rim": null,
+   "width": 0,
+   "file": "t002153.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 2176,
+   "rim": null,
+   "width": 0,
+   "file": "t002176.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 2210,
+   "rim": null,
+   "width": 0,
+   "file": "t002210.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 2213,
+   "rim": null,
+   "width": 0,
+   "file": "t002213.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 2245,
+   "rim": null,
+   "width": 0,
+   "file": "t002245.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 2265,
+   "rim": null,
+   "width": 0,
+   "file": "t002265.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 2313,
+   "rim": null,
+   "width": 0,
+   "file": "t002313.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 2320,
+   "rim": null,
+   "width": 0,
+   "file": "t002320.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 2323,
+   "rim": null,
+   "width": 0,
+   "file": "t002323.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 2372,
+   "rim": null,
+   "width": 0,
+   "file": "t002372.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 2375,
+   "rim": null,
+   "width": 0,
+   "file": "t002375.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 2383,
+   "rim": null,
+   "width": 0,
+   "file": "t002383.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 2430,
+   "rim": null,
+   "width": 0,
+   "file": "t002430.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 2477,
+   "rim": null,
+   "width": 0,
+   "file": "t002477.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 2495,
+   "rim": null,
+   "width": 0,
+   "file": "t002495.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 2498,
+   "rim": null,
+   "width": 0,
+   "file": "t002498.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 2521,
+   "rim": null,
+   "width": 0,
+   "file": "t002521.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 2726,
+   "rim": null,
+   "width": 0,
+   "file": "t002726.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 2729,
+   "rim": null,
+   "width": 0,
+   "file": "t002729.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 2768,
+   "rim": null,
+   "width": 0,
+   "file": "t002768.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 2877,
+   "rim": null,
+   "width": 0,
+   "file": "t002877.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 2900,
+   "rim": null,
+   "width": 0,
+   "file": "t002900.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 2986,
+   "rim": null,
+   "width": 0,
+   "file": "t002986.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 2990,
+   "rim": null,
+   "width": 0,
+   "file": "t002990.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 2995,
+   "rim": null,
+   "width": 0,
+   "file": "t002995.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 3081,
+   "rim": null,
+   "width": 0,
+   "file": "t003081.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 3084,
+   "rim": null,
+   "width": 0,
+   "file": "t003084.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 3255,
+   "rim": null,
+   "width": 0,
+   "file": "t003255.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 3258,
+   "rim": null,
+   "width": 0,
+   "file": "t003258.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 3274,
+   "rim": null,
+   "width": 0,
+   "file": "t003274.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 3326,
+   "rim": null,
+   "width": 0,
+   "file": "t003326.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 3360,
+   "rim": null,
+   "width": 0,
+   "file": "t003360.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 3373,
+   "rim": null,
+   "width": 0,
+   "file": "t003373.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 3400,
+   "rim": null,
+   "width": 0,
+   "file": "t003400.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 3403,
+   "rim": null,
+   "width": 0,
+   "file": "t003403.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 3418,
+   "rim": null,
+   "width": 0,
+   "file": "t003418.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 3479,
+   "rim": null,
+   "width": 0,
+   "file": "t003479.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 3513,
+   "rim": null,
+   "width": 0,
+   "file": "t003513.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 3599,
+   "rim": null,
+   "width": 0,
+   "file": "t003599.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 3602,
+   "rim": null,
+   "width": 0,
+   "file": "t003602.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 3605,
+   "rim": null,
+   "width": 0,
+   "file": "t003605.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 3670,
+   "rim": null,
+   "width": 0,
+   "file": "t003670.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 3674,
+   "rim": null,
+   "width": 0,
+   "file": "t003674.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 3742,
+   "rim": null,
+   "width": 0,
+   "file": "t003742.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 3841,
+   "rim": null,
+   "width": 0,
+   "file": "t003841.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 3867,
+   "rim": null,
+   "width": 0,
+   "file": "t003867.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 3870,
+   "rim": null,
+   "width": 0,
+   "file": "t003870.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 3898,
+   "rim": null,
+   "width": 0,
+   "file": "t003898.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 3929,
+   "rim": null,
+   "width": 0,
+   "file": "t003929.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 3946,
+   "rim": null,
+   "width": 0,
+   "file": "t003946.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 3952,
+   "rim": null,
+   "width": 0,
+   "file": "t003952.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 3962,
+   "rim": null,
+   "width": 0,
+   "file": "t003962.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 3994,
+   "rim": null,
+   "width": 0,
+   "file": "t003994.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 4013,
+   "rim": null,
+   "width": 0,
+   "file": "t004013.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 4031,
+   "rim": null,
+   "width": 0,
+   "file": "t004031.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 4034,
+   "rim": null,
+   "width": 0,
+   "file": "t004034.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 4037,
+   "rim": null,
+   "width": 0,
+   "file": "t004037.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 4086,
+   "rim": null,
+   "width": 0,
+   "file": "t004086.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 4150,
+   "rim": null,
+   "width": 0,
+   "file": "t004150.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 4164,
+   "rim": null,
+   "width": 0,
+   "file": "t004164.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 4176,
+   "rim": null,
+   "width": 0,
+   "file": "t004176.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 4271,
+   "rim": null,
+   "width": 0,
+   "file": "t004271.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 4274,
+   "rim": null,
+   "width": 0,
+   "file": "t004274.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 4280,
+   "rim": null,
+   "width": 0,
+   "file": "t004280.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 4283,
+   "rim": null,
+   "width": 0,
+   "file": "t004283.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 4380,
+   "rim": null,
+   "width": 0,
+   "file": "t004380.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 4398,
+   "rim": null,
+   "width": 0,
+   "file": "t004398.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 4426,
+   "rim": null,
+   "width": 0,
+   "file": "t004426.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 4481,
+   "rim": null,
+   "width": 0,
+   "file": "t004481.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 4524,
+   "rim": null,
+   "width": 0,
+   "file": "t004524.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 4540,
+   "rim": null,
+   "width": 0,
+   "file": "t004540.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 4601,
+   "rim": null,
+   "width": 0,
+   "file": "t004601.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 4689,
+   "rim": null,
+   "width": 0,
+   "file": "t004689.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 4705,
+   "rim": null,
+   "width": 0,
+   "file": "t004705.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 4708,
+   "rim": null,
+   "width": 0,
+   "file": "t004708.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 4731,
+   "rim": null,
+   "width": 0,
+   "file": "t004731.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 4744,
+   "rim": null,
+   "width": 0,
+   "file": "t004744.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 4754,
+   "rim": null,
+   "width": 0,
+   "file": "t004754.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 4761,
+   "rim": null,
+   "width": 0,
+   "file": "t004761.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 4774,
+   "rim": null,
+   "width": 0,
+   "file": "t004774.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 4801,
+   "rim": null,
+   "width": 0,
+   "file": "t004801.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 4818,
+   "rim": null,
+   "width": 0,
+   "file": "t004818.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 4821,
+   "rim": null,
+   "width": 0,
+   "file": "t004821.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 4839,
+   "rim": null,
+   "width": 0,
+   "file": "t004839.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 4897,
+   "rim": null,
+   "width": 0,
+   "file": "t004897.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 4958,
+   "rim": null,
+   "width": 0,
+   "file": "t004958.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 4980,
+   "rim": null,
+   "width": 0,
+   "file": "t004980.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 4996,
+   "rim": null,
+   "width": 0,
+   "file": "t004996.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 5023,
+   "rim": null,
+   "width": 0,
+   "file": "t005023.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 5153,
+   "rim": null,
+   "width": 0,
+   "file": "t005153.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 5194,
+   "rim": null,
+   "width": 0,
+   "file": "t005194.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 5208,
+   "rim": null,
+   "width": 0,
+   "file": "t005208.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 5229,
+   "rim": null,
+   "width": 0,
+   "file": "t005229.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 5300,
+   "rim": null,
+   "width": 0,
+   "file": "t005300.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 5321,
+   "rim": null,
+   "width": 0,
+   "file": "t005321.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 5324,
+   "rim": null,
+   "width": 0,
+   "file": "t005324.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 5373,
+   "rim": null,
+   "width": 0,
+   "file": "t005373.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 5381,
+   "rim": null,
+   "width": 0,
+   "file": "t005381.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 5384,
+   "rim": null,
+   "width": 0,
+   "file": "t005384.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 5458,
+   "rim": null,
+   "width": 0,
+   "file": "t005458.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 5468,
+   "rim": null,
+   "width": 0,
+   "file": "t005468.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 5473,
+   "rim": null,
+   "width": 0,
+   "file": "t005473.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 5523,
+   "rim": null,
+   "width": 0,
+   "file": "t005523.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 5528,
+   "rim": null,
+   "width": 0,
+   "file": "t005528.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 5531,
+   "rim": null,
+   "width": 0,
+   "file": "t005531.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 5575,
+   "rim": null,
+   "width": 0,
+   "file": "t005575.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 5581,
+   "rim": null,
+   "width": 0,
+   "file": "t005581.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 5584,
+   "rim": null,
+   "width": 0,
+   "file": "t005584.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 5587,
+   "rim": null,
+   "width": 0,
+   "file": "t005587.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 5593,
+   "rim": null,
+   "width": 0,
+   "file": "t005593.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 5611,
+   "rim": null,
+   "width": 0,
+   "file": "t005611.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 5614,
+   "rim": null,
+   "width": 0,
+   "file": "t005614.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 5617,
+   "rim": null,
+   "width": 0,
+   "file": "t005617.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 5620,
+   "rim": null,
+   "width": 0,
+   "file": "t005620.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 5633,
+   "rim": null,
+   "width": 0,
+   "file": "t005633.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 5638,
+   "rim": null,
+   "width": 0,
+   "file": "t005638.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 5641,
+   "rim": null,
+   "width": 0,
+   "file": "t005641.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 5644,
+   "rim": null,
+   "width": 0,
+   "file": "t005644.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 5648,
+   "rim": null,
+   "width": 0,
+   "file": "t005648.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 5666,
+   "rim": null,
+   "width": 0,
+   "file": "t005666.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 5717,
+   "rim": null,
+   "width": 0,
+   "file": "t005717.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 5722,
+   "rim": null,
+   "width": 0,
+   "file": "t005722.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 5806,
+   "rim": null,
+   "width": 0,
+   "file": "t005806.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 5810,
+   "rim": null,
+   "width": 0,
+   "file": "t005810.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 5813,
+   "rim": null,
+   "width": 0,
+   "file": "t005813.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 5901,
+   "rim": null,
+   "width": 0,
+   "file": "t005901.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 6056,
+   "rim": null,
+   "width": 0,
+   "file": "t006056.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 6060,
+   "rim": null,
+   "width": 0,
+   "file": "t006060.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 6165,
+   "rim": null,
+   "width": 0,
+   "file": "t006165.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 6247,
+   "rim": null,
+   "width": 0,
+   "file": "t006247.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 6263,
+   "rim": null,
+   "width": 0,
+   "file": "t006263.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 6271,
+   "rim": null,
+   "width": 0,
+   "file": "t006271.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 6283,
+   "rim": null,
+   "width": 0,
+   "file": "t006283.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 6287,
+   "rim": null,
+   "width": 0,
+   "file": "t006287.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 6303,
+   "rim": null,
+   "width": 0,
+   "file": "t006303.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 6321,
+   "rim": null,
+   "width": 0,
+   "file": "t006321.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 6416,
+   "rim": null,
+   "width": 0,
+   "file": "t006416.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 6439,
+   "rim": null,
+   "width": 0,
+   "file": "t006439.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 6442,
+   "rim": null,
+   "width": 0,
+   "file": "t006442.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 6465,
+   "rim": null,
+   "width": 0,
+   "file": "t006465.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 6505,
+   "rim": null,
+   "width": 0,
+   "file": "t006505.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 6511,
+   "rim": null,
+   "width": 0,
+   "file": "t006511.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 6631,
+   "rim": null,
+   "width": 0,
+   "file": "t006631.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 6649,
+   "rim": null,
+   "width": 0,
+   "file": "t006649.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 6700,
+   "rim": null,
+   "width": 0,
+   "file": "t006700.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 6703,
+   "rim": null,
+   "width": 0,
+   "file": "t006703.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 6711,
+   "rim": null,
+   "width": 0,
+   "file": "t006711.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 6714,
+   "rim": null,
+   "width": 0,
+   "file": "t006714.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 6730,
+   "rim": null,
+   "width": 0,
+   "file": "t006730.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 6733,
+   "rim": null,
+   "width": 0,
+   "file": "t006733.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 6736,
+   "rim": null,
+   "width": 0,
+   "file": "t006736.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 6775,
+   "rim": null,
+   "width": 0,
+   "file": "t006775.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 6834,
+   "rim": null,
+   "width": 0,
+   "file": "t006834.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 6853,
+   "rim": null,
+   "width": 0,
+   "file": "t006853.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 6856,
+   "rim": null,
+   "width": 0,
+   "file": "t006856.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 6865,
+   "rim": null,
+   "width": 0,
+   "file": "t006865.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 6876,
+   "rim": null,
+   "width": 0,
+   "file": "t006876.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 6883,
+   "rim": null,
+   "width": 0,
+   "file": "t006883.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 6887,
+   "rim": null,
+   "width": 0,
+   "file": "t006887.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 6926,
+   "rim": null,
+   "width": 0,
+   "file": "t006926.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 6945,
+   "rim": null,
+   "width": 0,
+   "file": "t006945.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 6982,
+   "rim": null,
+   "width": 0,
+   "file": "t006982.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 7018,
+   "rim": null,
+   "width": 0,
+   "file": "t007018.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 7032,
+   "rim": null,
+   "width": 0,
+   "file": "t007032.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 7106,
+   "rim": null,
+   "width": 0,
+   "file": "t007106.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 7171,
+   "rim": null,
+   "width": 0,
+   "file": "t007171.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 7181,
+   "rim": null,
+   "width": 0,
+   "file": "t007181.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 7184,
+   "rim": null,
+   "width": 0,
+   "file": "t007184.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 7193,
+   "rim": null,
+   "width": 0,
+   "file": "t007193.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 7229,
+   "rim": null,
+   "width": 0,
+   "file": "t007229.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 7269,
+   "rim": null,
+   "width": 0,
+   "file": "t007269.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 7280,
+   "rim": null,
+   "width": 0,
+   "file": "t007280.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 7303,
+   "rim": null,
+   "width": 0,
+   "file": "t007303.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 7328,
+   "rim": null,
+   "width": 0,
+   "file": "t007328.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 7331,
+   "rim": null,
+   "width": 0,
+   "file": "t007331.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 7353,
+   "rim": null,
+   "width": 0,
+   "file": "t007353.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 7410,
+   "rim": null,
+   "width": 0,
+   "file": "t007410.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 7428,
+   "rim": null,
+   "width": 0,
+   "file": "t007428.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 7431,
+   "rim": null,
+   "width": 0,
+   "file": "t007431.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 7463,
+   "rim": null,
+   "width": 0,
+   "file": "t007463.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 7477,
+   "rim": null,
+   "width": 0,
+   "file": "t007477.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 7480,
+   "rim": null,
+   "width": 0,
+   "file": "t007480.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 7523,
+   "rim": null,
+   "width": 0,
+   "file": "t007523.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 7543,
+   "rim": null,
+   "width": 0,
+   "file": "t007543.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 7552,
+   "rim": null,
+   "width": 0,
+   "file": "t007552.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 7558,
+   "rim": null,
+   "width": 0,
+   "file": "t007558.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 7574,
+   "rim": null,
+   "width": 0,
+   "file": "t007574.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 7577,
+   "rim": null,
+   "width": 0,
+   "file": "t007577.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 7583,
+   "rim": null,
+   "width": 0,
+   "file": "t007583.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 7586,
+   "rim": null,
+   "width": 0,
+   "file": "t007586.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 7608,
+   "rim": null,
+   "width": 0,
+   "file": "t007608.0.jpg",
+   "source": "hand"
+  },
+  {
+   "t": 7611,
+   "rim": null,
+   "width": 0,
+   "file": "t007611.0.jpg",
+   "source": "hand"
+  }
+ ]
+}
