@@ -6059,3 +6059,67 @@ picture is something to mistake for the answer.
     object   located   accuracy   95% CI          gate
     rim       55/59     0.932   0.838-0.973      0.95    in game
     rim       55/61     0.902   0.802-0.954      0.95    whole video
+
+## Round 88 - the thirteenth ball approach: dribbles harvested, and no gain
+
+Every ball label this project owns is a ball IN FLIGHT, because
+`find_ball_tracks.py` requires a motion-compensated 40 px/frame and says why:
+below that a running player's shoulder traces just as smooth a path. So the
+detector had never seen a ball at rest in someone's hands, while the evaluation
+samples the game uniformly, where most balls are held or dribbled -- the truth
+set's own notes say "held by the dribbler", "loose-ball scramble".
+
+`harvest_ball_tracks.py` attacks that with the one signature the missing
+population has and the poisoning population does not: A DRIBBLED BALL BOUNCES.
+With the camera removed by ORB, a dribble is a periodic vertical reversal of
+20-40 px at 1-3 Hz. A head does not do that. 95 labels over a whole game.
+
+    on 13 hand-located balls     ceiling   delivered   validation mAP50
+    ball_clean                    7/13     4/13 0.308       0.539
+    ball_dribble (+95 dribbles)   6/13     4/13 0.308       0.580
+
+Validation mAP rose and the gate number did not move -- and the CEILING FELL.
+The frame it lost is 1055.6 s, whose truth note reads "held by the dribbler",
+which is precisely the population the 95 labels were harvested to teach.
+
+Reverted to ball_clean, which delivers the same and proposes more.
+
+Two things the harvest did establish, and both are kept:
+
+- The flight branch is OFF. It is mis-calibrated at a 0.1 s step (40 px/frame
+  is 400 px/s where the flight miner meant 200), and the single flight chain it
+  accepted in a whole game was A COACH'S HEAD on a close-up sideline shot --
+  shallow depth, ORB cannot compensate the camera, so everything appears to
+  move fast at once and "fast and smooth" describes the whole picture. The
+  dribble rule is immune to that failure, because a compensation failure makes
+  everything drift together and drift is not a periodic reversal.
+- A sample sheet caught it. Six of eight dribble labels sit on a player's hands
+  with the ball; the flight one was the head.
+
+**Ledger, complete at thirteen:**
+
+     1  court-volume ray test         vacuous
+     2  motion as a filter            premise false; held balls are still
+     3  motion as a preference        picks a moving defender over a held ball
+     4  large inference + confidence  worse end to end
+     5  two-scale agreement           0 of 5
+     6  handler-box proximity         no change
+     7  learned patch ranker          true ball's mean rank 1.0 -> 2.0
+     8  retrained ball detector       3 of 10, unchanged (measured at 2x scale)
+     9  temporal gap-filling          ceiling 0.300 -> 0.500, delivered nothing
+    10  tiled inference               recall 6->7 of 10, top-1 still zero
+    11  orange colour prior           true balls are LESS orange than the false
+    12  192 px context ranker         val AP 0.313 vs 0.171, delivered 3/10
+    13  harvested dribbles            val mAP 0.539 -> 0.580, ceiling 7 -> 6
+
+The two things that DID move the ball were not ideas at all. They were a scale
+mismatch -- 640 px crops cut without resizing, evaluated at imgsz 2560 -- and a
+label leak, training frames 1.7 s from an evaluation frame. 0.300 to 0.308, one
+frame, on intervals that overlap almost completely.
+
+**Phase 2, as measured:**
+
+    object   located   accuracy   95% CI          gate
+    rim       55/59     0.932   0.838-0.973      0.95   in game
+    ball       4/13     0.308   0.127-0.576      0.95
+    ball ceiling with the best detector       0.538
