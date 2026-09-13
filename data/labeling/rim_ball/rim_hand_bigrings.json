@@ -1,5 +1,5 @@
 {
- "note": "Rims located by hand in data/labeling/rim_bigrings/label.html, two clicks per ring (left edge, right edge). Queue from mine_big_rims.py, which finds large orange flattened blobs by colour and shape and proposes them for a person -- it fires on hoardings and the scoreboard too, so every entry here was confirmed by eye against the frame. All 11 were re-rendered with the ellipse drawn and checked before this file was written.",
+ "note": "Rims located by hand in data/labeling/rim_bigrings/label.html, two clicks per ring (left edge, right edge). The queue comes from mine_big_rims.py, which finds large orange flattened blobs by colour and shape -- it fires on hoardings, the scoreboard and the centre-court logo too, so every entry here was confirmed by eye against its frame. Rings cut off by the frame edge were SKIPPED rather than extrapolated. Frames showing archival footage on an arena screen were skipped too.",
  "video": "data/raw_clips/fullgame.mp4",
  "frame_size": [
   1280,
@@ -115,6 +115,136 @@
    "width": 403,
    "source": "hand",
    "file": "t002010.0.jpg"
+  },
+  {
+   "t": 2571,
+   "rim": [
+    487,
+    446
+   ],
+   "width": 396,
+   "source": "hand",
+   "file": "t002571.0.jpg"
+  },
+  {
+   "t": 2575,
+   "rim": [
+    495,
+    452
+   ],
+   "width": 396,
+   "source": "hand",
+   "file": "t002575.0.jpg"
+  },
+  {
+   "t": 2579,
+   "rim": [
+    499,
+    454
+   ],
+   "width": 396,
+   "source": "hand",
+   "file": "t002579.0.jpg"
+  },
+  {
+   "t": 2707,
+   "rim": [
+    521,
+    394
+   ],
+   "width": 408,
+   "source": "hand",
+   "file": "t002707.0.jpg"
+  },
+  {
+   "t": 2892,
+   "rim": [
+    476,
+    105
+   ],
+   "width": 178,
+   "source": "hand",
+   "file": "t002892.0.jpg"
+  },
+  {
+   "t": 2945,
+   "rim": [
+    839,
+    267
+   ],
+   "width": 238,
+   "source": "hand",
+   "file": "t002945.0.jpg"
+  },
+  {
+   "t": 3756,
+   "rim": [
+    342,
+    182
+   ],
+   "width": 586,
+   "source": "hand",
+   "file": "t003756.0.jpg"
+  },
+  {
+   "t": 3760,
+   "rim": [
+    391,
+    222
+   ],
+   "width": 568,
+   "source": "hand",
+   "file": "t003760.0.jpg"
+  },
+  {
+   "t": 3852,
+   "rim": [
+    499,
+    377
+   ],
+   "width": 256,
+   "source": "hand",
+   "file": "t003852.0.jpg"
+  },
+  {
+   "t": 4242,
+   "rim": [
+    978,
+    561
+   ],
+   "width": 424,
+   "source": "hand",
+   "file": "t004242.0.jpg"
+  },
+  {
+   "t": 4246,
+   "rim": [
+    876,
+    281
+   ],
+   "width": 312,
+   "source": "hand",
+   "file": "t004246.0.jpg"
+  },
+  {
+   "t": 4385,
+   "rim": [
+    508,
+    371
+   ],
+   "width": 400,
+   "source": "hand",
+   "file": "t004385.0.jpg"
+  },
+  {
+   "t": 4389,
+   "rim": [
+    585,
+    332
+   ],
+   "width": 396,
+   "source": "hand",
+   "file": "t004389.0.jpg"
   }
  ],
  "queue": "outputs/rim_ball/big_rim_queue.json",
