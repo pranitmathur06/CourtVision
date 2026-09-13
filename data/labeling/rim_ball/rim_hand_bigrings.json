@@ -1,0 +1,122 @@
+{
+ "note": "Rims located by hand in data/labeling/rim_bigrings/label.html, two clicks per ring (left edge, right edge). Queue from mine_big_rims.py, which finds large orange flattened blobs by colour and shape and proposes them for a person -- it fires on hoardings and the scoreboard too, so every entry here was confirmed by eye against the frame. All 11 were re-rendered with the ellipse drawn and checked before this file was written.",
+ "video": "data/raw_clips/fullgame.mp4",
+ "frame_size": [
+  1280,
+  720
+ ],
+ "frames": [
+  {
+   "t": 877,
+   "rim": [
+    588,
+    82
+   ],
+   "width": 138,
+   "source": "hand",
+   "file": "t000877.0.jpg"
+  },
+  {
+   "t": 885,
+   "rim": [
+    980,
+    261
+   ],
+   "width": 552,
+   "source": "hand",
+   "file": "t000885.0.jpg"
+  },
+  {
+   "t": 889,
+   "rim": [
+    809,
+    280
+   ],
+   "width": 444,
+   "source": "hand",
+   "file": "t000889.0.jpg"
+  },
+  {
+   "t": 1176,
+   "rim": [
+    616,
+    374
+   ],
+   "width": 278,
+   "source": "hand",
+   "file": "t001176.0.jpg"
+  },
+  {
+   "t": 1386,
+   "rim": [
+    553,
+    270
+   ],
+   "width": 233,
+   "source": "hand",
+   "file": "t001386.0.jpg"
+  },
+  {
+   "t": 1919,
+   "rim": [
+    422,
+    422
+   ],
+   "width": 387,
+   "source": "hand",
+   "file": "t001919.0.jpg"
+  },
+  {
+   "t": 1923,
+   "rim": [
+    431,
+    426
+   ],
+   "width": 392,
+   "source": "hand",
+   "file": "t001923.0.jpg"
+  },
+  {
+   "t": 1927,
+   "rim": [
+    436,
+    433
+   ],
+   "width": 392,
+   "source": "hand",
+   "file": "t001927.0.jpg"
+  },
+  {
+   "t": 1931,
+   "rim": [
+    441,
+    438
+   ],
+   "width": 396,
+   "source": "hand",
+   "file": "t001931.0.jpg"
+  },
+  {
+   "t": 1935,
+   "rim": [
+    435,
+    440
+   ],
+   "width": 399,
+   "source": "hand",
+   "file": "t001935.0.jpg"
+  },
+  {
+   "t": 2010,
+   "rim": [
+    756,
+    323
+   ],
+   "width": 403,
+   "source": "hand",
+   "file": "t002010.0.jpg"
+  }
+ ],
+ "queue": "outputs/rim_ball/big_rim_queue.json",
+ "labeller": "claude"
+}
