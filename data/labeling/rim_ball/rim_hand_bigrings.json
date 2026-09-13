@@ -1,10 +1,14 @@
 {
- "note": "Rims located by hand in data/labeling/rim_bigrings/label.html, two clicks per ring (left edge, right edge). The queue comes from mine_big_rims.py, which finds large orange flattened blobs by colour and shape -- it fires on hoardings, the scoreboard and the centre-court logo too, so every entry here was confirmed by eye against its frame. Rings cut off by the frame edge were SKIPPED rather than extrapolated. Frames showing archival footage on an arena screen were skipped too.",
+ "note": "Rims located by hand in data/labeling/rim_bigrings/label.html, two clicks per ring (its left edge, then its right). The queue comes from mine_big_rims.py, which finds large orange flattened blobs by colour and shape -- it fires on the scoreboard, red hoardings and the centre-court logo too, so every entry here was confirmed by eye against its frame.\n\nALL 38 were then re-rendered with the ellipse drawn on the frame and checked. One was wrong -- 5430 s came back 788 px wide, spanning most of the picture rather than a ring, because both clicks landed badly on a ring truncated by the left frame edge -- and it is dropped here. That check is not optional: a label read back from the tool that produced it proves nothing.",
+ "conventions": "A ring cut off by the frame edge is labelled at its VISIBLE extent, with the click on the frame edge where the ring leaves it. Detector boxes are clipped to the image anyway, so the visible extent is the honest target and not an extrapolation. Frames showing archival footage on an arena screen were skipped rather than labelled.",
  "video": "data/raw_clips/fullgame.mp4",
  "frame_size": [
   1280,
   720
  ],
+ "queue": "outputs/rim_ball/big_rim_queue.json",
+ "triaged": "180 of 192 queued frames; 138 confirmed to hold no rim at all",
+ "labeller": "claude",
  "frames": [
   {
    "t": 877,
@@ -245,8 +249,136 @@
    "width": 396,
    "source": "hand",
    "file": "t004389.0.jpg"
+  },
+  {
+   "t": 4606,
+   "rim": [
+    221,
+    129
+   ],
+   "width": 431,
+   "source": "hand",
+   "file": "t004606.0.jpg"
+  },
+  {
+   "t": 4610,
+   "rim": [
+    470,
+    458
+   ],
+   "width": 393,
+   "source": "hand",
+   "file": "t004610.0.jpg"
+  },
+  {
+   "t": 5434,
+   "rim": [
+    424,
+    150
+   ],
+   "width": 415,
+   "source": "hand",
+   "file": "t005434.0.jpg"
+  },
+  {
+   "t": 5438,
+   "rim": [
+    585,
+    246
+   ],
+   "width": 411,
+   "source": "hand",
+   "file": "t005438.0.jpg"
+  },
+  {
+   "t": 5688,
+   "rim": [
+    822,
+    528
+   ],
+   "width": 420,
+   "source": "hand",
+   "file": "t005688.0.jpg"
+  },
+  {
+   "t": 5692,
+   "rim": [
+    866,
+    521
+   ],
+   "width": 415,
+   "source": "hand",
+   "file": "t005692.0.jpg"
+  },
+  {
+   "t": 5871,
+   "rim": [
+    940,
+    68
+   ],
+   "width": 355,
+   "source": "hand",
+   "file": "t005871.0.jpg"
+  },
+  {
+   "t": 5927,
+   "rim": [
+    950,
+    74
+   ],
+   "width": 358,
+   "source": "hand",
+   "file": "t005927.0.jpg"
+  },
+  {
+   "t": 6028,
+   "rim": [
+    387,
+    371
+   ],
+   "width": 247,
+   "source": "hand",
+   "file": "t006028.0.jpg"
+  },
+  {
+   "t": 6336,
+   "rim": [
+    759,
+    219
+   ],
+   "width": 172,
+   "source": "hand",
+   "file": "t006336.0.jpg"
+  },
+  {
+   "t": 6961,
+   "rim": [
+    505,
+    321
+   ],
+   "width": 393,
+   "source": "hand",
+   "file": "t006961.0.jpg"
+  },
+  {
+   "t": 6965,
+   "rim": [
+    509,
+    326
+   ],
+   "width": 393,
+   "source": "hand",
+   "file": "t006965.0.jpg"
+  },
+  {
+   "t": 6969,
+   "rim": [
+    516,
+    330
+   ],
+   "width": 393,
+   "source": "hand",
+   "file": "t006969.0.jpg"
   }
- ],
- "queue": "outputs/rim_ball/big_rim_queue.json",
- "labeller": "claude"
+ ]
 }
