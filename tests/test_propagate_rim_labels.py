@@ -87,24 +87,48 @@ def test_nothing_is_nearby_when_no_evaluation_file_was_given():
     assert nearby(123.0, np.array([])) == []
 
 
-def test_a_frame_registering_to_an_evaluation_frame_shares_its_shot():
+def test_a_frame_registering_seconds_away_shares_its_take():
     rng = np.random.default_rng(0)
     picture = rng.integers(0, 255, (240, 320), dtype=np.uint8)
-    # The same picture shifted a little: one broadcast take, two instants.
+    # The same picture shifted a little, two seconds apart: one take.
     shifted = np.roll(picture, 7, axis=1)
-    assert shares_a_shot(shifted, [picture])
+    assert shares_a_shot(shifted, [(picture, 2.0)])
 
 
-def test_an_unrelated_frame_does_not_share_a_shot():
+def test_the_same_fixed_camera_much_later_is_a_different_take():
+    # The heart of the correction. These cameras are bolted to the building,
+    # so registration alone would exclude the whole game's worth of them.
+    rng = np.random.default_rng(0)
+    picture = rng.integers(0, 255, (240, 320), dtype=np.uint8)
+    shifted = np.roll(picture, 7, axis=1)
+    assert not shares_a_shot(shifted, [(picture, 900.0)])
+
+
+def test_an_unrelated_frame_does_not_share_a_take_even_seconds_away():
     rng = np.random.default_rng(0)
     assert not shares_a_shot(
         rng.integers(0, 255, (240, 320), dtype=np.uint8),
-        [rng.integers(0, 255, (240, 320), dtype=np.uint8)])
+        [(rng.integers(0, 255, (240, 320), dtype=np.uint8), 1.0)])
+
+
+def test_a_bare_frame_with_no_time_keeps_the_stricter_behaviour():
+    rng = np.random.default_rng(0)
+    picture = rng.integers(0, 255, (240, 320), dtype=np.uint8)
+    assert shares_a_shot(np.roll(picture, 7, axis=1), [picture])
 
 
 def test_nothing_to_compare_against_shares_nothing():
     rng = np.random.default_rng(0)
     assert not shares_a_shot(rng.integers(0, 255, (240, 320), dtype=np.uint8), [])
+
+
+def test_a_take_boundary_is_where_it_was_declared():
+    from propagate_rim_labels import SAME_TAKE_S
+    rng = np.random.default_rng(0)
+    picture = rng.integers(0, 255, (240, 320), dtype=np.uint8)
+    shifted = np.roll(picture, 7, axis=1)
+    assert shares_a_shot(shifted, [(picture, SAME_TAKE_S - 0.1)])
+    assert not shares_a_shot(shifted, [(picture, SAME_TAKE_S + 0.1)])
 
 
 def test_inliers_clustered_on_the_ring_are_support():

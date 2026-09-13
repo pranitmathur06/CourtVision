@@ -50,12 +50,29 @@ WHAT STOPS IT LABELLING RUBBISH, all declared here before it was run:
   repeating, so the rule was replaced rather than relaxed.
 
   What the hold-out is actually for is that the model must not be trained on
-  a picture of an evaluation frame. Two frames 30 s apart share no camera, no
-  possession and no player position; two frames in the same continuous SHOT
-  are the same picture. So the criterion is the same shot, and ORB states it
-  exactly: a candidate is excluded when a nearby evaluation frame registers
-  to it. That is tighter than 30 s where it matters and admits the rest of
-  the game, which is the point.
+  a picture of an evaluation frame. Two frames in the same continuous SHOT
+  are the same picture; two frames 30 s apart are not.
+
+  ORB registration alone turned out to be the wrong test, and the reason is
+  worth stating because it was found by looking at what it excluded. These
+  alternate cameras are BOLTED TO THE BUILDING, so two frames from one of
+  them register to each other across the whole night -- different possession,
+  different players, different ball, same static structure. Registration
+  therefore means "same camera", not "same moment", and it removed every
+  alternate-camera frame in the game whenever an evaluation frame came from
+  that camera.
+
+  That is also INCONSISTENT with how the main camera is treated. The 8,256
+  scale crops come from the same main camera as the main-camera evaluation
+  frames and are not held out for it. Holding the alternate cameras to a
+  stricter standard than the main one is not caution, it is an error that
+  happens to look like caution.
+
+  So the criterion is the same TAKE: ORB registers AND the two frames are
+  within SAME_TAKE_S of each other. A broadcast take runs a few seconds to a
+  dozen; nothing in this video runs twenty. Both halves are required, so a
+  frame from the same fixed camera a quarter of an hour later is admitted
+  while the seconds either side of an evaluation frame are not.
 - A contact sheet is rendered and looked at BEFORE anything trains on this.
   The shot-chart ball labeller produced pure garbage that only a rendered
   sample caught, and no dataset in this repository is trusted unseen again.
@@ -90,9 +107,12 @@ MIN_SQUARENESS = 0.45
 MIN_LOCAL_INLIERS = 6
 LOCAL_RADIUS_WIDTHS = 3.0
 EDGE_MARGIN_PX = 4
-#: How far to look for an evaluation frame that might share a shot with a
+#: How far to look for an evaluation frame that might share a take with a
 #: candidate. Beyond this no broadcast take survives, so no ORB test is needed.
 HOLD_OUT_REACH_S = 45.0
+#: ...and a take is contiguous in time as well as in appearance. Registration
+#: alone means "same fixed camera", which is not the same thing at all.
+SAME_TAKE_S = 20.0
 
 
 def fit_with_report(grey_source, grey_target, min_inliers=MIN_INLIERS,
@@ -234,16 +254,23 @@ def nearby(t, held_out, reach=HOLD_OUT_REACH_S):
 
 
 def shares_a_shot(grey, others, min_inliers=MIN_INLIERS):
-    """Does any of `others` register to `grey`, i.e. is it the same take?
+    """Does any of `others` share a continuous take with `grey`?
 
-    `others` are already-loaded greyscale evaluation frames. Registration is
-    the operational definition of "the same picture from the same camera",
-    which is the thing a training set must not contain a copy of.
+    `others` are (greyscale frame, seconds apart) pairs. BOTH conditions are
+    required: the frames must register, and they must be within SAME_TAKE_S.
+    Registration alone means "the same fixed camera", which these arenas
+    satisfy across the whole night and which is not what a hold-out is for.
+
+    A bare frame with no time is treated as coincident, so callers that only
+    have pictures keep the old, stricter behaviour.
     """
     for other in others:
         if other is None:
             continue
-        if fit_with_report(other, grey)[0] is not None:
+        frame, apart = other if isinstance(other, tuple) else (other, 0.0)
+        if frame is None or abs(apart) > SAME_TAKE_S:
+            continue
+        if fit_with_report(frame, grey)[0] is not None:
             return True
     return False
 
@@ -287,10 +314,10 @@ def main() -> int:
             continue
         # The evaluation frames this anchor's window could possibly touch,
         # loaded once so the shot test is a comparison and not a video seek.
-        watch = [grey_at(v)[1] for v in nearby(at, held_out,
-                                               HOLD_OUT_REACH_S + args.reach_s)]
-        watch = [g for g in watch if g is not None]
-        if shares_a_shot(grey_a, watch):
+        watch = [(grey_at(v)[1], v) for v in nearby(at, held_out,
+                                                    HOLD_OUT_REACH_S + args.reach_s)]
+        watch = [(g, v) for g, v in watch if g is not None]
+        if shares_a_shot(grey_a, [(g, v - at) for g, v in watch]):
             excluded_anchors += 1
             continue
         centre, width = anchor["rim"], float(anchor["width"])
@@ -303,7 +330,7 @@ def main() -> int:
             if grey_b is None:
                 continue
             tried += 1
-            if shares_a_shot(grey_b, watch):
+            if shares_a_shot(grey_b, [(g, v - t) for g, v in watch]):
                 excluded_frames += 1
                 continue
             hop, inliers, ratio, residual, support = fit_with_report(grey_a, grey_b)
@@ -337,7 +364,8 @@ def main() -> int:
     out.parent.mkdir(parents=True, exist_ok=True)
     json.dump({"video": args.video, "anchors": args.anchors,
                "min_inliers": MIN_INLIERS,
-               "held_out_by": "same-shot ORB registration to an evaluation frame",
+               "held_out_by": "same TAKE: ORB registration AND within "
+                              f"{SAME_TAKE_S} s of an evaluation frame",
                "frames": found}, open(out, "w"))
     if args.sample_dir and samples:
         sample_dir = Path(args.sample_dir)
