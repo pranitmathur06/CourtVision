@@ -6123,3 +6123,25 @@ frame, on intervals that overlap almost completely.
     rim       55/59     0.932   0.838-0.973      0.95   in game
     ball       4/13     0.308   0.127-0.576      0.95
     ball ceiling with the best detector       0.538
+
+### And the rim cannot be carried in from a neighbour either
+
+The obvious remaining move on the under-basket misses was inference-time
+propagation: the camera is bolted to the building, so if the rim is found
+anywhere in the same shot, ORB carries it to the scored frame. That is what
+`propagate_rim_labels.py` does for labels, and Round 63's rim gap-filling
+already does it across neighbours.
+
+Scanned +-6 s at 0.5 s steps around all three under-basket misses, asking both
+models for a rim at 0.25 and testing whether the frame that yields one is the
+SAME SHOT as the scored frame:
+
+    115 (2887 s)  no frame within +-6 s yields a rim at all
+    231 (5787 s)  seven frames do, at +3.0 to +6.0 s -- every one of them a
+                  DIFFERENT SHOT, 0 ORB inliers against the scored frame
+    35  (888 s)   one, at +5.5 s, also a different shot
+
+So there is nothing to carry. For the whole duration of these shots no model
+here finds a rim on any frame, which is a stronger statement than "it misses
+this frame" and it rules out the cheapest fix rather than leaving it as a
+maybe.
