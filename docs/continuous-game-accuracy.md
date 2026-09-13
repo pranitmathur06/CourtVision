@@ -6202,3 +6202,57 @@ ball_clean alone.
 between them is one thing: on five frames ball_clean scores the true ball 0.00
 even centred at conf 0.01. Verification can only re-order what the precise
 model can recognise. Every remaining point is the detector's.
+
+## Round 90 - mining close-up balls fails, and the ball's ceiling is below the gate
+
+Round 89 isolated the ball's remaining gap: on five frames `ball_clean` scores
+the true ball 0.00 even centred at conf 0.01, and two of them are extreme
+close-ups where the ball is over 100 px. The dataset builder says "CROPS ARE
+TAKEN WITHOUT RESIZING, which is the point", so the model has never seen a ball
+that size. Same pathology as the rim's close-up misses.
+
+The mine looked sound: the FOUR-CLASS detector finds those balls when the frame
+is DOWNSCALED, because shrinking a 110 px ball puts it in the 15-25 px band
+that detector knows. Run it small over the game, keep boxes over 42 px in
+original pixels, require two inference sizes to agree, and the labels should be
+sharp close-up balls rather than the blurry upscaled ones crop-and-zoom makes.
+
+**Every one of the first 24 samples was a face.** Bill Russell in a documentary
+still, the anthem singer, a hand holding a trophy. Two causes, one of them mine:
+the scan started at t=0 and its whole sample came from the pre-game montage,
+where there is no basketball; and downscaling is precisely the operation that
+removes what tells a head from a ball, so agreement across sizes corroborates
+nothing -- a head is a stable object and every size finds it.
+
+Restricted to the game span, with a head-position filter that refused 835
+candidates, the second run is better and still unusable: of 24 sampled, 2 to 4
+are real balls. The false population has simply moved -- from faces to RED
+ADVERTISING BOARDS and the rim assembly, the same red horizontal objects that
+put a State Farm hoarding into the rim model in Round 85. A recurring-position
+filter removes only 24% of them, because the camera pans and an advert's image
+position moves with it.
+
+### The arithmetic that ends this line of work
+
+Of the seven frames the ball detector cannot see, only TWO are close-ups. The
+rest are a loose-ball scramble, a ball held between two players' legs, a ball
+in flight against a dark arena, and a ball on the floor among feet. So even a
+perfect close-up fix moves the ball from 5/13 to 7/13:
+
+    ball today                  5/13   0.385   CI 0.177-0.645
+    + both close-ups fixed      7/13   0.538   CI 0.291-0.768
+    the POOLED CEILING         12/13   0.923   CI 0.667-0.986
+
+**The ceiling is below the gate.** 0.923 is what an ORACLE would score choosing
+from every detector at every scale pooled -- 230 candidates a frame. 0.95 is
+above it. No selector, ranker or verifier can reach a frame where no candidate
+within tolerance exists, and on this 1280x720 broadcast one such frame in
+thirteen is what the pool leaves.
+
+**Phase 2, as measured:**
+
+    object   located   accuracy   95% CI          gate
+    rim       55/59     0.932   0.838-0.973      0.95   in game
+    rim       55/61     0.902   0.802-0.954      0.95   whole video
+    ball       5/13     0.385   0.177-0.645      0.95
+    ball ceiling, everything pooled, oracle-chosen   0.923
