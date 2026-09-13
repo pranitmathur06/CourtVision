@@ -6145,3 +6145,60 @@ So there is nothing to carry. For the whole duration of these shots no model
 here finds a rim on any frame, which is a stronger statement than "it misses
 this frame" and it rules out the cheapest fix rather than leaving it as a
 maybe.
+
+## Round 89 - verification moves the ball, and the seven hard frames get names
+
+The fourteenth approach stops ranking candidates and asks a different question
+about each one. Proposals come from the wide sources; each is scored by the
+PRECISE model on a 640 px crop CENTRED on it -- which is exactly the
+distribution `ball_clean` was trained on, with the clutter gone.
+
+    delivered by pooled confidence   4/13   0.308
+    delivered by verification        5/13   0.385
+
+### What the seven unrecognised frames actually are
+
+They had been described only by how they fail. Rendered at 2x with the truth
+ball circled, they are not typical broadcast balls at all:
+
+    1062 s   EXTREME CLOSE-UP, the ball over 100 px across behind a player's
+             hands and head
+    1638 s   extreme close-up, the ball filling the frame as leather texture
+    1044 s   a loose-ball scramble, the ball on the floor among four bodies
+    1056 s   held low between two players' legs, mostly occluded
+    1390 s   in flight against a dark arena background, low wide camera
+    2862 s   under the basket against dark crowd
+    812  s   on the floor at distance among feet
+
+The first two are the SAME PATHOLOGY AS THE RIM'S REMAINING MISSES.
+`build_ball_detector_dataset.py` cuts crops without resizing precisely because
+the ball is 15-25 px and "its whole difficulty is its size" -- so a ball over
+100 px across is as far outside that distribution as a 500 px rim is outside
+the rim model's. Both objects fail on close-up cameras for the same reason, and
+neither failure is a threshold.
+
+Downscaled inference confirms it and half-fixes it. Run over imgsz 192-800, the
+FOUR-CLASS detector finds 1062 s at imgsz 416 (conf 0.16) and 2862 s at 800
+(conf 0.28), while ball_clean finds neither at any size -- it has never seen a
+big ball. Adding downscaled configurations to the pool lifts the ceiling:
+
+    pool without downscaled configs    ceiling 11/13
+    pool with them                     ceiling 12/13 = 0.923
+
+### And adding the four-class model as a VERIFIER makes it worse
+
+The obvious next step was to let the four-class detector endorse proposals too,
+since it can recognise the big balls. Measured:
+
+    endorsement by ball_clean alone           5/13   0.385
+    endorsement by both models, multi-scale   4/13   0.308
+
+It endorses a head at 0.74 and knocked 737.5 s from rank 1 to rank 2. The
+precise model is precise, and diluting it with the model that proposes 112
+candidates a frame gives back exactly what verification bought. Kept:
+ball_clean alone.
+
+**So the ball stands at 0.385 delivered against a 0.923 ceiling**, and the gap
+between them is one thing: on five frames ball_clean scores the true ball 0.00
+even centred at conf 0.01. Verification can only re-order what the precise
+model can recognise. Every remaining point is the detector's.
