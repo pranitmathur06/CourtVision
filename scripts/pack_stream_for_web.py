@@ -46,12 +46,13 @@ def pack(streams):
                 None if court[1] is None else round(court[1], 1),
                 round(float(r.get("confidence") or 0), 2),
                 intern(r.get("detail") or "", details, d_idx),
+                r.get("screener_id") or 0,
             ])
         games.append({"id": s["game_id"], "date": s["date"], "rows": rows})
     return {"actions": actions, "teams": teams, "details": details,
             "players": players, "games": games,
             "fields": ["t", "period", "clock", "action", "player_id", "team",
-                       "x", "y", "confidence", "detail"]}
+                       "x", "y", "confidence", "detail", "screener_id"]}
 
 
 def main() -> int:

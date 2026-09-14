@@ -150,9 +150,11 @@ def build(path, target_hz=10.0):
 
     rows = []
 
-    def add(t, action, track_id=None, detail="", source="geometry", conf=None):
+    def add(t, action, track_id=None, detail="", source="geometry", conf=None,
+            screener_id=None):
         period, clock = place(t)
         name, team = who(track_id)
+        screener_name, _ = who(screener_id)
         rows.append({
             "t": round(float(t), 2),
             "period": period,
@@ -160,6 +162,12 @@ def build(path, target_hz=10.0):
             "action": action,
             "player": name,
             "player_id": track_id if track_id and track_id > 0 else None,
+            # On a screen the PLAYER is the one who benefits -- the handler or
+            # the cutter -- and the screener is a different person. Keeping only
+            # one of them makes "who set the most screens" count the wrong man,
+            # so both are carried.
+            "screener": screener_name,
+            "screener_id": screener_id if screener_id and screener_id > 0 else None,
             "team": team,
             "detail": detail,
             "court": ball_xy(t),
@@ -198,7 +206,7 @@ def build(path, target_hz=10.0):
         handler, _ = who(play.handler_id)
         add(play.time_s, play.name, play.handler_id,
             f"{screener or 'a teammate'} screens for {handler or 'the handler'}",
-            source="play", conf=PLAY_CONFIDENCE)
+            source="play", conf=PLAY_CONFIDENCE, screener_id=play.screener_id)
 
     for play in detect_off_ball_screens(positions, holders, times, offense):
         i = nearest_index(times, play.time_s)
@@ -211,7 +219,8 @@ def build(path, target_hz=10.0):
         cutter, _ = who(play.handler_id)
         add(play.time_s, kind, play.handler_id,
             f"{screener or 'a teammate'} screens off the ball for "
-            f"{cutter or 'a cutter'} ({evidence})", source="play", conf=PLAY_CONFIDENCE)
+            f"{cutter or 'a cutter'} ({evidence})", source="play",
+            conf=PLAY_CONFIDENCE, screener_id=play.screener_id)
 
     for play in detect_transition(positions, holders, times, offense=offense):
         add(play.time_s, "transition", play.handler_id, play.evidence,
