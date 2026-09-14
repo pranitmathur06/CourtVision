@@ -110,6 +110,16 @@ footer b{color:var(--ink);font-weight:600}
    exactly how the court's legend stayed on screen under the video. */
 [hidden]{display:none!important}
 
+/* The answer's beats: each one is a moment you can watch, so the control sits
+   on the line rather than in a table somewhere below it. */
+ul.beats{margin:8px 0 2px;padding:0;list-style:none}
+ul.beats li{margin:0;padding:7px 0 7px 2px;border-bottom:1px solid var(--line)}
+ul.beats li:last-child{border-bottom:0}
+ul.beats li.playing{background:rgba(255,255,255,.03);border-radius:8px;padding-left:9px;padding-right:9px}
+ul.beats video{display:block;width:100%;max-width:560px;margin:9px 0 4px;border-radius:8px;background:#000}
+ul.beats .muted{font-size:13px;margin-bottom:4px}
+button.play.inline{margin-left:8px;margin-right:0;vertical-align:baseline}
+
 /* The play control: a CSS triangle, because the mono face has no U+25B6 and a
    missing glyph renders as a box on exactly the rows that matter most. */
 button.play{display:inline-block;width:0;height:0;padding:0;margin-right:7px;
@@ -405,7 +415,7 @@ function aggregate(rows) {
 // The page must render whether or not a viewer can run the capability, so this
 // never throws and never gates the first paint: `claude` is simply absent when
 // the page is opened outside the artifact runtime.
-let sample = null, byok = null;
+let sample = null, byok = null, lastPick = [];
 const KEYSTORE = 'courtvision_anthropic_key';
 const PAGES_URL = 'https://pranitmathur06.github.io/CourtVision/film-room.html';
 const ARTIFACT_URL = 'https://claude.ai/code/artifact/51ad13d6-e024-4862-8ba3-ed9b7e10194e';
@@ -564,22 +574,56 @@ Rules:
 function render(text) {
   const esc = t => t.replace(/&/g, '&amp;').replace(/</g, '&lt;')
     .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
-    .replace(/\[([\d,\s]+)\]/g, (m) => `<span class="mono" style="color:var(--accent)">${m}</span>`);
-  // A block of "- " lines is a list. Rendering it as one paragraph with <br>
-  // ran every timeline item together, which is what the local answerer emits
-  // most of.
+    // A citation becomes the play control itself when the row it points at has
+    // footage. Asking and watching are then the same gesture in the same place,
+    // rather than a number you have to go and look up in a table below.
+    .replace(/\[([\d,\s]+)\]/g, (m, inner) => {
+      const first = parseInt(inner.split(',')[0].trim(), 10);
+      const r = lastPick[first];
+      if (r && r.clip) {
+        return ` <button class="play inline" data-clip="${r.clip}" data-i="${ALL.indexOf(r)}"`
+             + ` title="Watch this moment" aria-label="Watch this moment"></button>`;
+      }
+      return `<span class="mono" style="color:var(--accent)">${m}</span>`;
+    });
   return text.split(/\n{2,}/).map(block => {
     const lines = block.split('\n').filter(l => l.trim());
     if (lines.length && lines.every(l => l.trim().startsWith('- '))) {
-      return '<ul style="margin:6px 0 6px 18px;padding:0">'
-        + lines.map(l => '<li style="margin:3px 0">' + esc(l.trim().slice(2)) + '</li>').join('')
+      return '<ul class="beats">'
+        + lines.map(l => '<li>' + esc(l.trim().slice(2)) + '</li>').join('')
         + '</ul>';
     }
     return '<p>' + esc(block).replace(/\n/g, '<br>') + '</p>';
   }).join('');
 }
 
+// One player, moved to whichever beat was asked for, so the footage opens where
+// the sentence is instead of in a panel somewhere below.
+function playInline(button) {
+  const beat = button.closest('li') || button.parentElement;
+  let film = document.getElementById('inlineFilm');
+  if (!film) {
+    film = document.createElement('video');
+    film.id = 'inlineFilm';
+    film.controls = true; film.playsInline = true; film.preload = 'none';
+    film.onerror = () => {
+      const note = document.getElementById('inlineNote');
+      if (note) note.innerHTML = '<b>The footage lives with the published site.</b> '
+        + `Open <a href="${PAGES_URL}" target="_blank" rel="noopener">the Film Room</a> to watch it.`;
+    };
+  }
+  let note = document.getElementById('inlineNote');
+  if (!note) { note = document.createElement('div'); note.id = 'inlineNote'; note.className = 'muted'; }
+  note.textContent = '';
+  document.querySelectorAll('.beats li.playing').forEach(li => li.classList.remove('playing'));
+  beat.classList.add('playing');
+  beat.appendChild(film); beat.appendChild(note);
+  film.src = 'clips/' + button.dataset.clip;
+  film.play().catch(() => {});
+}
+
 function finish(text, rows, pick, applied) {
+  lastPick = pick;
   const ids = new Set();
   (text.match(/\[([\d,\s]+)\]/g) || []).forEach(m =>
     m.slice(1, -1).split(',').forEach(n => {
@@ -652,8 +696,16 @@ function showPanel() {
   if (note) note.hidden = !v;
 }
 
+document.getElementById('answer').addEventListener('click', ev => {
+  const b = ev.target.closest('button.play.inline');
+  if (b) { ev.preventDefault(); playInline(b) }
+});
+
 function bindPlay() {
-  document.querySelectorAll('button.play').forEach(b => b.addEventListener('click', ev => {
+  // Table rows only. The answer's own buttons are handled by the delegated
+  // listener on #answer -- binding them here too would route a bullet to the
+  // panel and stopPropagation() before the inline player ever saw the click.
+  document.querySelectorAll('button.play:not(.inline)').forEach(b => b.addEventListener('click', ev => {
     ev.stopPropagation();
     const r = ALL[Number(b.dataset.i)];
     const film = $('film');
