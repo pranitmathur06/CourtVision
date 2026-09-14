@@ -407,16 +407,19 @@ function aggregate(rows) {
 // the page is opened outside the artifact runtime.
 let sample = null, byok = null;
 const KEYSTORE = 'courtvision_anthropic_key';
+const PAGES_URL = 'https://pranitmathur06.github.io/CourtVision/film-room.html';
 const ARTIFACT_URL = 'https://claude.ai/code/artifact/51ad13d6-e024-4862-8ba3-ed9b7e10194e';
 // Outside the claude.ai runtime -- on GitHub Pages, say -- there is no model to
 // ask. Browsing still works entirely; the ask needs either the published
 // artifact or a key the reader supplies for their own account.
 function askingUnavailable() {
   if (localStorage.getItem(KEYSTORE)) { byok = localStorage.getItem(KEYSTORE); keyBanner(); return }
-  $('go').disabled = true;
+  $('go').disabled = false;
   $('answer').innerHTML = `<div class="warn">
-    <b>Two ways to turn on asking.</b> Browsing works as-is &mdash; pick a game, filter
-    the stream, read the court plot. To ask questions:
+    <b>Answers here are computed from the rows, not written by a model.</b> Ask
+    anything &mdash; the retrieval is exact, and you get counts, leaders and a timeline
+    with every row cited, so the clips still play. It cannot paraphrase or reason.
+    For answers in prose:
     <div style="margin-top:9px;display:flex;gap:9px;flex-wrap:wrap;align-items:center">
       <a class="chip" style="text-decoration:none" href="${ARTIFACT_URL}" target="_blank" rel="noopener">Open the hosted version &mdash; nothing to set up</a>
       <button class="chip" id="setkey">Use my own Anthropic API key</button>
@@ -486,7 +489,7 @@ function lineFor(r, i) {
 }
 
 async function ask(question) {
-  if ((!sample && !byok) || !question.trim()) return;
+  if (!question.trim()) return;
   const { rows, applied } = retrieve(question);
   const pick = rows.slice(0, 160);
   cited = new Set(); shown = rows.length ? rows : shown; table();
@@ -539,10 +542,16 @@ Rules:
   $('answer').innerHTML = `<div class="answer"><h3>Answer</h3>
     <div class="body" id="out"><p style="color:var(--muted)">Reading ${rows.length} rows\u2026</p></div></div>`;
   try {
-    const res = sample
-      ? await sample(prompt, { onText: ({ text }) => { const o = $('out'); if (o) o.innerHTML = render(text) } })
-      : await askWithKey(prompt);
-    finish(res.text, rows, pick, applied);
+    let text;
+    if (sample) {
+      text = (await sample(prompt, { onText: ({ text }) => { const o = $('out'); if (o) o.innerHTML = render(text) } })).text;
+    } else if (byok) {
+      text = (await askWithKey(prompt)).text;
+    } else {
+      // No model anywhere: answer from the rows themselves.
+      text = localAnswer(question, rows, pick);
+    }
+    finish(text, rows, pick, applied);
   } catch (e) {
     $('answer').innerHTML = `<div class="answer"><h3>Could not answer</h3><div class="body">
       <p>${e && e.code === 'bad_key' ? 'That API key was rejected. Check it and set it again.'
@@ -553,10 +562,21 @@ Rules:
 }
 
 function render(text) {
-  return text.split(/\n{2,}/).map(p =>
-    '<p>' + p.replace(/&/g, '&amp;').replace(/</g, '&lt;')
-      .replace(/\[([\d,\s]+)\]/g, (m) => `<span class="mono" style="color:var(--accent)">${m}</span>`)
-      .replace(/\n/g, '<br>') + '</p>').join('');
+  const esc = t => t.replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+    .replace(/\[([\d,\s]+)\]/g, (m) => `<span class="mono" style="color:var(--accent)">${m}</span>`);
+  // A block of "- " lines is a list. Rendering it as one paragraph with <br>
+  // ran every timeline item together, which is what the local answerer emits
+  // most of.
+  return text.split(/\n{2,}/).map(block => {
+    const lines = block.split('\n').filter(l => l.trim());
+    if (lines.length && lines.every(l => l.trim().startsWith('- '))) {
+      return '<ul style="margin:6px 0 6px 18px;padding:0">'
+        + lines.map(l => '<li style="margin:3px 0">' + esc(l.trim().slice(2)) + '</li>').join('')
+        + '</ul>';
+    }
+    return '<p>' + esc(block).replace(/\n/g, '<br>') + '</p>';
+  }).join('');
 }
 
 function finish(text, rows, pick, applied) {
@@ -637,6 +657,16 @@ function bindPlay() {
     ev.stopPropagation();
     const r = ALL[Number(b.dataset.i)];
     const film = $('film');
+    // The clips are files beside the page. That works on the static site; in a
+    // single-file artifact there is no clips/ directory and its CSP blocks
+    // media from another host either way, so this has to fail out loud rather
+    // than sit on a black rectangle.
+    film.onerror = () => {
+      $('filmCaption').innerHTML = '<b>The footage lives with the published site.</b> '
+        + 'This copy has the rows but not the clips \u2014 open '
+        + `<a href="${PAGES_URL}" target="_blank" rel="noopener">the Film Room on GitHub Pages</a>`
+        + ' to watch them.';
+    };
     film.src = 'clips/' + b.dataset.clip;
     film.play().catch(() => {});
     $('filmCaption').innerHTML = `<b>Q${r.period} ${r.clock}</b> &middot; ${r.detail || r.action}`
@@ -648,6 +678,65 @@ function bindPlay() {
 // The panel has to follow the game the reader picked, including on first paint.
 document.getElementById('game').addEventListener('change', showPanel);
 showPanel();
+
+
+// ---- answering without a model --------------------------------------------
+// The retrieval half of RAG is exact: it filters rows by player, action and
+// period. Only the writing-it-up half needs a model, and on a static host
+// there is none -- which left the page able to find the footage for a question
+// and unable to run the question at all.
+//
+// So the answer is COMPUTED from the retrieved rows: counts, leaders, and a
+// timeline, each citing the rows it came from so the clips still play. It
+// cannot paraphrase or reason, and the page says so rather than passing
+// arithmetic off as an answer a model wrote.
+function ordinal(p) { return p <= 4 ? ['', '1st', '2nd', '3rd', '4th'][p] : 'OT' + (p - 4) }
+
+function topOf(counts, n = 3) {
+  return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, n);
+}
+
+function localAnswer(question, rows, pick) {
+  const q = question.toLowerCase();
+  if (!rows.length) return 'Nothing in this game matches that. Try a different player, action or quarter.';
+
+  const agg = aggregate(rows);
+  const cite = r => { const i = pick.indexOf(r); return i >= 0 ? ` [${i}]` : '' };
+  const lines = [];
+
+  // "how many" -- a count, broken down when the rows span several actions
+  const kinds = Object.entries(agg.byAction).sort((a, b) => b[1] - a[1]);
+  const total = rows.length;
+  if (/\bhow many\b|\bhow much\b|\bcount\b/.test(q)) {
+    lines.push(`**${total}** matching ${total === 1 ? 'row' : 'rows'}`
+      + (kinds.length > 1 ? ': ' + kinds.map(([k, v]) => `${v} ${k.replace(/_/g, ' ')}`).join(', ') : ` of ${kinds[0][0].replace(/_/g, ' ')}`) + '.');
+  }
+
+  // "who" -- the leaders, by the thing being asked about
+  if (/\bwho\b|\bwhich player\b|\bmost\b|\bleader/.test(q)) {
+    const setters = topOf(agg.bySetter);
+    if (/screen/.test(q) && setters.length) {
+      lines.push('Most screens set: ' + setters.map(([n, c]) => `**${n}** (${c})`).join(', ') + '.');
+    } else {
+      const byTotal = {};
+      rows.forEach(r => { if (r.player) byTotal[r.player] = (byTotal[r.player] || 0) + 1 });
+      const top = topOf(byTotal);
+      if (top.length) lines.push('Most: ' + top.map(([n, c]) => `**${n}** (${c})`).join(', ') + '.');
+    }
+  }
+
+  // a timeline, which is what "what happened" wants and what makes the clips
+  // worth pressing
+  const shownRows = rows.slice(0, 8);
+  lines.push('', ...shownRows.map(r =>
+    `- ${ordinal(r.period)} ${r.clock} — ${r.detail || r.action.replace(/_/g, ' ')}`
+    + (r.player && !(r.detail || '').includes(r.player) ? ` (${r.player})` : '')
+    + cite(r)));
+  if (rows.length > shownRows.length) {
+    lines.push('', `…and ${rows.length - shownRows.length} more in the table below.`);
+  }
+  return lines.join('\n');
+}
 
 </script>
 </body>
