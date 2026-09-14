@@ -95,6 +95,10 @@ def main() -> int:
     parser.add_argument("--clips", required=True, help="cut_event_clips.py index.json")
     parser.add_argument("--game-id", default="0042400407")
     parser.add_argument("--date", default="2025 Finals G7")
+    parser.add_argument("--vision", default=None,
+                        help="cut_event_clips vision index -- what the pipeline called "
+                             "from PIXELS, added as its own game so the reader can watch "
+                             "it succeed and fail against the official record")
     parser.add_argument("--out", required=True)
     args = parser.parse_args()
 
@@ -137,6 +141,35 @@ def main() -> int:
 
     stream["games"].insert(0, {"id": args.game_id, "date": args.date,
                                "video": True, "rows": rows})
+
+    if args.vision:
+        vision = json.load(open(args.vision))
+        vrows = []
+        for c in vision["clips"]:
+            action = c["action"]
+            if action not in action_index:
+                action_index[action] = len(actions)
+                actions.append(action)
+            detail = c.get("description", "")
+            if detail and detail not in detail_index:
+                detail_index[detail] = len(details)
+                details.append(detail)
+            # Not a per-call score -- the detector has none. This is the class's
+            # MEASURED precision on the held-out half, which is exactly how much
+            # any single call is worth, and 0 for a shot it never made.
+            conf = 0.0 if action == "vision miss" else round(vision.get("precision", 0.52), 2)
+            period, clock = clock_of(max(c["video_s"] - 524.0, 0.0))
+            vrows.append([round(float(c["video_s"]), 1), period, clock,
+                          action_index[action], 0, -1, None, None, conf,
+                          detail_index.get(detail, -1), 0, c["clip"]])
+        stream["games"].insert(1, {"id": args.game_id + "-vision",
+                                   "date": "2025 Finals G7 \u00b7 what the VISION pipeline saw",
+                                   "video": True, "vision": True, "rows": vrows})
+        stream["vision_note"] = (
+            "These rows are the vision pipeline's own calls, made from pixels: ball and "
+            "rim detected per frame, no play-by-play involved. Held-out F1 0.619, "
+            "precision 0.522, recall 0.762 -- so about half its calls are wrong, and "
+            "those are in here to be watched rather than hidden.")
     stream["fields"] = stream["fields"] + ["clip"]
     stream["video_note"] = (
         "Rows for this game are the NBA's own play-by-play placed on the video's "

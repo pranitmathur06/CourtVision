@@ -185,6 +185,11 @@ def main() -> int:
     parser.add_argument("--clock", default="outputs/clock/fullgame.json")
     parser.add_argument("--all-play", action="store_true", help="keep calls made with the clock stopped")
     parser.add_argument("--tune", action="store_true", help="sweep thresholds on the first half only")
+    parser.add_argument("--out", default=None,
+                        help="write every call with its video time and whether the "
+                             "official record agrees. The misses are the point: a "
+                             "false alarm you can watch is the only honest way to "
+                             "show what a 0.52 precision actually looks like.")
     args = parser.parse_args()
 
     detections = json.load(open(args.detections))
@@ -228,6 +233,38 @@ def main() -> int:
         p, r, f1 = score(window, truth)
         print(f"  {name:22s} predicted {len(window):3d}  P {p:.3f}  R {r:.3f}  F1 {f1:.3f}"
               + ("   -> PASS" if truth is second and f1 >= 0.60 else ("   -> FAIL" if truth is second else "")))
+
+    if args.out:
+        # Label each call against the official record, using the same greedy
+        # matching `score` uses so the file and the printed F1 cannot disagree.
+        truth = [s["t"] for s in official]
+        used, calls = set(), []
+        for t in sorted(predicted):
+            near = [(abs(t - x), i) for i, x in enumerate(truth)
+                    if abs(t - x) <= TOLERANCE_S and i not in used]
+            match = min(near) if near else None
+            if match:
+                used.add(match[1])
+            calls.append({"video_s": round(float(t), 1),
+                          "half": "first" if t < middle else "second",
+                          "agrees_with_official": bool(match),
+                          "official_s": round(truth[match[1]], 1) if match else None,
+                          "off_by_s": round(match[0], 1) if match else None})
+        missed = [{"video_s": round(x, 1)} for i, x in enumerate(truth) if i not in used]
+        out = Path(args.out)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        json.dump({"note": "shots the VISION pipeline called from pixels -- ball and rim "
+                           "detected per frame, no play-by-play involved. Each call is "
+                           "marked with whether the official record agrees.",
+                   "detections": args.detections,
+                   "approach_rim_widths": a, "far_rim_widths": f, "merge_s": m,
+                   "tolerance_s": TOLERANCE_S,
+                   "calls": calls,
+                   "official_shots_missed": missed}, open(out, "w"), indent=1)
+        hits = sum(1 for c in calls if c["agrees_with_official"])
+        print(f"\n  wrote {len(calls)} calls ({hits} agree with the official record, "
+              f"{len(calls)-hits} do not) and {len(missed)} official shots it never called")
+        print(f"  {out}")
     return 0
 
 

@@ -1,0 +1,1422 @@
+{
+ "note": "what the VISION pipeline called from pixels on Finals G7 -- ball and rim detected per frame, no play-by-play involved. Each row says whether the official record agrees.",
+ "held_out_f1": 0.619,
+ "precision": 0.522,
+ "recall": 0.762,
+ "clips": [
+  {
+   "video_s": 682.4,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e006810.mp4"
+  },
+  {
+   "video_s": 691.0,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e006900.mp4"
+  },
+  {
+   "video_s": 724.6,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e007260.mp4"
+  },
+  {
+   "video_s": 738.4,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e007400.mp4"
+  },
+  {
+   "video_s": 753.2,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e007532.mp4"
+  },
+  {
+   "video_s": 761.4,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e007630.mp4"
+  },
+  {
+   "video_s": 779.2,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e007792.mp4"
+  },
+  {
+   "video_s": 789.2,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e007880.mp4"
+  },
+  {
+   "video_s": 809.4,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e008100.mp4"
+  },
+  {
+   "video_s": 816.0,
+   "action": "vision miss",
+   "description": "official shot the pipeline never called",
+   "agrees": false,
+   "clip": "e008160.mp4"
+  },
+  {
+   "video_s": 819.6,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e008196.mp4"
+  },
+  {
+   "video_s": 833.0,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e008350.mp4"
+  },
+  {
+   "video_s": 849.0,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e008490.mp4"
+  },
+  {
+   "video_s": 858.4,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e008600.mp4"
+  },
+  {
+   "video_s": 933.6,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e009330.mp4"
+  },
+  {
+   "video_s": 940.0,
+   "action": "vision miss",
+   "description": "official shot the pipeline never called",
+   "agrees": false,
+   "clip": "e009400.mp4"
+  },
+  {
+   "video_s": 1006.0,
+   "action": "vision miss",
+   "description": "official shot the pipeline never called",
+   "agrees": false,
+   "clip": "e010060.mp4"
+  },
+  {
+   "video_s": 1024.4,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e010244.mp4"
+  },
+  {
+   "video_s": 1033.8,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e010360.mp4"
+  },
+  {
+   "video_s": 1136.4,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e011364.mp4"
+  },
+  {
+   "video_s": 1144.0,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e011420.mp4"
+  },
+  {
+   "video_s": 1155.8,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e011550.mp4"
+  },
+  {
+   "video_s": 1205.8,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e012058.mp4"
+  },
+  {
+   "video_s": 1216.6,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e012170.mp4"
+  },
+  {
+   "video_s": 1233.8,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e012338.mp4"
+  },
+  {
+   "video_s": 1253.0,
+   "action": "vision miss",
+   "description": "official shot the pipeline never called",
+   "agrees": false,
+   "clip": "e012530.mp4"
+  },
+  {
+   "video_s": 1314.8,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e013148.mp4"
+  },
+  {
+   "video_s": 1332.2,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e013320.mp4"
+  },
+  {
+   "video_s": 1353.6,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e013550.mp4"
+  },
+  {
+   "video_s": 1362.6,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e013626.mp4"
+  },
+  {
+   "video_s": 1369.0,
+   "action": "vision miss",
+   "description": "official shot the pipeline never called",
+   "agrees": false,
+   "clip": "e013690.mp4"
+  },
+  {
+   "video_s": 1421.6,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e014216.mp4"
+  },
+  {
+   "video_s": 1428.6,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e014290.mp4"
+  },
+  {
+   "video_s": 1438.8,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e014400.mp4"
+  },
+  {
+   "video_s": 1449.8,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e014490.mp4"
+  },
+  {
+   "video_s": 1459.6,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e014596.mp4"
+  },
+  {
+   "video_s": 1466.2,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e014662.mp4"
+  },
+  {
+   "video_s": 1473.0,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e014750.mp4"
+  },
+  {
+   "video_s": 1480.0,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e014800.mp4"
+  },
+  {
+   "video_s": 1492.0,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e014930.mp4"
+  },
+  {
+   "video_s": 1515.0,
+   "action": "vision miss",
+   "description": "official shot the pipeline never called",
+   "agrees": false,
+   "clip": "e015150.mp4"
+  },
+  {
+   "video_s": 1542.6,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e015430.mp4"
+  },
+  {
+   "video_s": 1559.8,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e015600.mp4"
+  },
+  {
+   "video_s": 1579.0,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e015790.mp4"
+  },
+  {
+   "video_s": 1586.8,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e015868.mp4"
+  },
+  {
+   "video_s": 1620.8,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e016210.mp4"
+  },
+  {
+   "video_s": 1631.2,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e016310.mp4"
+  },
+  {
+   "video_s": 1660.8,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e016608.mp4"
+  },
+  {
+   "video_s": 1668.8,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e016688.mp4"
+  },
+  {
+   "video_s": 1677.6,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e016760.mp4"
+  },
+  {
+   "video_s": 1683.0,
+   "action": "vision miss",
+   "description": "official shot the pipeline never called",
+   "agrees": false,
+   "clip": "e016830.mp4"
+  },
+  {
+   "video_s": 2122.4,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e021240.mp4"
+  },
+  {
+   "video_s": 2143.8,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e021430.mp4"
+  },
+  {
+   "video_s": 2153.6,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e021520.mp4"
+  },
+  {
+   "video_s": 2172.4,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e021720.mp4"
+  },
+  {
+   "video_s": 2185.6,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e021870.mp4"
+  },
+  {
+   "video_s": 2266.0,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e022660.mp4"
+  },
+  {
+   "video_s": 2282.6,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e022840.mp4"
+  },
+  {
+   "video_s": 2405.8,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e024050.mp4"
+  },
+  {
+   "video_s": 2421.0,
+   "action": "vision miss",
+   "description": "official shot the pipeline never called",
+   "agrees": false,
+   "clip": "e024210.mp4"
+  },
+  {
+   "video_s": 2424.0,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e024240.mp4"
+  },
+  {
+   "video_s": 2430.6,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e024306.mp4"
+  },
+  {
+   "video_s": 2438.0,
+   "action": "vision miss",
+   "description": "official shot the pipeline never called",
+   "agrees": false,
+   "clip": "e024380.mp4"
+  },
+  {
+   "video_s": 2454.2,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e024540.mp4"
+  },
+  {
+   "video_s": 2517.2,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e025190.mp4"
+  },
+  {
+   "video_s": 2525.0,
+   "action": "vision miss",
+   "description": "official shot the pipeline never called",
+   "agrees": false,
+   "clip": "e025250.mp4"
+  },
+  {
+   "video_s": 2546.6,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e025460.mp4"
+  },
+  {
+   "video_s": 2604.2,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e026042.mp4"
+  },
+  {
+   "video_s": 2614.6,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e026130.mp4"
+  },
+  {
+   "video_s": 2625.0,
+   "action": "vision miss",
+   "description": "official shot the pipeline never called",
+   "agrees": false,
+   "clip": "e026250.mp4"
+  },
+  {
+   "video_s": 2656.0,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e026560.mp4"
+  },
+  {
+   "video_s": 2667.6,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e026700.mp4"
+  },
+  {
+   "video_s": 2682.2,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e026830.mp4"
+  },
+  {
+   "video_s": 2745.2,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e027452.mp4"
+  },
+  {
+   "video_s": 2758.2,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e027600.mp4"
+  },
+  {
+   "video_s": 2765.2,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e027652.mp4"
+  },
+  {
+   "video_s": 2772.2,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e027722.mp4"
+  },
+  {
+   "video_s": 2781.2,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e027790.mp4"
+  },
+  {
+   "video_s": 2799.6,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e028000.mp4"
+  },
+  {
+   "video_s": 2812.0,
+   "action": "vision miss",
+   "description": "official shot the pipeline never called",
+   "agrees": false,
+   "clip": "e028120.mp4"
+  },
+  {
+   "video_s": 2832.0,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e028320.mp4"
+  },
+  {
+   "video_s": 2838.2,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e028382.mp4"
+  },
+  {
+   "video_s": 2845.0,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e028450.mp4"
+  },
+  {
+   "video_s": 2853.0,
+   "action": "vision miss",
+   "description": "official shot the pipeline never called",
+   "agrees": false,
+   "clip": "e028530.mp4"
+  },
+  {
+   "video_s": 2857.4,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e028570.mp4"
+  },
+  {
+   "video_s": 2864.0,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e028640.mp4"
+  },
+  {
+   "video_s": 2936.2,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e029362.mp4"
+  },
+  {
+   "video_s": 2957.6,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e029590.mp4"
+  },
+  {
+   "video_s": 2981.0,
+   "action": "vision miss",
+   "description": "official shot the pipeline never called",
+   "agrees": false,
+   "clip": "e029810.mp4"
+  },
+  {
+   "video_s": 3039.2,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e030392.mp4"
+  },
+  {
+   "video_s": 3051.8,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e030510.mp4"
+  },
+  {
+   "video_s": 3104.6,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e031050.mp4"
+  },
+  {
+   "video_s": 3176.2,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e031762.mp4"
+  },
+  {
+   "video_s": 3190.2,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e031910.mp4"
+  },
+  {
+   "video_s": 3208.6,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e032086.mp4"
+  },
+  {
+   "video_s": 3218.8,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e032200.mp4"
+  },
+  {
+   "video_s": 3301.2,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e033012.mp4"
+  },
+  {
+   "video_s": 3310.8,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e033130.mp4"
+  },
+  {
+   "video_s": 3696.8,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e036980.mp4"
+  },
+  {
+   "video_s": 3698.0,
+   "action": "vision miss",
+   "description": "official shot the pipeline never called",
+   "agrees": false,
+   "clip": "e036980.mp4"
+  },
+  {
+   "video_s": 3712.0,
+   "action": "vision miss",
+   "description": "official shot the pipeline never called",
+   "agrees": false,
+   "clip": "e037120.mp4"
+  },
+  {
+   "video_s": 3722.4,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e037210.mp4"
+  },
+  {
+   "video_s": 3733.0,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e037350.mp4"
+  },
+  {
+   "video_s": 3790.0,
+   "action": "vision miss",
+   "description": "official shot the pipeline never called",
+   "agrees": false,
+   "clip": "e037900.mp4"
+  },
+  {
+   "video_s": 3794.6,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e037940.mp4"
+  },
+  {
+   "video_s": 3832.0,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e038320.mp4"
+  },
+  {
+   "video_s": 3896.2,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e038970.mp4"
+  },
+  {
+   "video_s": 3909.0,
+   "action": "vision miss",
+   "description": "official shot the pipeline never called",
+   "agrees": false,
+   "clip": "e039090.mp4"
+  },
+  {
+   "video_s": 3925.0,
+   "action": "vision miss",
+   "description": "official shot the pipeline never called",
+   "agrees": false,
+   "clip": "e039250.mp4"
+  },
+  {
+   "video_s": 3930.0,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e039300.mp4"
+  },
+  {
+   "video_s": 3942.8,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e039428.mp4"
+  },
+  {
+   "video_s": 3978.0,
+   "action": "vision miss",
+   "description": "official shot the pipeline never called",
+   "agrees": false,
+   "clip": "e039780.mp4"
+  },
+  {
+   "video_s": 3990.2,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e039902.mp4"
+  },
+  {
+   "video_s": 4008.8,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e040070.mp4"
+  },
+  {
+   "video_s": 4078.8,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e040788.mp4"
+  },
+  {
+   "video_s": 4082.0,
+   "action": "vision miss",
+   "description": "official shot the pipeline never called",
+   "agrees": false,
+   "clip": "e040820.mp4"
+  },
+  {
+   "video_s": 4102.8,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e041040.mp4"
+  },
+  {
+   "video_s": 4146.8,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e041480.mp4"
+  },
+  {
+   "video_s": 4156.8,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e041580.mp4"
+  },
+  {
+   "video_s": 4173.2,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e041740.mp4"
+  },
+  {
+   "video_s": 4179.6,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e041796.mp4"
+  },
+  {
+   "video_s": 4187.8,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e041890.mp4"
+  },
+  {
+   "video_s": 4199.6,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e042010.mp4"
+  },
+  {
+   "video_s": 4209.2,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e042092.mp4"
+  },
+  {
+   "video_s": 4215.8,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e042160.mp4"
+  },
+  {
+   "video_s": 4296.0,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e042980.mp4"
+  },
+  {
+   "video_s": 4310.8,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e043108.mp4"
+  },
+  {
+   "video_s": 4318.0,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e043170.mp4"
+  },
+  {
+   "video_s": 4326.0,
+   "action": "vision miss",
+   "description": "official shot the pipeline never called",
+   "agrees": false,
+   "clip": "e043260.mp4"
+  },
+  {
+   "video_s": 4328.4,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e043300.mp4"
+  },
+  {
+   "video_s": 4339.4,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e043410.mp4"
+  },
+  {
+   "video_s": 4358.4,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e043570.mp4"
+  },
+  {
+   "video_s": 4374.0,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e043760.mp4"
+  },
+  {
+   "video_s": 4417.8,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e044200.mp4"
+  },
+  {
+   "video_s": 4427.2,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e044272.mp4"
+  },
+  {
+   "video_s": 4435.0,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e044350.mp4"
+  },
+  {
+   "video_s": 4441.6,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e044416.mp4"
+  },
+  {
+   "video_s": 4452.4,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e044520.mp4"
+  },
+  {
+   "video_s": 4508.6,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e045080.mp4"
+  },
+  {
+   "video_s": 4562.0,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e045640.mp4"
+  },
+  {
+   "video_s": 4623.2,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e046232.mp4"
+  },
+  {
+   "video_s": 4628.0,
+   "action": "vision miss",
+   "description": "official shot the pipeline never called",
+   "agrees": false,
+   "clip": "e046280.mp4"
+  },
+  {
+   "video_s": 4647.2,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e046470.mp4"
+  },
+  {
+   "video_s": 4658.4,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e046570.mp4"
+  },
+  {
+   "video_s": 4713.6,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e047150.mp4"
+  },
+  {
+   "video_s": 4727.6,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e047290.mp4"
+  },
+  {
+   "video_s": 4739.2,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e047390.mp4"
+  },
+  {
+   "video_s": 4752.0,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e047520.mp4"
+  },
+  {
+   "video_s": 4859.8,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e048600.mp4"
+  },
+  {
+   "video_s": 4861.0,
+   "action": "vision miss",
+   "description": "official shot the pipeline never called",
+   "agrees": false,
+   "clip": "e048610.mp4"
+  },
+  {
+   "video_s": 5175.6,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e051750.mp4"
+  },
+  {
+   "video_s": 5222.6,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e052240.mp4"
+  },
+  {
+   "video_s": 5226.0,
+   "action": "vision miss",
+   "description": "official shot the pipeline never called",
+   "agrees": false,
+   "clip": "e052250.mp4"
+  },
+  {
+   "video_s": 5229.2,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e052280.mp4"
+  },
+  {
+   "video_s": 5245.4,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e052470.mp4"
+  },
+  {
+   "video_s": 5265.2,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e052670.mp4"
+  },
+  {
+   "video_s": 5281.0,
+   "action": "vision miss",
+   "description": "official shot the pipeline never called",
+   "agrees": false,
+   "clip": "e052810.mp4"
+  },
+  {
+   "video_s": 5293.6,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e052930.mp4"
+  },
+  {
+   "video_s": 5378.8,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e053788.mp4"
+  },
+  {
+   "video_s": 5400.8,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e054010.mp4"
+  },
+  {
+   "video_s": 5411.2,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e054112.mp4"
+  },
+  {
+   "video_s": 5482.0,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e054820.mp4"
+  },
+  {
+   "video_s": 5499.0,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e054990.mp4"
+  },
+  {
+   "video_s": 5547.6,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e055470.mp4"
+  },
+  {
+   "video_s": 5605.0,
+   "action": "vision miss",
+   "description": "official shot the pipeline never called",
+   "agrees": false,
+   "clip": "e056050.mp4"
+  },
+  {
+   "video_s": 5664.2,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e056640.mp4"
+  },
+  {
+   "video_s": 5676.2,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e056770.mp4"
+  },
+  {
+   "video_s": 5760.0,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e057590.mp4"
+  },
+  {
+   "video_s": 5839.8,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e058400.mp4"
+  },
+  {
+   "video_s": 5992.6,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e059926.mp4"
+  },
+  {
+   "video_s": 6000.2,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e060010.mp4"
+  },
+  {
+   "video_s": 6107.0,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e061080.mp4"
+  },
+  {
+   "video_s": 6120.0,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e061200.mp4"
+  },
+  {
+   "video_s": 6126.4,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e061250.mp4"
+  },
+  {
+   "video_s": 6138.4,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e061384.mp4"
+  },
+  {
+   "video_s": 6181.0,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e061810.mp4"
+  },
+  {
+   "video_s": 6189.0,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e061890.mp4"
+  },
+  {
+   "video_s": 6240.8,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e062430.mp4"
+  },
+  {
+   "video_s": 6268.0,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e062690.mp4"
+  },
+  {
+   "video_s": 6274.8,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e062740.mp4"
+  },
+  {
+   "video_s": 6576.2,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e065760.mp4"
+  },
+  {
+   "video_s": 6595.6,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e065950.mp4"
+  },
+  {
+   "video_s": 6646.0,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e066460.mp4"
+  },
+  {
+   "video_s": 6665.8,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e066680.mp4"
+  },
+  {
+   "video_s": 6688.4,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e066880.mp4"
+  },
+  {
+   "video_s": 6756.2,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e067562.mp4"
+  },
+  {
+   "video_s": 6765.8,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e067650.mp4"
+  },
+  {
+   "video_s": 6772.4,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e067730.mp4"
+  },
+  {
+   "video_s": 6779.2,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e067810.mp4"
+  },
+  {
+   "video_s": 6785.6,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e067856.mp4"
+  },
+  {
+   "video_s": 6794.2,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e067942.mp4"
+  },
+  {
+   "video_s": 6807.8,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e068060.mp4"
+  },
+  {
+   "video_s": 6861.0,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e068610.mp4"
+  },
+  {
+   "video_s": 6874.4,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e068730.mp4"
+  },
+  {
+   "video_s": 7017.6,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e070180.mp4"
+  },
+  {
+   "video_s": 7077.4,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e070774.mp4"
+  },
+  {
+   "video_s": 7085.0,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e070860.mp4"
+  },
+  {
+   "video_s": 7120.8,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e071208.mp4"
+  },
+  {
+   "video_s": 7127.0,
+   "action": "vision miss",
+   "description": "official shot the pipeline never called",
+   "agrees": false,
+   "clip": "e071270.mp4"
+  },
+  {
+   "video_s": 7198.2,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e071990.mp4"
+  },
+  {
+   "video_s": 7204.6,
+   "action": "vision shot",
+   "description": "official record agrees",
+   "agrees": true,
+   "clip": "e072046.mp4"
+  },
+  {
+   "video_s": 7269.0,
+   "action": "vision false alarm",
+   "description": "no official shot within 3 s",
+   "agrees": false,
+   "clip": "e072690.mp4"
+  }
+ ]
+}
