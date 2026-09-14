@@ -6256,3 +6256,69 @@ thirteen is what the pool leaves.
     rim       55/61     0.902   0.802-0.954      0.95   whole video
     ball       5/13     0.385   0.177-0.645      0.95
     ball ceiling, everything pooled, oracle-chosen   0.923
+
+## Round 91 - 196 hand labels, two more training runs, and the rim is done
+
+The user labelled 398 frames and I labelled 192, giving 196 hand-located rims
+and 375 frames confirmed to hold none. Two runs followed. Neither shipped.
+
+    model                                  held-out   false    main-camera
+                                             rims     alarms   frames lost
+    shipped (scale crops only)               3 / 7       0          0
+    + 676 propagated from the hand labels    2 / 7       1          1
+    + those, plus 474 negative crops         1 / 7       0          2
+
+Recall falls monotonically as labels are added. The negatives did exactly what
+they were predicted to do -- the ESPN scoreboard false alarm is gone -- and
+cost another real rim doing it. That is Round 82's finding a second time, with
+237 negatives instead of 68: THE NEGATIVES SUPPRESS THE THING THEY SHARPEN.
+
+### The validation number was measuring memorisation
+
+mAP50 read 0.864 while the held-out rims fell. Checking the split:
+
+    propagated source instants: 429 train, 68 val, 0 files in both
+    each val frame's nearest TRAINING frame:
+        under 0.5 s: 60 of 68     under 2 s: 67     under 5 s: 68
+
+Zero file overlap, so the split looks clean, but 60 of 68 validation frames
+are within HALF A SECOND of a training frame -- the next frame of the same
+replay. The split is by file and the duplication is by scene. Any future run
+here must split by ANCHOR, not by frame.
+
+### Why more labels made it worse
+
+`mine_big_rims.py` queues candidates by ORANGE COLOUR and flattened shape, so
+training on what it queues enriches the positives in orange blobs and the model
+drifts toward "orange blob is a rim". In a 640 px crop around a rim an ESPN
+scoreboard almost never appears; in a 1280x720 broadcast frame it always does.
+The bias is therefore invisible in training and validation and fires only at
+inference on whole frames, which is where it was found, at 0.80 confidence.
+
+And 676 labels is not 676 scenes: they come from 48 anchors, many a second
+apart, so a few dozen viewpoints at weight 3 crowd out 8,256 diverse crops.
+
+### Stopping here, and why it costs little
+
+Seven training runs, seven honest measurements, one unchanged shipped model.
+What is worth saying plainly is that this never fed the goal much anyway:
+
+- `shot_detection.py` does not detect the rim. "The rims never move -- they sit
+  5.25 ft from each baseline on the centre line of a 94 x 50 ft court, with the
+  hoop 10 ft up. Nothing needs detecting." It works in court coordinates.
+- No grid version has ever been built with `--rim-detections`, so the
+  scale-trained rim model has never been in the delivered pipeline at all.
+
+The rim's real jobs are anchoring frames where court landmarks fail and
+cross-checking the pose, and the system-level rim already reads 0.932 in game.
+
+**Kept from this round:** 196 hand-located rims and 375 confirmed negatives,
+committed and reusable; a browser labeller; a colour-and-shape miner that
+raised labelling yield from 1-in-20 to 5-to-9-in-20; and a measured statement
+of what mining by colour does to a model trained on it.
+
+**Phase 2, unchanged:**
+
+    object   located   accuracy   95% CI          gate
+    rim       55/59     0.932   0.838-0.973      0.95   in game
+    ball       5/13     0.385   0.177-0.645      0.95
