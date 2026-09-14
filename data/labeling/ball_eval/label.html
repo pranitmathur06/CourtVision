@@ -1,0 +1,132 @@
+<meta charset="utf-8"><title>Ball labeller</title>
+<style>
+:root{--bg:#12161c;--fg:#e6edf3;--dim:#8b98a5;--acc:#5cc0da;--ok:#3fb950;--no:#f85149;--line:#2b3440;--sel:#f0b400}
+*{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,sans-serif}
+header{display:flex;gap:14px;align-items:center;padding:8px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+#bar{flex:1;height:6px;background:#1c2330;border-radius:3px;overflow:hidden;min-width:120px}#fill{height:100%;background:var(--acc);width:0}
+main{display:flex;gap:14px;padding:10px 14px;align-items:flex-start}
+#wrap{position:relative;cursor:crosshair;flex:none}
+#img{display:block} #marks{position:absolute;inset:0;pointer-events:none}
+aside{display:flex;flex-direction:column;gap:8px;min-width:430px}
+#loupe{border:1px solid var(--line);background:#000;image-rendering:pixelated}
+kbd{background:#1c2330;border:1px solid var(--line);border-radius:4px;padding:0 5px;font:12px monospace}
+button{background:#1c2330;color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:5px 11px;cursor:pointer;font:inherit}
+button:hover{border-color:var(--acc)} ul{margin:0;padding-left:18px;color:var(--dim);font-size:13px}
+#state{font-weight:600} .found{color:var(--ok)} .none{color:var(--no)} .unk{color:var(--sel)}
+.counts b{color:var(--fg)}
+</style>
+<header><b>Ball labeller &mdash; ONE click on the ball's centre</b>
+<div id="bar"><div id="fill"></div></div>
+<span><span id="idx">0</span>/<span id="tot">0</span></span>
+<span class="counts"><b id="nball">0</b> located &middot; <b id="nnone">0</b> no ball &middot; <b id="nunk">0</b> can't find</span>
+<span class="k" id="meta"></span><button onclick="exportLabels()">Export ball_labels.json</button></header>
+<main><div id="wrap"><img id="img"><svg id="marks"></svg></div>
+<aside><div>This frame: <span id="state">&mdash;</span> <span id="rad" style="color:var(--dim)"></span></div>
+<canvas id="loupe" width="420" height="320"></canvas>
+<ul>
+<li><b>Click the centre of the ball.</b> The loupe shows 8&times; around the cursor &mdash; at this size it is the only way to see it.</li>
+<li><kbd>[</kbd> / <kbd>]</kbd> shrink / grow the circle to match the ball. It is remembered for the next frame.</li>
+<li><kbd>x</kbd> &mdash; <b>no ball in this picture</b> (out of frame, or a graphic). That is a real label, keep it.</li>
+<li><kbd>?</kbd> &mdash; <b>the ball is in here somewhere and you cannot find it.</b> Not a skip: it is excluded from both sides of the score, so it keeps the number honest instead of flattering it.</li>
+<li>If you are not sure whether the blob is the ball or someone's head, it is <kbd>?</kbd>.</li>
+<li><kbd>&rarr;</kbd>/<kbd>n</kbd> next &middot; <kbd>&larr;</kbd> previous &middot; <kbd>u</kbd> undo &middot; <kbd>d</kbd> clear this frame</li>
+<li>Saved in this browser as you go. Export when done and put it at <code>data/labeling/ball_eval/ball_labels.json</code>.</li>
+</ul></aside></main>
+<script>
+const MANIFEST = {"video": "data/raw_clips/fullgame.mp4", "size": [1280, 720], "frames": [{"file": "t000662.5.jpg", "t": 662.5}, {"file": "t000687.5.jpg", "t": 687.5}, {"file": "t000712.5.jpg", "t": 712.5}, {"file": "t000737.5.jpg", "t": 737.5}, {"file": "t000762.5.jpg", "t": 762.5}, {"file": "t000787.5.jpg", "t": 787.5}, {"file": "t000812.5.jpg", "t": 812.5}, {"file": "t000837.5.jpg", "t": 837.5}, {"file": "t000862.5.jpg", "t": 862.5}, {"file": "t000887.5.jpg", "t": 887.5}, {"file": "t000912.5.jpg", "t": 912.5}, {"file": "t000937.5.jpg", "t": 937.5}, {"file": "t000962.5.jpg", "t": 962.5}, {"file": "t000987.5.jpg", "t": 987.5}, {"file": "t001012.5.jpg", "t": 1012.5}, {"file": "t001037.5.jpg", "t": 1037.5}, {"file": "t001062.5.jpg", "t": 1062.5}, {"file": "t001087.5.jpg", "t": 1087.5}, {"file": "t001112.5.jpg", "t": 1112.5}, {"file": "t001137.5.jpg", "t": 1137.5}, {"file": "t001162.5.jpg", "t": 1162.5}, {"file": "t001187.5.jpg", "t": 1187.5}, {"file": "t001212.5.jpg", "t": 1212.5}, {"file": "t001237.5.jpg", "t": 1237.5}, {"file": "t001262.5.jpg", "t": 1262.5}, {"file": "t001287.5.jpg", "t": 1287.5}, {"file": "t001312.5.jpg", "t": 1312.5}, {"file": "t001337.5.jpg", "t": 1337.5}, {"file": "t001362.5.jpg", "t": 1362.5}, {"file": "t001387.5.jpg", "t": 1387.5}, {"file": "t001412.5.jpg", "t": 1412.5}, {"file": "t001437.5.jpg", "t": 1437.5}, {"file": "t001462.5.jpg", "t": 1462.5}, {"file": "t001487.5.jpg", "t": 1487.5}, {"file": "t001512.5.jpg", "t": 1512.5}, {"file": "t001537.5.jpg", "t": 1537.5}, {"file": "t001562.5.jpg", "t": 1562.5}, {"file": "t001587.5.jpg", "t": 1587.5}, {"file": "t001612.5.jpg", "t": 1612.5}, {"file": "t001637.5.jpg", "t": 1637.5}, {"file": "t001662.5.jpg", "t": 1662.5}, {"file": "t001687.5.jpg", "t": 1687.5}, {"file": "t001712.5.jpg", "t": 1712.5}, {"file": "t001737.5.jpg", "t": 1737.5}, {"file": "t001762.5.jpg", "t": 1762.5}, {"file": "t001787.5.jpg", "t": 1787.5}, {"file": "t001812.5.jpg", "t": 1812.5}, {"file": "t001837.5.jpg", "t": 1837.5}, {"file": "t001862.5.jpg", "t": 1862.5}, {"file": "t001887.5.jpg", "t": 1887.5}, {"file": "t001912.5.jpg", "t": 1912.5}, {"file": "t001937.5.jpg", "t": 1937.5}, {"file": "t001962.5.jpg", "t": 1962.5}, {"file": "t001987.5.jpg", "t": 1987.5}, {"file": "t002012.5.jpg", "t": 2012.5}, {"file": "t002037.5.jpg", "t": 2037.5}, {"file": "t002062.5.jpg", "t": 2062.5}, {"file": "t002087.5.jpg", "t": 2087.5}, {"file": "t002112.5.jpg", "t": 2112.5}, {"file": "t002137.5.jpg", "t": 2137.5}, {"file": "t002162.5.jpg", "t": 2162.5}, {"file": "t002187.5.jpg", "t": 2187.5}, {"file": "t002212.5.jpg", "t": 2212.5}, {"file": "t002237.5.jpg", "t": 2237.5}, {"file": "t002262.5.jpg", "t": 2262.5}, {"file": "t002287.5.jpg", "t": 2287.5}, {"file": "t002312.5.jpg", "t": 2312.5}, {"file": "t002337.5.jpg", "t": 2337.5}, {"file": "t002362.5.jpg", "t": 2362.5}, {"file": "t002387.5.jpg", "t": 2387.5}, {"file": "t002412.5.jpg", "t": 2412.5}, {"file": "t002437.5.jpg", "t": 2437.5}, {"file": "t002462.5.jpg", "t": 2462.5}, {"file": "t002487.5.jpg", "t": 2487.5}, {"file": "t002512.5.jpg", "t": 2512.5}, {"file": "t002537.5.jpg", "t": 2537.5}, {"file": "t002562.5.jpg", "t": 2562.5}, {"file": "t002587.5.jpg", "t": 2587.5}, {"file": "t002612.5.jpg", "t": 2612.5}, {"file": "t002637.5.jpg", "t": 2637.5}, {"file": "t002662.5.jpg", "t": 2662.5}, {"file": "t002687.5.jpg", "t": 2687.5}, {"file": "t002712.5.jpg", "t": 2712.5}, {"file": "t002737.5.jpg", "t": 2737.5}, {"file": "t002762.5.jpg", "t": 2762.5}, {"file": "t002787.5.jpg", "t": 2787.5}, {"file": "t002812.5.jpg", "t": 2812.5}, {"file": "t002837.5.jpg", "t": 2837.5}, {"file": "t002862.5.jpg", "t": 2862.5}, {"file": "t002887.5.jpg", "t": 2887.5}, {"file": "t002912.5.jpg", "t": 2912.5}, {"file": "t002937.5.jpg", "t": 2937.5}, {"file": "t002962.5.jpg", "t": 2962.5}, {"file": "t002987.5.jpg", "t": 2987.5}, {"file": "t003012.5.jpg", "t": 3012.5}, {"file": "t003037.5.jpg", "t": 3037.5}, {"file": "t003062.5.jpg", "t": 3062.5}, {"file": "t003087.5.jpg", "t": 3087.5}, {"file": "t003112.5.jpg", "t": 3112.5}, {"file": "t003137.5.jpg", "t": 3137.5}, {"file": "t003162.5.jpg", "t": 3162.5}, {"file": "t003187.5.jpg", "t": 3187.5}, {"file": "t003212.5.jpg", "t": 3212.5}, {"file": "t003237.5.jpg", "t": 3237.5}, {"file": "t003262.5.jpg", "t": 3262.5}, {"file": "t003287.5.jpg", "t": 3287.5}, {"file": "t003312.5.jpg", "t": 3312.5}, {"file": "t003337.5.jpg", "t": 3337.5}, {"file": "t003362.5.jpg", "t": 3362.5}, {"file": "t003387.5.jpg", "t": 3387.5}, {"file": "t003412.5.jpg", "t": 3412.5}, {"file": "t003437.5.jpg", "t": 3437.5}, {"file": "t003462.5.jpg", "t": 3462.5}, {"file": "t003487.5.jpg", "t": 3487.5}, {"file": "t003512.5.jpg", "t": 3512.5}, {"file": "t003537.5.jpg", "t": 3537.5}, {"file": "t003562.5.jpg", "t": 3562.5}, {"file": "t003587.5.jpg", "t": 3587.5}, {"file": "t003612.5.jpg", "t": 3612.5}, {"file": "t003637.5.jpg", "t": 3637.5}, {"file": "t003662.5.jpg", "t": 3662.5}, {"file": "t003687.5.jpg", "t": 3687.5}, {"file": "t003712.5.jpg", "t": 3712.5}, {"file": "t003737.5.jpg", "t": 3737.5}, {"file": "t003762.5.jpg", "t": 3762.5}, {"file": "t003787.5.jpg", "t": 3787.5}, {"file": "t003812.5.jpg", "t": 3812.5}, {"file": "t003837.5.jpg", "t": 3837.5}, {"file": "t003862.5.jpg", "t": 3862.5}, {"file": "t003887.5.jpg", "t": 3887.5}, {"file": "t003912.5.jpg", "t": 3912.5}, {"file": "t003937.5.jpg", "t": 3937.5}, {"file": "t003962.5.jpg", "t": 3962.5}, {"file": "t003987.5.jpg", "t": 3987.5}, {"file": "t004012.5.jpg", "t": 4012.5}, {"file": "t004037.5.jpg", "t": 4037.5}, {"file": "t004062.5.jpg", "t": 4062.5}, {"file": "t004087.5.jpg", "t": 4087.5}, {"file": "t004112.5.jpg", "t": 4112.5}, {"file": "t004137.5.jpg", "t": 4137.5}, {"file": "t004162.5.jpg", "t": 4162.5}, {"file": "t004187.5.jpg", "t": 4187.5}, {"file": "t004212.5.jpg", "t": 4212.5}, {"file": "t004237.5.jpg", "t": 4237.5}, {"file": "t004262.5.jpg", "t": 4262.5}, {"file": "t004287.5.jpg", "t": 4287.5}, {"file": "t004312.5.jpg", "t": 4312.5}, {"file": "t004337.5.jpg", "t": 4337.5}, {"file": "t004362.5.jpg", "t": 4362.5}, {"file": "t004387.5.jpg", "t": 4387.5}, {"file": "t004412.5.jpg", "t": 4412.5}, {"file": "t004437.5.jpg", "t": 4437.5}, {"file": "t004462.5.jpg", "t": 4462.5}, {"file": "t004487.5.jpg", "t": 4487.5}, {"file": "t004512.5.jpg", "t": 4512.5}, {"file": "t004537.5.jpg", "t": 4537.5}, {"file": "t004562.5.jpg", "t": 4562.5}, {"file": "t004587.5.jpg", "t": 4587.5}, {"file": "t004612.5.jpg", "t": 4612.5}, {"file": "t004637.5.jpg", "t": 4637.5}, {"file": "t004662.5.jpg", "t": 4662.5}, {"file": "t004687.5.jpg", "t": 4687.5}, {"file": "t004712.5.jpg", "t": 4712.5}, {"file": "t004737.5.jpg", "t": 4737.5}, {"file": "t004762.5.jpg", "t": 4762.5}, {"file": "t004787.5.jpg", "t": 4787.5}, {"file": "t004812.5.jpg", "t": 4812.5}, {"file": "t004837.5.jpg", "t": 4837.5}, {"file": "t004862.5.jpg", "t": 4862.5}, {"file": "t004887.5.jpg", "t": 4887.5}, {"file": "t004912.5.jpg", "t": 4912.5}, {"file": "t004937.5.jpg", "t": 4937.5}, {"file": "t004962.5.jpg", "t": 4962.5}, {"file": "t004987.5.jpg", "t": 4987.5}, {"file": "t005012.5.jpg", "t": 5012.5}, {"file": "t005037.5.jpg", "t": 5037.5}, {"file": "t005062.5.jpg", "t": 5062.5}, {"file": "t005087.5.jpg", "t": 5087.5}, {"file": "t005112.5.jpg", "t": 5112.5}, {"file": "t005137.5.jpg", "t": 5137.5}, {"file": "t005162.5.jpg", "t": 5162.5}, {"file": "t005187.5.jpg", "t": 5187.5}, {"file": "t005212.5.jpg", "t": 5212.5}, {"file": "t005237.5.jpg", "t": 5237.5}, {"file": "t005262.5.jpg", "t": 5262.5}, {"file": "t005287.5.jpg", "t": 5287.5}, {"file": "t005312.5.jpg", "t": 5312.5}, {"file": "t005337.5.jpg", "t": 5337.5}, {"file": "t005362.5.jpg", "t": 5362.5}, {"file": "t005387.5.jpg", "t": 5387.5}, {"file": "t005412.5.jpg", "t": 5412.5}, {"file": "t005437.5.jpg", "t": 5437.5}, {"file": "t005462.5.jpg", "t": 5462.5}, {"file": "t005487.5.jpg", "t": 5487.5}, {"file": "t005512.5.jpg", "t": 5512.5}, {"file": "t005537.5.jpg", "t": 5537.5}, {"file": "t005562.5.jpg", "t": 5562.5}, {"file": "t005587.5.jpg", "t": 5587.5}, {"file": "t005612.5.jpg", "t": 5612.5}, {"file": "t005637.5.jpg", "t": 5637.5}, {"file": "t005662.5.jpg", "t": 5662.5}, {"file": "t005687.5.jpg", "t": 5687.5}, {"file": "t005712.5.jpg", "t": 5712.5}, {"file": "t005737.5.jpg", "t": 5737.5}, {"file": "t005762.5.jpg", "t": 5762.5}, {"file": "t005787.5.jpg", "t": 5787.5}, {"file": "t005812.5.jpg", "t": 5812.5}, {"file": "t005837.5.jpg", "t": 5837.5}, {"file": "t005862.5.jpg", "t": 5862.5}, {"file": "t005887.5.jpg", "t": 5887.5}, {"file": "t005912.5.jpg", "t": 5912.5}, {"file": "t005937.5.jpg", "t": 5937.5}, {"file": "t005962.5.jpg", "t": 5962.5}, {"file": "t005987.5.jpg", "t": 5987.5}, {"file": "t006012.5.jpg", "t": 6012.5}, {"file": "t006037.5.jpg", "t": 6037.5}, {"file": "t006062.5.jpg", "t": 6062.5}, {"file": "t006087.5.jpg", "t": 6087.5}, {"file": "t006112.5.jpg", "t": 6112.5}, {"file": "t006137.5.jpg", "t": 6137.5}, {"file": "t006162.5.jpg", "t": 6162.5}, {"file": "t006187.5.jpg", "t": 6187.5}, {"file": "t006212.5.jpg", "t": 6212.5}, {"file": "t006237.5.jpg", "t": 6237.5}, {"file": "t006262.5.jpg", "t": 6262.5}, {"file": "t006287.5.jpg", "t": 6287.5}, {"file": "t006312.5.jpg", "t": 6312.5}, {"file": "t006337.5.jpg", "t": 6337.5}, {"file": "t006362.5.jpg", "t": 6362.5}, {"file": "t006387.5.jpg", "t": 6387.5}, {"file": "t006412.5.jpg", "t": 6412.5}, {"file": "t006437.5.jpg", "t": 6437.5}, {"file": "t006462.5.jpg", "t": 6462.5}, {"file": "t006487.5.jpg", "t": 6487.5}, {"file": "t006512.5.jpg", "t": 6512.5}, {"file": "t006537.5.jpg", "t": 6537.5}, {"file": "t006562.5.jpg", "t": 6562.5}, {"file": "t006587.5.jpg", "t": 6587.5}, {"file": "t006612.5.jpg", "t": 6612.5}, {"file": "t006637.5.jpg", "t": 6637.5}, {"file": "t006662.5.jpg", "t": 6662.5}, {"file": "t006687.5.jpg", "t": 6687.5}, {"file": "t006712.5.jpg", "t": 6712.5}, {"file": "t006737.5.jpg", "t": 6737.5}, {"file": "t006762.5.jpg", "t": 6762.5}, {"file": "t006787.5.jpg", "t": 6787.5}, {"file": "t006812.5.jpg", "t": 6812.5}, {"file": "t006837.5.jpg", "t": 6837.5}, {"file": "t006862.5.jpg", "t": 6862.5}, {"file": "t006887.5.jpg", "t": 6887.5}, {"file": "t006912.5.jpg", "t": 6912.5}, {"file": "t006937.5.jpg", "t": 6937.5}, {"file": "t006962.5.jpg", "t": 6962.5}, {"file": "t006987.5.jpg", "t": 6987.5}, {"file": "t007012.5.jpg", "t": 7012.5}, {"file": "t007037.5.jpg", "t": 7037.5}, {"file": "t007062.5.jpg", "t": 7062.5}, {"file": "t007087.5.jpg", "t": 7087.5}, {"file": "t007112.5.jpg", "t": 7112.5}, {"file": "t007137.5.jpg", "t": 7137.5}, {"file": "t007162.5.jpg", "t": 7162.5}, {"file": "t007187.5.jpg", "t": 7187.5}, {"file": "t007212.5.jpg", "t": 7212.5}, {"file": "t007237.5.jpg", "t": 7237.5}, {"file": "t007262.5.jpg", "t": 7262.5}, {"file": "t007287.5.jpg", "t": 7287.5}, {"file": "t007312.5.jpg", "t": 7312.5}, {"file": "t007337.5.jpg", "t": 7337.5}, {"file": "t007362.5.jpg", "t": 7362.5}, {"file": "t007387.5.jpg", "t": 7387.5}, {"file": "t007412.5.jpg", "t": 7412.5}, {"file": "t007437.5.jpg", "t": 7437.5}, {"file": "t007462.5.jpg", "t": 7462.5}, {"file": "t007487.5.jpg", "t": 7487.5}, {"file": "t007512.5.jpg", "t": 7512.5}, {"file": "t007537.5.jpg", "t": 7537.5}, {"file": "t007562.5.jpg", "t": 7562.5}, {"file": "t007587.5.jpg", "t": 7587.5}, {"file": "t007612.5.jpg", "t": 7612.5}, {"file": "t007637.5.jpg", "t": 7637.5}, {"file": "t007662.5.jpg", "t": 7662.5}, {"file": "t007687.5.jpg", "t": 7687.5}, {"file": "t007712.5.jpg", "t": 7712.5}, {"file": "t007737.5.jpg", "t": 7737.5}, {"file": "t007762.5.jpg", "t": 7762.5}, {"file": "t007787.5.jpg", "t": 7787.5}, {"file": "t007812.5.jpg", "t": 7812.5}, {"file": "t007837.5.jpg", "t": 7837.5}, {"file": "t007862.5.jpg", "t": 7862.5}, {"file": "t007887.5.jpg", "t": 7887.5}]};
+const KEY = 'balllabels_eval';
+let i = 0, radius = 9, L = {}, SCALE = 1, lastXY = null;
+try { L = JSON.parse(localStorage.getItem(KEY) || '{}') } catch (e) { L = {} }
+const $ = id => document.getElementById(id);
+const img = $('img'), marks = $('marks'), loupe = $('loupe').getContext('2d');
+function frame() { return MANIFEST.frames[i] }
+function rec() { const f = frame().file; return L[f] || (L[f] = { t: frame().t, verdict: null, ball: null, radius: radius }) }
+function persist() { try { localStorage.setItem(KEY, JSON.stringify(L)) } catch (e) {} }
+
+function draw() {
+  const r = rec(); marks.innerHTML = '';
+  const ns = 'http://www.w3.org/2000/svg';
+  if (r.ball) {
+    const c = document.createElementNS(ns, 'circle');
+    c.setAttribute('cx', r.ball[0] * SCALE); c.setAttribute('cy', r.ball[1] * SCALE);
+    c.setAttribute('r', Math.max(r.radius * SCALE, 3));
+    c.setAttribute('fill', 'none'); c.setAttribute('stroke', '#3fb950');
+    c.setAttribute('stroke-width', 2); marks.appendChild(c);
+    const x = document.createElementNS(ns, 'path');
+    x.setAttribute('d', `M${r.ball[0]*SCALE-14} ${r.ball[1]*SCALE}h9M${r.ball[0]*SCALE+5} ${r.ball[1]*SCALE}h9`
+                      + `M${r.ball[0]*SCALE} ${r.ball[1]*SCALE-14}v9M${r.ball[0]*SCALE} ${r.ball[1]*SCALE+5}v9`);
+    x.setAttribute('stroke', '#3fb950'); x.setAttribute('stroke-width', 1); marks.appendChild(x);
+  }
+  const s = $('state');
+  s.textContent = r.verdict === 'ball' ? 'ball located' : r.verdict === 'none' ? 'no ball in this picture'
+                : r.verdict === 'unknown' ? "in here somewhere, can't find it" : '—';
+  s.className = r.verdict === 'ball' ? 'found' : r.verdict === 'none' ? 'none' : r.verdict === 'unknown' ? 'unk' : '';
+  $('rad').textContent = r.verdict === 'ball' ? `radius ${r.radius} px` : '';
+  let b = 0, n = 0, u = 0;
+  for (const k in L) { const v = L[k].verdict; if (v === 'ball') b++; else if (v === 'none') n++; else if (v === 'unknown') u++; }
+  $('nball').textContent = b; $('nnone').textContent = n; $('nunk').textContent = u;
+  $('fill').style.width = (100 * (b + n + u) / MANIFEST.frames.length) + '%';
+  $('idx').textContent = i + 1; $('tot').textContent = MANIFEST.frames.length;
+  $('meta').textContent = `${frame().file}  t=${frame().t.toFixed(1)}s`;
+}
+function show() {
+  img.onload = () => {
+    const room = Math.min(window.innerWidth - 470, 1240);
+    SCALE = Math.min(1, room / img.naturalWidth);
+    img.width = img.naturalWidth * SCALE; img.height = img.naturalHeight * SCALE;
+    marks.setAttribute('width', img.width); marks.setAttribute('height', img.height);
+    draw();
+  };
+  img.src = 'images/' + frame().file;
+}
+function at(ev) { const b = img.getBoundingClientRect();
+  return [(ev.clientX - b.left) / SCALE, (ev.clientY - b.top) / SCALE] }
+function paintLoupe() {
+  if (!lastXY) return;
+  const [x, y] = lastXY, z = 8, w = 420, h = 320;
+  loupe.imageSmoothingEnabled = false;
+  loupe.clearRect(0, 0, w, h);
+  loupe.drawImage(img, x - w/(2*z), y - h/(2*z), w/z, h/z, 0, 0, w, h);
+  loupe.strokeStyle = 'rgba(240,180,0,0.9)'; loupe.lineWidth = 1;
+  loupe.beginPath(); loupe.moveTo(w/2, 0); loupe.lineTo(w/2, h);
+  loupe.moveTo(0, h/2); loupe.lineTo(w, h/2); loupe.stroke();
+  loupe.strokeStyle = 'rgba(60,200,90,0.9)';
+  loupe.beginPath(); loupe.arc(w/2, h/2, radius*z, 0, 6.2832); loupe.stroke();
+}
+$('wrap').addEventListener('mousemove', ev => { lastXY = at(ev); paintLoupe() });
+$('wrap').addEventListener('click', ev => {
+  const [x, y] = at(ev), r = rec();
+  r.verdict = 'ball'; r.ball = [x, y]; r.radius = radius;
+  persist(); draw();
+});
+document.addEventListener('keydown', ev => {
+  const r = rec();
+  if (ev.key === 'ArrowRight' || ev.key === 'n') { i = Math.min(i+1, MANIFEST.frames.length-1); show() }
+  else if (ev.key === 'ArrowLeft') { i = Math.max(i-1, 0); show() }
+  else if (ev.key === '[') { radius = Math.max(3, radius-1); if (r.verdict==='ball') r.radius=radius; persist(); draw(); paintLoupe() }
+  else if (ev.key === ']') { radius = Math.min(60, radius+1); if (r.verdict==='ball') r.radius=radius; persist(); draw(); paintLoupe() }
+  else if (ev.key === 'x') { r.verdict = 'none'; r.ball = null; persist(); draw() }
+  else if (ev.key === '?' || ev.key === '/') { r.verdict = 'unknown'; r.ball = null; persist(); draw() }
+  else if (ev.key === 'u' || ev.key === 'd') { r.verdict = null; r.ball = null; persist(); draw() }
+});
+function exportLabels() {
+  const frames = [];
+  for (const file in L) {
+    const r = L[file];
+    if (!r.verdict) continue;
+    frames.push({ t: r.t, verdict: r.verdict,
+                  ball: r.ball ? [Math.round(r.ball[0]), Math.round(r.ball[1])] : null,
+                  radius: r.ball ? r.radius : 0, file: file });
+  }
+  frames.sort((a, b) => a.t - b.t);
+  const blob = new Blob([JSON.stringify({
+    note: "Ball located by hand, one click per centre, radius set by key. verdict is "
+        + "'ball' (located), 'none' (no ball in the picture -- a negative), or 'unknown' "
+        + "(present but not findable by eye, EXCLUDED from both sides of the accuracy).",
+    video: MANIFEST.video, frame_size: MANIFEST.size, frames: frames }, null, 1)],
+    { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'ball_labels.json'; a.click();
+}
+show();
+</script>
