@@ -117,7 +117,9 @@ ul.beats{margin:8px 0 2px;padding:0 6px 0 0;list-style:none;max-height:none}
 ul.beats li{margin:0;padding:7px 0 7px 2px;border-bottom:1px solid var(--line)}
 ul.beats li:last-child{border-bottom:0}
 ul.beats li.playing{background:rgba(255,255,255,.03);border-radius:8px;padding-left:9px;padding-right:9px}
-ul.beats video{display:block;width:100%;max-width:560px;margin:9px 0 4px;border-radius:8px;background:#000}
+ul.beats video{display:block;width:100%;margin:0;border-radius:8px;background:#000}
+#filmShell{margin:9px 0 4px}
+#filmBoxes{border-radius:8px}
 ul.beats .muted{font-size:13px;margin-bottom:4px}
 button.play.inline{margin-left:8px;margin-right:0;vertical-align:baseline}
 
@@ -153,6 +155,7 @@ button.play:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 
   <div id="answer"></div>
   <div id="videoNote" class="warn" hidden>The NBA&rsquo;s own play-by-play on the video&rsquo;s clock &mdash; ground truth you can watch. Confidence is how exactly it was placed, not a detector&rsquo;s score.</div>
+  <div id="boxNote" class="warn" hidden>Boxes are the detector&rsquo;s own, drawn over the footage: <b style="color:var(--play)">players</b>, <b style="color:var(--accent)">whoever has the ball</b>, <b style="color:var(--made)">the ball</b>, <b style="color:var(--missed)">the rim</b>. They are not named &mdash; jersey reading finds the right player in 16% of clips, so a name would be a guess.</div>
   <div id="visionNote" class="warn" hidden>What the pipeline called <b>from pixels</b> &mdash; ball and rim per frame, no play-by-play. Precision 0.52 held out, so about half is wrong, and all of it is here to watch.</div>
 
   <div class="panes">
@@ -692,6 +695,49 @@ function render(text) {
   }).join('');
 }
 
+// ---- the detector's own boxes, drawn over the footage ---------------------
+// A clip shows the play. The boxes show what the vision stack saw while it
+// happened -- including the frames where it saw nothing, which is the honest
+// half. They are fetched once and only when a clip is first played, because
+// 2.9 MB is not worth loading for a reader who never presses play.
+let OVERLAYS = null, overlayWanted = false;
+const BOX_COLOUR = { p: 'rgba(78,155,245,.95)', h: 'rgba(251,139,60,1)',
+                     b: 'rgba(63,208,122,1)', r: 'rgba(242,100,122,.95)' };
+const BOX_LABEL = { p: '', h: 'ball', b: 'ball', r: 'rim' };
+
+async function loadOverlays() {
+  if (OVERLAYS || overlayWanted) return OVERLAYS;
+  overlayWanted = true;
+  try {
+    const r = await fetch('clips/overlays.json');
+    if (r.ok) OVERLAYS = await r.json();
+  } catch (e) { OVERLAYS = null }     // artifact CSP blocks this; boxes are optional
+  return OVERLAYS;
+}
+
+function drawBoxes(svg, film, clip, highlight) {
+  if (!OVERLAYS || !OVERLAYS.clips[clip]) { svg.innerHTML = ''; return }
+  const frames = OVERLAYS.clips[clip];
+  const step = OVERLAYS.step_s || 0.2;
+  const i = Math.max(0, Math.min(frames.length - 1, Math.round(film.currentTime / step)));
+  const [, boxes] = frames[i] || [0, []];
+  // The viewBox does the scaling and CSS makes the svg exactly cover the
+  // video. Setting pixel sizes here read the layout before it had settled and
+  // drew a 517 px overlay over a 471 px video.
+  const [sw, sh] = OVERLAYS.source_size || [1280, 720];
+  svg.setAttribute('viewBox', `0 0 ${sw} ${sh}`);
+  svg.setAttribute('preserveAspectRatio', 'none');
+  svg.innerHTML = boxes.map(([c, x1, y1, x2, y2]) => {
+    const on = !highlight || highlight === c;
+    const stroke = BOX_COLOUR[c] || '#fff';
+    return `<rect x="${x1}" y="${y1}" width="${x2 - x1}" height="${y2 - y1}"`
+         + ` fill="none" stroke="${stroke}" stroke-width="${c === 'b' ? 4 : 3}"`
+         + ` opacity="${on ? 1 : .25}" rx="3"/>`
+         + (BOX_LABEL[c] ? `<text x="${x1 + 3}" y="${Math.max(y1 - 6, 14)}" fill="${stroke}"`
+            + ` font-size="20" font-family="ui-monospace,monospace">${BOX_LABEL[c]}</text>` : '');
+  }).join('');
+}
+
 // One player, moved to whichever beat was asked for, so the footage opens where
 // the sentence is instead of in a panel somewhere below.
 function playInline(button) {
@@ -712,8 +758,25 @@ function playInline(button) {
   note.textContent = '';
   document.querySelectorAll('.beats li.playing').forEach(li => li.classList.remove('playing'));
   beat.classList.add('playing');
-  beat.appendChild(film); beat.appendChild(note);
-  film.src = 'clips/' + button.dataset.clip;
+  let shell = document.getElementById('filmShell');
+  if (!shell) {
+    shell = document.createElement('div'); shell.id = 'filmShell';
+    shell.style.cssText = 'position:relative;display:inline-block;max-width:560px;width:100%';
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.id = 'filmBoxes';
+    svg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none';
+    shell.appendChild(film); shell.appendChild(svg);
+  }
+  beat.appendChild(shell); beat.appendChild(note);
+  const svg = document.getElementById('filmBoxes');
+  const clip = button.dataset.clip;
+  film.src = 'clips/' + clip;
+  svg.innerHTML = '';
+  loadOverlays().then(() => {
+    const paint = () => drawBoxes(svg, film, clip, null);
+    film.ontimeupdate = paint; film.onloadeddata = paint; film.onseeked = paint;
+    paint();
+  });
   film.play().catch(() => {});
 }
 
@@ -793,6 +856,7 @@ function showPanel() {
   const vision = !!(D.games.find(x => x.id === game) || {}).vision;
   const note = $('videoNote'); if (note) note.hidden = !(v && !vision);
   const vnote = $('visionNote'); if (vnote) vnote.hidden = !vision;
+  const bnote = $('boxNote'); if (bnote) bnote.hidden = !v;
 }
 
 document.getElementById('answer').addEventListener('click', ev => {
