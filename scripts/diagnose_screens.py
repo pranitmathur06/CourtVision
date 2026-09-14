@@ -1,8 +1,10 @@
 """Why did or did not a screen fire? Answers it without re-registering.
 
-analyze_plays caches court positions to outputs/play_positions.json, because
-registration costs ~8 s a frame and every question about thresholds afterwards
-should be answerable without paying that again.
+Reads the court positions scripts/analyze_plays.py cached to
+outputs/play_positions.json, because registration cost ~8 s a frame and every
+question about thresholds afterwards should be answerable without paying that
+again. analyze_plays registered by line search, which ee94b99 removed, so it
+was deleted and the cache cannot be regenerated; it is in history at 199e28c.
 
 A screen needs two offensive players to be SCREEN_SEPARATION_FT apart and then
 come within SCREEN_CONTACT_FT. This prints every near-contact with its prior
@@ -27,7 +29,8 @@ CACHE = Path("outputs/play_positions.json")
 
 def main() -> int:
     if not CACHE.exists():
-        print(f"no cache at {CACHE}; run scripts/analyze_plays.py first")
+        print(f"no cache at {CACHE}; it was written by scripts/analyze_plays.py, "
+              "removed after 199e28c")
         return 1
     blob = json.loads(CACHE.read_text())
     frames = [{int(k): tuple(v) for k, v in f.items()} for f in blob["positions"]]

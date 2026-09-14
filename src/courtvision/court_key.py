@@ -206,111 +206,25 @@ def key_homography(image: np.ndarray,
 
 
 # ---------------------------------------------------------------------------
-# Refining the key homography against the rest of the court.
+# Refining the key homography against the rest of the court: measured, harmful.
 #
-# Four corners from one compact quad determine a homography exactly, but they
-# constrain it only where they are. Extrapolated to the far arc and the
-# division line, small corner errors amplify, and the measured gap between the
-# feed's shot location and the nearest detected player was ~10 ft.
+# Iterative closest point, started from the key's fit and snapping the whole
+# projected court to the nearest line pixel, was built and measured. Against
+# the endpoint's own shot locations, which know nothing about line pixels:
 #
-# The whole court is visible though, and now that the key has put the fit in
-# the RIGHT basin, iterative closest point can use all of it. This is exactly
-# the local refinement that could not work before: `search_camera` started
-# blind and converged into wrong minima the line score could not distinguish
-# from the answer. Started from the key, the same evidence becomes usable.
-
-REFINE_ITERATIONS = 6
-# Correspondences further than this from a line are outliers -- a projected
-# point over a player, a scoreboard edge, a crowd gap -- and re-fitting to them
-# drags the whole homography.
-REFINE_MAX_SNAP_PX = 40.0
-MIN_REFINE_POINTS = 30
-
-
-def refine_homography(image: np.ndarray,
-                      court_from_image: np.ndarray,
-                      exclude_boxes: "np.ndarray | None" = None,
-                      iterations: int = REFINE_ITERATIONS,
-                      max_snap_px: float = REFINE_MAX_SNAP_PX
-                      ) -> np.ndarray:
-    """Tighten a court registration using every visible line, not just the key.
-
-    Returns the refined image-to-court matrix, or the input unchanged when the
-    evidence is too thin to improve on it -- refusing to move is correct when
-    there is nothing to move toward.
-
-    MEASURED AND HARMFUL. Do not enable this without reading the numbers.
-    Against the endpoint's own shot locations, which know nothing about line
-    pixels:
-
-                       p50 gap    within 6 ft
-        key only        10.2 ft      35.7%
-        + ICP           16.5 ft      12.5%
-
-    while the line-distance metric it optimises improved from 7.60 ft to
-    1.30 ft. The metric moved one way and the truth the other, for the third
-    time in this project.
-
-    The cause is correspondence, not convergence: snapping a projected point to
-    the NEAREST line pixel is wrong on a court full of parallel lines. A point
-    on the three-point arc snaps to the free-throw circle, a far lane line to
-    the near one, and re-fitting to those pairs drags the homography. Kept only
-    so the measurement stays attached to the idea.
-    """
-    import cv2
-
-    from courtvision.court_lines import canonical_court_points, court_line_mask
-
-    mask = court_line_mask(image, exclude_boxes)
-    if not mask.any():
-        return court_from_image
-    distance = cv2.distanceTransform(255 - mask, cv2.DIST_L2, 3)
-    # Nearest line pixel for every image position, so a projected point can be
-    # snapped without searching.
-    _, labels = cv2.distanceTransformWithLabels(
-        255 - mask, cv2.DIST_L2, 3, labelType=cv2.DIST_LABEL_PIXEL)
-    ys, xs = np.nonzero(mask)
-    if len(xs) < MIN_REFINE_POINTS:
-        return court_from_image
-    # cv2 labels are 1-based indices into the sorted list of zero pixels.
-    order = np.lexsort((xs, ys))
-    line_xy = np.stack([xs[order], ys[order]], axis=1)
-
-    court = canonical_court_points(1.0)
-    height, width = mask.shape
-    current = court_from_image
-    for _ in range(iterations):
-        try:
-            court_to_image = np.linalg.inv(current)
-        except np.linalg.LinAlgError:
-            return court_from_image
-        projected = np.hstack([court, np.ones((len(court), 1))]) @ court_to_image.T
-        valid = np.abs(projected[:, 2]) > 1e-9
-        image_xy = projected[valid, :2] / projected[valid, 2:3]
-        source = court[valid]
-        inside = ((image_xy[:, 0] >= 0) & (image_xy[:, 0] < width)
-                  & (image_xy[:, 1] >= 0) & (image_xy[:, 1] < height))
-        image_xy, source = image_xy[inside], source[inside]
-        if len(image_xy) < MIN_REFINE_POINTS:
-            return current
-        columns = image_xy[:, 0].astype(int)
-        rows = image_xy[:, 1].astype(int)
-        snap_distance = distance[rows, columns]
-        near = snap_distance <= max_snap_px
-        if near.sum() < MIN_REFINE_POINTS:
-            return current
-        index = labels[rows[near], columns[near]] - 1
-        index = np.clip(index, 0, len(line_xy) - 1)
-        target = line_xy[index].astype(np.float32)
-        updated, _ = cv2.findHomography(
-            source[near].astype(np.float32), target, cv2.RANSAC, 5.0)
-        if updated is None or not np.isfinite(updated).all():
-            return current
-        try:
-            current = np.linalg.inv(updated)
-        except np.linalg.LinAlgError:
-            return current
-    return current
+#                    p50 gap    within 6 ft
+#     key only        10.2 ft      35.7%
+#     + ICP           16.5 ft      12.5%
+#
+# while the line-distance metric it optimised improved from 7.60 ft to 1.30 ft.
+# The metric moved one way and the truth the other.
+#
+# The cause is correspondence, not convergence: snapping a projected point to
+# the NEAREST line pixel is wrong on a court full of parallel lines. A point on
+# the three-point arc snaps to the free-throw circle, a far lane line to the
+# near one, and re-fitting to those pairs drags the homography. The code
+# (`refine_homography`) was kept as a record until ee94b99 removed the line
+# mask it ran on; it is in this file's history at 199e28c.
 
 
 # ---------------------------------------------------------------------------

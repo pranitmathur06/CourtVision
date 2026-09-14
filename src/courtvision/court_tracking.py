@@ -185,14 +185,10 @@ def propagate(images: Sequence[np.ndarray],
 #
 # Solve the rig once from the frames that register confidently, then give every
 # remaining frame a three-parameter problem: pan, tilt, zoom.
+#
+# `rig_bounds` turned the rig into bounds for `court_lines.search_camera`; both
+# went when ee94b99 removed the camera search.
 
-# Half-width of the box left around each solved rig coordinate. Not zero:
-# differential evolution needs a non-degenerate interval, and a foot of slack
-# absorbs the spread between individually-solved frames without reopening the
-# search.
-RIG_SLACK_FT = 1.0
-# Focal length is the one intrinsic that genuinely varies -- the operator zooms
-# constantly -- so it keeps its full range.
 RIG_MIN_FRAMES = 5
 
 
@@ -220,22 +216,6 @@ def estimate_rig(params: Sequence[np.ndarray],
         pairs.sort(key=lambda x: -x[0])
         good = [p for _, p in pairs[:max(RIG_MIN_FRAMES, len(pairs) // 3)]]
     return np.median(np.vstack(good), axis=0)
-
-
-def rig_bounds(rig: np.ndarray,
-               base: Sequence[tuple[float, float]] | None = None,
-               slack: float = RIG_SLACK_FT) -> list[tuple[float, float]]:
-    """Search bounds that pin the camera position and free only pan/tilt/zoom."""
-    from courtvision.court_lines import DEFAULT_CAMERA_BOUNDS
-
-    base = list(base or DEFAULT_CAMERA_BOUNDS)
-    out: list[tuple[float, float]] = []
-    for axis in range(3):
-        lo, hi = base[axis]
-        centre = float(np.clip(rig[axis], lo, hi))
-        out.append((max(lo, centre - slack), min(hi, centre + slack)))
-    out.extend(base[3:])
-    return out
 
 
 # ---------------------------------------------------------------------------
@@ -325,13 +305,13 @@ def players_on_court(court_to_image_inverse: np.ndarray,
     if not valid.any():
         return 0.0
     court = projected[valid, :2] / w[valid, None]
-    from courtvision.court_lines import COURT_LENGTH as COURT_LENGTH_FT
+    from courtvision.court_lines import COURT_LENGTH
     from courtvision.court import COURT_WIDTH
 
     inside = ((court[:, 0] >= -margin_ft)
               & (court[:, 0] <= COURT_WIDTH + margin_ft)
               & (court[:, 1] >= -margin_ft)
-              & (court[:, 1] <= COURT_LENGTH_FT + margin_ft))
+              & (court[:, 1] <= COURT_LENGTH + margin_ft))
     return float(inside.mean())
 
 
@@ -422,10 +402,10 @@ def right_basket(court_to_image: np.ndarray,
 def court_rotation() -> np.ndarray:
     """(x, y) -> (COURT_WIDTH - x, COURT_LENGTH - y), as a 3x3 on court feet."""
     from courtvision.court import COURT_WIDTH
-    from courtvision.court_lines import COURT_LENGTH as COURT_LENGTH_FT
+    from courtvision.court_lines import COURT_LENGTH
 
     return np.array([[-1.0, 0.0, COURT_WIDTH],
-                     [0.0, -1.0, COURT_LENGTH_FT],
+                     [0.0, -1.0, COURT_LENGTH],
                      [0.0, 0.0, 1.0]])
 
 
