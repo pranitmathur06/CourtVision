@@ -34,12 +34,24 @@ The chain is why. The digit reader answers on 13% of crops here, sampling at
 0.2 s gives about thirty crops a clip across ten players, and the kit split
 then has to be right as well. Three weak stages multiply.
 
-So the page draws the detector's boxes WITHOUT names. This script is kept
-because the measurement is the useful part and the obvious next step is
-cheap to state: sample the clip at the video's own 30 fps instead of 5, which
-is five times the crops per tracklet, at a cost of roughly an hour of
-detection over the whole clip set. Until that is measured, a named box would
-be a confident guess, and this repository has enough of those.
+THE DENSER SAMPLING WAS THEN RUN AND MEASURED, by `clip_detect_dense.py`:
+every frame detected at 30 fps with a jersey read every third frame, 16,384
+crops over 30 clips against 8,468 over 25.
+
+    5 fps sampling    the named player identified in   4/25   (16%)
+    30 fps sampling                                   13/29   (45%)
+
+Nearly three times better, and still not enough to draw a name on a box. More
+than half the time the player the play-by-play names is not among those
+identified, and the names that ARE assigned have no measured precision -- that
+would need per-player ground-truth boxes, which do not exist here.
+
+What the second measurement settles is WHERE the limit is: 16% of crops give a
+number at all, and that is the digit reader on 720p broadcast torsos, not the
+linking or the voting. Beating it needs a better reader, not more frames --
+the same answer the ball detection reached, and for the same reason.
+
+So the page draws the detector's boxes WITHOUT names, and says so.
 """
 
 from __future__ import annotations
