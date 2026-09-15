@@ -50,3 +50,9 @@ def test_confidence_is_alignment_not_detection():
     assert confidence(0.0) == 1.0
     assert confidence(2.0) == 0.5
     assert confidence(9.0) == 0.0
+
+
+def test_a_club_is_not_a_player():
+    # "Pacers Timeout" put a team into the player filter.
+    assert player_from("Pacers Timeout: Regular (Full 6 Short 0)") is None
+    assert player_from("THUNDER Rebound") is None

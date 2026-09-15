@@ -60,6 +60,10 @@ def player_from(description):
     text = re.sub(r"^MISS\s+", "", text)
     if re.match(r"^(Jump Ball|Timeout|Instant Replay)", text):
         return None
+    # "Pacers Timeout", "THUNDER Rebound" -- a club is not a player, and letting
+    # one through puts a team in the player filter.
+    if re.match(r"^(Pacers|Thunder|THUNDER|PACERS)\b", text):
+        return None
     # A name is capitalised words, possibly with an abbreviated first name
     # ("Jal. Williams") or a particle, stopping at the first lowercase word or
     # an all-caps verb like REBOUND / BLOCK / STEAL.
@@ -95,6 +99,11 @@ def main() -> int:
     parser.add_argument("--clips", required=True, help="cut_event_clips.py index.json")
     parser.add_argument("--game-id", default="0042400407")
     parser.add_argument("--date", default="2025 Finals G7")
+    parser.add_argument("--roster", default=None,
+                        help="number -> {team: full name}. The play-by-play writes "
+                             "surnames only, so 'Gilgeous-Alexander' cannot be found by "
+                             "someone who types 'shai gilgeous alexander'. The roster "
+                             "supplies the full name.")
     parser.add_argument("--vision", default=None,
                         help="cut_event_clips vision index -- what the pipeline called "
                              "from PIXELS, added as its own game so the reader can watch "
@@ -104,6 +113,16 @@ def main() -> int:
 
     stream = json.load(open(args.stream))
     clips = json.load(open(args.clips))
+
+    # Surname -> full names. A LIST, because two players share a surname here
+    # and keeping one collapsed "Jal. Williams" into Kenrich Williams -- the
+    # same collision the jersey numbers had. The play-by-play writes the
+    # initial exactly so this can be resolved, so it is used.
+    full_by_last: dict[str, list[str]] = {}
+    if args.roster:
+        for teams in json.load(open(args.roster)).values():
+            for who in teams.values():
+                full_by_last.setdefault(who.split()[-1].lower(), []).append(who)
 
     actions, details, names = stream["actions"], stream["details"], stream["players"]
     action_index = {a: i for i, a in enumerate(actions)}
@@ -118,6 +137,17 @@ def main() -> int:
             actions.append(action)
 
         who = player_from(c.get("description", ""))
+        if who:
+            options = full_by_last.get(who.split()[-1].lower(), [])
+            if len(options) == 1:
+                who = options[0]
+            elif len(options) > 1:
+                # "Jal. Williams" vs "K. Williams": match the initial.
+                initial = who.split()[0].rstrip(".").lower() if len(who.split()) > 1 else ""
+                picked = [o for o in options if o.split()[0].lower().startswith(initial)] \
+                    if initial else []
+                if len(picked) == 1:
+                    who = picked[0]
         if who is None:
             unnamed += 1
             pid = 0
