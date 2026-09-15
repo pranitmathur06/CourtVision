@@ -3,311 +3,692 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Ask about an NBA game and watch the footage behind every answer.">
 <title>CourtVision</title>
-<meta name="description" content="Basketball broadcast in, named play-by-play out — and what nine validation gates say about where it holds up.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=IBM+Plex+Mono:wght@400;500&family=Source+Sans+3:wght@400;600&display=swap">
 <style>
 :root{
-  --ink:#12161c; --ink-2:#2b333f; --ink-3:#5d6875;
-  --ground:#f7f8fa; --surface:#ffffff; --line:#dfe3e9;
-  --cyan:#1e7d97; --red:#b8423d; --amber:#a8741a;
-  --good:#2f7d5d; --warn:#a8741a; --bad:#b8423d;
-  --display:"Barlow Condensed",ui-sans-serif,system-ui,sans-serif;
-  --body:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;
-  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
-  --measure:68ch;
+  --bg:#04070A; --card:#090E13; --sunk:#060A0E; --line:#151E26;
+  --ink:#E4EBF2; --dim:#76858F; --faint:#3D4A55;
+  --accent:#FF8A3D; --made:#3FD07A; --missed:#F2647A; --play:#4E9BF5; --rimc:#F2647A;
+  --mono:"IBM Plex Mono",ui-monospace,monospace;
+  --disp:"Barlow Condensed",system-ui,sans-serif;
+  --body:"Source Sans 3",system-ui,sans-serif;
 }
-@media (prefers-color-scheme:dark){
-  :root:not([data-theme="light"]){
-    --ink:#e8ecf2; --ink-2:#b7c0cd; --ink-3:#8592a3;
-    --ground:#12161c; --surface:#1a1f28; --line:#2b333f;
-    --cyan:#5cc0da; --red:#e4726d; --amber:#e0a03a;
-    --good:#5fbf94; --warn:#e0a03a; --bad:#e4726d;
-  }
-}
-:root[data-theme="dark"]{
-  --ink:#e8ecf2; --ink-2:#b7c0cd; --ink-3:#8592a3;
-  --ground:#12161c; --surface:#1a1f28; --line:#2b333f;
-  --cyan:#5cc0da; --red:#e4726d; --amber:#e0a03a;
-  --good:#5fbf94; --warn:#e0a03a; --bad:#e4726d;
-}
+[hidden]{display:none!important}
 *{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%}
-body{
-  margin:0; background:var(--ground); color:var(--ink);
-  font-family:var(--body); font-size:16.5px; line-height:1.65;
-  font-feature-settings:"kern","liga";
-}
-.wrap{max-width:min(96vw,1120px); margin:0 auto; padding:0 24px}
-.col{max-width:var(--measure)}
-a{color:var(--cyan)}
-a:focus-visible,button:focus-visible{outline:2px solid var(--amber); outline-offset:3px; border-radius:2px}
+html,body{background:var(--bg)}
+body{margin:0;color:var(--ink);font:15px/1.5 var(--body);-webkit-font-smoothing:antialiased}
+.page{max-width:1180px;margin:0 auto;padding:22px 20px 40px}
 
-header{padding:88px 0 40px; border-bottom:1px solid var(--line)}
-.eyebrow{
-  font-family:var(--display); text-transform:uppercase; letter-spacing:.14em;
-  font-size:14px; color:var(--ink-3); margin:0 0 14px;
-}
-h1{
-  font-family:var(--display); font-weight:600; font-size:clamp(52px,9vw,88px);
-  line-height:.95; letter-spacing:-.01em; margin:0 0 20px; text-wrap:balance;
-}
-.lede{font-size:20px; line-height:1.55; color:var(--ink-2); margin:0; max-width:60ch}
-.lede strong{color:var(--ink); font-weight:600}
+header{display:flex;align-items:center;gap:20px;margin-bottom:16px}
+h1{margin:0;font:600 25px/1 var(--disp);letter-spacing:.055em}
+h1 span{color:var(--accent)}
 
-section{padding:56px 0; border-bottom:1px solid var(--line)}
-h2{
-  font-family:var(--display); font-weight:600; font-size:clamp(28px,4vw,38px);
-  line-height:1.1; letter-spacing:-.005em; margin:0 0 8px; text-wrap:balance;
-}
-h3{
-  font-family:var(--display); font-weight:600; font-size:22px; letter-spacing:.01em;
-  margin:34px 0 8px;
-}
-.sub{color:var(--ink-3); margin:0 0 28px; max-width:60ch}
-p{margin:0 0 16px}
-p+p{margin-top:-2px}
+.seg{display:flex;background:var(--sunk);border:1px solid var(--line);border-radius:9px;padding:3px;margin-left:auto}
+.seg button{background:none;border:0;color:var(--dim);font:500 13px/1 var(--body);
+  padding:8px 15px;border-radius:6px;cursor:pointer;white-space:nowrap}
+.seg button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.6)}
 
-figure{margin:0}
-.shot{
-  border:1px solid var(--line); border-radius:3px; overflow:hidden;
-  background:var(--surface); line-height:0;
-}
-.shot img{width:100%; height:auto; display:block}
-figcaption{
-  font-family:var(--mono); font-size:12.5px; color:var(--ink-3);
-  padding:11px 14px; border-top:1px solid var(--line); line-height:1.5;
-}
-.legend{display:flex; flex-wrap:wrap; gap:16px; margin:14px 0 0; padding:0; list-style:none}
-.legend li{display:flex; align-items:center; gap:7px; font-size:13.5px; color:var(--ink-2)}
-.swatch{width:22px; height:3px; border-radius:2px; flex:none}
+.strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));
+  border:1px solid var(--line);border-radius:11px;overflow:hidden;background:var(--card);margin-bottom:16px}
+.cell{padding:11px 14px;border-right:1px solid var(--line)}
+.cell:last-child{border-right:0}
+.k{font:500 10px/1 var(--mono);letter-spacing:.11em;text-transform:uppercase;color:var(--faint)}
+.v{font:400 25px/1.1 var(--disp);margin-top:6px}
+.v small{font:400 12px/1 var(--body);color:var(--dim);margin-left:3px}
 
-pre{
-  font-family:var(--mono); font-size:13px; line-height:1.75; margin:0;
-  background:var(--surface); border:1px solid var(--line); border-radius:3px;
-  padding:16px 18px; overflow-x:auto;
-}
-code{font-family:var(--mono); font-size:.92em}
-.k{color:var(--cyan)} .v{color:var(--amber)} .c{color:var(--ink-3)}
+.askbar{display:flex;gap:9px}
+#q{flex:1;background:var(--card);border:1px solid var(--line);border-radius:10px;
+  color:var(--ink);font:15px var(--body);padding:13px 15px;outline:0}
+#q:focus{border-color:#28333D}
+#q::placeholder{color:var(--faint)}
+#go{background:var(--accent);color:#120800;border:0;border-radius:10px;
+  font:600 14px var(--body);padding:0 22px;cursor:pointer}
+#go:disabled{opacity:.45;cursor:default}
 
-.tablewrap{overflow-x:auto; margin:20px 0 0}
-table{border-collapse:collapse; width:100%; min-width:520px; font-size:14.5px}
-caption{
-  text-align:left; font-family:var(--display); text-transform:uppercase;
-  letter-spacing:.12em; font-size:13px; color:var(--ink-3); padding-bottom:10px;
-}
-th,td{padding:9px 14px 9px 0; text-align:left; border-bottom:1px solid var(--line)}
-th{
-  font-family:var(--display); text-transform:uppercase; letter-spacing:.1em;
-  font-size:12.5px; font-weight:500; color:var(--ink-3);
-}
-td.num{font-family:var(--mono); font-variant-numeric:tabular-nums; text-align:right; padding-right:22px}
-th.num{text-align:right; padding-right:22px}
-td.name{font-weight:500}
-.tag{
-  font-family:var(--display); text-transform:uppercase; letter-spacing:.09em;
-  font-size:12px; padding:1px 8px; border-radius:2px; white-space:nowrap;
-  border:1px solid currentColor;
-}
-.tag.ok{color:var(--good)} .tag.mid{color:var(--warn)} .tag.no{color:var(--bad)}
+.chips{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0 18px}
+.chips button{background:var(--sunk);border:1px solid var(--line);color:var(--dim);
+  border-radius:20px;padding:6px 13px;font:13px var(--body);cursor:pointer}
+.chips button:hover{color:var(--ink);border-color:#242F39}
 
-ol.stages{list-style:none; counter-reset:s; margin:24px 0 0; padding:0; display:grid; gap:1px;
-  background:var(--line); border:1px solid var(--line); border-radius:3px; overflow:hidden}
-ol.stages li{
-  counter-increment:s; background:var(--surface); padding:14px 18px;
-  display:grid; grid-template-columns:34px 1fr auto; gap:16px; align-items:baseline;
-}
-ol.stages li::before{
-  content:counter(s); font-family:var(--mono); font-size:12.5px; color:var(--ink-3);
-  font-variant-numeric:tabular-nums;
-}
-.stage-what{font-size:15px}
-.stage-what b{font-weight:600}
-.stage-tech{
-  font-family:var(--mono); font-size:12px; color:var(--ink-3); text-align:right;
-  white-space:nowrap;
-}
-@media (max-width:640px){
-  ol.stages li{grid-template-columns:26px 1fr; gap:10px}
-  .stage-tech{grid-column:2; text-align:left}
-}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px}
+#answer:empty{display:none}
+#answer{margin-bottom:16px}
+.answer{background:var(--card);border:1px solid var(--line);border-left:2px solid var(--accent);
+  border-radius:12px;padding:15px 17px}
+.answer p{margin:0 0 9px}
+.answer b{color:#fff}
 
-.note{
-  border-left:2px solid var(--amber); padding:2px 0 2px 18px; margin:26px 0;
-  color:var(--ink-2); max-width:62ch;
-}
-.note b{color:var(--ink); font-weight:600}
+ul.beats{margin:2px 0 0;padding:0;list-style:none}
+ul.beats li{padding:8px 2px;border-bottom:1px solid var(--line);font-size:14.5px}
+ul.beats li:last-child{border-bottom:0}
+ul.beats li.playing{background:var(--sunk);border-radius:8px;padding-left:10px;padding-right:10px}
+ul.beats video{display:block;width:100%;margin:0;border-radius:9px;background:#000}
+#filmShell{margin:10px 0 4px}
+#filmBoxes{border-radius:9px}
 
-footer{padding:44px 0 72px; color:var(--ink-3); font-size:14px}
-footer a{color:var(--ink-2)}
-@media (prefers-reduced-motion:no-preference){
-  a{transition:color .15s ease}
-}
+button.play{display:inline-block;width:0;height:0;padding:0;border:0;border-style:solid;
+  border-width:5px 0 5px 8px;border-color:transparent transparent transparent var(--accent);
+  background:none;cursor:pointer;vertical-align:middle;margin-right:8px;opacity:.85}
+button.play.inline{margin-left:7px;margin-right:0}
+button.play:hover{opacity:1}
+
+.list .listhead{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--line)}
+#rowcount{font:500 10px/1 var(--mono);letter-spacing:.11em;text-transform:uppercase;color:var(--faint)}
+.filters{display:flex;gap:7px;margin-left:auto}
+.filters select{background:var(--sunk);border:1px solid var(--line);color:var(--dim);
+  border-radius:7px;padding:6px 9px;font:13px var(--body);outline:0}
+.scroll{max-height:400px;overflow:auto}
+table{width:100%;border-collapse:collapse}
+td{padding:9px 14px;border-bottom:1px solid var(--line);vertical-align:top;font-size:14px}
+tr:last-child td{border-bottom:0}
+tr.cited{background:rgba(255,138,61,.05)}
+td.mono{font-family:var(--mono);font-size:12.5px;color:var(--dim);white-space:nowrap;width:1%}
+td.who{color:var(--dim);white-space:nowrap;width:1%}
+.act{font-weight:600}
+.sub{color:var(--dim);font-size:12.5px;margin-top:2px}
+
+.fine{color:var(--faint);font-size:12px;margin:14px 2px 0}
+.fine b{color:var(--dim);font-weight:600}
+
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:#18222B;border-radius:5px}
+::-webkit-scrollbar-track{background:transparent}
 </style>
 </head>
 <body>
+<div class="page">
 
-<header>
-  <div class="wrap">
-    <p class="eyebrow">Computer vision &middot; NBA broadcast</p>
-    <h1>CourtVision</h1>
-    <p class="lede">Basketball video in, <strong>named play-by-play</strong> out. Nine stages, thirty modules,
-      346 tests &mdash; and eleven validation gates whose job is to say where it doesn't work.</p>
-    <p style="margin-top:18px">
-      <a href="film-room.html" style="display:inline-block;background:var(--ink);color:var(--ground);
-         text-decoration:none;padding:11px 20px;border-radius:8px;font-family:var(--display);
-         font-size:19px;letter-spacing:.02em">Open the Film Room &rarr;</a>
-      <span style="display:block;margin-top:9px;color:var(--ink-3);font-size:15px;max-width:62ch">
-        Ask plain-English questions about 20 games &mdash; 10,479 actions derived from 25&nbsp;Hz
-        tracking coordinates, with every answer built only from the rows it cites.</span>
-    </p>
-  </div>
-</header>
-
-<section>
-  <div class="wrap">
-    <h2>What it produces</h2>
-    <p class="sub">Eight seconds of a Nuggets possession. Every box, id and label below is inferred from pixels.</p>
-    <figure class="shot">
-      <img src="media/demo.gif" alt="Annotated NBA footage: players in coloured boxes with track ids, the ball-handler highlighted">
-      <figcaption>Boxes coloured by team, numbered by track. The highlighted box is whoever has the ball.</figcaption>
-    </figure>
-    <ul class="legend">
-      <li><span class="swatch" style="background:var(--cyan)"></span>Team A</li>
-      <li><span class="swatch" style="background:var(--red)"></span>Team B</li>
-      <li><span class="swatch" style="background:var(--amber)"></span>In possession</li>
-    </ul>
-
-    <h3>And the log beside it</h3>
-    <pre><span class="c">{</span> <span class="k">"time_s"</span>: <span class="v">4.08</span>, <span class="k">"action"</span>: <span class="v">"steal"</span>,   <span class="k">"team"</span>: <span class="v">"A"</span>, <span class="k">"player_name"</span>: <span class="v">"Conley"</span> <span class="c">}</span>
-<span class="c">{</span> <span class="k">"time_s"</span>: <span class="v">5.68</span>, <span class="k">"action"</span>: <span class="v">"rebound"</span>, <span class="k">"team"</span>: <span class="v">"A"</span>, <span class="k">"player_name"</span>: <span class="v">"Randle"</span> <span class="c">}</span>
-<span class="c">{</span> <span class="k">"time_s"</span>: <span class="v">7.28</span>, <span class="k">"action"</span>: <span class="v">"pass"</span>,    <span class="k">"team"</span>: <span class="v">"B"</span>, <span class="k">"player_name"</span>: <span class="v">"Jokić"</span> <span class="c">}</span></pre>
-    <p class="note">The names come from joining the event timeline against the official play-by-play &mdash;
-      <b>no jersey OCR</b>. When a match isn't confident the event keeps its anonymous track id rather than
-      guessing, and a fabrication guard rejects any name the events don't carry.</p>
-  </div>
-</section>
-
-<section>
-  <div class="wrap">
-    <h2>Nine stages</h2>
-    <p class="sub">Numbered because it genuinely is a sequence &mdash; each stage consumes the one above it.</p>
-    <ol class="stages">
-      <li><span class="stage-what"><b>Extract</b> frames at 10&nbsp;fps</span><span class="stage-tech">OpenCV</span></li>
-      <li><span class="stage-what"><b>Detect</b> players, ball, rim, ball-handler</span><span class="stage-tech">YOLO11, 4-class fine-tune</span></li>
-      <li><span class="stage-what"><b>Track</b> identities across frames</span><span class="stage-tech">ByteTrack</span></li>
-      <li><span class="stage-what"><b>Assign teams</b> by torso colour</span><span class="stage-tech">k-means in CIELAB</span></li>
-      <li><span class="stage-what"><b>Resolve possession</b> frame by frame</span><span class="stage-tech">geometry + hysteresis</span></li>
-      <li><span class="stage-what"><b>Classify actions</b> in 1.6&nbsp;s windows</span><span class="stage-tech">VideoMAE</span></li>
-      <li><span class="stage-what"><b>Structure events</b>, collapsing repeats</span><span class="stage-tech">possession derivation</span></li>
-      <li><span class="stage-what"><b>Name players</b> from the official feed</span><span class="stage-tech">clock OCR + play-by-play</span></li>
-      <li><span class="stage-what"><b>Narrate</b>, guarded against invention</span><span class="stage-tech">Claude</span></li>
-    </ol>
-    <p class="note">Stage 8 is the one that surprised me. Arbitrary footage has no join key, so the only way to
-      line video up with the official record is <b>the clock on screen</b>. A template reader validates itself
-      on the one thing a game clock always does &mdash; count down &mdash; and passed 96 of 96 consecutive reads.</p>
-  </div>
-</section>
-
-<section>
-  <div class="wrap">
-    <h2>Where it holds up</h2>
-    <p class="sub">Every number is a count of emitted events against the NBA's own play-by-play for the same
-      game. A ratio of 1.00&times; means the system reported exactly as many as actually happened.</p>
-
-    <div class="tablewrap">
-      <table>
-        <caption>From broadcast video</caption>
-        <thead><tr>
-          <th>Action</th><th class="num">Ratio</th><th>Footage</th><th></th>
-        </tr></thead>
-        <tbody>
-          <tr><td class="name">Shot</td><td class="num">0.94&times;</td><td>141&nbsp;min continuous</td><td><span class="tag ok">holds</span></td></tr>
-          <tr><td class="name">Steal</td><td class="num">1.73&times;</td><td>cut-segmented</td><td><span class="tag ok">holds</span></td></tr>
-          <tr><td class="name">Block</td><td class="num">0.67&times;</td><td>cut-segmented</td><td><span class="tag ok">holds</span></td></tr>
-          <tr><td class="name">Rebound</td><td class="num">4.25&times;</td><td>141&nbsp;min continuous</td><td><span class="tag no">over-reports</span></td></tr>
-        </tbody>
-      </table>
+  <header>
+    <h1>COURT<span>VISION</span></h1>
+    <div class="seg" id="view" role="tablist">
+      <button class="on" data-view="official" role="tab">Official record</button>
+      <button data-view="vision" role="tab">What vision saw</button>
     </div>
-    <p style="margin-top:14px; color:var(--ink-2); max-width:62ch">Each class clears the bar somewhere, but never
-      all at once on one game: shot needs uncut footage, while steal and block were only measurable on
-      joined clips.</p>
+  </header>
 
-    <h3>The ceiling, from tracking data</h3>
-    <p class="sub">Ten full games of 25&nbsp;Hz player coordinates, to answer a different question: is the
-      <em>event logic</em> right when perception is perfect? Precision sits beside every ratio, because a count
-      can be hit by accident.</p>
-    <div class="tablewrap">
-      <table>
-        <caption>Ten games, 2015&ndash;16 SportVU</caption>
-        <thead><tr>
-          <th>Action</th><th class="num">Median</th><th class="num">Precision</th><th class="num">Recall</th><th></th>
-        </tr></thead>
-        <tbody>
-          <tr><td class="name">Shot</td><td class="num">0.78&times;</td><td class="num">0.89</td><td class="num">0.71</td><td><span class="tag ok">solved</span></td></tr>
-          <tr><td class="name">Rebound</td><td class="num">1.20&times;</td><td class="num">0.51</td><td class="num">0.59</td><td><span class="tag ok">sound</span></td></tr>
-          <tr><td class="name">Steal</td><td class="num">1.71&times;</td><td class="num">0.24</td><td class="num">0.35</td><td><span class="tag mid">marginal</span></td></tr>
-          <tr><td class="name">Block</td><td class="num">&mdash;</td><td class="num">&mdash;</td><td class="num">&mdash;</td><td><span class="tag no">not emitted</span></td></tr>
-        </tbody>
-      </table>
+  <div class="strip" id="strip"></div>
+
+  <div class="askbar">
+    <input id="q" autocomplete="off" spellcheck="false"
+           placeholder="Ask about the game — a player, a quarter, a kind of play">
+    <button id="go">Ask</button>
+  </div>
+  <div class="chips" id="chips"></div>
+
+  <div id="answer"></div>
+
+  <section class="card list">
+    <div class="listhead">
+      <span id="rowcount"></span>
+      <div class="filters">
+        <select id="fAction"></select>
+        <select id="fPlayer"></select>
+        <select id="fPeriod"></select>
+      </div>
     </div>
-    <p class="note">Read the precision column, not the ratio. Steal's <b>count</b> fits, but 0.24 precision means
-      three of four are the wrong moment &mdash; and perfect perception didn't fix it. That makes steal an
-      <b>event-logic</b> problem, not a camera one, and no amount of model training would have found it.</p>
-  </div>
-</section>
+    <div class="scroll"><table><tbody id="rows"></tbody></table></div>
+  </section>
 
-<section>
-  <div class="wrap">
-    <h2>Where it doesn't</h2>
-    <p class="sub">Measured, not hedged.</p>
-    <p><b>Block is below chance from pixels.</b> Separating a block from ordinary play scores &minus;0.170 lift
-      from a player crop &mdash; worse than always guessing. Two geometric routes failed too: blocked shots
-      still reach the rim (median 0.4&nbsp;ft, so they're a <em>subset</em> of shots, not a complement), and a
-      defender at the ball doesn't separate them, because on any shot the shooter is right there.</p>
-    <p><b>A player crop can't contain a rebound.</b> The crop follows the ball-handler; a rebound is the ball
-      coming off a rim that's outside the frame. Separability is +0.042 from the crop against +0.113 from the
-      whole frame &mdash; which is why <code>rebound</code> quietly became the model's label for anything
-      generic, and claimed 82% of a game.</p>
-    <p><b>Steal is barely visual at all.</b> +0.054 lift. It isn't a look; it's a possession change.</p>
-    <p class="note">Those three findings redirected the whole project: these are <b>possession and trajectory
-      events</b>, not visual categories. Deriving steal from possession instead of classifying it took it from
-      33.8&times; over-reporting to 1.73&times;.</p>
-  </div>
-</section>
+  <p class="fine" id="fine"></p>
+</div>
 
-<section>
-  <div class="wrap">
-    <h2>Engineering notes</h2>
-    <div class="tablewrap">
-      <table>
-        <thead><tr><th>Item</th><th>Result</th></tr></thead>
-        <tbody>
-          <tr><td class="name">Full-game throughput</td><td>84,589 frames in 47.7&nbsp;min &mdash; 1.76&times; real time, memory flat in clip length</td></tr>
-          <tr><td class="name">Fused CUDA kernel</td><td>Compiles under nvcc 12.8; matches an OpenCV oracle to 0.1456 against a 2.0 tolerance</td></tr>
-          <tr><td class="name">Dual-GPU split</td><td>Verified, and measurably <em>not</em> worth it &mdash; the classifier was never the bottleneck</td></tr>
-          <tr><td class="name">Possession</td><td>9/9 on a human-annotated answer key</td></tr>
-          <tr><td class="name">Dataset confound</td><td>Corpus membership worth +0.010 of label accuracy, down from +0.150</td></tr>
-          <tr><td class="name">Tests</td><td>346, across 30 modules and 11 validation gates</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <p class="note">The fused kernel measured 1.4&times; faster than the reference on one machine and 1.0&times;
-      on another, same GPU model. It's recorded as <b>not reproducible</b> rather than as a speedup &mdash; the
-      first benchmark ran while training held the GPU at 71%, and a benchmark on a contended GPU isn't one.</p>
-  </div>
-</section>
+<script>window.__STREAM__={"actions":["assist","made shot","shot","rebound","turnover","block","foul","free throw","jump ball","steal","violation","vision shot","vision false alarm","vision miss"],"teams":["B","A"],"details":["Nembhard 14' Pullup Jump Shot (2 PTS)","MISS Jal. Williams 10' Step Back Jump Shot","Nesmith BLOCK (1 BLK)","Nesmith REBOUND (Off:0 Def:1)","Dort P.FOUL (P1.T1) (S.Wright)","MISS Turner 24' 3PT Jump Shot","Holmgren REBOUND (Off:0 Def:1)","Gilgeous-Alexander 15' Step Back Jump Shot (2 PTS)","Siakam 25' 3PT Jump Shot (3 PTS) (Nembhard 1 AST)","MISS Gilgeous-Alexander 21' Pullup Jump Shot","Pacers Rebound","Holmgren L.B.FOUL (P1.T2) (J.Tiven)","MISS Nembhard 7' Driving Layup","Holmgren BLOCK (1 BLK)","Nembhard REBOUND (Off:1 Def:0)","MISS Siakam 15' Pullup Jump Shot","Gilgeous-Alexander REBOUND (Off:0 Def:1)","Nesmith P.FOUL (P1.T1) (J.Capers)","Gilgeous-Alexander 15' Pullup Jump Shot (4 PTS)","MISS Haliburton 1' Driving Layup","Gilgeous-Alexander BLOCK (1 BLK)","Holmgren REBOUND (Off:0 Def:2)","Holmgren 15' Turnaround Jump Shot (2 PTS) (Jal. Williams 1 AST)","Haliburton 25' 3PT Jump Shot (3 PTS) (Siakam 1 AST)","MISS Jal. Williams 6' Driving Floating Jump Shot","Nembhard REBOUND (Off:1 Def:1)","Haliburton 24' 3PT Running Jump Shot (6 PTS) (Nembhard 2 AST)","Dort 3' Cutting Layup Shot (2 PTS) (Hartenstein 1 AST)","MISS Siakam 15' Step Back Jump Shot","Holmgren REBOUND (Off:0 Def:3)","Nesmith S.FOUL (P2.T2) (J.Tiven)","Gilgeous-Alexander Free Throw 1 of 2 (5 PTS)","Gilgeous-Alexander Free Throw 2 of 2 (6 PTS)","MISS Haliburton 25' 3PT Pullup Jump Shot","Mathurin REBOUND (Off:1 Def:0)","Haliburton 27' 3PT Jump Shot (9 PTS) (Mathurin 1 AST)","Caruso 26' 3PT Jump Shot (3 PTS) (Gilgeous-Alexander 1 AST)","MISS Mathurin 24' 3PT Pullup Jump Shot","Hartenstein REBOUND (Off:0 Def:1)","Jump Ball Jal. Williams vs. Nembhard: Tip to Hartenstein","Caruso 25' 3PT Jump Shot (6 PTS) (Gilgeous-Alexander 2 AST)","Jal. Williams S.FOUL (P1.T3) (J.Tiven)","Nembhard Free Throw 1 of 2 (3 PTS)","Nembhard Free Throw 2 of 2 (4 PTS)","MISS Caruso 4' Driving Layup","Turner REBOUND (Off:0 Def:1)","Haliburton Bad Pass Turnover (P1.T1)","Caruso STEAL (1 STL)","Jal. Williams 2' Running Dunk (2 PTS) (Gilgeous-Alexander 3 AST)","MISS McConnell 14' Turnaround Fadeaway Shot","Pacers Turnover: Shot Clock (T#2)","MISS Caruso 24' 3PT Jump Shot","Mathurin REBOUND (Off:1 Def:1)","Siakam 3' Driving Finger Roll Layup (5 PTS) (Mathurin 2 AST)","Caruso S.FOUL (P1.T4) (J.Capers)","MISS Siakam Free Throw 1 of 1","Gilgeous-Alexander REBOUND (Off:0 Def:2)","MISS Gilgeous-Alexander 13' Turnaround Fadeaway Shot","Siakam REBOUND (Off:0 Def:1)","MISS Mathurin 6' Driving Floating Jump Shot","Caruso REBOUND (Off:0 Def:1)","MISS Caruso 26' 3PT Jump Shot","K. Williams REBOUND (Off:1 Def:0)","Gilgeous-Alexander 6' Pullup Jump Shot (8 PTS)","MISS Toppin 6' Driving Floating Bank Jump Shot","Holmgren REBOUND (Off:0 Def:4)","Holmgren 8' Driving Floating Jump Shot (4 PTS) (Gilgeous-Alexander 4 AST)","Siakam 15' Pullup Jump Shot (7 PTS) (McConnell 1 AST)","MISS Gilgeous-Alexander 18' Pullup Jump Shot","McConnell REBOUND (Off:0 Def:1)","McConnell Bad Pass Turnover (P1.T3)","Caruso STEAL (2 STL)","MISS Wallace 19' Pullup Jump Shot","THUNDER Rebound","THUNDER Turnover: Shot Clock (T#1)","MISS McConnell 15' Pullup Jump Shot","Jal. Williams REBOUND (Off:0 Def:1)","MISS K. Williams 30' 3PT Jump Shot","MISS Hartenstein 2' Alley Oop Dunk","Sheppard REBOUND (Off:0 Def:1)","Mathurin 25' 3PT Jump Shot (5 PTS) (McConnell 2 AST)","Bradley S.FOUL (P1.T1) (J.Tiven)","MISS Hartenstein Free Throw 1 of 2","MISS Hartenstein Free Throw 2 of 2","Bradley REBOUND (Off:0 Def:1)","Wallace S.FOUL (P1.T1) (J.Tiven)","Siakam Free Throw 1 of 2 (8 PTS)","MISS Siakam Free Throw 2 of 2","Hartenstein REBOUND (Off:0 Def:2)","MISS Jal. Williams 27' 3PT Step Back Jump Shot","Wallace REBOUND (Off:1 Def:0)","Caruso 1' Cutting Dunk Shot (8 PTS) (Hartenstein 2 AST)","Jal. Williams S.FOUL (P2.T2) (S.Wright)","Bradley Free Throw 1 of 2 (1 PTS)","Bradley Free Throw 2 of 2 (2 PTS)","McConnell P.FOUL (P2.T2) (S.Wright)","MISS Jal. Williams 3' Driving Layup","Hartenstein REBOUND (Off:1 Def:2)","MISS Caruso 25' 3PT Jump Shot","Bradley L.B.FOUL (P2.T3) (J.Tiven)","Hartenstein 2' Cutting Layup Shot (2 PTS) (Jal. Williams 2 AST)","Sheppard Lost Ball Turnover (P1.T5)","Caruso STEAL (3 STL)","Wallace Lost Ball Turnover (P1.T2)","McConnell STEAL (1 STL)","MISS Siakam 12' Step Back Jump Shot","Hartenstein REBOUND (Off:1 Def:3)","Sheppard S.FOUL (P1.T4) (S.Wright)","MISS Jal. Williams Free Throw 1 of 2","Jal. Williams Free Throw 2 of 2 (5 PTS)","Wiggins S.FOUL (P1.T3) (S.Wright)","MISS Turner Free Throw 1 of 2","Turner Free Throw 2 of 2 (1 PTS)","Nembhard P.FOUL (P1.PN) (S.Wright)","Gilgeous-Alexander Free Throw 1 of 2 (9 PTS)","Gilgeous-Alexander Free Throw 2 of 2 (10 PTS)","Toppin Bad Pass Turnover (P1.T6)","Wallace STEAL (2 STL)","MISS Gilgeous-Alexander 27' 3PT Step Back Jump Shot","Nesmith REBOUND (Off:0 Def:2)","MISS Toppin 24' 3PT Jump Shot","Turner REBOUND (Off:1 Def:1)","Nesmith 24' 3PT Jump Shot (3 PTS) (Turner 1 AST)","MISS Dort 28' 3PT Jump Shot","Toppin REBOUND (Off:0 Def:1)","Toppin Lost Ball Turnover (P2.T7)","Wallace STEAL (3 STL)","Gilgeous-Alexander 16' Step Back Jump Shot (12 PTS)","MISS Mathurin 3' Driving Layup","Gilgeous-Alexander REBOUND (Off:0 Def:3)","Wallace 27' 3PT Running Jump Shot (3 PTS) (Gilgeous-Alexander 5 AST)","Wallace S.FOUL (P2.T4) (S.Wright)","MISS Turner Free Throw 2 of 2","Dort REBOUND (Off:0 Def:1)","Dort Bad Pass Turnover (P1.T3)","Nesmith STEAL (1 STL)","Gilgeous-Alexander REBOUND (Off:0 Def:4)","MISS Wallace 26' 3PT Jump Shot","McConnell 2' Driving Reverse Layup (2 PTS)","MISS Holmgren 3PT Jump Shot","Nesmith REBOUND (Off:0 Def:3)","Nembhard 2' Driving Layup (6 PTS) (McConnell 3 AST)","MISS Jal. Williams 26' 3PT Jump Shot","Nembhard REBOUND (Off:1 Def:2)","MISS Nesmith 25' 3PT Running Jump Shot","Dort REBOUND (Off:0 Def:2)","Dort 26' 3PT Jump Shot (5 PTS) (Gilgeous-Alexander 6 AST)","Turner 16' Jump Shot (3 PTS)","MISS Dort 26' 3PT Jump Shot","Nembhard REBOUND (Off:1 Def:3)","McConnell 15' Pullup Jump Shot (4 PTS)","MISS Holmgren 7' Driving Layup","McConnell BLOCK (1 BLK)","McConnell REBOUND (Off:0 Def:2)","MISS Turner 25' 3PT Jump Shot","Dort REBOUND (Off:0 Def:3)","MISS Gilgeous-Alexander 4' Driving Layup","Siakam BLOCK (1 BLK)","McConnell REBOUND (Off:0 Def:3)","Siakam Out of Bounds - Bad Pass Turnover Turnover (P1.T8)","Turner Violation:Kicked Ball (J.Tiven)","Gilgeous-Alexander 3' Driving Finger Roll Layup (14 PTS) (Jal. Williams 3 AST)","Turner Violation:Defensive Goaltending (J.Capers)","MISS Nembhard 13' Pullup Jump Shot","Hartenstein REBOUND (Off:1 Def:4)","Hartenstein REBOUND (Off:2 Def:4)"," ","Hartenstein Lost Ball Turnover (P1.T4)","Nesmith STEAL (2 STL)","Mathurin 24' 3PT Pullup Jump Shot (8 PTS)","Hartenstein Double Dribble Turnover (P2.T5)","MISS Toppin 25' 3PT Jump Shot","Wallace L.B.FOUL (P3.PN) (J.Tiven)","Siakam Free Throw 1 of 2 (9 PTS)","Siakam Free Throw 2 of 2 (10 PTS)","MISS Gilgeous-Alexander 26' 3PT Step Back Jump Shot","Siakam REBOUND (Off:0 Def:2)","MISS Nembhard 15' Step Back Jump Shot","Jal. Williams REBOUND (Off:0 Def:2)","Hartenstein 3' Cutting Layup Shot (4 PTS) (Gilgeous-Alexander 7 AST)","Toppin S.FOUL (P1.PN) (J.Capers)","Hartenstein Free Throw 1 of 1 (5 PTS)","Mathurin OFF.Foul (P1) (S.Wright)","Mathurin Offensive Foul Turnover (P1.T9)","Nembhard S.FOUL (P2.PN) (J.Tiven)","Gilgeous-Alexander Free Throw 1 of 2 (15 PTS)","Gilgeous-Alexander Free Throw 2 of 2 (16 PTS)","MISS Gilgeous-Alexander 48' 3PT Pullup Jump Shot","MISS Gilgeous-Alexander 26' 3PT Pullup Jump Shot","MISS Gilgeous-Alexander 3PT Jump Shot","Holmgren REBOUND (Off:1 Def:4)","Holmgren 2' Putback Layup (7 PTS)","Nembhard Out of Bounds Lost Ball Turnover (P1.T10)","MISS Jal. Williams 25' 3PT Jump Shot","Dort REBOUND (Off:1 Def:3)","Dort 27' 3PT Pullup Jump Shot (8 PTS)","Holmgren BLOCK (2 BLK)","Mathurin REBOUND (Off:3 Def:1)","Siakam 27' 3PT Jump Shot (13 PTS) (Mathurin 3 AST)","Nesmith P.FOUL (P3.T1) (J.Capers)","MISS Caruso 2' Cutting Layup Shot","Caruso REBOUND (Off:1 Def:1)","Caruso Tip Layup Shot (10 PTS)","MISS Nembhard 28' 3PT Pullup Jump Shot","Jal. Williams REBOUND (Off:0 Def:3)","Mathurin REBOUND (Off:3 Def:2)","Mathurin Lost Ball Turnover (P2.T11)","Jal. Williams STEAL (1 STL)","Jal. Williams 1' Running Layup (7 PTS)","MISS Mathurin 3PT Jump Shot","Nesmith REBOUND (Off:1 Def:3)","MISS Nesmith 9' Driving Floating Jump Shot","Gilgeous-Alexander L.B.FOUL (P1.T1) (J.Capers)","Holmgren S.FOUL (P2.T2) (J.Tiven)","Nembhard Free Throw 1 of 2 (10 PTS)","Nembhard Free Throw 2 of 2 (11 PTS)","MISS Jal. Williams 6' Driving Floating Bank Jump Shot","Turner REBOUND (Off:1 Def:2)","Turner 27' 3PT Jump Shot (6 PTS) (Nembhard 3 AST)","Gilgeous-Alexander 25' 3PT Step Back Jump Shot (19 PTS)","McConnell Bad Pass Turnover (P3.T12)","Jal. Williams STEAL (2 STL)","Holmgren 24' 3PT Jump Shot (10 PTS) (Gilgeous-Alexander 8 AST)","McConnell Bad Pass Turnover (P4.T13)","Dort STEAL (1 STL)","Jal. Williams 24' 3PT Jump Shot (10 PTS) (Gilgeous-Alexander 9 AST)","McConnell 3' Driving Layup (6 PTS)","Gilgeous-Alexander 2' Driving Layup (21 PTS)","Toppin Lost Ball Turnover (P3.T14)","Gilgeous-Alexander STEAL (1 STL)","MISS Jal. Williams 3' Driving Finger Roll Layup","Turner REBOUND (Off:1 Def:3)","McConnell 1' Driving Finger Roll Layup (8 PTS) (Nesmith 1 AST)","MISS Gilgeous-Alexander 24' 3PT Step Back Jump Shot","Toppin REBOUND (Off:0 Def:2)","McConnell 7' Pullup Jump Shot (10 PTS)","Holmgren 1' Cutting Dunk Shot (12 PTS) (Gilgeous-Alexander 10 AST)","McConnell 2' Driving Layup (12 PTS)","Turner S.FOUL (P1.T2) (J.Capers)","Gilgeous-Alexander Free Throw 1 of 2 (22 PTS)","MISS Gilgeous-Alexander Free Throw 2 of 2","MISS Nembhard 11' Step Back Jump Shot","Gilgeous-Alexander REBOUND (Off:0 Def:5)","MISS Dort 25' 3PT Running Pull-Up Jump Shot","Caruso REBOUND (Off:2 Def:1)","MISS Caruso Tip Dunk Shot","McConnell REBOUND (Off:0 Def:4)","McConnell 12' Pullup Jump Shot (14 PTS) (Toppin 1 AST)","MISS Dort 25' 3PT Jump Shot","McConnell REBOUND (Off:0 Def:5)","Bradley Out of Bounds - Bad Pass Turnover Turnover (P1.T15)","Wallace 3PT Jump Shot (6 PTS) (Hartenstein 3 AST)","McConnell Bad Pass Turnover (P5.T16)","Hartenstein STEAL (1 STL)","Wallace 1' Running Layup (8 PTS) (Hartenstein 4 AST)","Jal. Williams P.FOUL (P3.T3) (J.Capers)","MISS Bryant 28' 3PT Jump Shot","Mathurin REBOUND (Off:4 Def:2)","Pacers Turnover: 5 Second Violation (T#17)","Jal. Williams 1' Driving Finger Roll Layup (12 PTS)","McConnell 17' Pullup Jump Shot (16 PTS)","Jal. Williams 18' Step Back Jump Shot (14 PTS)","Jal. Williams P.FOUL (P4.T4) (J.Capers)","MISS Sheppard 26' 3PT Jump Shot","Hartenstein REBOUND (Off:2 Def:5)","MISS Jal. Williams 18' Pullup Jump Shot","Mathurin REBOUND (Off:4 Def:3)","MISS McConnell 5' Driving Layup","MISS Gilgeous-Alexander 15' Pullup Jump Shot","Hartenstein REBOUND (Off:3 Def:6)","Hartenstein Tip Layup Shot (7 PTS)","MISS Nembhard 3' Driving Layup","Mathurin REBOUND (Off:5 Def:3)","MISS Toppin 27' 3PT Jump Shot","Gilgeous-Alexander 25' 3PT Step Back Jump Shot (25 PTS)","Nesmith Out of Bounds Lost Ball Turnover (P1.T18)","MISS Gilgeous-Alexander 15' Jump Shot","Nesmith REBOUND (Off:1 Def:4)","MISS Siakam 26' 3PT Jump Shot","Nesmith L.B.FOUL (P4.T1) (J.Capers)","MISS Wiggins 27' 3PT Jump Shot","Nesmith REBOUND (Off:1 Def:5)","Gilgeous-Alexander P.FOUL (P2.T1) (S.Wright)","Dort P.FOUL (P2.T2) (J.Capers)","MISS Nesmith 26' 3PT Pullup Jump Shot","Gilgeous-Alexander BLOCK (2 BLK)","Siakam REBOUND (Off:1 Def:2)","MISS Siakam 10' Turnaround Fadeaway Bank Jump Shot","Holmgren REBOUND (Off:1 Def:5)","Wallace 2' Layup (10 PTS) (Gilgeous-Alexander 11 AST)","MISS Nesmith 1' Reverse Layup","Holmgren BLOCK (3 BLK)","Dort REBOUND (Off:1 Def:4)","MISS Gilgeous-Alexander 25' 3PT Pullup Jump Shot","Wallace REBOUND (Off:2 Def:0)","Jal. Williams 24' 3PT Jump Shot (17 PTS) (Gilgeous-Alexander 12 AST)","Turner OFF.Foul (P2) (J.Capers)","Turner Offensive Foul Turnover (P1.T19)","MISS Gilgeous-Alexander 20' Step Back Jump Shot","Dort REBOUND (Off:2 Def:4)","MISS Jal. Williams 27' 3PT Jump Shot","Holmgren REBOUND (Off:2 Def:5)","Turner S.FOUL (P3.T2) (J.Tiven)","Holmgren Free Throw 1 of 2 (13 PTS)","MISS Holmgren Free Throw 2 of 2","Nembhard REBOUND (Off:1 Def:4)","Siakam 19' Jump Shot (15 PTS) (Nembhard 4 AST)","Gilgeous-Alexander Bad Pass Turnover (P1.T6)","Mathurin STEAL (1 STL)","Caruso P.FOUL (P2.T3) (J.Capers)","Gilgeous-Alexander S.FOUL (P3.T4) (J.Tiven)","Siakam Free Throw 1 of 2 (16 PTS)","Mathurin REBOUND (Off:6 Def:3)","MISS Mathurin 10' Putback Layup","Holmgren BLOCK (4 BLK)","Sheppard REBOUND (Off:1 Def:1)","Jal. Williams REBOUND (Off:0 Def:4)","Mathurin P.FOUL (P2.T3) (J.Capers)","MISS Gilgeous-Alexander 16' Pullup Jump Shot","Sheppard REBOUND (Off:1 Def:2)","Holmgren S.FOUL (P3.PN) (J.Capers)","Mathurin Free Throw 1 of 2 (9 PTS)","Mathurin Free Throw 2 of 2 (10 PTS)","Jal. Williams Lost Ball Turnover (P1.T7)","Siakam STEAL (1 STL)","Gilgeous-Alexander S.FOUL (P4.PN) (J.Tiven)","Mathurin Free Throw 1 of 2 (11 PTS)","Mathurin Free Throw 2 of 2 (12 PTS)","Siakam S.FOUL (P1.T4) (J.Tiven)","Dort Free Throw 1 of 2 (9 PTS)","MISS Dort Free Throw 2 of 2","Mathurin REBOUND (Off:6 Def:4)","Dort S.FOUL (P3.PN) (J.Tiven)","Mathurin Free Throw 1 of 2 (13 PTS)","Mathurin Free Throw 2 of 2 (14 PTS)","MISS Jal. Williams 12' Turnaround Fadeaway Shot","Dort REBOUND (Off:3 Def:4)","MISS Gilgeous-Alexander 25' 3PT Step Back Jump Shot","Mathurin REBOUND (Off:6 Def:5)","Mathurin 2' Driving Layup (16 PTS) (Nembhard 5 AST)","Nembhard S.FOUL (P3.PN) (S.Wright)","Gilgeous-Alexander Free Throw 1 of 2 (26 PTS)","Gilgeous-Alexander Free Throw 2 of 2 (27 PTS)","MISS McConnell 5' Fadeaway Jumper","Holmgren BLOCK (5 BLK)","Holmgren REBOUND (Off:2 Def:6)","MISS Jal. Williams 2' Driving Layup","Nesmith BLOCK (2 BLK)","Siakam REBOUND (Off:1 Def:3)","Gilgeous-Alexander S.FOUL (P5.PN) (S.Wright)","Mathurin Free Throw 1 of 2 (17 PTS)","Mathurin Free Throw 2 of 2 (18 PTS)","Mathurin REBOUND (Off:6 Def:6)","Jump Ball Holmgren vs. Mathurin: Tip to Gilgeous-Alexander","McConnell Lost Ball Turnover (P6.T20)","Holmgren STEAL (1 STL)","MISS Gilgeous-Alexander 6' Driving Floating Jump Shot","McConnell REBOUND (Off:0 Def:6)","McConnell Lost Ball Turnover (P7.T21)","Dort STEAL (2 STL)","Nesmith L.B.FOUL (P5.PN) (S.Wright)","MISS Holmgren Free Throw 1 of 2","Holmgren Free Throw 2 of 2 (14 PTS)","Nembhard 30' 3PT Step Back Jump Shot (14 PTS) (Siakam 2 AST)","Holmgren 1' Cutting Dunk Shot (16 PTS) (Jal. Williams 4 AST)","Mathurin 2' Driving Layup (20 PTS) (Nembhard 6 AST)","Nesmith P.FOUL (P6.PN) (S.Wright)","Gilgeous-Alexander Free Throw 1 of 2 (28 PTS)","Gilgeous-Alexander Free Throw 2 of 2 (29 PTS)","Caruso P.FOUL (P3.PN) (J.Capers)","MISS Nembhard Free Throw 1 of 2","Nembhard Free Throw 2 of 2 (15 PTS)","Mathurin P.FOUL (P3.PN) (J.Capers)","Jal. Williams Free Throw 1 of 2 (18 PTS)","Jal. Williams Free Throw 2 of 2 (19 PTS)","Nembhard Lost Ball Turnover (P2.T22)","Dort STEAL (3 STL)","Siakam P.FOUL (P2.PN) (J.Tiven)","Jal. Williams Free Throw 1 of 2 (20 PTS)","MISS Jal. Williams Free Throw 2 of 2","Sheppard REBOUND (Off:1 Def:3)","MISS Mathurin 29' 3PT Running Pull-Up Jump Shot","Mathurin REBOUND (Off:7 Def:6)","Mathurin Step Out of Bounds Turnover (P3.T23)","Mathurin 2' Driving Layup (22 PTS)","Mitchell Lost Ball Turnover (P1.T8)","Mathurin STEAL (2 STL)","Jones S.FOUL (P1.PN) (S.Wright)","Mathurin Free Throw 1 of 2 (23 PTS)","Mathurin Free Throw 2 of 2 (24 PTS)","official record agrees","no official shot within 3 s","official shot the pipeline never called"],"players":{"1626167":"Myles Turner","v375":"Andrew Nembhard","v376":"Jalen Williams","v377":"Aaron Nesmith","v378":"Luguentz Dort","v379":"Chet Holmgren","v380":"Shai Gilgeous-Alexander","v381":"Pascal Siakam","v382":"Tyrese Haliburton","v383":"Bennedict Mathurin","v384":"Alex Caruso","v385":"Isaiah Hartenstein","v386":"T.J. McConnell","v387":"Kenrich Williams","v388":"Obi Toppin","v389":"Cason Wallace","v390":"Ben Sheppard","v391":"Bradley","v392":"Aaron Wiggins","v393":"Thomas Bryant","v394":"Mitchell","v395":"Jones"},"fields":["t","period","clock","action","player_id","team","x","y","confidence","detail","screener_id","clip"],"games":[{"id":"0042400407","date":"2025 Finals G7","video":true,"rows":[[540.0,1,"11:44",1,"v375",-1,null,null,1.0,0,0,"e005400.mp4"],[555.0,1,"11:29",2,"v376",-1,null,null,1.0,1,0,"e005550.mp4"],[555.0,1,"11:29",5,"v377",-1,null,null,1.0,2,0,"e005550.mp4"],[557.0,1,"11:25",3,"v377",-1,null,null,0.5,3,0,"e005570.mp4"],[567.0,1,"11:17",6,"v378",-1,null,null,1.0,4,0,"e005670.mp4"],[588.0,1,"11:11",2,"1626167",-1,null,null,1.0,5,0,"e005880.mp4"],[591.0,1,"11:08",3,"v379",-1,null,null,1.0,6,0,"e005910.mp4"],[602.0,1,"10:57",1,"v380",-1,null,null,1.0,7,0,"e006020.mp4"],[614.0,1,"10:45",1,"v381",-1,null,null,1.0,8,0,"e006140.mp4"],[614.0,1,"10:45",0,"v381",-1,null,null,1.0,8,0,"e006140.mp4"],[642.0,1,"10:17",2,"v380",-1,null,null,1.0,9,0,"e006420.mp4"],[644.0,1,"10:15",3,0,-1,null,null,1.0,10,0,"e006440.mp4"],[644.0,1,"10:15",6,"v379",-1,null,null,1.0,11,0,"e006440.mp4"],[676.0,1,"9:59",2,"v375",-1,null,null,1.0,12,0,"e006760.mp4"],[676.0,1,"9:59",5,"v379",-1,null,null,1.0,13,0,"e006760.mp4"],[679.0,1,"9:56",3,"v375",-1,null,null,1.0,14,0,"e006790.mp4"],[681.0,1,"9:54",2,"v381",-1,null,null,1.0,15,0,"e006810.mp4"],[684.0,1,"9:51",3,"v380",-1,null,null,1.0,16,0,"e006840.mp4"],[690.0,1,"9:45",6,"v377",-1,null,null,1.0,17,0,"e006900.mp4"],[726.0,1,"9:35",1,"v380",-1,null,null,1.0,18,0,"e007260.mp4"],[740.0,1,"9:21",2,"v382",-1,null,null,1.0,19,0,"e007400.mp4"],[740.0,1,"9:21",5,"v380",-1,null,null,1.0,20,0,"e007400.mp4"],[743.0,1,"9:18",3,"v379",-1,null,null,1.0,21,0,"e007430.mp4"],[763.0,1,"8:58",1,"v379",-1,null,null,1.0,22,0,"e007630.mp4"],[763.0,1,"8:58",0,"v379",-1,null,null,1.0,22,0,"e007630.mp4"],[788.0,1,"8:33",1,"v382",-1,null,null,1.0,23,0,"e007880.mp4"],[788.0,1,"8:33",0,"v382",-1,null,null,1.0,23,0,"e007880.mp4"],[810.0,1,"8:11",2,"v376",-1,null,null,1.0,24,0,"e008100.mp4"],[812.0,1,"8:09",3,"v375",-1,null,null,1.0,25,0,"e008120.mp4"],[816.0,1,"8:05",1,"v382",-1,null,null,1.0,26,0,"e008160.mp4"],[816.0,1,"8:05",0,"v382",-1,null,null,1.0,26,0,"e008160.mp4"],[835.0,1,"7:46",1,"v378",-1,null,null,1.0,27,0,"e008350.mp4"],[835.0,1,"7:46",0,"v378",-1,null,null,1.0,27,0,"e008350.mp4"],[849.0,1,"7:32",2,"v381",-1,null,null,1.0,28,0,"e008490.mp4"],[852.0,1,"7:29",3,"v379",-1,null,null,1.0,29,0,"e008520.mp4"],[860.0,1,"7:21",6,"v377",-1,null,null,1.0,30,0,"e008600.mp4"],[860.0,1,"7:21",7,"v380",-1,null,null,1.0,31,0,"e008600.mp4"],[860.0,1,"7:21",7,"v380",-1,null,null,1.0,32,0,"e008600.mp4"],[933.0,1,"7:08",2,"v382",-1,null,null,1.0,33,0,"e009330.mp4"],[938.0,1,"7:03",3,"v383",-1,null,null,1.0,34,0,"e009380.mp4"],[940.0,1,"7:01",1,"v382",-1,null,null,1.0,35,0,"e009400.mp4"],[940.0,1,"7:01",0,"v382",-1,null,null,1.0,35,0,"e009400.mp4"],[1006.0,1,"6:43",1,"v384",-1,null,null,1.0,36,0,"e010060.mp4"],[1006.0,1,"6:43",0,"v384",-1,null,null,1.0,36,0,"e010060.mp4"],[1036.0,1,"6:13",2,"v383",-1,null,null,1.0,37,0,"e010360.mp4"],[1038.0,1,"6:11",3,"v385",-1,null,null,1.0,38,0,"e010380.mp4"],[1048.0,1,"6:01",8,0,-1,null,null,1.0,39,0,"e010480.mp4"],[1142.0,1,"5:48",1,"v384",-1,null,null,0.75,40,0,"e011420.mp4"],[1142.0,1,"5:48",0,"v384",-1,null,null,0.75,40,0,"e011420.mp4"],[1155.0,1,"5:36",6,"v376",-1,null,null,1.0,41,0,"e011550.mp4"],[1155.0,1,"5:36",7,"v375",-1,null,null,1.0,42,0,"e011550.mp4"],[1155.0,1,"5:36",7,"v375",-1,null,null,1.0,43,0,"e011550.mp4"],[1217.0,1,"5:20",2,"v384",-1,null,null,1.0,44,0,"e012170.mp4"],[1219.0,1,"5:18",3,"1626167",-1,null,null,1.0,45,0,"e012190.mp4"],[1237.0,1,"5:00",4,"v382",-1,null,null,1.0,46,0,"e012370.mp4"],[1237.0,1,"5:00",9,"v384",-1,null,null,1.0,47,0,"e012370.mp4"],[1242.0,1,"4:55",1,"v376",-1,null,null,1.0,48,0,"e012420.mp4"],[1242.0,1,"4:55",0,"v376",-1,null,null,1.0,48,0,"e012420.mp4"],[1331.0,1,"4:32",2,"v386",-1,null,null,1.0,49,0,"e013310.mp4"],[1332.0,1,"4:31",3,0,-1,null,null,1.0,10,0,"e013320.mp4"],[1332.0,1,"4:31",4,0,-1,null,null,1.0,50,0,"e013320.mp4"],[1355.0,1,"4:19",2,"v384",-1,null,null,1.0,51,0,"e013550.mp4"],[1358.0,1,"4:16",3,"v383",-1,null,null,1.0,52,0,"e013580.mp4"],[1369.0,1,"4:05",1,"v381",-1,null,null,1.0,53,0,"e013690.mp4"],[1369.0,1,"4:05",0,"v381",-1,null,null,1.0,53,0,"e013690.mp4"],[1369.0,1,"4:05",6,"v384",-1,null,null,1.0,54,0,"e013690.mp4"],[1369.0,1,"4:05",7,"v381",-1,null,null,1.0,55,0,"e013690.mp4"],[1419.0,1,"4:02",3,"v380",-1,null,null,1.0,56,0,"e014190.mp4"],[1429.0,1,"3:52",2,"v380",-1,null,null,1.0,57,0,"e014290.mp4"],[1431.0,1,"3:50",3,"v381",-1,null,null,1.0,58,0,"e014310.mp4"],[1440.0,1,"3:41",2,"v383",-1,null,null,1.0,59,0,"e014400.mp4"],[1442.0,1,"3:39",3,"v384",-1,null,null,1.0,60,0,"e014420.mp4"],[1449.0,1,"3:32",2,"v384",-1,null,null,1.0,61,0,"e014490.mp4"],[1454.0,1,"3:27",3,"v387",-1,null,null,1.0,62,0,"e014540.mp4"],[1463.0,1,"3:18",1,"v380",-1,null,null,1.0,63,0,"e014630.mp4"],[1475.0,1,"3:06",2,"v388",-1,null,null,1.0,64,0,"e014750.mp4"],[1477.0,1,"3:04",3,"v379",-1,null,null,1.0,65,0,"e014770.mp4"],[1493.0,1,"2:48",1,"v379",-1,null,null,1.0,66,0,"e014930.mp4"],[1493.0,1,"2:48",0,"v379",-1,null,null,1.0,66,0,"e014930.mp4"],[1515.0,1,"2:26",1,"v381",-1,null,null,1.0,67,0,"e015150.mp4"],[1515.0,1,"2:26",0,"v381",-1,null,null,1.0,67,0,"e015150.mp4"],[1543.0,1,"1:59",2,"v380",-1,null,null,0.75,68,0,"e015430.mp4"],[1545.0,1,"1:56",3,"v386",-1,null,null,1.0,69,0,"e015450.mp4"],[1560.0,1,"1:41",4,"v386",-1,null,null,1.0,70,0,"e015600.mp4"],[1560.0,1,"1:41",9,"v384",-1,null,null,1.0,71,0,"e015600.mp4"],[1582.0,1,"1:19",2,"v389",-1,null,null,1.0,72,0,"e015820.mp4"],[1583.0,1,"1:18",3,0,-1,null,null,1.0,73,0,"e015830.mp4"],[1583.0,1,"1:18",4,0,-1,null,null,1.0,74,0,"e015830.mp4"],[1621.0,1,"1:09",2,"v386",-1,null,null,1.0,75,0,"e016210.mp4"],[1624.0,1,"1:06",3,"v376",-1,null,null,1.0,76,0,"e016240.mp4"],[1631.0,1,"0:59",2,"v387",-1,null,null,0.95,77,0,"e016310.mp4"],[1635.0,1,"0:56",3,0,-1,null,null,1.0,10,0,"e016350.mp4"],[1813.0,2,"11:47",2,"v385",-1,null,null,1.0,78,0,"e018130.mp4"],[1815.0,2,"11:45",3,"v390",-1,null,null,1.0,79,0,"e018150.mp4"],[1821.0,2,"11:39",1,"v383",-1,null,null,1.0,80,0,"e018210.mp4"],[1821.0,2,"11:39",0,"v383",-1,null,null,1.0,80,0,"e018210.mp4"],[1836.0,2,"11:24",6,"v391",-1,null,null,1.0,81,0,"e018360.mp4"],[1836.0,2,"11:24",7,"v385",-1,null,null,1.0,82,0,"e018360.mp4"],[1836.0,2,"11:24",3,0,-1,null,null,1.0,73,0,"e018360.mp4"],[1836.0,2,"11:24",7,"v385",-1,null,null,1.0,83,0,"e018360.mp4"],[1876.0,2,"11:22",3,"v391",-1,null,null,1.0,84,0,"e018760.mp4"],[1895.0,2,"11:03",6,"v389",-1,null,null,1.0,85,0,"e018950.mp4"],[1895.0,2,"11:03",7,"v381",-1,null,null,1.0,86,0,"e018950.mp4"],[1895.0,2,"11:03",7,"v381",-1,null,null,1.0,87,0,"e018950.mp4"],[1950.0,2,"11:01",3,"v385",-1,null,null,1.0,88,0,"e019500.mp4"],[1966.0,2,"10:45",2,"v376",-1,null,null,1.0,89,0,"e019660.mp4"],[1969.0,2,"10:42",3,"v389",-1,null,null,1.0,90,0,"e019690.mp4"],[1977.0,2,"10:34",1,"v384",-1,null,null,1.0,91,0,"e019770.mp4"],[1977.0,2,"10:34",0,"v384",-1,null,null,1.0,91,0,"e019770.mp4"],[1993.0,2,"10:21",6,"v376",-1,null,null,1.0,92,0,"e019930.mp4"],[1993.0,2,"10:21",7,"v391",-1,null,null,1.0,93,0,"e019930.mp4"],[1993.0,2,"10:21",7,"v391",-1,null,null,1.0,94,0,"e019930.mp4"],[2053.0,2,"10:10",6,"v386",-1,null,null,1.0,95,0,"e020530.mp4"],[2085.0,2,"10:05",2,"v376",-1,null,null,1.0,96,0,"e020850.mp4"],[2087.0,2,"10:03",3,"v385",-1,null,null,1.0,97,0,"e020870.mp4"],[2087.0,2,"10:03",2,"v384",-1,null,null,1.0,98,0,"e020870.mp4"],[2088.0,2,"10:02",3,0,-1,null,null,1.0,73,0,"e020880.mp4"],[2088.0,2,"10:02",6,"v391",-1,null,null,1.0,99,0,"e020880.mp4"],[2124.0,2,"9:55",1,"v385",-1,null,null,1.0,100,0,"e021240.mp4"],[2124.0,2,"9:55",0,"v385",-1,null,null,1.0,100,0,"e021240.mp4"],[2143.0,2,"9:36",4,"v390",-1,null,null,1.0,101,0,"e021430.mp4"],[2143.0,2,"9:36",9,"v384",-1,null,null,1.0,102,0,"e021430.mp4"],[2152.0,2,"9:27",4,"v389",-1,null,null,1.0,103,0,"e021520.mp4"],[2152.0,2,"9:27",9,"v386",-1,null,null,1.0,104,0,"e021520.mp4"],[2172.0,2,"9:07",2,"v381",-1,null,null,1.0,105,0,"e021720.mp4"],[2176.0,2,"9:03",3,"v385",-1,null,null,1.0,106,0,"e021760.mp4"],[2187.0,2,"8:52",6,"v390",-1,null,null,1.0,107,0,"e021870.mp4"],[2187.0,2,"8:52",7,"v376",-1,null,null,1.0,108,0,"e021870.mp4"],[2187.0,2,"8:52",3,0,-1,null,null,1.0,73,0,"e021870.mp4"],[2187.0,2,"8:52",7,"v376",-1,null,null,1.0,109,0,"e021870.mp4"],[2284.0,2,"8:29",6,"v392",-1,null,null,1.0,110,0,"e022840.mp4"],[2284.0,2,"8:29",7,"1626167",-1,null,null,1.0,111,0,"e022840.mp4"],[2284.0,2,"8:29",3,0,-1,null,null,1.0,10,0,"e022840.mp4"],[2284.0,2,"8:29",7,"1626167",-1,null,null,1.0,112,0,"e022840.mp4"],[2340.0,2,"8:19",6,"v375",-1,null,null,1.0,113,0,"e023400.mp4"],[2340.0,2,"8:19",7,"v380",-1,null,null,1.0,114,0,"e023400.mp4"],[2340.0,2,"8:19",7,"v380",-1,null,null,1.0,115,0,"e023400.mp4"],[2394.0,2,"8:16",4,"v388",-1,null,null,1.0,116,0,"e023940.mp4"],[2394.0,2,"8:16",9,"v389",-1,null,null,1.0,117,0,"e023940.mp4"],[2405.0,2,"8:05",2,"v380",-1,null,null,1.0,118,0,"e024050.mp4"],[2409.0,2,"8:01",3,"v377",-1,null,null,1.0,119,0,"e024090.mp4"],[2421.0,2,"7:49",2,"v388",-1,null,null,1.0,120,0,"e024210.mp4"],[2423.0,2,"7:47",3,"1626167",-1,null,null,1.0,121,0,"e024230.mp4"],[2424.0,2,"7:46",1,"v377",-1,null,null,1.0,122,0,"e024240.mp4"],[2424.0,2,"7:46",0,"v377",-1,null,null,1.0,122,0,"e024240.mp4"],[2438.0,2,"7:30",2,"v378",-1,null,null,0.5,123,0,"e024380.mp4"],[2446.0,2,"7:24",3,"v388",-1,null,null,0.5,124,0,"e024460.mp4"],[2446.0,2,"7:23",4,"v388",-1,null,null,0.75,125,0,"e024460.mp4"],[2446.0,2,"7:23",9,"v389",-1,null,null,0.75,126,0,"e024460.mp4"],[2454.0,2,"7:16",1,"v380",-1,null,null,1.0,127,0,"e024540.mp4"],[2519.0,2,"6:52",2,"v383",-1,null,null,1.0,128,0,"e025190.mp4"],[2521.0,2,"6:50",3,"v380",-1,null,null,1.0,129,0,"e025210.mp4"],[2525.0,2,"6:46",1,"v389",-1,null,null,1.0,130,0,"e025250.mp4"],[2525.0,2,"6:46",0,"v389",-1,null,null,1.0,130,0,"e025250.mp4"],[2546.0,2,"6:25",6,"v389",-1,null,null,1.0,131,0,"e025460.mp4"],[2546.0,2,"6:25",7,"1626167",-1,null,null,1.0,111,0,"e025460.mp4"],[2546.0,2,"6:25",3,0,-1,null,null,1.0,10,0,"e025460.mp4"],[2546.0,2,"6:25",7,"1626167",-1,null,null,1.0,132,0,"e025460.mp4"],[2609.0,2,"6:21",3,"v378",-1,null,null,1.0,133,0,"e026090.mp4"],[2611.0,2,"6:19",4,"v378",-1,null,null,1.0,134,0,"e026110.mp4"],[2611.0,2,"6:19",9,"v377",-1,null,null,1.0,135,0,"e026110.mp4"],[2613.0,2,"6:17",2,"v386",-1,null,null,1.0,75,0,"e026130.mp4"],[2619.0,2,"6:11",3,"v380",-1,null,null,1.0,136,0,"e026190.mp4"],[2625.0,2,"6:05",2,"v389",-1,null,null,1.0,137,0,"e026250.mp4"],[2625.0,2,"6:05",3,0,-1,null,null,1.0,10,0,"e026250.mp4"],[1644.0,2,"5:48",1,"v386",-1,null,null,0.75,138,0,"e016440.mp4"],[2670.0,2,"5:36",2,"v379",-1,null,null,1.0,139,0,"e026700.mp4"],[2674.0,2,"5:32",3,"v377",-1,null,null,1.0,140,0,"e026740.mp4"],[2683.0,2,"5:23",1,"v375",-1,null,null,1.0,141,0,"e026830.mp4"],[2683.0,2,"5:23",0,"v375",-1,null,null,1.0,141,0,"e026830.mp4"],[1648.0,2,"5:09",2,"v376",-1,null,null,1.0,142,0,"e016480.mp4"],[2760.0,2,"5:05",3,"v375",-1,null,null,1.0,143,0,"e027600.mp4"],[1653.0,2,"4:59",2,"v377",-1,null,null,1.0,144,0,"e016530.mp4"],[2768.0,2,"4:57",3,"v378",-1,null,null,1.0,145,0,"e027680.mp4"],[2779.0,2,"4:46",1,"v378",-1,null,null,1.0,146,0,"e027790.mp4"],[2779.0,2,"4:46",0,"v378",-1,null,null,1.0,146,0,"e027790.mp4"],[2800.0,2,"4:25",1,"1626167",-1,null,null,1.0,147,0,"e028000.mp4"],[2812.0,2,"4:13",2,"v378",-1,null,null,1.0,148,0,"e028120.mp4"],[2815.0,2,"4:10",3,"v375",-1,null,null,1.0,149,0,"e028150.mp4"],[2832.0,2,"3:53",1,"v386",-1,null,null,1.0,150,0,"e028320.mp4"],[2845.0,2,"3:40",2,"v379",-1,null,null,1.0,151,0,"e028450.mp4"],[2845.0,2,"3:40",5,"v386",-1,null,null,1.0,152,0,"e028450.mp4"],[2847.0,2,"3:38",3,"v386",-1,null,null,1.0,153,0,"e028470.mp4"],[2853.0,2,"3:32",2,"1626167",-1,null,null,1.0,154,0,"e028530.mp4"],[2857.0,2,"3:28",3,"v378",-1,null,null,1.0,155,0,"e028570.mp4"],[2864.0,2,"3:21",2,"v380",-1,null,null,1.0,156,0,"e028640.mp4"],[2864.0,2,"3:21",5,"v381",-1,null,null,1.0,157,0,"e028640.mp4"],[2867.0,2,"3:18",3,"v386",-1,null,null,1.0,158,0,"e028670.mp4"],[2872.0,2,"3:13",4,"v381",-1,null,null,1.0,159,0,"e028720.mp4"],[2908.0,2,"3:04",10,"1626167",-1,null,null,1.0,160,0,"e029080.mp4"],[1676.0,2,"2:55",1,"v380",-1,null,null,1.0,161,0,"e016760.mp4"],[1676.0,2,"2:55",0,"v380",-1,null,null,1.0,161,0,"e016760.mp4"],[1676.0,2,"2:55",10,"1626167",-1,null,null,1.0,162,0,"e016760.mp4"],[2959.0,2,"2:44",2,"v375",-1,null,null,1.0,163,0,"e029590.mp4"],[2959.0,2,"2:44",3,"v385",-1,null,null,1.0,164,0,"e029590.mp4"],[2981.0,2,"2:22",2,"v378",-1,null,null,1.0,148,0,"e029810.mp4"],[2984.0,2,"2:19",3,"v385",-1,null,null,1.0,165,0,"e029840.mp4"],[2984.0,2,"2:19",8,0,-1,null,null,1.0,166,0,"e029840.mp4"],[3028.0,2,"2:17",4,"v385",-1,null,null,1.0,167,0,"e030280.mp4"],[3028.0,2,"2:17",9,"v377",-1,null,null,1.0,168,0,"e030280.mp4"],[3051.0,2,"2:02",1,"v383",-1,null,null,1.0,169,0,"e030510.mp4"],[3064.0,2,"1:49",4,"v385",-1,null,null,1.0,170,0,"e030640.mp4"],[3103.0,2,"1:30",2,"v388",-1,null,null,1.0,171,0,"e031030.mp4"],[3105.0,2,"1:28",3,0,-1,null,null,1.0,10,0,"e031050.mp4"],[3105.0,2,"1:28",6,"v389",-1,null,null,1.0,172,0,"e031050.mp4"],[3105.0,2,"1:28",7,"v381",-1,null,null,1.0,173,0,"e031050.mp4"],[3105.0,2,"1:28",7,"v381",-1,null,null,1.0,174,0,"e031050.mp4"],[3191.0,2,"1:07",2,"v380",-1,null,null,1.0,175,0,"e031910.mp4"],[3195.0,2,"1:03",3,"v381",-1,null,null,1.0,176,0,"e031950.mp4"],[1649.0,2,"0:49",2,"v375",-1,null,null,1.0,177,0,"e016490.mp4"],[3212.0,2,"0:46",3,"v376",-1,null,null,0.93,178,0,"e032120.mp4"],[3220.0,2,"0:39",1,"v385",-1,null,null,1.0,179,0,"e032200.mp4"],[3220.0,2,"0:39",0,"v385",-1,null,null,1.0,179,0,"e032200.mp4"],[3220.0,2,"0:39",6,"v388",-1,null,null,1.0,180,0,"e032200.mp4"],[3220.0,2,"0:39",7,"v385",-1,null,null,1.0,181,0,"e032200.mp4"],[3274.0,2,"0:37",6,"v383",-1,null,null,1.0,182,0,"e032740.mp4"],[3274.0,2,"0:37",4,"v383",-1,null,null,1.0,183,0,"e032740.mp4"],[3313.0,2,"0:24",6,"v375",-1,null,null,0.55,184,0,"e033130.mp4"],[3313.0,2,"0:24",7,"v380",-1,null,null,0.55,185,0,"e033130.mp4"],[3313.0,2,"0:24",7,"v380",-1,null,null,0.55,186,0,"e033130.mp4"],[3520.0,2,"0:00",2,"v380",-1,null,null,0.3,187,0,"e035200.mp4"],[3520.0,2,"0:00",3,0,-1,null,null,0.3,73,0,"e035200.mp4"],[3541.0,3,"11:37",2,"v380",-1,null,null,1.0,188,0,"e035410.mp4"],[3543.0,3,"11:35",3,0,-1,null,null,1.0,73,0,"e035430.mp4"],[3574.0,3,"11:33",2,"v380",-1,null,null,1.0,189,0,"e035740.mp4"],[3576.0,3,"11:31",3,"v379",-1,null,null,1.0,190,0,"e035760.mp4"],[3577.0,3,"11:30",1,"v379",-1,null,null,1.0,191,0,"e035770.mp4"],[3593.0,3,"11:14",4,"v375",-1,null,null,1.0,192,0,"e035930.mp4"],[3614.0,3,"11:02",2,"v376",-1,null,null,1.0,193,0,"e036140.mp4"],[3617.0,3,"10:59",3,"v378",-1,null,null,1.0,194,0,"e036170.mp4"],[3630.0,3,"10:46",1,"v378",-1,null,null,1.0,195,0,"e036300.mp4"],[3642.0,3,"10:34",2,"v383",-1,null,null,1.0,59,0,"e036420.mp4"],[3642.0,3,"10:34",5,"v379",-1,null,null,1.0,196,0,"e036420.mp4"],[3642.0,3,"10:34",3,"v383",-1,null,null,1.0,197,0,"e036420.mp4"],[3646.0,3,"10:30",1,"v381",-1,null,null,1.0,198,0,"e036460.mp4"],[3646.0,3,"10:30",0,"v381",-1,null,null,1.0,198,0,"e036460.mp4"],[3662.0,3,"10:14",6,"v377",-1,null,null,1.0,199,0,"e036620.mp4"],[3695.0,3,"10:00",2,"v384",-1,null,null,1.0,200,0,"e036950.mp4"],[3698.0,3,"9:57",3,"v384",-1,null,null,1.0,201,0,"e036980.mp4"],[3698.0,3,"9:57",1,"v384",-1,null,null,1.0,202,0,"e036980.mp4"],[3712.0,3,"9:43",2,"v375",-1,null,null,1.0,203,0,"e037120.mp4"],[3714.0,3,"9:41",3,"v376",-1,null,null,1.0,204,0,"e037140.mp4"],[3721.0,3,"9:34",2,"v378",-1,null,null,1.0,148,0,"e037210.mp4"],[3727.0,3,"9:28",3,"v383",-1,null,null,1.0,205,0,"e037270.mp4"],[3730.0,3,"9:25",4,"v383",-1,null,null,1.0,206,0,"e037300.mp4"],[3730.0,3,"9:25",9,"v376",-1,null,null,1.0,207,0,"e037300.mp4"],[3735.0,3,"9:20",1,"v376",-1,null,null,1.0,208,0,"e037350.mp4"],[3790.0,3,"9:10",2,"v383",-1,null,null,1.0,209,0,"e037900.mp4"],[3794.0,3,"9:06",3,"v377",-1,null,null,1.0,210,0,"e037940.mp4"],[3796.0,3,"9:04",2,"v377",-1,null,null,1.0,211,0,"e037960.mp4"],[3796.0,3,"9:04",3,0,-1,null,null,1.0,10,0,"e037960.mp4"],[3796.0,3,"9:04",6,"v380",-1,null,null,1.0,212,0,"e037960.mp4"],[3832.0,3,"8:54",6,"v379",-1,null,null,1.0,213,0,"e038320.mp4"],[3832.0,3,"8:54",7,"v375",-1,null,null,1.0,214,0,"e038320.mp4"],[3832.0,3,"8:54",7,"v375",-1,null,null,1.0,215,0,"e038320.mp4"],[3897.0,3,"8:44",2,"v376",-1,null,null,1.0,216,0,"e038970.mp4"],[3898.0,3,"8:43",3,"1626167",-1,null,null,1.0,217,0,"e038980.mp4"],[3909.0,3,"8:32",1,"1626167",-1,null,null,1.0,218,0,"e039090.mp4"],[3909.0,3,"8:32",0,"1626167",-1,null,null,1.0,218,0,"e039090.mp4"],[3925.0,3,"8:16",1,"v380",-1,null,null,1.0,219,0,"e039250.mp4"],[3947.0,3,"7:54",4,"v386",-1,null,null,1.0,220,0,"e039470.mp4"],[3947.0,3,"7:54",9,"v376",-1,null,null,1.0,221,0,"e039470.mp4"],[3978.0,3,"7:45",1,"v379",-1,null,null,1.0,222,0,"e039780.mp4"],[3978.0,3,"7:45",0,"v379",-1,null,null,1.0,222,0,"e039780.mp4"],[3994.0,3,"7:29",4,"v386",-1,null,null,1.0,223,0,"e039940.mp4"],[3994.0,3,"7:29",9,"v378",-1,null,null,1.0,224,0,"e039940.mp4"],[4007.0,3,"7:16",1,"v376",-1,null,null,1.0,225,0,"e040070.mp4"],[4007.0,3,"7:16",0,"v376",-1,null,null,1.0,225,0,"e040070.mp4"],[4082.0,3,"6:55",1,"v386",-1,null,null,1.0,226,0,"e040820.mp4"],[4104.0,3,"6:33",1,"v380",-1,null,null,1.0,227,0,"e041040.mp4"],[4127.0,3,"6:10",4,"v388",-1,null,null,1.0,228,0,"e041270.mp4"],[4127.0,3,"6:10",9,"v380",-1,null,null,1.0,229,0,"e041270.mp4"],[4148.0,3,"5:49",2,"v376",-1,null,null,1.0,230,0,"e041480.mp4"],[4151.0,3,"5:46",3,"1626167",-1,null,null,1.0,231,0,"e041510.mp4"],[4158.0,3,"5:38",1,"v386",-1,null,null,0.75,232,0,"e041580.mp4"],[4158.0,3,"5:38",0,"v386",-1,null,null,0.75,232,0,"e041580.mp4"],[4174.0,3,"5:23",2,"v380",-1,null,null,1.0,233,0,"e041740.mp4"],[4176.0,3,"5:21",3,"v388",-1,null,null,1.0,234,0,"e041760.mp4"],[4189.0,3,"5:08",1,"v386",-1,null,null,1.0,235,0,"e041890.mp4"],[4201.0,3,"4:56",1,"v379",-1,null,null,1.0,236,0,"e042010.mp4"],[4201.0,3,"4:56",0,"v379",-1,null,null,1.0,236,0,"e042010.mp4"],[4216.0,3,"4:41",1,"v386",-1,null,null,1.0,237,0,"e042160.mp4"],[4226.0,3,"4:31",6,"1626167",-1,null,null,1.0,238,0,"e042260.mp4"],[4226.0,3,"4:31",7,"v380",-1,null,null,1.0,239,0,"e042260.mp4"],[4226.0,3,"4:31",7,"v380",-1,null,null,1.0,240,0,"e042260.mp4"],[4298.0,3,"4:30",3,0,-1,null,null,1.0,10,0,"e042980.mp4"],[4317.0,3,"4:18",2,"v375",-1,null,null,1.0,241,0,"e043170.mp4"],[4321.0,3,"4:14",3,"v380",-1,null,null,1.0,242,0,"e043210.mp4"],[4326.0,3,"4:09",2,"v378",-1,null,null,1.0,243,0,"e043260.mp4"],[4330.0,3,"4:05",3,"v384",-1,null,null,1.0,244,0,"e043300.mp4"],[4330.0,3,"4:05",2,"v384",-1,null,null,1.0,245,0,"e043300.mp4"],[4331.0,3,"4:04",3,"v386",-1,null,null,1.0,246,0,"e043310.mp4"],[4341.0,3,"3:54",1,"v386",-1,null,null,1.0,247,0,"e043410.mp4"],[4341.0,3,"3:54",0,"v386",-1,null,null,1.0,247,0,"e043410.mp4"],[4357.0,3,"3:38",2,"v378",-1,null,null,1.0,248,0,"e043570.mp4"],[4361.0,3,"3:34",3,"v386",-1,null,null,1.0,249,0,"e043610.mp4"],[4376.0,3,"3:19",4,"v391",-1,null,null,1.0,250,0,"e043760.mp4"],[4420.0,3,"3:00",1,"v389",-1,null,null,1.0,251,0,"e044200.mp4"],[4420.0,3,"3:00",0,"v389",-1,null,null,1.0,251,0,"e044200.mp4"],[4435.0,3,"2:45",4,"v386",-1,null,null,1.0,252,0,"e044350.mp4"],[4435.0,3,"2:45",9,"v385",-1,null,null,1.0,253,0,"e044350.mp4"],[4438.0,3,"2:42",1,"v389",-1,null,null,1.0,254,0,"e044380.mp4"],[4438.0,3,"2:42",0,"v389",-1,null,null,1.0,254,0,"e044380.mp4"],[4452.0,3,"2:28",6,"v376",-1,null,null,1.0,255,0,"e044520.mp4"],[4508.0,3,"2:23",2,"v393",-1,null,null,1.0,256,0,"e045080.mp4"],[4511.0,3,"2:20",3,"v383",-1,null,null,1.0,257,0,"e045110.mp4"],[4511.0,3,"2:20",4,0,-1,null,null,1.0,258,0,"e045110.mp4"],[4564.0,3,"2:02",1,"v376",-1,null,null,1.0,259,0,"e045640.mp4"],[4628.0,3,"1:46",1,"v386",-1,null,null,1.0,260,0,"e046280.mp4"],[4647.0,3,"1:27",1,"v376",-1,null,null,1.0,261,0,"e046470.mp4"],[4657.0,3,"1:17",6,"v376",-1,null,null,1.0,262,0,"e046570.mp4"],[4715.0,3,"1:10",2,"v390",-1,null,null,1.0,263,0,"e047150.mp4"],[4718.0,3,"1:07",3,"v385",-1,null,null,1.0,264,0,"e047180.mp4"],[4729.0,3,"0:56",2,"v376",-1,null,null,0.93,265,0,"e047290.mp4"],[4729.0,3,"0:54",3,"v383",-1,null,null,0.57,266,0,"e047290.mp4"],[4739.0,3,"0:44",2,"v386",-1,null,null,0.47,267,0,"e047390.mp4"],[4860.0,3,"0:30",2,"v380",-1,null,null,0.8,268,0,"e048600.mp4"],[4861.0,3,"0:29",3,"v385",-1,null,null,1.0,269,0,"e048610.mp4"],[4861.0,3,"0:29",1,"v385",-1,null,null,1.0,270,0,"e048610.mp4"],[4927.0,4,"11:49",2,"v375",-1,null,null,1.0,271,0,"e049270.mp4"],[4930.0,4,"11:46",3,"v383",-1,null,null,1.0,272,0,"e049300.mp4"],[4934.0,4,"11:42",2,"v388",-1,null,null,1.0,273,0,"e049340.mp4"],[4937.0,4,"11:39",3,0,-1,null,null,1.0,73,0,"e049370.mp4"],[4975.0,4,"11:22",1,"v380",-1,null,null,1.0,274,0,"e049750.mp4"],[4992.0,4,"11:05",4,"v377",-1,null,null,1.0,275,0,"e049920.mp4"],[5083.0,4,"10:46",2,"v380",-1,null,null,1.0,276,0,"e050830.mp4"],[5085.0,4,"10:44",3,"v377",-1,null,null,1.0,277,0,"e050850.mp4"],[5099.0,4,"10:30",2,"v381",-1,null,null,1.0,278,0,"e050990.mp4"],[5102.0,4,"10:27",3,0,-1,null,null,1.0,73,0,"e051020.mp4"],[5102.0,4,"10:27",6,"v377",-1,null,null,1.0,279,0,"e051020.mp4"],[5135.0,4,"10:09",2,"v392",-1,null,null,1.0,280,0,"e051350.mp4"],[5139.0,4,"10:05",3,"v377",-1,null,null,1.0,281,0,"e051390.mp4"],[5149.0,4,"9:55",6,"v380",-1,null,null,1.0,282,0,"e051490.mp4"],[5175.0,4,"9:50",6,"v378",-1,null,null,1.0,283,0,"e051750.mp4"],[5221.0,4,"9:41",2,"v377",-1,null,null,1.0,284,0,"e052210.mp4"],[5221.0,4,"9:41",5,"v380",-1,null,null,1.0,285,0,"e052210.mp4"],[5225.0,4,"9:37",3,"v381",-1,null,null,1.0,286,0,"e052250.mp4"],[5224.0,4,"9:36",2,"v381",-1,null,null,1.0,287,0,"e052240.mp4"],[5228.0,4,"9:34",3,"v379",-1,null,null,1.0,288,0,"e052280.mp4"],[5247.0,4,"9:15",1,"v389",-1,null,null,1.0,289,0,"e052470.mp4"],[5247.0,4,"9:15",0,"v389",-1,null,null,1.0,289,0,"e052470.mp4"],[5267.0,4,"8:55",2,"v377",-1,null,null,1.0,290,0,"e052670.mp4"],[5267.0,4,"8:55",5,"v379",-1,null,null,1.0,291,0,"e052670.mp4"],[5269.0,4,"8:53",3,"v378",-1,null,null,1.0,292,0,"e052690.mp4"],[5281.0,4,"8:41",2,"v380",-1,null,null,1.0,293,0,"e052810.mp4"],[5285.0,4,"8:37",3,"v389",-1,null,null,1.0,294,0,"e052850.mp4"],[5293.0,4,"8:29",1,"v376",-1,null,null,1.0,295,0,"e052930.mp4"],[5293.0,4,"8:29",0,"v376",-1,null,null,1.0,295,0,"e052930.mp4"],[5363.0,4,"8:19",6,"1626167",-1,null,null,1.0,296,0,"e053630.mp4"],[5363.0,4,"8:19",4,"1626167",-1,null,null,1.0,297,0,"e053630.mp4"],[5401.0,4,"7:58",2,"v380",-1,null,null,1.0,298,0,"e054010.mp4"],[5404.0,4,"7:55",3,"v378",-1,null,null,1.0,299,0,"e054040.mp4"],[5414.0,4,"7:45",2,"v376",-1,null,null,1.0,300,0,"e054140.mp4"],[5417.0,4,"7:42",3,"v379",-1,null,null,1.0,301,0,"e054170.mp4"],[5418.0,4,"7:41",6,"1626167",-1,null,null,1.0,302,0,"e054180.mp4"],[5418.0,4,"7:41",7,"v379",-1,null,null,1.0,303,0,"e054180.mp4"],[5418.0,4,"7:41",7,"v379",-1,null,null,1.0,304,0,"e054180.mp4"],[5485.0,4,"7:40",3,"v375",-1,null,null,1.0,305,0,"e054850.mp4"],[5496.0,4,"7:29",1,"v381",-1,null,null,1.0,306,0,"e054960.mp4"],[5496.0,4,"7:29",0,"v381",-1,null,null,1.0,306,0,"e054960.mp4"],[5521.0,4,"7:04",4,"v380",-1,null,null,1.0,307,0,"e055210.mp4"],[5521.0,4,"7:04",9,"v383",-1,null,null,1.0,308,0,"e055210.mp4"],[5521.0,4,"7:04",6,"v384",-1,null,null,1.0,309,0,"e055210.mp4"],[5547.0,4,"6:56",6,"v380",-1,null,null,1.0,310,0,"e055470.mp4"],[5547.0,4,"6:56",7,"v381",-1,null,null,1.0,311,0,"e055470.mp4"],[5547.0,4,"6:56",7,"v381",-1,null,null,1.0,87,0,"e055470.mp4"],[5601.0,4,"6:55",3,"v383",-1,null,null,1.0,312,0,"e056010.mp4"],[5601.0,4,"6:54",2,"v383",-1,null,null,0.75,313,0,"e056010.mp4"],[5601.0,4,"6:54",5,"v379",-1,null,null,0.75,314,0,"e056010.mp4"],[5605.0,4,"6:51",3,"v390",-1,null,null,0.75,315,0,"e056050.mp4"],[5605.0,4,"6:50",2,"v381",-1,null,null,0.5,278,0,"e056050.mp4"],[5611.0,4,"6:48",3,"v376",-1,null,null,1.0,316,0,"e056110.mp4"],[5611.0,4,"6:48",6,"v383",-1,null,null,1.0,317,0,"e056110.mp4"],[5664.0,4,"6:32",2,"v380",-1,null,null,1.0,318,0,"e056640.mp4"],[5668.0,4,"6:28",3,"v390",-1,null,null,1.0,319,0,"e056680.mp4"],[5677.0,4,"6:19",6,"v379",-1,null,null,1.0,320,0,"e056770.mp4"],[5677.0,4,"6:19",7,"v383",-1,null,null,1.0,321,0,"e056770.mp4"],[5677.0,4,"6:19",7,"v383",-1,null,null,1.0,322,0,"e056770.mp4"],[5759.0,4,"6:01",4,"v376",-1,null,null,1.0,323,0,"e057590.mp4"],[5759.0,4,"6:01",9,"v381",-1,null,null,1.0,324,0,"e057590.mp4"],[5763.0,4,"5:57",6,"v380",-1,null,null,1.0,325,0,"e057630.mp4"],[5763.0,4,"5:57",7,"v383",-1,null,null,1.0,326,0,"e057630.mp4"],[5763.0,4,"5:57",7,"v383",-1,null,null,1.0,327,0,"e057630.mp4"],[5840.0,4,"5:50",6,"v381",-1,null,null,1.0,328,0,"e058400.mp4"],[5840.0,4,"5:50",7,"v378",-1,null,null,1.0,329,0,"e058400.mp4"],[5840.0,4,"5:50",7,"v378",-1,null,null,1.0,330,0,"e058400.mp4"],[5996.0,4,"5:48",3,"v383",-1,null,null,1.0,331,0,"e059960.mp4"],[6001.0,4,"5:43",6,"v378",-1,null,null,1.0,332,0,"e060010.mp4"],[6001.0,4,"5:43",7,"v383",-1,null,null,1.0,333,0,"e060010.mp4"],[6001.0,4,"5:43",7,"v383",-1,null,null,1.0,334,0,"e060010.mp4"],[6108.0,4,"5:20",2,"v376",-1,null,null,1.0,335,0,"e061080.mp4"],[6112.0,4,"5:16",3,"v378",-1,null,null,1.0,336,0,"e061120.mp4"],[6120.0,4,"5:08",2,"v380",-1,null,null,1.0,337,0,"e061200.mp4"],[6125.0,4,"5:03",3,"v383",-1,null,null,1.0,338,0,"e061250.mp4"],[6141.0,4,"4:47",1,"v383",-1,null,null,1.0,339,0,"e061410.mp4"],[6141.0,4,"4:47",0,"v383",-1,null,null,1.0,339,0,"e061410.mp4"],[6189.0,4,"4:34",6,"v375",-1,null,null,1.0,340,0,"e061890.mp4"],[6189.0,4,"4:34",7,"v380",-1,null,null,1.0,341,0,"e061890.mp4"],[6189.0,4,"4:34",7,"v380",-1,null,null,1.0,342,0,"e061890.mp4"],[6243.0,4,"4:25",2,"v386",-1,null,null,1.0,343,0,"e062430.mp4"],[6243.0,4,"4:25",5,"v379",-1,null,null,1.0,344,0,"e062430.mp4"],[6244.0,4,"4:24",3,"v379",-1,null,null,1.0,345,0,"e062440.mp4"],[6269.0,4,"4:16",2,"v376",-1,null,null,1.0,346,0,"e062690.mp4"],[6269.0,4,"4:16",5,"v377",-1,null,null,1.0,347,0,"e062690.mp4"],[6271.0,4,"4:14",3,"v381",-1,null,null,1.0,348,0,"e062710.mp4"],[6274.0,4,"4:11",6,"v380",-1,null,null,1.0,349,0,"e062740.mp4"],[6274.0,4,"4:11",7,"v383",-1,null,null,1.0,350,0,"e062740.mp4"],[6274.0,4,"4:11",7,"v383",-1,null,null,1.0,351,0,"e062740.mp4"],[6576.0,4,"3:52",2,"v380",-1,null,null,1.0,337,0,"e065760.mp4"],[6580.0,4,"3:48",3,"v383",-1,null,null,1.0,352,0,"e065800.mp4"],[6595.0,4,"3:33",8,0,-1,null,null,1.0,353,0,"e065950.mp4"],[6646.0,4,"3:31",4,"v386",-1,null,null,1.0,354,0,"e066460.mp4"],[6646.0,4,"3:31",9,"v379",-1,null,null,1.0,355,0,"e066460.mp4"],[6668.0,4,"3:09",2,"v380",-1,null,null,1.0,356,0,"e066680.mp4"],[6670.0,4,"3:07",3,"v386",-1,null,null,1.0,357,0,"e066700.mp4"],[6672.0,4,"3:05",4,"v386",-1,null,null,1.0,358,0,"e066720.mp4"],[6672.0,4,"3:05",9,"v378",-1,null,null,1.0,359,0,"e066720.mp4"],[6688.0,4,"2:49",2,"v376",-1,null,null,1.0,300,0,"e066880.mp4"],[6690.0,4,"2:47",3,0,-1,null,null,1.0,73,0,"e066900.mp4"],[6690.0,4,"2:47",6,"v377",-1,null,null,1.0,360,0,"e066900.mp4"],[6690.0,4,"2:47",7,"v379",-1,null,null,1.0,361,0,"e066900.mp4"],[6690.0,4,"2:47",3,0,-1,null,null,1.0,73,0,"e066900.mp4"],[6690.0,4,"2:47",7,"v379",-1,null,null,1.0,362,0,"e066900.mp4"],[6765.0,4,"2:32",1,"v375",-1,null,null,1.0,363,0,"e067650.mp4"],[6765.0,4,"2:32",0,"v375",-1,null,null,1.0,363,0,"e067650.mp4"],[6773.0,4,"2:24",1,"v379",-1,null,null,1.0,364,0,"e067730.mp4"],[6773.0,4,"2:24",0,"v379",-1,null,null,1.0,364,0,"e067730.mp4"],[6781.0,4,"2:16",1,"v383",-1,null,null,1.0,365,0,"e067810.mp4"],[6781.0,4,"2:16",0,"v383",-1,null,null,1.0,365,0,"e067810.mp4"],[6806.0,4,"1:51",6,"v377",-1,null,null,1.0,366,0,"e068060.mp4"],[6806.0,4,"1:51",7,"v380",-1,null,null,1.0,367,0,"e068060.mp4"],[6806.0,4,"1:51",7,"v380",-1,null,null,1.0,368,0,"e068060.mp4"],[6873.0,4,"1:41",6,"v384",-1,null,null,1.0,369,0,"e068730.mp4"],[6873.0,4,"1:41",7,"v375",-1,null,null,1.0,370,0,"e068730.mp4"],[6873.0,4,"1:41",3,0,-1,null,null,1.0,10,0,"e068730.mp4"],[6873.0,4,"1:41",7,"v375",-1,null,null,1.0,371,0,"e068730.mp4"],[6936.0,4,"1:26",6,"v383",-1,null,null,1.0,372,0,"e069360.mp4"],[6936.0,4,"1:26",7,"v376",-1,null,null,1.0,373,0,"e069360.mp4"],[6936.0,4,"1:26",7,"v376",-1,null,null,1.0,374,0,"e069360.mp4"],[7018.0,4,"1:14",4,"v375",-1,null,null,1.0,375,0,"e070180.mp4"],[7018.0,4,"1:14",9,"v378",-1,null,null,1.0,376,0,"e070180.mp4"],[7028.0,4,"1:04",6,"v381",-1,null,null,1.0,377,0,"e070280.mp4"],[7028.0,4,"1:04",7,"v376",-1,null,null,1.0,378,0,"e070280.mp4"],[7028.0,4,"1:04",7,"v376",-1,null,null,1.0,379,0,"e070280.mp4"],[7081.0,4,"1:01",3,"v390",-1,null,null,1.0,380,0,"e070810.mp4"],[7086.0,4,"0:56",2,"v383",-1,null,null,0.95,381,0,"e070860.mp4"],[7086.0,4,"0:55",3,"v383",-1,null,null,0.65,382,0,"e070860.mp4"],[7086.0,4,"0:55",4,"v383",-1,null,null,0.65,383,0,"e070860.mp4"],[7199.0,4,"0:25",1,"v383",-1,null,null,0.9,384,0,"e071990.mp4"],[7208.0,4,"0:19",4,"v394",-1,null,null,0.93,385,0,"e072080.mp4"],[7208.0,4,"0:19",9,"v383",-1,null,null,0.93,386,0,"e072080.mp4"],[7209.0,4,"0:19",6,"v395",-1,null,null,1.0,387,0,"e072090.mp4"],[7209.0,4,"0:19",7,"v383",-1,null,null,1.0,388,0,"e072090.mp4"],[7209.0,4,"0:19",7,"v383",-1,null,null,1.0,389,0,"e072090.mp4"]]},{"id":"0042400407-vision","date":"2025 Finals G7 \u00b7 what the VISION pipeline saw","video":true,"vision":true,"rows":[[682.4,1,"9:21",11,0,-1,null,null,0.52,390,0,"e006810.mp4"],[691.0,1,"9:13",12,0,-1,null,null,0.52,391,0,"e006900.mp4"],[724.6,1,"8:39",11,0,-1,null,null,0.52,390,0,"e007260.mp4"],[738.4,1,"8:25",11,0,-1,null,null,0.52,390,0,"e007400.mp4"],[753.2,1,"8:10",12,0,-1,null,null,0.52,391,0,"e007532.mp4"],[761.4,1,"8:02",11,0,-1,null,null,0.52,390,0,"e007630.mp4"],[779.2,1,"7:44",12,0,-1,null,null,0.52,391,0,"e007792.mp4"],[789.2,1,"7:34",11,0,-1,null,null,0.52,390,0,"e007880.mp4"],[809.4,1,"7:14",11,0,-1,null,null,0.52,390,0,"e008100.mp4"],[816.0,1,"7:08",13,0,-1,null,null,0.0,392,0,"e008160.mp4"],[819.6,1,"7:04",12,0,-1,null,null,0.52,391,0,"e008196.mp4"],[833.0,1,"6:51",11,0,-1,null,null,0.52,390,0,"e008350.mp4"],[849.0,1,"6:35",11,0,-1,null,null,0.52,390,0,"e008490.mp4"],[858.4,1,"6:25",12,0,-1,null,null,0.52,391,0,"e008600.mp4"],[933.6,1,"5:10",11,0,-1,null,null,0.52,390,0,"e009330.mp4"],[940.0,1,"5:04",13,0,-1,null,null,0.0,392,0,"e009400.mp4"],[1006.0,1,"3:58",13,0,-1,null,null,0.0,392,0,"e010060.mp4"],[1024.4,1,"3:39",12,0,-1,null,null,0.52,391,0,"e010244.mp4"],[1033.8,1,"3:30",11,0,-1,null,null,0.52,390,0,"e010360.mp4"],[1136.4,1,"1:47",12,0,-1,null,null,0.52,391,0,"e011364.mp4"],[1144.0,1,"1:40",11,0,-1,null,null,0.52,390,0,"e011420.mp4"],[1155.8,1,"1:28",12,0,-1,null,null,0.52,391,0,"e011550.mp4"],[1205.8,1,"0:38",12,0,-1,null,null,0.52,391,0,"e012058.mp4"],[1216.6,1,"0:27",11,0,-1,null,null,0.52,390,0,"e012170.mp4"],[1233.8,1,"0:10",12,0,-1,null,null,0.52,391,0,"e012338.mp4"],[1253.0,2,"11:51",13,0,-1,null,null,0.0,392,0,"e012530.mp4"],[1314.8,2,"10:49",12,0,-1,null,null,0.52,391,0,"e013148.mp4"],[1332.2,2,"10:31",11,0,-1,null,null,0.52,390,0,"e013320.mp4"],[1353.6,2,"10:10",11,0,-1,null,null,0.52,390,0,"e013550.mp4"],[1362.6,2,"10:01",12,0,-1,null,null,0.52,391,0,"e013626.mp4"],[1369.0,2,"9:55",13,0,-1,null,null,0.0,392,0,"e013690.mp4"],[1421.6,2,"9:02",12,0,-1,null,null,0.52,391,0,"e014216.mp4"],[1428.6,2,"8:55",11,0,-1,null,null,0.52,390,0,"e014290.mp4"],[1438.8,2,"8:45",11,0,-1,null,null,0.52,390,0,"e014400.mp4"],[1449.8,2,"8:34",11,0,-1,null,null,0.52,390,0,"e014490.mp4"],[1459.6,2,"8:24",11,0,-1,null,null,0.52,390,0,"e014596.mp4"],[1466.2,2,"8:17",12,0,-1,null,null,0.52,391,0,"e014662.mp4"],[1473.0,2,"8:11",11,0,-1,null,null,0.52,390,0,"e014750.mp4"],[1480.0,2,"8:04",12,0,-1,null,null,0.52,391,0,"e014800.mp4"],[1492.0,2,"7:52",11,0,-1,null,null,0.52,390,0,"e014930.mp4"],[1515.0,2,"7:29",13,0,-1,null,null,0.0,392,0,"e015150.mp4"],[1542.6,2,"7:01",11,0,-1,null,null,0.52,390,0,"e015430.mp4"],[1559.8,2,"6:44",12,0,-1,null,null,0.52,391,0,"e015600.mp4"],[1579.0,2,"6:25",11,0,-1,null,null,0.52,390,0,"e015790.mp4"],[1586.8,2,"6:17",12,0,-1,null,null,0.52,391,0,"e015868.mp4"],[1620.8,2,"5:43",11,0,-1,null,null,0.52,390,0,"e016210.mp4"],[1631.2,2,"5:32",11,0,-1,null,null,0.52,390,0,"e016310.mp4"],[1660.8,2,"5:03",11,0,-1,null,null,0.52,390,0,"e016608.mp4"],[1668.8,2,"4:55",11,0,-1,null,null,0.52,390,0,"e016688.mp4"],[1677.6,2,"4:46",12,0,-1,null,null,0.52,391,0,"e016760.mp4"],[1683.0,2,"4:41",13,0,-1,null,null,0.0,392,0,"e016830.mp4"],[2122.4,3,"9:21",11,0,-1,null,null,0.52,390,0,"e021240.mp4"],[2143.8,3,"9:00",12,0,-1,null,null,0.52,391,0,"e021430.mp4"],[2153.6,3,"8:50",12,0,-1,null,null,0.52,391,0,"e021520.mp4"],[2172.4,3,"8:31",11,0,-1,null,null,0.52,390,0,"e021720.mp4"],[2185.6,3,"8:18",12,0,-1,null,null,0.52,391,0,"e021870.mp4"],[2266.0,3,"6:58",12,0,-1,null,null,0.52,391,0,"e022660.mp4"],[2282.6,3,"6:41",12,0,-1,null,null,0.52,391,0,"e022840.mp4"],[2405.8,3,"4:38",11,0,-1,null,null,0.52,390,0,"e024050.mp4"],[2421.0,3,"4:23",13,0,-1,null,null,0.0,392,0,"e024210.mp4"],[2424.0,3,"4:20",11,0,-1,null,null,0.52,390,0,"e024240.mp4"],[2430.6,3,"4:13",12,0,-1,null,null,0.52,391,0,"e024306.mp4"],[2438.0,3,"4:06",13,0,-1,null,null,0.0,392,0,"e024380.mp4"],[2454.2,3,"3:49",11,0,-1,null,null,0.52,390,0,"e024540.mp4"],[2517.2,3,"2:46",11,0,-1,null,null,0.52,390,0,"e025190.mp4"],[2525.0,3,"2:39",13,0,-1,null,null,0.0,392,0,"e025250.mp4"],[2546.6,3,"2:17",12,0,-1,null,null,0.52,391,0,"e025460.mp4"],[2604.2,3,"1:19",12,0,-1,null,null,0.52,391,0,"e026042.mp4"],[2614.6,3,"1:09",11,0,-1,null,null,0.52,390,0,"e026130.mp4"],[2625.0,3,"0:59",13,0,-1,null,null,0.0,392,0,"e026250.mp4"],[2656.0,3,"0:28",11,0,-1,null,null,0.52,390,0,"e026560.mp4"],[2667.6,3,"0:16",11,0,-1,null,null,0.52,390,0,"e026700.mp4"],[2682.2,3,"0:01",11,0,-1,null,null,0.52,390,0,"e026830.mp4"],[2745.2,4,"10:58",12,0,-1,null,null,0.52,391,0,"e027452.mp4"],[2758.2,4,"10:45",11,0,-1,null,null,0.52,390,0,"e027600.mp4"],[2765.2,4,"10:38",11,0,-1,null,null,0.52,390,0,"e027652.mp4"],[2772.2,4,"10:31",12,0,-1,null,null,0.52,391,0,"e027722.mp4"],[2781.2,4,"10:22",11,0,-1,null,null,0.52,390,0,"e027790.mp4"],[2799.6,4,"10:04",11,0,-1,null,null,0.52,390,0,"e028000.mp4"],[2812.0,4,"9:52",13,0,-1,null,null,0.0,392,0,"e028120.mp4"],[2832.0,4,"9:32",11,0,-1,null,null,0.52,390,0,"e028320.mp4"],[2838.2,4,"9:25",12,0,-1,null,null,0.52,391,0,"e028382.mp4"],[2845.0,4,"9:19",11,0,-1,null,null,0.52,390,0,"e028450.mp4"],[2853.0,4,"9:11",13,0,-1,null,null,0.0,392,0,"e028530.mp4"],[2857.4,4,"9:06",12,0,-1,null,null,0.52,391,0,"e028570.mp4"],[2864.0,4,"9:00",11,0,-1,null,null,0.52,390,0,"e028640.mp4"],[2936.2,4,"7:47",11,0,-1,null,null,0.52,390,0,"e029362.mp4"],[2957.6,4,"7:26",11,0,-1,null,null,0.52,390,0,"e029590.mp4"],[2981.0,4,"7:03",13,0,-1,null,null,0.0,392,0,"e029810.mp4"],[3039.2,4,"6:04",12,0,-1,null,null,0.52,391,0,"e030392.mp4"],[3051.8,4,"5:52",11,0,-1,null,null,0.52,390,0,"e030510.mp4"],[3104.6,4,"4:59",11,0,-1,null,null,0.52,390,0,"e031050.mp4"],[3176.2,4,"3:47",12,0,-1,null,null,0.52,391,0,"e031762.mp4"],[3190.2,4,"3:33",11,0,-1,null,null,0.52,390,0,"e031910.mp4"],[3208.6,4,"3:15",11,0,-1,null,null,0.52,390,0,"e032086.mp4"],[3218.8,4,"3:05",11,0,-1,null,null,0.52,390,0,"e032200.mp4"],[3301.2,4,"1:42",12,0,-1,null,null,0.52,391,0,"e033012.mp4"],[3310.8,4,"1:33",12,0,-1,null,null,0.52,391,0,"e033130.mp4"],[3696.8,5,"0:07",11,0,-1,null,null,0.52,390,0,"e036980.mp4"],[3698.0,5,"0:06",13,0,-1,null,null,0.0,392,0,"e036980.mp4"],[3712.0,6,"4:52",13,0,-1,null,null,0.0,392,0,"e037120.mp4"],[3722.4,6,"4:41",11,0,-1,null,null,0.52,390,0,"e037210.mp4"],[3733.0,6,"4:31",11,0,-1,null,null,0.52,390,0,"e037350.mp4"],[3790.0,6,"3:34",13,0,-1,null,null,0.0,392,0,"e037900.mp4"],[3794.6,6,"3:29",11,0,-1,null,null,0.52,390,0,"e037940.mp4"],[3832.0,6,"2:52",12,0,-1,null,null,0.52,391,0,"e038320.mp4"],[3896.2,6,"1:47",11,0,-1,null,null,0.52,390,0,"e038970.mp4"],[3909.0,6,"1:35",13,0,-1,null,null,0.0,392,0,"e039090.mp4"],[3925.0,6,"1:19",13,0,-1,null,null,0.0,392,0,"e039250.mp4"],[3930.0,6,"1:14",12,0,-1,null,null,0.52,391,0,"e039300.mp4"],[3942.8,6,"1:01",12,0,-1,null,null,0.52,391,0,"e039428.mp4"],[3978.0,6,"0:26",13,0,-1,null,null,0.0,392,0,"e039780.mp4"],[3990.2,6,"0:13",12,0,-1,null,null,0.52,391,0,"e039902.mp4"],[4008.8,7,"4:55",11,0,-1,null,null,0.52,390,0,"e040070.mp4"],[4078.8,7,"3:45",12,0,-1,null,null,0.52,391,0,"e040788.mp4"],[4082.0,7,"3:42",13,0,-1,null,null,0.0,392,0,"e040820.mp4"],[4102.8,7,"3:21",11,0,-1,null,null,0.52,390,0,"e041040.mp4"],[4146.8,7,"2:37",11,0,-1,null,null,0.52,390,0,"e041480.mp4"],[4156.8,7,"2:27",11,0,-1,null,null,0.52,390,0,"e041580.mp4"],[4173.2,7,"2:10",11,0,-1,null,null,0.52,390,0,"e041740.mp4"],[4179.6,7,"2:04",12,0,-1,null,null,0.52,391,0,"e041796.mp4"],[4187.8,7,"1:56",11,0,-1,null,null,0.52,390,0,"e041890.mp4"],[4199.6,7,"1:44",11,0,-1,null,null,0.52,390,0,"e042010.mp4"],[4209.2,7,"1:34",12,0,-1,null,null,0.52,391,0,"e042092.mp4"],[4215.8,7,"1:28",11,0,-1,null,null,0.52,390,0,"e042160.mp4"],[4296.0,7,"0:08",12,0,-1,null,null,0.52,391,0,"e042980.mp4"],[4310.8,8,"4:53",12,0,-1,null,null,0.52,391,0,"e043108.mp4"],[4318.0,8,"4:46",11,0,-1,null,null,0.52,390,0,"e043170.mp4"],[4326.0,8,"4:38",13,0,-1,null,null,0.0,392,0,"e043260.mp4"],[4328.4,8,"4:35",11,0,-1,null,null,0.52,390,0,"e043300.mp4"],[4339.4,8,"4:24",11,0,-1,null,null,0.52,390,0,"e043410.mp4"],[4358.4,8,"4:05",11,0,-1,null,null,0.52,390,0,"e043570.mp4"],[4374.0,8,"3:50",12,0,-1,null,null,0.52,391,0,"e043760.mp4"],[4417.8,8,"3:06",11,0,-1,null,null,0.52,390,0,"e044200.mp4"],[4427.2,8,"2:56",12,0,-1,null,null,0.52,391,0,"e044272.mp4"],[4435.0,8,"2:49",12,0,-1,null,null,0.52,391,0,"e044350.mp4"],[4441.6,8,"2:42",11,0,-1,null,null,0.52,390,0,"e044416.mp4"],[4452.4,8,"2:31",12,0,-1,null,null,0.52,391,0,"e044520.mp4"],[4508.6,8,"1:35",11,0,-1,null,null,0.52,390,0,"e045080.mp4"],[4562.0,8,"0:42",11,0,-1,null,null,0.52,390,0,"e045640.mp4"],[4623.2,9,"4:40",12,0,-1,null,null,0.52,391,0,"e046232.mp4"],[4628.0,9,"4:36",13,0,-1,null,null,0.0,392,0,"e046280.mp4"],[4647.2,9,"4:16",11,0,-1,null,null,0.52,390,0,"e046470.mp4"],[4658.4,9,"4:05",12,0,-1,null,null,0.52,391,0,"e046570.mp4"],[4713.6,9,"3:10",11,0,-1,null,null,0.52,390,0,"e047150.mp4"],[4727.6,9,"2:56",11,0,-1,null,null,0.52,390,0,"e047290.mp4"],[4739.2,9,"2:44",11,0,-1,null,null,0.52,390,0,"e047390.mp4"],[4752.0,9,"2:32",12,0,-1,null,null,0.52,391,0,"e047520.mp4"],[4859.8,9,"0:44",11,0,-1,null,null,0.52,390,0,"e048600.mp4"],[4861.0,9,"0:43",13,0,-1,null,null,0.0,392,0,"e048610.mp4"],[5175.6,10,"0:28",12,0,-1,null,null,0.52,391,0,"e051750.mp4"],[5222.6,11,"4:41",11,0,-1,null,null,0.52,390,0,"e052240.mp4"],[5226.0,11,"4:38",13,0,-1,null,null,0.0,392,0,"e052250.mp4"],[5229.2,11,"4:34",12,0,-1,null,null,0.52,391,0,"e052280.mp4"],[5245.4,11,"4:18",11,0,-1,null,null,0.52,390,0,"e052470.mp4"],[5265.2,11,"3:58",11,0,-1,null,null,0.52,390,0,"e052670.mp4"],[5281.0,11,"3:43",13,0,-1,null,null,0.0,392,0,"e052810.mp4"],[5293.6,11,"3:30",11,0,-1,null,null,0.52,390,0,"e052930.mp4"],[5378.8,11,"2:05",12,0,-1,null,null,0.52,391,0,"e053788.mp4"],[5400.8,11,"1:43",11,0,-1,null,null,0.52,390,0,"e054010.mp4"],[5411.2,11,"1:32",11,0,-1,null,null,0.52,390,0,"e054112.mp4"],[5482.0,11,"0:22",12,0,-1,null,null,0.52,391,0,"e054820.mp4"],[5499.0,11,"0:05",11,0,-1,null,null,0.52,390,0,"e054990.mp4"],[5547.6,12,"4:16",11,0,-1,null,null,0.52,390,0,"e055470.mp4"],[5605.0,12,"3:19",13,0,-1,null,null,0.0,392,0,"e056050.mp4"],[5664.2,12,"2:19",11,0,-1,null,null,0.52,390,0,"e056640.mp4"],[5676.2,12,"2:07",12,0,-1,null,null,0.52,391,0,"e056770.mp4"],[5760.0,12,"0:44",12,0,-1,null,null,0.52,391,0,"e057590.mp4"],[5839.8,13,"4:24",12,0,-1,null,null,0.52,391,0,"e058400.mp4"],[5992.6,13,"1:51",12,0,-1,null,null,0.52,391,0,"e059926.mp4"],[6000.2,13,"1:43",12,0,-1,null,null,0.52,391,0,"e060010.mp4"],[6107.0,14,"4:57",11,0,-1,null,null,0.52,390,0,"e061080.mp4"],[6120.0,14,"4:44",11,0,-1,null,null,0.52,390,0,"e061200.mp4"],[6126.4,14,"4:37",12,0,-1,null,null,0.52,391,0,"e061250.mp4"],[6138.4,14,"4:25",11,0,-1,null,null,0.52,390,0,"e061384.mp4"],[6181.0,14,"3:43",12,0,-1,null,null,0.52,391,0,"e061810.mp4"],[6189.0,14,"3:35",12,0,-1,null,null,0.52,391,0,"e061890.mp4"],[6240.8,14,"2:43",11,0,-1,null,null,0.52,390,0,"e062430.mp4"],[6268.0,14,"2:16",11,0,-1,null,null,0.52,390,0,"e062690.mp4"],[6274.8,14,"2:09",12,0,-1,null,null,0.52,391,0,"e062740.mp4"],[6576.2,15,"2:07",11,0,-1,null,null,0.52,390,0,"e065760.mp4"],[6595.6,15,"1:48",12,0,-1,null,null,0.52,391,0,"e065950.mp4"],[6646.0,15,"0:58",12,0,-1,null,null,0.52,391,0,"e066460.mp4"],[6665.8,15,"0:38",11,0,-1,null,null,0.52,390,0,"e066680.mp4"],[6688.4,15,"0:15",11,0,-1,null,null,0.52,390,0,"e066880.mp4"],[6756.2,16,"4:07",12,0,-1,null,null,0.52,391,0,"e067562.mp4"],[6765.8,16,"3:58",11,0,-1,null,null,0.52,390,0,"e067650.mp4"],[6772.4,16,"3:51",11,0,-1,null,null,0.52,390,0,"e067730.mp4"],[6779.2,16,"3:44",11,0,-1,null,null,0.52,390,0,"e067810.mp4"],[6785.6,16,"3:38",12,0,-1,null,null,0.52,391,0,"e067856.mp4"],[6794.2,16,"3:29",12,0,-1,null,null,0.52,391,0,"e067942.mp4"],[6807.8,16,"3:16",12,0,-1,null,null,0.52,391,0,"e068060.mp4"],[6861.0,16,"2:23",12,0,-1,null,null,0.52,391,0,"e068610.mp4"],[6874.4,16,"2:09",12,0,-1,null,null,0.52,391,0,"e068730.mp4"],[7017.6,17,"4:46",12,0,-1,null,null,0.52,391,0,"e070180.mp4"],[7077.4,17,"3:46",12,0,-1,null,null,0.52,391,0,"e070774.mp4"],[7085.0,17,"3:39",11,0,-1,null,null,0.52,390,0,"e070860.mp4"],[7120.8,17,"3:03",12,0,-1,null,null,0.52,391,0,"e071208.mp4"],[7127.0,17,"2:57",13,0,-1,null,null,0.0,392,0,"e071270.mp4"],[7198.2,17,"1:45",12,0,-1,null,null,0.52,391,0,"e071990.mp4"],[7204.6,17,"1:39",11,0,-1,null,null,0.52,390,0,"e072046.mp4"],[7269.0,17,"0:35",12,0,-1,null,null,0.52,391,0,"e072690.mp4"]]}]};</script>
+<script>
+const SYNONYM = [
+  // Order matters: the FIRST pattern that matches wins, so the specific ones
+  // come before the general. "missed shot" must beat "shot", and the vision
+  // game's own vocabulary must beat the word "shot" inside it.
+  [/vision|pipeline|detector|from pixels|computer vision|false alarm|hallucinat/,
+   ['vision shot', 'vision false alarm', 'vision miss']],
 
-<footer>
-  <div class="wrap">
-    <p>Source, full findings and the validation gates:
-      <a href="https://github.com/pranitmathur06/CourtVision">github.com/pranitmathur06/CourtVision</a></p>
-    <p style="margin:0; font-size:13px">Tracking figures use the public 2015&ndash;16 SportVU release for research
-      only. Broadcast footage is not redistributed.</p>
-  </div>
-</footer>
+  [/free.?throw|foul shot|from the line|at the line/, ['free throw']],
+  [/\bfoul/, ['foul']],
+  [/\bblock(ed|s)?\b|swat|rejected/, ['block']],
+  [/\bsteal(s)?\b|stole|picked.?pocket/, ['steal', 'turnover']],
+  [/turnover|lost the ball|giveaway|coughed/, ['turnover']],
+  [/jump ball|tip.?off|opening tip/, ['jump ball']],
 
+  [/pick.?and.?roll|pnr|ball ?screen|screen.?and.?roll|pick.?and.?pop/,
+   ['pick_and_roll', 'ball_screen', 'pick_and_pop', 'double_drag', 'spain_pick_and_roll', 'dribble_handoff']],
+  [/hand.?off|dho/, ['dribble_handoff']],
+  [/off.?ball|cut|pin.?down|flare|back ?screen|cross ?screen|stagger/,
+   ['off_ball_screen', 'pin_down', 'flare_screen', 'back_screen', 'cross_screen']],
+  [/screen|pick\b/, ['ball_screen', 'off_ball_screen', 'pin_down', 'flare_screen',
+                     'back_screen', 'cross_screen', 'dribble_handoff', 'pick_and_roll',
+                     'pick_and_pop', 'double_drag', 'spain_pick_and_roll']],
+
+  [/assist|passed|feed|set up/, ['assist']],
+  [/rebound|board|offensive glass/, ['rebound']],
+  [/transition|fast ?break|running|push the/, ['transition']],
+
+  [/\bmiss(ed|es)?\b|brick|bricked|came up short/, ['shot']],
+  [/\bmade\b|\bmake(s)?\b|scored|basket|bucket|finish|converted|knocked down|hit a/,
+   ['made shot']],
+  [/three|3pt|3.?point|from deep|beyond the arc/, ['made shot', 'shot']],
+  [/shot|shoot|attempt|scoring|points|\bpts\b/, ['shot', 'made shot']],
+  [/formation|shape|spacing|isolation|post ?up/, null],
+];
+
+function retrieve(question) {
+  const q = ' ' + question.toLowerCase() + ' ';
+  let rows = ALL.filter(r => r.gid === game);
+  const applied = [];
+
+  // Players, matched on the full name or the surname, with punctuation ignored
+  // on BOTH sides. "shai gilgeous alexander" has to find "Shai
+  // Gilgeous-Alexander": typing the hyphen is not something a reader should
+  // have to get right, and without this the name silently failed to match and
+  // the answer came back as every made shot in the game.
+  const flat = t => ' ' + t.toLowerCase().replace(/[.'’\-]/g, ' ').replace(/\s+/g, ' ').trim() + ' ';
+  const qf = flat(q);
+  // Only this game's players. Matching a bare surname against every player in
+  // twenty games turned "jalen williams" into seven different Williamses from
+  // games nobody asked about.
+  const here = [...new Set(ALL.filter(r => r.gid === game && r.player).map(r => r.player))];
+  const pool = here.length ? here
+    : [...new Set(ALL.filter(r => r.player).map(r => r.player))];
+  const match = (p, exact) => {
+    const pf = flat(p).trim();
+    if (qf.includes(' ' + pf + ' ')) return true;
+    if (exact) return false;
+    const last = pf.split(' ').slice(-1)[0];
+    return last.length > 3 && qf.includes(' ' + last + ' ');
+  };
+  // A full-name match beats a surname match: "jalen williams" should not also
+  // drag in every other Williams on the floor.
+  let hits = pool.filter(p => match(p, true));
+  if (!hits.length) hits = pool.filter(p => match(p, false));
+  if (hits.length) {
+    // A named player counts whether they benefited from the action or set the
+    // screen for it; asking about someone should not miss the screens they set.
+    rows = rows.filter(r => hits.includes(r.player) || hits.includes(r.screener));
+    applied.push('player: ' + hits.join(', '));
+  }
+
+  // actions. EVERY matching pattern contributes, not just the first: "every
+  // block and steal" is two things, and stopping at the first match returned
+  // only the blocks.
+  let acts = null;
+  const matched = [];
+  for (const [re, list] of SYNONYM) {
+    if (!re.test(q)) continue;
+    matched.push(re);
+    acts = (acts || []).concat(list || ACT.filter(a => a.startsWith('formation')));
+  }
+  // ...except inside the shot family, where the specific has to beat the
+  // general: "missed shot" matches both /miss/ and /shot/, and unioning them
+  // would hand back the made shots too.
+  if (acts && /\bmiss|\bmade\b|\bmake|scored|three|3.?point/.test(q)) {
+    const generic = ['shot', 'made shot'];
+    const specific = acts.filter(a => !generic.includes(a));
+    const wantMade = /\bmade\b|\bmake|scored|basket|bucket|converted/.test(q);
+    const wantMiss = /\bmiss/.test(q);
+    if (wantMiss && !wantMade) acts = specific.concat('shot');
+    else if (wantMade && !wantMiss) acts = specific.concat('made shot');
+  }
+  // Inside the vision family the same rule applies: "where did it get it wrong"
+  // must not hand back the calls it got right, and the general /vision/ pattern
+  // alone would.
+  if (acts && acts.some(a => a.startsWith('vision'))) {
+    const wrong = /wrong|false alarm|mistake|hallucinat|phantom|over.?call/.test(q);
+    const missed = /miss(ed|es)?\b|never called|failed to|didn.?t (see|call|catch)/.test(q);
+    if (wrong && !missed) acts = acts.filter(a => a !== 'vision shot' && a !== 'vision miss');
+    else if (missed && !wrong) acts = acts.filter(a => a === 'vision miss');
+    else if (/right|correct|agree|got it/.test(q)) acts = acts.filter(a => a === 'vision shot');
+  }
+  if (acts) acts = [...new Set(acts)];
+  if (acts) {
+    // The vision layer is its own game. Asking "where did it get it wrong"
+    // while the official game is selected filtered to nothing, which read as
+    // the retrieval being stupid when it was the scope being wrong.
+    let scoped = rows.filter(r => acts.includes(r.action));
+    if (!scoped.length) {
+      const elsewhere = ALL.filter(r => acts.includes(r.action));
+      if (elsewhere.length) {
+        const gid = elsewhere[0].gid;
+        const g = D.games.find(x => x.id === gid);
+        game = gid;
+        const sel = $('game'); if (sel) sel.value = gid;
+        fillControls(); strip();
+        rows = ALL.filter(r => r.gid === gid);
+        if (hits.length) rows = rows.filter(r => hits.includes(r.player) || hits.includes(r.screener));
+        scoped = rows.filter(r => acts.includes(r.action));
+        applied.push('switched to ' + (g ? g.date : gid));
+      }
+    }
+    rows = scoped;
+    applied.push('action: ' + acts.join(', '));
+  }
+
+  // Some distinctions live only in the description the play-by-play wrote --
+  // 3PT, layup, dunk, free-throw number -- so they are matched as text rather
+  // than invented as actions.
+  const TEXT = [
+    [/three|3pt|3.?point|from deep|beyond the arc/, /3pt/i, 'three-pointers'],
+    [/layup|lay.?up/, /layup/i, 'layups'],
+    [/dunk|slam/, /dunk/i, 'dunks'],
+    [/jump ?shot|jumper|pull.?up/, /jump shot|pullup/i, 'jump shots'],
+  ];
+  for (const [ask, inText, label] of TEXT) {
+    if (ask.test(q)) {
+      const narrowed = rows.filter(r => inText.test(r.detail || ''));
+      if (narrowed.length) { rows = narrowed; applied.push(label) }
+    }
+  }
+
+  // quarter, half and the clutch
+  const words = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, ten: 10 };
+  const qm = q.match(/\b(?:q|quarter |period )([1-4])\b/)
+    || (/\bfirst quarter|\b1st q/.test(q) && [0, '1'])
+    || (/\bsecond quarter|\b2nd q/.test(q) && [0, '2'])
+    || (/\bthird quarter|\b3rd q/.test(q) && [0, '3'])
+    || (/\bfourth quarter|\b4th q|\b4th\b/.test(q) && [0, '4']);
+  if (qm) { rows = rows.filter(r => String(r.period) === qm[1]); applied.push('quarter ' + qm[1]) }
+  else if (/first half|1st half/.test(q)) {
+    rows = rows.filter(r => r.period <= 2); applied.push('first half');
+  } else if (/second half|2nd half/.test(q)) {
+    rows = rows.filter(r => r.period >= 3); applied.push('second half');
+  } else if (/overtime|\bot\b/.test(q)) {
+    rows = rows.filter(r => r.period >= 5); applied.push('overtime');
+  }
+
+  const clutch = q.match(/last (\w+|\d+) minutes?/) || q.match(/final (\w+|\d+) minutes?/);
+  if (clutch || /clutch|crunch ?time|down the stretch|end of the game/.test(q)) {
+    const mins = clutch ? (parseInt(clutch[1]) || words[clutch[1]] || 2) : 2;
+    const last = Math.max(...ALL.filter(r => r.gid === game).map(r => r.period), 4);
+    rows = rows.filter(r => r.period >= last && toSec(r.clock) <= mins * 60);
+    applied.push(`final ${mins} minutes`);
+  }
+  const opening = q.match(/first (\w+|\d+) minutes?/);
+  if (opening) {
+    const mins = parseInt(opening[1]) || words[opening[1]] || 5;
+    rows = rows.filter(r => r.period === 1 && toSec(r.clock) >= (12 - mins) * 60);
+    applied.push(`opening ${mins} minutes`);
+  }
+
+  return { rows, applied, acts, hits };
+}
+
+function aggregate(rows) {
+  const byAction = {}, byPlayer = {}, bySetter = {};
+  rows.forEach(r => {
+    byAction[r.action] = (byAction[r.action] || 0) + 1;
+    if (r.player) {
+      byPlayer[r.player] = byPlayer[r.player] || {};
+      byPlayer[r.player][r.action] = (byPlayer[r.player][r.action] || 0) + 1;
+    }
+    // Counted separately: setting a screen and coming off one are different
+    // things, and only the setter answers "who sets the most screens".
+    if (r.screener) bySetter[r.screener] = (bySetter[r.screener] || 0) + 1;
+  });
+  return { byAction, byPlayer, bySetter };
+}
+
+function localAnswer(question, rows, pick, hits) {
+  const q = question.toLowerCase();
+  hits = hits || [];
+  if (!rows.length) return 'Nothing in this game matches that. Try a different player, action or quarter.';
+
+  const agg = aggregate(rows);
+  const cite = r => { const i = pick.indexOf(r); return i >= 0 ? ` [${i}]` : '' };
+  const lines = [];
+
+  // "how many" -- a count, broken down when the rows span several actions
+  const kinds = Object.entries(agg.byAction).sort((a, b) => b[1] - a[1]);
+  const total = rows.length;
+  // Points are not a row count. The play-by-play writes each scorer's RUNNING
+  // TOTAL in the description -- "(29 PTS)" -- so the largest one a player
+  // reaches is exactly what they scored, free throws included.
+  if (/\bpoints?\b|\bpts\b|\bscore(d)?\b/.test(q) && hits.length) {
+    for (const who of hits) {
+      let best = 0, at = null;
+      // Every row for this player in the game, not the filtered subset: a
+      // question about points that filtered to made shots missed the free
+      // throws, and the running total lives on those too.
+      ALL.filter(r => r.gid === game && r.player === who).forEach(r => {
+        const m = (r.detail || '').match(/\((\d+)\s*PTS\)/i);
+        if (m && +m[1] >= best) { best = +m[1]; at = r }
+      });
+      if (best) lines.push(`**${who}** scored **${best}** points`
+        + (at ? `, the last of them at ${ordinal(at.period)} ${at.clock}${cite(at)}` : '') + '.');
+    }
+  }
+
+  if (/\bhow many\b|\bhow much\b|\bcount\b/.test(q)) {
+    lines.push(`**${total}** matching ${total === 1 ? 'row' : 'rows'}`
+      + (kinds.length > 1 ? ': ' + kinds.map(([k, v]) => `${v} ${k.replace(/_/g, ' ')}`).join(', ') : ` of ${kinds[0][0].replace(/_/g, ' ')}`) + '.');
+  }
+
+  // "who" -- the leaders, by the thing being asked about
+  if (/\bwho\b|\bwhich player\b|\bmost\b|\bleader/.test(q)) {
+    const setters = topOf(agg.bySetter);
+    if (/screen/.test(q) && setters.length) {
+      lines.push('Most screens set: ' + setters.map(([n, c]) => `**${n}** (${c})`).join(', ') + '.');
+    } else {
+      const byTotal = {};
+      rows.forEach(r => { if (r.player) byTotal[r.player] = (byTotal[r.player] || 0) + 1 });
+      const top = topOf(byTotal);
+      if (top.length) lines.push('Most: ' + top.map(([n, c]) => `**${n}** (${c})`).join(', ') + '.');
+    }
+  }
+
+  // Every matching row, not a sample of them. Truncating to eight and saying
+  // "and 54 more below" made the reader go and find the rest somewhere else,
+  // which is the thing this page exists not to do. The list scrolls instead.
+  lines.push('', ...rows.map(r =>
+    `- ${ordinal(r.period)} ${r.clock} — ${r.detail || r.action.replace(/_/g, ' ')}`
+    + (r.player && !(r.detail || '').includes(r.player) ? ` (${r.player})` : '')
+    + cite(r)));
+  return lines.join('\n');
+}
+
+function render(text) {
+  const esc = t => t.replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+    // A citation becomes the play control itself when the row it points at has
+    // footage. Asking and watching are then the same gesture in the same place,
+    // rather than a number you have to go and look up in a table below.
+    .replace(/\[([\d,\s]+)\]/g, (m, inner) => {
+      const first = parseInt(inner.split(',')[0].trim(), 10);
+      const r = lastPick[first];
+      if (r && r.clip) {
+        return ` <button class="play inline" data-clip="${r.clip}" data-i="${ALL.indexOf(r)}"`
+             + ` title="Watch this moment" aria-label="Watch this moment"></button>`;
+      }
+      return `<span class="mono" style="color:var(--accent)">${m}</span>`;
+    });
+  return text.split(/\n{2,}/).map(block => {
+    const lines = block.split('\n').filter(l => l.trim());
+    if (lines.length && lines.every(l => l.trim().startsWith('- '))) {
+      return '<ul class="beats">'
+        + lines.map(l => '<li>' + esc(l.trim().slice(2)) + '</li>').join('')
+        + '</ul>';
+    }
+    return '<p>' + esc(block).replace(/\n/g, '<br>') + '</p>';
+  }).join('');
+}
+
+// ---- answering without a model --------------------------------------------
+// The retrieval half of RAG is exact: it filters rows by player, action and
+// period. Only the writing-it-up half needs a model, and on a static host
+// there is none -- which left the page able to find the footage for a question
+// and unable to run the question at all.
+//
+// So the answer is COMPUTED from the retrieved rows: counts, leaders, and a
+// timeline, each citing the rows it came from so the clips still play. It
+// cannot paraphrase or reason, and the page says so rather than passing
+// arithmetic off as an answer a model wrote.
+function ordinal(p) { return p <= 4 ? ['', '1st', '2nd', '3rd', '4th'][p] : 'OT' + (p - 4) }
+
+function topOf(counts, n = 3) {
+  return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, n);
+}
+
+function toSec(clock) { const [m, s] = (clock || '0:00').split(':').map(Number); return m * 60 + (s || 0) }
+
+// The detector's own boxes, drawn over the footage at the video's own rate.
+// Fetched once, and only when a clip is first played.
+let OVERLAYS = null, overlayWanted = false;
+const BOX_COLOUR = { p: 'rgba(78,155,245,.7)', s: 'rgba(255,138,61,1)',
+                     b: 'rgba(63,208,122,1)', r: 'rgba(242,100,122,.95)' };
+const BOX_LABEL = { p: '', s: '', b: 'ball', r: 'rim' };
+
+async function loadOverlays() {
+  if (OVERLAYS || overlayWanted) return OVERLAYS;
+  overlayWanted = true;
+  // The dense file is every frame at the video's own rate, linked and smoothed.
+  // The sparse one samples every 0.2 s -- one update per six played frames,
+  // which is what made the boxes look like they were jumping around.
+  for (const name of ['clips/overlays_dense.json', 'clips/overlays.json']) {
+    try {
+      const r = await fetch(name);
+      if (r.ok) { OVERLAYS = await r.json(); OVERLAYS.dense = name.includes('dense'); break }
+    } catch (e) { /* artifact CSP blocks this; boxes are optional */ }
+  }
+  return OVERLAYS;
+}
+
+function drawBoxes(svg, film, clip, subjectName) {
+  if (!OVERLAYS || !OVERLAYS.clips[clip]) { svg.innerHTML = ''; return }
+  const frames = OVERLAYS.clips[clip];
+  const step = OVERLAYS.dense ? (1 / (OVERLAYS.fps || 30)) : (OVERLAYS.step_s || 0.2);
+  const i = Math.max(0, Math.min(frames.length - 1, Math.round(film.currentTime / step)));
+  // dense: frames[i] is the boxes directly. sparse: frames[i] is [t, boxes].
+  const frame = frames[i];
+  const boxes = !frame ? [] : (OVERLAYS.dense ? frame : frame[1]) || [];
+  // The viewBox does the scaling and CSS makes the svg exactly cover the
+  // video. Setting pixel sizes here read the layout before it had settled and
+  // drew a 517 px overlay over a 471 px video.
+  const [sw, sh] = OVERLAYS.source_size || [1280, 720];
+  svg.setAttribute('viewBox', `0 0 ${sw} ${sh}`);
+  svg.setAttribute('preserveAspectRatio', 'none');
+  svg.innerHTML = boxes.filter(row => !subjectName || row[0] !== 'p').map(row => {
+    const c = row[0];
+    const [x1, y1, x2, y2] = row.slice(1);
+    const on = true;
+    const stroke = BOX_COLOUR[c] || '#fff';
+    // Labelled for what it verifiably is. The subject is the tracklet holding
+    // the ball at the logged instant, which lands on the actor's own TEAM 79%
+    // of the time -- so it is called "ball handler", not given the name of the
+    // player the question asked about. One box in five would be an opponent.
+    const label = (c === 's' && subjectName) ? 'ball handler' : BOX_LABEL[c];
+    return `<rect x="${x1}" y="${y1}" width="${x2 - x1}" height="${y2 - y1}"`
+         + ` fill="none" stroke="${stroke}" stroke-width="${on ? (c === 'b' ? 4 : 3) : 2}"`
+         + ` opacity="${on ? 1 : .22}" rx="3"/>`
+         + (label ? `<text x="${x1 + 3}" y="${Math.max(y1 - 6, 16)}" fill="${stroke}"`
+            + ` opacity="${on ? 1 : .3}" font-size="19"`
+            + ` font-family="ui-monospace,monospace">${label}</text>` : '');
+  }).join('');
+}
+
+// One player, moved to whichever beat was asked for, so the footage opens where
+// the sentence is instead of in a panel somewhere below.
+function playInline(button) {
+  const beat = button.closest('li') || button.parentElement;
+  let film = document.getElementById('inlineFilm');
+  if (!film) {
+    film = document.createElement('video');
+    film.id = 'inlineFilm';
+    film.controls = true; film.playsInline = true; film.preload = 'none';
+    film.onerror = () => {
+      const note = document.getElementById('inlineNote');
+      if (note) note.textContent = 'That clip did not load.';
+    };
+  }
+  let note = document.getElementById('inlineNote');
+  if (!note) { note = document.createElement('div'); note.id = 'inlineNote'; note.className = 'muted'; }
+  note.textContent = '';
+  document.querySelectorAll('.beats li.playing').forEach(li => li.classList.remove('playing'));
+  beat.classList.add('playing');
+  let shell = document.getElementById('filmShell');
+  if (!shell) {
+    shell = document.createElement('div'); shell.id = 'filmShell';
+    shell.style.cssText = 'position:relative;display:inline-block;max-width:560px;width:100%';
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.id = 'filmBoxes';
+    svg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none';
+    shell.appendChild(film); shell.appendChild(svg);
+  }
+  beat.appendChild(shell); beat.appendChild(note);
+  const svg = document.getElementById('filmBoxes');
+  const clip = button.dataset.clip;
+  film.src = 'clips/' + clip;
+  svg.innerHTML = '';
+  // A question about one player draws only him: the tracklet that held the ball
+  // at the logged instant. `r` lives in bindPlay, not here -- referencing it
+  // threw before the overlay was ever fetched, which is why no box appeared.
+  const row = ALL[Number(button.dataset.i)];
+  const subjectName = (solo && row && row.player === solo) ? solo : null;
+  loadOverlays().then(() => {
+    const paint = () => drawBoxes(svg, film, clip, subjectName);
+    film.ontimeupdate = paint; film.onloadeddata = paint; film.onseeked = paint;
+    paint();
+  });
+  film.play().catch(() => {});
+}
+
+// ---- filters, table, stat strip -------------------------------------------
+function option(v, label) { return `<option value="${v}">${label}</option>` }const D = window.__STREAM__;
+const $ = id => document.getElementById(id);
+const ACT = D.actions, DET = D.details, NAMES = D.players;
+
+// Two views of one game: what the NBA logged, and what the vision stack called
+// from pixels. They are separate row sets, and the toggle chooses which is on
+// screen -- the comparison is the point of having both.
+const OFFICIAL = D.games.find(g => !g.vision).id;
+const VISION = (D.games.find(g => g.vision) || {}).id;
+
+let ALL = [];
+D.games.forEach(g => g.rows.forEach((r, i) => ALL.push({
+  gid: g.id, id: g.id + ':' + i,
+  t: r[0], period: r[1], clock: r[2], action: ACT[r[3]],
+  player: r[4] ? (NAMES[r[4]] || null) : null,
+  conf: r[8], detail: r[9] >= 0 ? DET[r[9]] : '',
+  screener: null, x: null, y: null,
+  clip: r[11] || null, video: true
+})));
+
+const COLOR = a =>
+  a === 'made shot' ? 'var(--made)' :
+  a === 'shot' ? 'var(--missed)' :
+  a === 'vision shot' ? 'var(--made)' :
+  a === 'vision false alarm' ? 'var(--missed)' :
+  a === 'vision miss' ? 'var(--accent)' :
+  a === 'rebound' || a === 'block' ? 'var(--play)' :
+  a === 'assist' ? 'var(--accent)' : 'var(--ink)';
+
+let game = OFFICIAL, cited = new Set(), shown = [], solo = null, lastPick = [];
+
+function strip() {
+  const g = ALL.filter(r => r.gid === game);
+  const n = a => g.filter(r => r.action === a).length;
+  let cells;
+  if (game === VISION) {
+    const right = n('vision shot'), alarm = n('vision false alarm'), miss = n('vision miss');
+    cells = [['Calls', right + alarm], ['Agreed', right], ['False alarms', alarm],
+             ['Never called', miss],
+             ['Precision', Math.round(100 * right / Math.max(right + alarm, 1)) + '%'],
+             ['Recall', Math.round(100 * right / Math.max(right + miss, 1)) + '%']];
+  } else {
+    const made = n('made shot'), att = made + n('shot');
+    cells = [['Actions', g.length], ['Shots', att],
+             ['Made', made + (att ? ` <small>${Math.round(100 * made / att)}%</small>` : '')],
+             ['Rebounds', n('rebound')], ['Assists', n('assist')],
+             ['Turnovers', n('turnover')], ['Blocks', n('block')], ['Steals', n('steal')]];
+  }
+  $('strip').innerHTML = cells.map(([k, v]) =>
+    `<div class="cell"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+  $('fine').innerHTML = game === VISION
+    ? 'Called from pixels &mdash; ball and rim per frame, no play-by-play. <b>Precision 0.52 held out</b>, so about half is wrong and all of it is here.'
+    : 'The NBA&rsquo;s own record on the video&rsquo;s clock. Boxes are the detector&rsquo;s, at 30&nbsp;fps; ask about one player and only the <b>ball handler</b> is drawn &mdash; right team 79% of the time.';
+}
+
+function fillControls() {
+  const g = ALL.filter(r => r.gid === game);
+  const acts = [...new Set(g.map(r => r.action))].sort();
+  const people = [...new Set(g.map(r => r.player).filter(Boolean))].sort();
+  const periods = [...new Set(g.map(r => r.period))].sort();
+  $('fAction').innerHTML = option('', 'every action') + acts.map(a => option(a, a.replace(/_/g, ' '))).join('');
+  $('fPlayer').innerHTML = option('', 'every player') + people.map(p => option(p, p)).join('');
+  $('fPeriod').innerHTML = option('', 'whole game') + periods.map(p => option(p, 'Q' + p)).join('');
+}
+
+function table() {
+  const a = $('fAction').value, p = $('fPlayer').value, q = $('fPeriod').value;
+  shown = ALL.filter(r => r.gid === game
+    && (!a || r.action === a) && (!p || r.player === p) && (!q || String(r.period) === q));
+  $('rowcount').textContent = shown.length + ' rows';
+  $('rows').innerHTML = shown.map(r => `
+    <tr class="${cited.has(r.id) ? 'cited' : ''}">
+      <td class="mono">${r.clip ? `<button class="play" data-clip="${r.clip}" data-i="${ALL.indexOf(r)}" aria-label="Watch"></button>` : ''}Q${r.period} ${r.clock}</td>
+      <td><span class="act" style="color:${COLOR(r.action)}">${r.action.replace(/_/g, ' ')}</span>
+        ${r.detail ? `<div class="sub">${r.detail}</div>` : ''}</td>
+      <td class="who">${r.player || ''}</td>
+    </tr>`).join('');
+  bindPlay();
+}
+
+function bindPlay() {
+  document.querySelectorAll('button.play:not(.inline)').forEach(b =>
+    b.addEventListener('click', ev => { ev.stopPropagation(); playInline(b) }));
+}
+$('answer').addEventListener('click', ev => {
+  const b = ev.target.closest('button.play.inline');
+  if (b) { ev.preventDefault(); playInline(b) }
+});
+
+function finish(text, rows, pick, applied) {
+  lastPick = pick;
+  const ids = new Set();
+  (text.match(/\[([\d,\s]+)\]/g) || []).forEach(m =>
+    m.slice(1, -1).split(',').forEach(n => {
+      const r = pick[parseInt(n.trim(), 10)]; if (r) ids.add(r.id);
+    }));
+  cited = ids;
+  $('answer').innerHTML = `<div class="answer">${render(text)}</div>`;
+  shown = rows;
+  $('fAction').value = ''; $('fPlayer').value = ''; $('fPeriod').value = '';
+  $('rowcount').textContent = shown.length + ' rows';
+  $('rows').innerHTML = shown.map(r => `
+    <tr class="${cited.has(r.id) ? 'cited' : ''}">
+      <td class="mono">${r.clip ? `<button class="play" data-clip="${r.clip}" data-i="${ALL.indexOf(r)}" aria-label="Watch"></button>` : ''}Q${r.period} ${r.clock}</td>
+      <td><span class="act" style="color:${COLOR(r.action)}">${r.action.replace(/_/g, ' ')}</span>
+        ${r.detail ? `<div class="sub">${r.detail}</div>` : ''}</td>
+      <td class="who">${r.player || ''}</td>
+    </tr>`).join('');
+  bindPlay();
+}
+
+function ask(question) {
+  if (!question.trim()) return;
+  const { rows, applied, hits } = retrieve(question);
+  solo = (hits && hits.length === 1) ? hits[0] : null;
+  const pick = rows;
+  finish(localAnswer(question, rows, pick, hits), rows, pick, applied);
+}
+
+const EXAMPLES = [
+  'What happened in the last two minutes?',
+  'How many points did Shai Gilgeous-Alexander score?',
+  'Every three-pointer',
+  'Every block and steal',
+];
+$('chips').innerHTML = EXAMPLES.map(e => `<button>${e}</button>`).join('');
+$('chips').addEventListener('click', ev => {
+  if (ev.target.tagName !== 'BUTTON') return;
+  $('q').value = ev.target.textContent; ask($('q').value);
+});
+$('go').addEventListener('click', () => ask($('q').value));
+$('q').addEventListener('keydown', e => { if (e.key === 'Enter') ask($('q').value) });
+['fAction', 'fPlayer', 'fPeriod'].forEach(id =>
+  $(id).addEventListener('change', () => { cited = new Set(); table() }));
+
+$('view').addEventListener('click', ev => {
+  const b = ev.target.closest('button[data-view]');
+  if (!b || !VISION) return;
+  [...$('view').children].forEach(x => x.classList.toggle('on', x === b));
+  game = b.dataset.view === 'vision' ? VISION : OFFICIAL;
+  cited = new Set(); solo = null; $('answer').innerHTML = '';
+  fillControls(); strip(); table();
+});
+
+// Open on a moment already running, so what the page does is visible without
+// reading anything or typing anything.
+function openOnAMoment() {
+  const first = ALL.find(r => r.gid === game && r.action === 'made shot'
+    && /3PT/.test(r.detail || '') && r.clip);
+  if (!first) return;
+  ask('Every three-pointer');
+  const btn = document.querySelector('#answer button.play.inline');
+  if (btn) { playInline(btn); const v = $('inlineFilm'); if (v) { v.muted = true; v.play().catch(() => {}) } }
+}
+
+fillControls(); strip(); table(); openOnAMoment();
+
+</script>
 </body>
 </html>
