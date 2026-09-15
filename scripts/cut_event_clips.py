@@ -36,9 +36,11 @@ from pathlib import Path
 
 #: Seconds either side of the logged instant.
 LEAD_S, TAIL_S = 3.0, 3.0
-#: 426x240 at crf 36 is 92 KB for six seconds. The whole set fits in the tens of
-#: megabytes, which is what makes it hostable on a static site at all.
-WIDTH, CRF = 426, 36
+#: 426x240 at crf 36 was 64 KB a clip and unwatchable -- at the size the page
+#: shows a clip you could not tell a player from a referee. 854x480 at crf 26 is
+#: 740 KB, four times the pixels, and 211 MB for the set: still a static site,
+#: and now you can actually see the play being described.
+WIDTH, CRF = 854, 26
 #: Logged rows with nothing to see.
 SKIP = {"Substitution", "Timeout", "period", "Instant Replay"}
 #: An event the aligner placed this far from its clock reading is not worth

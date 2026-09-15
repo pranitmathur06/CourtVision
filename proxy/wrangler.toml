@@ -1,0 +1,7 @@
+name = "courtvision-ask"
+main = "worker.js"
+compatibility_date = "2026-01-01"
+
+# The key is NOT here. Set it as a secret, which is never committed and never
+# reaches the browser:
+#     wrangler secret put ANTHROPIC_API_KEY
