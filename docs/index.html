@@ -106,6 +106,19 @@ td.who{color:var(--dim);white-space:nowrap;width:1%}
 ::-webkit-scrollbar{width:9px;height:9px}
 ::-webkit-scrollbar-thumb{background:#18222B;border-radius:5px}
 ::-webkit-scrollbar-track{background:transparent}
+
+/* On a phone the header's tabs and the table's three filters each ran off the
+   right edge, which made the whole page scroll sideways. Both get their own
+   line instead. */
+@media (max-width:640px){
+  header{flex-wrap:wrap;gap:10px}
+  .seg{order:3;width:100%;margin-left:0}
+  .seg button{flex:1}
+  .list .listhead{flex-wrap:wrap;gap:8px}
+  .filters{margin-left:0;width:100%}
+  .filters select{flex:1 1 0;min-width:0}
+  #filmShell{max-width:100%}
+}
 </style>
 </head>
 <body>
@@ -391,7 +404,7 @@ function localAnswer(question, rows, pick, hits) {
   // which is the thing this page exists not to do. The list scrolls instead.
   lines.push('', ...rows.map(r =>
     `- ${ordinal(r.period)} ${r.clock} — ${r.detail || r.action.replace(/_/g, ' ')}`
-    + (r.player && !(r.detail || '').includes(r.player) ? ` (${r.player})` : '')
+    + (r.player && !namedAlready(r.detail, r.player) ? ` (${r.player})` : '')
     + cite(r)));
   return lines.join('\n');
 }
@@ -432,7 +445,18 @@ function render(text) {
 // timeline, each citing the rows it came from so the clips still play. It
 // cannot paraphrase or reason, and the page says so rather than passing
 // arithmetic off as an answer a model wrote.
-function ordinal(p) { return p <= 4 ? ['', '1st', '2nd', '3rd', '4th'][p] : 'OT' + (p - 4) }
+// The table, the filters and the answer all name a period the same way.
+function ordinal(p) { return p <= 4 ? 'Q' + p : 'OT' + (p - 4) }
+
+// The detail is written with a surname -- "MISS Turner 24' 3PT" -- while the
+// row carries the full name. Printing both reads as a stutter, so the name is
+// appended only when the detail does not already identify the player.
+function namedAlready(detail, player) {
+  const d = (detail || '').toLowerCase();
+  if (!d) return false;
+  const surname = player.split(/\s+/).pop().toLowerCase();
+  return d.includes(player.toLowerCase()) || (surname.length > 2 && d.includes(surname));
+}
 
 function topOf(counts, n = 3) {
   return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, n);
@@ -730,12 +754,15 @@ clock as the rows do. If the rows do not answer the question, say so.`;
     : (body.content || []).filter(c => c.type === 'text').map(c => c.text).join('');
 }
 
-async function ask(question) {
+async function ask(question, local) {
   if (!question.trim()) return;
   const { rows, applied, hits } = retrieve(question);
   solo = (hits && hits.length === 1) ? hits[0] : null;
   const pick = rows;
-  if (!modelReady()) { finish(localAnswer(question, rows, pick, hits), rows, pick, applied); return }
+  // `local` is for the question the page asks itself on load. Spending a model
+  // call on every page view would cost money to no one's benefit -- the visitor
+  // did not ask it. Their own question is what the model writes up.
+  if (local || !modelReady()) { finish(localAnswer(question, rows, pick, hits), rows, pick, applied); return }
   $('go').disabled = true;
   $('answer').innerHTML = `<div class="answer"><p class="dim">Reading ${rows.length} rows\u2026</p></div>`;
   try {
@@ -787,7 +814,7 @@ function openOnAMoment() {
   const first = ALL.find(r => r.gid === game && r.action === 'made shot'
     && /3PT/.test(r.detail || '') && r.clip);
   if (!first) return;
-  ask('Every three-pointer');
+  ask('Every three-pointer', true);
   const btn = document.querySelector('#answer button.play.inline');
   if (btn) { playInline(btn); const v = $('inlineFilm'); if (v) { v.muted = true; v.play().catch(() => {}) } }
 }
