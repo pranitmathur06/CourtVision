@@ -23,9 +23,26 @@ fast, so averaging it would lag the throw; gaps shorter than MAX_BALL_GAP are
 filled by interpolation and longer ones are left empty, because a ball nobody
 detected for half a second is not a ball whose position is known.
 
-Jersey reads happen on this denser sampling too, every JERSEY_EVERY frames.
-The measured problem with naming players was too few legible crops per player
-per clip; this is the cheap way to get more of them.
+THE SUBJECT OF THE CLIP IS FOUND WITHOUT READING A JERSEY. Every clip is cut
+around one logged event, and the play-by-play already says who did it --
+"Jal. Williams 26' 3PT Jump Shot". What it does not say is which box on screen
+he is. The detector's `handler` class does: whoever has the ball at the moment
+of a shot IS the shooter.
+
+So the subject is the tracklet that is the handler most often in the second
+around the logged instant, and the name comes from the official record rather
+than from a digit reader that answers on 16% of crops. That is why this works
+where `identify_players.py` measured 45%: the hard half of the problem was
+already solved by the play-by-play, and only the pointing needed doing.
+
+It is honest about what it covers. A shot, a turnover or an assist is an act by
+the player holding the ball, so the handler is the actor. A REBOUND is whoever
+comes up with it, which the handler usually becomes a moment later. A FOUL is
+committed by a defender who may never touch the ball, and for those the subject
+is left unset rather than guessed at.
+
+The subject's box is carried across frames where the detector lost it, for gaps
+up to MAX_SUBJECT_GAP, so the one box a viewer is watching does not blink.
 """
 
 from __future__ import annotations
@@ -44,9 +61,17 @@ LINK_IOU = 0.4
 MIN_TRACK_FRAMES = 6
 #: Ball gaps up to this many frames are interpolated; longer ones are left out.
 MAX_BALL_GAP = 6
-#: Read a jersey this often. Every frame is wasted -- consecutive frames show
-#: the same pose -- and every third is still six times the old sampling.
+#: Read a jersey this often, when a roster is given at all.
 JERSEY_EVERY = 3
+#: The subject is decided from the handler over this window around the logged
+#: instant, which sits at the middle of every clip.
+SUBJECT_WINDOW_S = 1.2
+#: Carry the subject's box across gaps up to this many frames so it does not
+#: blink; beyond it the player really is gone from the picture.
+MAX_SUBJECT_GAP = 12
+#: Actions whose actor is the player holding the ball. A foul is not one.
+BALL_ACTS = ("shot", "made shot", "free throw", "assist", "turnover",
+             "steal", "rebound", "block", "violation")
 
 
 def smooth_track(boxes, window=SMOOTH):
@@ -154,12 +179,13 @@ def main() -> int:
     fps = capture.get(cv2.CAP_PROP_FPS) or 30.0
     frames_per_clip = int(round(args.duration * fps))
 
-    overlays, identities = {}, {}
+    overlays, identities, subjects = {}, {}, {}
     crops = reads = 0
     for n, clip in enumerate(names):
         start = clips[clip]
         capture.set(cv2.CAP_PROP_POS_MSEC, start * 1000)
         players, balls, rims, pictures = [], {}, [], []
+        handler_boxes: dict[int, list] = {}
         for f in range(frames_per_clip):
             ok, frame = capture.read()
             if not ok:
@@ -175,6 +201,8 @@ def main() -> int:
                     b = [float(v) for v in box]
                     if kind in ("player", "handler"):
                         here.append(b)
+                        if kind == "handler":
+                            handler_boxes.setdefault(f, []).append(b)
                     elif kind == "ball":
                         if f not in balls or conf > balls[f][1]:
                             balls[f] = (b, float(conf))
@@ -185,6 +213,25 @@ def main() -> int:
 
         tracks = link(players)
         tracks = {t: b for t, b in tracks.items() if len(b) >= MIN_TRACK_FRAMES}
+
+        # Which tracklet is the subject: the one holding the ball around the
+        # logged instant, which every clip is cut to its middle.
+        from identify_players import iou as _iou
+        middle = frames_per_clip // 2
+        half = int(round(SUBJECT_WINDOW_S * fps / 2))
+        holding: Counter = Counter()
+        for f in range(max(middle - half, 0), min(middle + half + 1, frames_per_clip)):
+            for hb in handler_boxes.get(f, []):
+                best, score = None, 0.5
+                for tid, by_frame in tracks.items():
+                    if f not in by_frame:
+                        continue
+                    v = _iou(hb, by_frame[f])
+                    if v > score:
+                        best, score = tid, v
+                if best is not None:
+                    holding[best] += 1
+        subject = holding.most_common(1)[0][0] if holding else None
 
         named = {}
         if roster and reader is not None:
@@ -229,6 +276,9 @@ def main() -> int:
             order = sorted(by_frame)
             vals = smooth_track([by_frame[f] for f in order])
             smoothed[tid] = dict(zip(order, vals))
+        if subject is not None and subject in smoothed:
+            smoothed[subject] = fill_gaps(smoothed[subject], frames_per_clip,
+                                          MAX_SUBJECT_GAP)
         rim = median_box(rims)
         ball = fill_gaps({f: b for f, (b, _) in balls.items()}, frames_per_clip)
 
@@ -237,15 +287,16 @@ def main() -> int:
             drawn = []
             for tid, by_frame in smoothed.items():
                 if f in by_frame:
-                    drawn.append(["p", tid, named.get(tid, "")]
-                                 + [int(round(v)) for v in by_frame[f]])
+                    code = "s" if tid == subject else "p"
+                    drawn.append([code] + [int(round(v)) for v in by_frame[f]])
             if f in ball:
-                drawn.append(["b", -1, ""] + [int(round(v)) for v in ball[f]])
+                drawn.append(["b"] + [int(round(v)) for v in ball[f]])
             if rim:
-                drawn.append(["r", -2, ""] + [int(round(v)) for v in rim])
+                drawn.append(["r"] + [int(round(v)) for v in rim])
             if drawn:
                 rows.append([round(f / fps, 3), drawn])
         overlays[clip] = rows
+        subjects[clip] = subject is not None
         if (n + 1) % 20 == 0:
             print(f"  {n + 1}/{len(names)} clips"
                   + (f", {reads}/{crops} crops read" if crops else ""), flush=True)
@@ -257,8 +308,11 @@ def main() -> int:
                        "smoothed; the rim is one box for the clip and short ball gaps "
                        "are interpolated. Rows are [code, tracklet, name, x1,y1,x2,y2].",
                "source_size": [1280, 720], "fps": fps,
+               "subject_found": subjects,
                "clips": overlays}, open(target, "w"), separators=(",", ":"))
+    found = sum(1 for v in subjects.values() if v)
     print(f"{len(overlays)} clips at {fps:.0f} fps -> {target.stat().st_size/1e6:.1f} MB")
+    print(f"  a subject (the player holding the ball) was found in {found}/{len(subjects)}")
     if args.identity_out:
         Path(args.identity_out).write_text(json.dumps(identities, indent=1))
         named_clips = sum(1 for v in identities.values() if v)

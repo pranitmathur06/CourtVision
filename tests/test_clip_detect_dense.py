@@ -56,3 +56,25 @@ def test_a_player_moving_steadily_stays_one_tracklet():
 def test_two_players_do_not_merge():
     per_frame = [[[0, 0, 40, 90], [300, 0, 340, 90]] for _ in range(5)]
     assert len(link(per_frame)) == 2
+
+
+def test_the_subject_gap_fill_keeps_the_box_from_blinking():
+    # The one box a viewer is watching must not disappear for three frames
+    # because the detector lost the player behind someone.
+    from clip_detect_dense import MAX_SUBJECT_GAP, fill_gaps
+    got = fill_gaps({0: [0, 0, 40, 90], 4: [40, 0, 80, 90]}, 10, MAX_SUBJECT_GAP)
+    assert sorted(got) == [0, 1, 2, 3, 4]
+
+
+def test_a_long_absence_is_not_filled_in():
+    from clip_detect_dense import MAX_SUBJECT_GAP, fill_gaps
+    got = fill_gaps({0: [0, 0, 40, 90], 40: [40, 0, 80, 90]}, 60, MAX_SUBJECT_GAP)
+    assert sorted(got) == [0, 40]
+
+
+def test_a_foul_is_not_an_act_of_the_ball_handler():
+    # The fouler is usually a defender who never touches the ball, so the
+    # subject must be left unset rather than pointed at whoever was holding it.
+    from clip_detect_dense import BALL_ACTS
+    assert "foul" not in BALL_ACTS
+    assert "shot" in BALL_ACTS and "made shot" in BALL_ACTS

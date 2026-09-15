@@ -155,7 +155,7 @@ button.play:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 
   <div id="answer"></div>
   <div id="videoNote" class="warn" hidden>The NBA&rsquo;s own play-by-play on the video&rsquo;s clock &mdash; ground truth you can watch. Confidence is how exactly it was placed, not a detector&rsquo;s score.</div>
-  <div id="boxNote" class="warn" hidden>Boxes are the detector&rsquo;s own, drawn over the footage: <b style="color:var(--play)">players</b>, <b style="color:var(--accent)">whoever has the ball</b>, <b style="color:var(--made)">the ball</b>, <b style="color:var(--missed)">the rim</b>. They are not named &mdash; jersey reading finds the right player in 16% of clips, so a name would be a guess.</div>
+  <div id="boxNote" class="warn" hidden>Boxes are the detector&rsquo;s own: <b style="color:var(--play)">players</b>, <b style="color:var(--accent)">whoever has the ball</b>, <b style="color:var(--made)">the ball</b>, <b style="color:var(--missed)">the rim</b>, at the video&rsquo;s full 30&nbsp;fps. Ask about one player and only the ball handler is drawn &mdash; it lands on that player&rsquo;s <b>team</b> 79% of the time, so it is labelled &ldquo;ball handler&rdquo; rather than given his name. Reading the jersey instead finds the right man in 45%.</div>
   <div id="visionNote" class="warn" hidden>What the pipeline called <b>from pixels</b> &mdash; ball and rim per frame, no play-by-play. Precision 0.52 held out, so about half is wrong, and all of it is here to watch.</div>
 
   <div class="panes">
@@ -617,6 +617,7 @@ function lineFor(r, i) {
 async function ask(question) {
   if (!question.trim()) return;
   const { rows, applied, hits } = retrieve(question);
+  solo = (hits && hits.length === 1) ? hits[0] : null;
   const pick = rows.slice(0, 160);
   cited = new Set(); shown = rows.length ? rows : shown; table();
 
@@ -719,9 +720,13 @@ function render(text) {
 // half. They are fetched once and only when a clip is first played, because
 // 2.9 MB is not worth loading for a reader who never presses play.
 let OVERLAYS = null, overlayWanted = false;
-const BOX_COLOUR = { p: 'rgba(78,155,245,.95)', h: 'rgba(251,139,60,1)',
+const BOX_COLOUR = { p: 'rgba(78,155,245,.75)', s: 'rgba(251,139,60,1)',
                      b: 'rgba(63,208,122,1)', r: 'rgba(242,100,122,.95)' };
-const BOX_LABEL = { p: '', h: 'ball', b: 'ball', r: 'rim' };
+const BOX_LABEL = { p: '', s: '', b: 'ball', r: 'rim' };
+// When a question is about one player, the other nine boxes are noise. `solo`
+// carries that player's name: only the subject box, the ball and the rim are
+// drawn, and the subject wears the name the play-by-play gave it.
+let solo = null;
 
 async function loadOverlays() {
   if (OVERLAYS || overlayWanted) return OVERLAYS;
@@ -738,7 +743,7 @@ async function loadOverlays() {
   return OVERLAYS;
 }
 
-function drawBoxes(svg, film, clip, highlight) {
+function drawBoxes(svg, film, clip, subjectName) {
   if (!OVERLAYS || !OVERLAYS.clips[clip]) { svg.innerHTML = ''; return }
   const frames = OVERLAYS.clips[clip];
   const step = OVERLAYS.dense ? (1 / (OVERLAYS.fps || 30)) : (OVERLAYS.step_s || 0.2);
@@ -752,12 +757,16 @@ function drawBoxes(svg, film, clip, highlight) {
   const [sw, sh] = OVERLAYS.source_size || [1280, 720];
   svg.setAttribute('viewBox', `0 0 ${sw} ${sh}`);
   svg.setAttribute('preserveAspectRatio', 'none');
-  svg.innerHTML = boxes.map(row => {
+  svg.innerHTML = boxes.filter(row => !subjectName || row[0] !== 'p').map(row => {
     const c = row[0];
     const [x1, y1, x2, y2] = row.slice(1);
     const on = true;
     const stroke = BOX_COLOUR[c] || '#fff';
-    const label = BOX_LABEL[c];
+    // Labelled for what it verifiably is. The subject is the tracklet holding
+    // the ball at the logged instant, which lands on the actor's own TEAM 79%
+    // of the time -- so it is called "ball handler", not given the name of the
+    // player the question asked about. One box in five would be an opponent.
+    const label = (c === 's' && subjectName) ? 'ball handler' : BOX_LABEL[c];
     return `<rect x="${x1}" y="${y1}" width="${x2 - x1}" height="${y2 - y1}"`
          + ` fill="none" stroke="${stroke}" stroke-width="${on ? (c === 'b' ? 4 : 3) : 2}"`
          + ` opacity="${on ? 1 : .22}" rx="3"/>`
@@ -801,8 +810,13 @@ function playInline(button) {
   const clip = button.dataset.clip;
   film.src = 'clips/' + clip;
   svg.innerHTML = '';
+  // A question about one player draws only him: the tracklet that held the ball
+  // at the logged instant. `r` lives in bindPlay, not here -- referencing it
+  // threw before the overlay was ever fetched, which is why no box appeared.
+  const row = ALL[Number(button.dataset.i)];
+  const subjectName = (solo && row && row.player === solo) ? solo : null;
   loadOverlays().then(() => {
-    const paint = () => drawBoxes(svg, film, clip, null);
+    const paint = () => drawBoxes(svg, film, clip, subjectName);
     film.ontimeupdate = paint; film.onloadeddata = paint; film.onseeked = paint;
     paint();
   });
