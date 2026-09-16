@@ -37,6 +37,16 @@ STEP = 2
 COURT_EVERY = 3
 #: Frames handed to the detector at once.
 BATCH = 8
+#: How far the floor mask is eroded before feet are tested against it. The
+#: library's own default is 45 px, which is tuned for a different question and
+#: costs real players here: on the Finals G1 broadcast it kept 4 of the 10
+#: players on the floor, because a player standing near a sideline has his feet
+#: at the very edge of a mask that has just been pulled 45 px inward. Measured
+#: over 39 frames of each of two broadcasts, at 15 px the count goes 4 -> 7 on
+#: that game and 7 -> 8 on G7 while still dropping about two boxes a frame --
+#: the bench and the front row, which is what the test is for. A convex hull
+#: over the floor recovers everything and filters nothing, so it is not used.
+COURT_ERODE_PX = 15
 
 CODE = {"player": "p", "handler": "h", "ball": "b", "rim": "r"}
 
@@ -50,6 +60,9 @@ def main() -> int:
     parser.add_argument("--duration", type=float, default=6.0)
     parser.add_argument("--imgsz", type=int, default=1280)
     parser.add_argument("--step", type=int, default=STEP)
+    parser.add_argument("--court-erode", type=int, default=COURT_ERODE_PX,
+                        help="how far the floor mask is pulled in before a "
+                             "player's feet are tested against it")
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--out", required=True)
     args = parser.parse_args()
@@ -114,7 +127,7 @@ def main() -> int:
                 # reused between -- but whether a box stands on it depends on
                 # that frame's boxes and is answered for every one of them.
                 if i % COURT_EVERY == 0 or region is None:
-                    region = court_region(chunk[offset])
+                    region = court_region(chunk[offset], erode_px=args.court_erode)
                     if region is not None:
                         ys, xs = np.nonzero(region)
                         court = ([int(xs.min()), int(ys.min()),

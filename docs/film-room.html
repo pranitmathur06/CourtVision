@@ -848,13 +848,26 @@ async function ask(question, local) {
   } finally { $('go').disabled = false }
 }
 
-const EXAMPLES = [
-  'What happened in the last two minutes?',
-  'How many points did Shai Gilgeous-Alexander score?',
-  'Every three-pointer',
-  'Every block and steal',
-];
-$('chips').innerHTML = EXAMPLES.map(e => `<button>${e}</button>`).join('');
+// The examples name somebody who played in THIS game. Asking a Knicks-Pacers
+// game how many points Shai Gilgeous-Alexander scored is a suggestion to ask
+// about someone who was not there.
+function examples() {
+  const here = ALL.filter(r => r.gid === game && r.player);
+  const scored = {};
+  here.forEach(r => {
+    const m = (r.detail || '').match(/\((\d+)\s*PTS\)/i);
+    if (m) scored[r.player] = Math.max(scored[r.player] || 0, +m[1]);
+  });
+  const top = Object.entries(scored).sort((a, b) => b[1] - a[1])[0];
+  return ['What happened in the last two minutes?',
+          top ? `How many points did ${top[0]} score?` : 'Who scored the most?',
+          'Every three-pointer',
+          'Every block and steal'];
+}
+function fillChips() {
+  $('chips').innerHTML = examples().map(e => `<button>${e}</button>`).join('');
+}
+fillChips();
 $('chips').addEventListener('click', ev => {
   if (ev.target.tagName !== 'BUTTON') return;
   ask(ev.target.textContent);
@@ -880,7 +893,7 @@ $('game').addEventListener('change', () => {
   game = $('game').value;
   cited = new Set(); solo = null; turnNo = 0; QUERIED.clear();
   $('chat').innerHTML = '';
-  fillControls();
+  fillControls(); fillChips();
   if (!$('list').hidden) drawRows(filtered());
   openThread();
 });
