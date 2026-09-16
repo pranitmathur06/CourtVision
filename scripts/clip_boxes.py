@@ -114,6 +114,16 @@ BALL_LOFT_SHARE = 0.55
 #: which is exactly the frame where the rim matters.
 RIM_W_PX = (16.0, 420.0)
 RIM_ASPECT = (1.5, 6.5)
+#: A track survives this many detected frames of absence before it is retired.
+#: At 15 Hz that is half a second -- long enough to cross behind another player.
+TRACK_MAX_AGE = 15
+#: Overlap that matches outright, before the distance gate is considered.
+TRACK_MIN_IOU = 0.18
+#: ...and a box whose centre is within this share of the predicted box's own
+#: size matches too, which is what carries a track through a fast pan.
+TRACK_GATE_SHARE = 1.4
+#: Two boxes overlapping this much in one frame are one player twice.
+DUPLICATE_IOU = 0.55
 #: A rim track this short is noise...
 RIM_MIN_FRAMES = 6
 
@@ -245,6 +255,95 @@ def link(per_frame, min_iou=LINK_IOU):
     return tracks
 
 
+def track(per_frame, max_age=TRACK_MAX_AGE, min_iou=TRACK_MIN_IOU,
+          gate=TRACK_GATE_SHARE):
+    """{track: {frame: box}}, joined across gaps and across camera motion.
+
+    Greedy overlap against the previous frame alone gave 127 identities per
+    six-second clip for the ten players on the floor, 77% of them living under
+    half a second. Two things caused that, and neither is the detector:
+
+      THE CAMERA MOVES. On a pan a stationary player's box slides several of
+      its own widths between frames, so the overlap with its own previous box
+      is zero and it becomes a new person. The global shift is estimated here
+      from the matches themselves -- the median displacement of everything
+      that did match -- and applied before matching the rest.
+
+      A PLAYER DISAPPEARS FOR A MOMENT. Behind another player, at the edge of
+      frame, or simply missed. Matching only against the previous frame ends
+      the track; a track here survives `max_age` frames of absence, moving at
+      its last known velocity, and is picked up again when it reappears.
+
+    Assignment is Hungarian over 1 - IoU rather than greedy, so one obvious
+    match no longer steals the box a better one needed.
+    """
+    import numpy as np
+    from scipy.optimize import linear_sum_assignment
+
+    tracks, live, nxt = defaultdict(dict), {}, 0
+    shift = (0.0, 0.0)
+    for f, boxes in enumerate(per_frame):
+        predicted = {}
+        for tid, state in live.items():
+            age = f - state["frame"]
+            vx, vy = state["vel"]
+            dx = vx * age + shift[0] * age
+            dy = vy * age + shift[1] * age
+            b = state["box"]
+            predicted[tid] = [b[0] + dx, b[1] + dy, b[2] + dx, b[3] + dy]
+
+        matches = {}
+        if predicted and boxes:
+            ids = sorted(predicted)
+            cost = np.ones((len(ids), len(boxes)), dtype=float)
+            for i, tid in enumerate(ids):
+                pb = predicted[tid]
+                width = max(pb[2] - pb[0], 1.0)
+                height = max(pb[3] - pb[1], 1.0)
+                for j, box in enumerate(boxes):
+                    overlap = iou(pb, box)
+                    near = (abs((box[0] + box[2]) / 2 - (pb[0] + pb[2]) / 2) < gate * width
+                            and abs((box[1] + box[3]) / 2 - (pb[1] + pb[3]) / 2) < gate * height)
+                    sized = 0.5 <= (box[2] - box[0]) / width <= 2.0
+                    if overlap >= min_iou or (near and sized):
+                        cost[i, j] = 1.0 - max(overlap, 0.05)
+            rows, cols = linear_sum_assignment(cost)
+            for i, j in zip(rows, cols):
+                if cost[i, j] < 1.0:
+                    matches[ids[i]] = j
+
+        moved = [((boxes[j][0] + boxes[j][2]) / 2 - (predicted[t][0] + predicted[t][2]) / 2,
+                  (boxes[j][1] + boxes[j][3]) / 2 - (predicted[t][1] + predicted[t][3]) / 2)
+                 for t, j in matches.items()]
+        if len(moved) >= 3:
+            shift = (float(np.median([m[0] for m in moved])),
+                     float(np.median([m[1] for m in moved])))
+        else:
+            shift = (0.0, 0.0)
+
+        taken = set(matches.values())
+        for tid, j in matches.items():
+            box = boxes[j]
+            state = live[tid]
+            gap = max(f - state["frame"], 1)
+            centre = ((box[0] + box[2]) / 2, (box[1] + box[3]) / 2)
+            was = ((state["box"][0] + state["box"][2]) / 2,
+                   (state["box"][1] + state["box"][3]) / 2)
+            vel = ((centre[0] - was[0]) / gap, (centre[1] - was[1]) / gap)
+            state["vel"] = (0.6 * state["vel"][0] + 0.4 * vel[0],
+                            0.6 * state["vel"][1] + 0.4 * vel[1])
+            state["box"], state["frame"] = box, f
+            tracks[tid][f] = box
+        for j, box in enumerate(boxes):
+            if j in taken:
+                continue
+            live[nxt] = {"box": box, "frame": f, "vel": (0.0, 0.0)}
+            tracks[nxt][f] = box
+            nxt += 1
+        live = {tid: s for tid, s in live.items() if f - s["frame"] <= max_age}
+    return tracks
+
+
 def smooth(by_frame, window=SMOOTH):
     """Centred moving average over a track, keyed by frame."""
     order = sorted(by_frame)
@@ -303,7 +402,7 @@ def assemble(detected, count, fps):
     ball = {order[i]: box for i, box in best_path(balls).items()}
     ball = interpolate(ball)
 
-    players = link([d["p"] for d in detected])
+    players = track([d["p"] for d in detected])
     player_tracks = {}
     for t, by_index in players.items():
         if len(by_index) < MIN_TRACK_FRAMES:
@@ -311,7 +410,7 @@ def assemble(detected, count, fps):
         smoothed = smooth(by_index)
         player_tracks[t] = interpolate({order[i]: b for i, b in smoothed.items()})
 
-    rims = link([[b for b in d["r"] if rim_shaped(b)] for d in detected])
+    rims = track([[b for b in d["r"] if rim_shaped(b)] for d in detected])
     keep = [by_index for by_index in rims.values()
             if len(by_index) >= max(RIM_MIN_FRAMES, RIM_MIN_SHARE * len(detected))]
     keep.sort(key=len, reverse=True)
@@ -336,13 +435,22 @@ def assemble(detected, count, fps):
                 holding[best] += 1
     subject = max(holding, key=holding.get) if holding else None
 
+    # Two tracks can settle on the same player -- one of them usually held
+    # through a gap by prediction -- and then he is drawn twice. The longer
+    # track keeps him.
+    order = sorted(player_tracks, key=lambda t: -len(player_tracks[t]))
     rows = []
     for f in range(count):
-        drawn = []
-        for tid, by_frame in player_tracks.items():
-            if f in by_frame:
-                drawn.append(["s" if tid == subject else "p"]
-                             + [int(round(v)) for v in by_frame[f]])
+        drawn, placed = [], []
+        for tid in order:
+            box = player_tracks[tid].get(f)
+            if box is None:
+                continue
+            if any(iou(box, other) > DUPLICATE_IOU for other in placed):
+                continue
+            placed.append(box)
+            drawn.append(["s" if tid == subject else "p"]
+                         + [int(round(v)) for v in box])
         for by_frame in rim_tracks:
             if f in by_frame:
                 drawn.append(["r"] + [int(round(v)) for v in by_frame[f]])
