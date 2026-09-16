@@ -57,6 +57,14 @@ def main() -> int:
     parser.add_argument("--index", action="append", required=True)
     parser.add_argument("--detector",
                         default="runs/detect/outputs/train/detector/weights/best.pt")
+    parser.add_argument("--ball-detector", default=None,
+                        help="a single-class ball model whose boxes REPLACE the "
+                             "4-class detector's ball class. The two are trained "
+                             "on different things: the 4-class model learned the "
+                             "ball from labels that were its own false positives, "
+                             "and offers 17 candidates a frame; the specialist is "
+                             "trained on tiles at the ball's own scale against "
+                             "hard negatives cut from the crowd, and offers 2.6.")
     parser.add_argument("--duration", type=float, default=6.0)
     parser.add_argument("--imgsz", type=int, default=1280)
     parser.add_argument("--step", type=int, default=STEP)
@@ -86,6 +94,7 @@ def main() -> int:
         names = names[:args.limit]
 
     model, device = YOLO(args.detector), resolve_device()
+    ball_model = YOLO(args.ball_detector) if args.ball_detector else None
     capture = cv2.VideoCapture(args.video)
     fps = capture.get(cv2.CAP_PROP_FPS) or 30.0
     count = int(round(args.duration * fps))
@@ -110,6 +119,9 @@ def main() -> int:
             chunk = frames[start:start + BATCH]
             results = model.predict(chunk, device=device, verbose=False,
                                     imgsz=args.imgsz, conf=CONF_FLOOR)
+            ball_results = (ball_model.predict(chunk, device=device, verbose=False,
+                                               imgsz=args.imgsz, conf=CONF_FLOOR)
+                            if ball_model is not None else None)
             for offset, result in enumerate(results):
                 i = start + offset
                 boxes = result.boxes
@@ -119,10 +131,17 @@ def main() -> int:
                                               boxes.conf.cpu().numpy(),
                                               boxes.xyxy.cpu().numpy()):
                         kind = CODE.get(model.names[int(cls)])
-                        if kind is None:
+                        if kind is None or (kind == "b" and ball_model is not None):
                             continue
                         here.append([kind, round(float(conf), 3)]
                                     + [round(float(v), 1) for v in box])
+                if ball_results is not None:
+                    found = ball_results[offset].boxes
+                    if found is not None and len(found):
+                        for conf, box in zip(found.conf.cpu().numpy(),
+                                             found.xyxy.cpu().numpy()):
+                            here.append(["b", round(float(conf), 3)]
+                                        + [round(float(v), 1) for v in box])
                 # The floor moves slowly, so it is re-found every few frames and
                 # reused between -- but whether a box stands on it depends on
                 # that frame's boxes and is answered for every one of them.

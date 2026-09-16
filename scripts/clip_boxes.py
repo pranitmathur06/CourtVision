@@ -65,7 +65,7 @@ RIM_MIN_SHARE = 0.12
 RIM_MAX_TRACKS = 2
 #: ...and the ball lower still, because the path chooser -- not the threshold --
 #: is what rejects a bad candidate.
-BALL_CONF = 0.10
+BALL_CONF = 0.35
 #: Ball candidates kept per frame for the path search.
 BALL_TOPK = 6
 #: Pixels a ball may move between frames before the jump costs more than it is
@@ -73,19 +73,22 @@ BALL_TOPK = 6
 BALL_STEP_PX = 110.0
 #: What it costs to say "no ball in this frame" rather than accept a candidate.
 BALL_MISS_COST = 0.55
-#: WHETHER A BALL IS DRAWN AT ALL. It is not, and this is the measurement that
-#: decided it. Thirteen frames of this game carry a ball position located by
-#: eye before any system's claim was looked at, with a 28 px tolerance
-#: (`scripts/eval_ball_choice.py`). The pass that shipped put the box in the
-#: right place on 1 of 13. Anchoring it to the play, capping the confidence,
-#: cheapening the gaps, anchoring to the ball handler instead of every player
-#: -- eight variants -- reached 3 of 12, and no chooser could pass 6 of 13,
-#: because that is how often a correct candidate is in the detector's proposals
-#: at all. A box labelled "ball" that is somewhere else three times in four is
-#: not an overlay, it is a lie with a rectangle around it. So the ball is not
-#: drawn until the detector can find it; everything below still chooses one,
-#: and flipping this back on is a one-line change when it can.
-DRAW_BALL = False
+#: WHETHER A BALL IS DRAWN AT ALL. It is again, and this is the measurement
+#: that decided it both times. Thirteen frames of this game carry a ball
+#: position located by eye before any system's claim was looked at, with a
+#: 28 px tolerance (`scripts/eval_ball_choice.py`).
+#:
+#:   what shipped, with the old detector      right 1 of 13
+#:   ...its best candidate, any chooser       6 of 13 was the ceiling
+#:   the specialist trained on corrected
+#:   labels, feeding this chooser             right 6 of 12 it draws
+#:   ...with the confidence floor below       right 5 of the 7 it draws
+#:
+#: The floor is the operating point: the ball is drawn on about half the
+#: frames and is right about seven times in ten when it is, rather than drawn
+#: always and right one time in eight. Thirteen frames is a small sample and
+#: the confidence interval is wide; it is the truth that exists.
+DRAW_BALL = True
 #: The detector's confidence on a ball is anti-correlated with being right --
 #: measured on the thirteen hand-located frames, its most confident candidate
 #: was correct twice while a correct one existed six times, usually at 0.1-0.3
