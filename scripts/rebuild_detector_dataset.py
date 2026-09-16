@@ -57,9 +57,16 @@ BALL_NEAR_HANDLER = 2.5
 HOLDOUT_S = 20.0
 #: Hard negatives: a candidate this far above the floor's top edge, and this far
 #: from any player, is in the stands.
-STANDS_ABOVE_PX = 120.0
-STANDS_FROM_PLAYER_PX = 220.0
-NEGATIVE_CROP = 640
+STANDS_ABOVE_PX = 30.0
+STANDS_FROM_PLAYER_PX = 200.0
+NEGATIVE_CROP = 256
+#: Which broadcast each cache came from, and the index that dates its clips.
+VIDEO_FOR = {"clip_detections_g7": "data/raw_clips/fullgame.mp4",
+             "clip_detections_g1": "data/games/iVhcru3Gli0.mp4",
+             "clip_detections_ecf": "data/games/T1d3VxVnDUo.mp4"}
+INDEX_FOR = {"clip_detections_g7": "docs/clips/index.json",
+             "clip_detections_g1": "docs/clips/index_finals_g1.json",
+             "clip_detections_ecf": "docs/clips/index_ecf_g1.json"}
 
 
 def read_labels(path: Path):
@@ -205,12 +212,26 @@ def main() -> int:
           f"{HOLDOUT_S:.0f}s of a hand-located truth frame")
 
     # ---- hard negatives: the stands, where it kept finding basketballs ------
+    # These are cut from the SOURCE broadcast, not from the published clips,
+    # and they are small. The first attempt took 640 px crops out of an 854x480
+    # clip, which is most of the picture: 1,200 images of a basketball game
+    # labelled "nothing here", and a detector that then found 6 players on a
+    # floor holding 10 instead of the old one's 10. A negative has to contain
+    # the thing being denied and nothing else.
     wanted = []
     for path in args.detections:
         if not Path(path).exists():
             continue
         cached = json.load(open(path))
+        video = VIDEO_FOR.get(Path(path).stem)
+        index = INDEX_FOR.get(Path(path).stem)
+        if not video or not Path(video).exists() or not Path(index).exists():
+            continue
+        starts = {c["clip"]: float(c.get("start_s", float(c["video_s"]) - 3.0))
+                  for c in json.load(open(index))["clips"] if c.get("clip")}
         for clip, rows in cached["clips"].items():
+            if clip not in starts:
+                continue
             for row in rows:
                 court = row.get("court")
                 if not court:
@@ -220,57 +241,59 @@ def main() -> int:
                     if b[0] != "b" or b[1] < 0.25:
                         continue
                     cx, cy = (b[2] + b[4]) / 2, (b[3] + b[5]) / 2
-                    if cy > court[1] - STANDS_ABOVE_PX:
+                    # entirely above the floor, with the whole crop above it
+                    if cy + NEGATIVE_CROP / 2 > court[1] - STANDS_ABOVE_PX:
                         continue
                     if people and min(math.dist((cx, cy),
                                                 ((p[0] + p[2]) / 2, (p[1] + p[3]) / 2))
                                       for p in people) < STANDS_FROM_PLAYER_PX:
                         continue
-                    wanted.append((path, clip, row["f"], cx, cy, b[1]))
+                    # ...and the crop must contain nothing else the detector
+                    # found. A crop holding a rim, labelled empty, teaches
+                    # "rim: background"; two of the first batch did exactly
+                    # that.
+                    half = NEGATIVE_CROP / 2
+                    crop = (cx - half, cy - half, cx + half, cy + half)
+                    clash = False
+                    for other in row["d"]:
+                        if other[0] == "b" or other[1] < 0.30:
+                            continue
+                        if (other[2] < crop[2] and other[4] > crop[0]
+                                and other[3] < crop[3] and other[5] > crop[1]):
+                            clash = True
+                            break
+                    if clash:
+                        continue
+                    wanted.append((video, starts[clip] + row["f"] / 30.0, cx, cy))
     random.seed(11)
     random.shuffle(wanted)
-    print(f"  {len(wanted)} ball candidates found in the stands; "
-          f"taking {min(args.negatives, len(wanted))} as hard negatives")
+    wanted = wanted[:args.negatives]
+    print(f"  {len(wanted)} crops of the stands to cut, entirely above the floor")
 
     made = 0
-    by_clip = defaultdict(list)
-    for path, clip, frame_no, cx, cy, conf in wanted[:args.negatives]:
-        by_clip[clip].append((frame_no, cx, cy))
-    for clip, wants in by_clip.items():
-        source = Path("docs/clips") / clip
-        if not source.exists():
-            continue
-        capture = cv2.VideoCapture(str(source))
-        frames = {}
-        index = 0
-        want_by_frame = defaultdict(list)
-        for frame_no, cx, cy in wants:
-            want_by_frame[frame_no].append((cx, cy))
-        while True:
+    by_video = defaultdict(list)
+    for video, when, cx, cy in wanted:
+        by_video[video].append((when, cx, cy))
+    for video, spots in by_video.items():
+        capture = cv2.VideoCapture(video)
+        for when, cx, cy in sorted(spots):
+            capture.set(cv2.CAP_PROP_POS_MSEC, when * 1000)
             ok, frame = capture.read()
             if not ok:
-                break
-            if index in want_by_frame:
-                frames[index] = frame.copy()
-            index += 1
-        capture.release()
-        for frame_no, spots in want_by_frame.items():
-            frame = frames.get(frame_no)
-            if frame is None:
                 continue
             height, width = frame.shape[:2]
-            # the cache is in 1280x720 coordinates; the clip is 854 wide
-            sx, sy = width / 1280.0, height / 720.0
-            for cx, cy in spots:
-                x = int(max(0, min(width - NEGATIVE_CROP // 2 * 2, cx * sx - NEGATIVE_CROP / 2)))
-                y = int(max(0, min(height - 1, cy * sy - NEGATIVE_CROP / 2)))
-                crop = frame[y:y + NEGATIVE_CROP, x:x + NEGATIVE_CROP]
-                if crop.shape[0] < 64 or crop.shape[1] < 64:
-                    continue
-                name = f"stands_{clip.replace('.mp4','')}_{frame_no}_{int(cx)}.jpg"
-                cv2.imwrite(str(out / "images" / "train" / name), crop)
-                (out / "labels" / "train" / (Path(name).stem + ".txt")).write_text("")
-                made += 1
+            half = NEGATIVE_CROP // 2
+            x = int(max(0, min(width - NEGATIVE_CROP, cx - half)))
+            y = int(max(0, min(height - NEGATIVE_CROP, cy - half)))
+            crop = frame[y:y + NEGATIVE_CROP, x:x + NEGATIVE_CROP]
+            if crop.shape[0] < NEGATIVE_CROP or crop.shape[1] < NEGATIVE_CROP:
+                continue
+            name = f"stands_{Path(video).stem}_{int(when * 10)}_{int(cx)}.jpg"
+            cv2.imwrite(str(out / "images" / "train" / name), crop,
+                        [cv2.IMWRITE_JPEG_QUALITY, 88])
+            (out / "labels" / "train" / (Path(name).stem + ".txt")).write_text("")
+            made += 1
+        capture.release()
     print(f"  {made} hard negatives written from the stands")
 
     data = out / "data.yaml"
