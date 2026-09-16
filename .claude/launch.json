@@ -36,6 +36,18 @@
         "data/labeling/court_toyota_1080_v3"
       ],
       "port": 8767
+    },
+    {
+      "name": "possession-labeller",
+      "runtimeExecutable": "/Users/sanikakapoor/CourtVision/.venv/bin/python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8770",
+        "--directory",
+        "data/labeling/possession"
+      ],
+      "port": 8770
     }
   ]
 }
