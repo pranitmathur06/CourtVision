@@ -84,6 +84,11 @@ def main() -> int:
     parser.add_argument("--lead", type=float, default=LEAD_S)
     parser.add_argument("--tail", type=float, default=TAIL_S)
     parser.add_argument("--limit", type=int, default=None)
+    parser.add_argument("--index-name", default="index.json",
+                        help="what to call the index inside --out-dir. Games "
+                             "share a directory and the second one overwrote "
+                             "the first's index, which is the file the whole "
+                             "stream is built from.")
     parser.add_argument("--prefix", default="e",
                         help="first letter of every clip name; one per game")
     parser.add_argument("--skip", action="append", default=[],
@@ -129,7 +134,7 @@ def main() -> int:
         if (n + 1) % 50 == 0:
             print(f"  {n + 1}/{len(events)} cut", flush=True)
 
-    (out / "index.json").write_text(json.dumps(
+    (out / args.index_name).write_text(json.dumps(
         {"note": "clips cut at the instant the NBA's own play-by-play says the event "
                  "happened, carried onto the video by a scoreboard clock read. Ground "
                  "truth with a timestamp -- NOT the vision stack's output.",
@@ -139,7 +144,7 @@ def main() -> int:
     size = sum(f.stat().st_size for f in out.glob("*.mp4"))
     print(f"{len(index)} clips ({made} cut now, {skipped} already there, {failed} failed)")
     print(f"  {size/1e6:.1f} MB total, {size/max(len(index),1)/1e3:.0f} KB each")
-    print(f"  {out / 'index.json'}")
+    print(f"  {out / args.index_name}")
     return 0
 
 

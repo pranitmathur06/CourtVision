@@ -41,6 +41,9 @@ import numpy as np
 # error on a real broadcast is 0.00 s.
 DEFAULT_TOLERANCE_S = 3.0
 PERIOD_LENGTH_S = 720.0
+#: A quarter is twelve minutes; an overtime is five.
+REGULATION_PERIODS = 4
+OVERTIME_LENGTH_S = 300.0
 
 
 @dataclass(frozen=True)
@@ -55,8 +58,17 @@ class AlignedEvent:
 
 
 def elapsed_seconds(period: int, clock_seconds: float) -> float:
-    """Game time elapsed, from a period and its counting-down clock."""
-    return (period - 1) * PERIOD_LENGTH_S + (PERIOD_LENGTH_S - clock_seconds)
+    """Game time elapsed, from a period and its counting-down clock.
+
+    An overtime is five minutes, not twelve. Treating one as a quarter put
+    every overtime event 400 seconds past anything the scoreboard could read,
+    so all 21 of them were dropped from a game that was decided there.
+    """
+    if period <= REGULATION_PERIODS:
+        return (period - 1) * PERIOD_LENGTH_S + (PERIOD_LENGTH_S - clock_seconds)
+    return (REGULATION_PERIODS * PERIOD_LENGTH_S
+            + (period - REGULATION_PERIODS - 1) * OVERTIME_LENGTH_S
+            + (OVERTIME_LENGTH_S - clock_seconds))
 
 
 def _period_starts(readings: Sequence[dict]) -> dict[int, float]:

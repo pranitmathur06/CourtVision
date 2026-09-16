@@ -155,7 +155,16 @@ def assign_periods(readings):
     out, period, top = [], 0, None
     for run in kept:
         start = run[0][1]
-        if top is None or start >= NEW_PERIOD_SHARE * top:
+        # A period begins near the top of its own clock -- 12:00 for a quarter,
+        # 5:00 for an overtime. Testing only against the previous period's top
+        # merged overtime into the fourth quarter, because 5:00 is well under
+        # four fifths of 12:00; the ECF game that ends in OT then had a fourth
+        # quarter 3,387 seconds of video long and its overtime unplaceable.
+        fresh = top is None or start >= NEW_PERIOD_SHARE * top
+        overtime = (period >= 4 and not fresh
+                    and start >= NEW_PERIOD_SHARE * OT_S
+                    and start <= OT_S + RESET_JUMP_S)
+        if fresh or overtime:
             period += 1
             top = start
         out += [(t, period, seconds) for t, seconds in run]
