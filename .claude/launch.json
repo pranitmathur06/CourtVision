@@ -48,6 +48,18 @@
         "data/labeling/possession"
       ],
       "port": 8770
+    },
+    {
+      "name": "handler-labeller",
+      "runtimeExecutable": "/Users/sanikakapoor/CourtVision/.venv/bin/python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8771",
+        "--directory",
+        "data/labeling/handler"
+      ],
+      "port": 8771
     }
   ]
 }
