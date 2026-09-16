@@ -1,0 +1,5211 @@
+{
+ "note": "Ball and ball-handler located by hand on the same frames, independently. ball_verdict: 'ball' (located), 'none' (not in the picture), 'unknown' (present, not findable by eye -- excluded from both sides of the ball accuracy). handler_verdict: 'box' (that detector box has it), 'missing' (a player has it and the detector drew no box for him -- a detector miss, with his position in handler_at), 'nobody' (in flight, loose, contested). pick is 'hard' (the ball model's best candidate was under 0.35 here) or 'random'.",
+ "frame_size": [
+  1280,
+  720
+ ],
+ "games": [
+  "2025 ECF G1",
+  "2025 Finals G1",
+  "2025 Finals G7"
+ ],
+ "frames": [
+  {
+   "file": "T1d3VxVnDUo_0011332.jpg",
+   "t": 1133.2,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    1125,
+    351
+   ],
+   "radius": 11,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0012419.jpg",
+   "t": 1241.9,
+   "game": "2025 ECF G1",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "box",
+   "handler_box": [
+    310,
+    219,
+    394,
+    404
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0001273.jpg",
+   "t": 127.3,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    440,
+    102
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    517,
+    383,
+    596,
+    570
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0012747.jpg",
+   "t": 1274.7,
+   "game": "2025 ECF G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    571,
+    173
+   ],
+   "radius": 11,
+   "handler_verdict": "box",
+   "handler_box": [
+    531,
+    145,
+    626,
+    317
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0014837.jpg",
+   "t": 1483.7,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    750,
+    432
+   ],
+   "radius": 11,
+   "handler_verdict": "box",
+   "handler_box": [
+    710,
+    300,
+    859,
+    483
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0015567.jpg",
+   "t": 1556.7,
+   "game": "2025 ECF G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    679,
+    51
+   ],
+   "radius": 11,
+   "handler_verdict": null,
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0015631.jpg",
+   "t": 1563.1,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    754,
+    443
+   ],
+   "radius": 11,
+   "handler_verdict": "box",
+   "handler_box": [
+    682,
+    407,
+    769,
+    560
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0015771.jpg",
+   "t": 1577.1,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    403,
+    337
+   ],
+   "radius": 11,
+   "handler_verdict": "box",
+   "handler_box": [
+    311,
+    258,
+    415,
+    412
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0016053.jpg",
+   "t": 1605.3,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    972,
+    272
+   ],
+   "radius": 11,
+   "handler_verdict": "box",
+   "handler_box": [
+    900,
+    195,
+    983,
+    342
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0001725.jpg",
+   "t": 172.5,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    363,
+    257
+   ],
+   "radius": 9,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0017659.jpg",
+   "t": 1765.9,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0017832.jpg",
+   "t": 1783.2,
+   "game": "2025 ECF G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    1030,
+    297
+   ],
+   "radius": 11,
+   "handler_verdict": "box",
+   "handler_box": [
+    999,
+    201,
+    1080,
+    395
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0018137.jpg",
+   "t": 1813.7,
+   "game": "2025 ECF G1",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "box",
+   "handler_box": [
+    552,
+    243,
+    633,
+    377
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0018146.jpg",
+   "t": 1814.6,
+   "game": "2025 ECF G1",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "box",
+   "handler_box": [
+    581,
+    244,
+    686,
+    371
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0018179.jpg",
+   "t": 1817.9,
+   "game": "2025 ECF G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    731,
+    156
+   ],
+   "radius": 11,
+   "handler_verdict": "box",
+   "handler_box": [
+    713,
+    186,
+    776,
+    393
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0018653.jpg",
+   "t": 1865.3,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0018874.jpg",
+   "t": 1887.4,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    666,
+    113
+   ],
+   "radius": 11,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0018901.jpg",
+   "t": 1890.1,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    895,
+    314
+   ],
+   "radius": 11,
+   "handler_verdict": "box",
+   "handler_box": [
+    884,
+    253,
+    946,
+    424
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0019690.jpg",
+   "t": 1969,
+   "game": "2025 ECF G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    652,
+    274
+   ],
+   "radius": 11,
+   "handler_verdict": "box",
+   "handler_box": [
+    546,
+    233,
+    620,
+    345
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0020919.jpg",
+   "t": 2091.9,
+   "game": "2025 ECF G1",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "missing",
+   "handler_box": null,
+   "handler_at": [
+    583,
+    260
+   ]
+  },
+  {
+   "file": "T1d3VxVnDUo_0020956.jpg",
+   "t": 2095.6,
+   "game": "2025 ECF G1",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "box",
+   "handler_box": [
+    84,
+    331,
+    157,
+    449
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0021833.jpg",
+   "t": 2183.3,
+   "game": "2025 ECF G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    652,
+    489
+   ],
+   "radius": 11,
+   "handler_verdict": "missing",
+   "handler_box": null,
+   "handler_at": [
+    625,
+    450
+   ]
+  },
+  {
+   "file": "T1d3VxVnDUo_0021951.jpg",
+   "t": 2195.1,
+   "game": "2025 ECF G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    647,
+    252
+   ],
+   "radius": 11,
+   "handler_verdict": "missing",
+   "handler_box": null,
+   "handler_at": [
+    652,
+    323
+   ]
+  },
+  {
+   "file": "T1d3VxVnDUo_0021962.jpg",
+   "t": 2196.2,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    368,
+    360
+   ],
+   "radius": 11,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0021964.jpg",
+   "t": 2196.4,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    293,
+    441
+   ],
+   "radius": 11,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0002367.jpg",
+   "t": 236.7,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    830,
+    100
+   ],
+   "radius": 9,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0023757.jpg",
+   "t": 2375.7,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    833,
+    163
+   ],
+   "radius": 11,
+   "handler_verdict": "box",
+   "handler_box": [
+    779,
+    159,
+    850,
+    374
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0023855.jpg",
+   "t": 2385.5,
+   "game": "2025 ECF G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    592,
+    369
+   ],
+   "radius": 11,
+   "handler_verdict": "box",
+   "handler_box": [
+    577,
+    340,
+    674,
+    487
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0024003.jpg",
+   "t": 2400.3,
+   "game": "2025 ECF G1",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "box",
+   "handler_box": [
+    520,
+    340,
+    621,
+    479
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0024155.jpg",
+   "t": 2415.5,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    555,
+    141
+   ],
+   "radius": 11,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0024787.jpg",
+   "t": 2478.7,
+   "game": "2025 ECF G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    776,
+    290
+   ],
+   "radius": 11,
+   "handler_verdict": "box",
+   "handler_box": [
+    772,
+    244,
+    863,
+    429
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0024879.jpg",
+   "t": 2487.9,
+   "game": "2025 ECF G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    406,
+    297
+   ],
+   "radius": 11,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0025369.jpg",
+   "t": 2536.9,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    882,
+    86
+   ],
+   "radius": 11,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0026306.jpg",
+   "t": 2630.6,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    457,
+    271
+   ],
+   "radius": 11,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0026452.jpg",
+   "t": 2645.2,
+   "game": "2025 ECF G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    581,
+    314
+   ],
+   "radius": 11,
+   "handler_verdict": "box",
+   "handler_box": [
+    558,
+    241,
+    615,
+    397
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0026792.jpg",
+   "t": 2679.2,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    485,
+    88
+   ],
+   "radius": 11,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0028607.jpg",
+   "t": 2860.7,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    438,
+    229
+   ],
+   "radius": 11,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0031847.jpg",
+   "t": 3184.7,
+   "game": "2025 ECF G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    872,
+    111
+   ],
+   "radius": 11,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0031859.jpg",
+   "t": 3185.9,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    633,
+    313
+   ],
+   "radius": 11,
+   "handler_verdict": "box",
+   "handler_box": [
+    628,
+    244,
+    740,
+    368
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0032084.jpg",
+   "t": 3208.4,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    524,
+    309
+   ],
+   "radius": 11,
+   "handler_verdict": "box",
+   "handler_box": [
+    519,
+    289,
+    600,
+    476
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0032259.jpg",
+   "t": 3225.9,
+   "game": "2025 ECF G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    699,
+    250
+   ],
+   "radius": 11,
+   "handler_verdict": "box",
+   "handler_box": [
+    664,
+    237,
+    747,
+    442
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0032431.jpg",
+   "t": 3243.1,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    607,
+    333
+   ],
+   "radius": 11,
+   "handler_verdict": "box",
+   "handler_box": [
+    549,
+    255,
+    619,
+    388
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0033351.jpg",
+   "t": 3335.1,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    984,
+    339
+   ],
+   "radius": 11,
+   "handler_verdict": "missing",
+   "handler_box": null,
+   "handler_at": [
+    932,
+    307
+   ]
+  },
+  {
+   "file": "T1d3VxVnDUo_0034613.jpg",
+   "t": 3461.3,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    643,
+    326
+   ],
+   "radius": 11,
+   "handler_verdict": "box",
+   "handler_box": [
+    599,
+    278,
+    710,
+    430
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0003483.jpg",
+   "t": 348.3,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    476,
+    459
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    458,
+    395,
+    572,
+    556
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0034845.jpg",
+   "t": 3484.5,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    651,
+    259
+   ],
+   "radius": 11,
+   "handler_verdict": "box",
+   "handler_box": [
+    640,
+    250,
+    693,
+    408
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0003507.jpg",
+   "t": 350.7,
+   "game": "2025 ECF G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    561,
+    277
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    523,
+    239,
+    594,
+    410
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0037890.jpg",
+   "t": 3789,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    706,
+    21
+   ],
+   "radius": 11,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0037951.jpg",
+   "t": 3795.1,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    928,
+    521
+   ],
+   "radius": 11,
+   "handler_verdict": "missing",
+   "handler_box": null,
+   "handler_at": [
+    959,
+    527
+   ]
+  },
+  {
+   "file": "T1d3VxVnDUo_0037958.jpg",
+   "t": 3795.8,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    870,
+    231
+   ],
+   "radius": 11,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0040905.jpg",
+   "t": 4090.5,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    826,
+    160
+   ],
+   "radius": 11,
+   "handler_verdict": "box",
+   "handler_box": [
+    756,
+    151,
+    851,
+    361
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0041100.jpg",
+   "t": 4110,
+   "game": "2025 ECF G1",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "box",
+   "handler_box": [
+    496,
+    215,
+    559,
+    348
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0042126.jpg",
+   "t": 4212.6,
+   "game": "2025 ECF G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    752,
+    155
+   ],
+   "radius": 11,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0042462.jpg",
+   "t": 4246.2,
+   "game": "2025 ECF G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    513,
+    78
+   ],
+   "radius": 11,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0042491.jpg",
+   "t": 4249.1,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    835,
+    295
+   ],
+   "radius": 11,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0047180.jpg",
+   "t": 4718,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    503,
+    137
+   ],
+   "radius": 11,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0047417.jpg",
+   "t": 4741.7,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    797,
+    181
+   ],
+   "radius": 11,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0004763.jpg",
+   "t": 476.3,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    853,
+    271
+   ],
+   "radius": 10,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0047673.jpg",
+   "t": 4767.3,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    714,
+    48
+   ],
+   "radius": 11,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0004847.jpg",
+   "t": 484.7,
+   "game": "2025 ECF G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    803,
+    310
+   ],
+   "radius": 10,
+   "handler_verdict": "box",
+   "handler_box": [
+    794,
+    235,
+    893,
+    429
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0004849.jpg",
+   "t": 484.9,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    778,
+    264
+   ],
+   "radius": 10,
+   "handler_verdict": "box",
+   "handler_box": [
+    771,
+    170,
+    847,
+    342
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0048884.jpg",
+   "t": 4888.4,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "box",
+   "handler_box": [
+    389,
+    209,
+    471,
+    318
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0049607.jpg",
+   "t": 4960.7,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    521,
+    326
+   ],
+   "radius": 11,
+   "handler_verdict": "box",
+   "handler_box": [
+    424,
+    271,
+    536,
+    428
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0049631.jpg",
+   "t": 4963.1,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    682,
+    54
+   ],
+   "radius": 11,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0050821.jpg",
+   "t": 5082.1,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    860,
+    493
+   ],
+   "radius": 11,
+   "handler_verdict": "missing",
+   "handler_box": null,
+   "handler_at": [
+    886,
+    425
+   ]
+  },
+  {
+   "file": "T1d3VxVnDUo_0050826.jpg",
+   "t": 5082.6,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "box",
+   "handler_box": [
+    882,
+    363,
+    941,
+    523
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0005113.jpg",
+   "t": 511.3,
+   "game": "2025 ECF G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    410,
+    147
+   ],
+   "radius": 10,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0052386.jpg",
+   "t": 5238.6,
+   "game": "2025 ECF G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    498,
+    198
+   ],
+   "radius": 11,
+   "handler_verdict": "box",
+   "handler_box": [
+    517,
+    161,
+    604,
+    315
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0052727.jpg",
+   "t": 5272.7,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    486,
+    161
+   ],
+   "radius": 11,
+   "handler_verdict": "box",
+   "handler_box": [
+    424,
+    209,
+    525,
+    418
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0005356.jpg",
+   "t": 535.6,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    574,
+    270
+   ],
+   "radius": 10,
+   "handler_verdict": "box",
+   "handler_box": [
+    550,
+    275,
+    640,
+    437
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0053851.jpg",
+   "t": 5385.1,
+   "game": "2025 ECF G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    284,
+    249
+   ],
+   "radius": 11,
+   "handler_verdict": "box",
+   "handler_box": [
+    235,
+    209,
+    324,
+    406
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0055091.jpg",
+   "t": 5509.1,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    558,
+    92
+   ],
+   "radius": 11,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0055299.jpg",
+   "t": 5529.9,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    734,
+    441
+   ],
+   "radius": 12,
+   "handler_verdict": "box",
+   "handler_box": [
+    683,
+    234,
+    769,
+    469
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0056088.jpg",
+   "t": 5608.8,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    636,
+    351
+   ],
+   "radius": 12,
+   "handler_verdict": "box",
+   "handler_box": [
+    582,
+    297,
+    662,
+    429
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0056210.jpg",
+   "t": 5621,
+   "game": "2025 ECF G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    864,
+    314
+   ],
+   "radius": 12,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0056441.jpg",
+   "t": 5644.1,
+   "game": "2025 ECF G1",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "box",
+   "handler_box": [
+    994,
+    272,
+    1098,
+    411
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0056490.jpg",
+   "t": 5649,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "missing",
+   "handler_box": null,
+   "handler_at": [
+    513,
+    256
+   ]
+  },
+  {
+   "file": "T1d3VxVnDUo_0056495.jpg",
+   "t": 5649.5,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    709,
+    197
+   ],
+   "radius": 12,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0057553.jpg",
+   "t": 5755.3,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    743,
+    279
+   ],
+   "radius": 12,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0058751.jpg",
+   "t": 5875.1,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    931,
+    397
+   ],
+   "radius": 12,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0059026.jpg",
+   "t": 5902.6,
+   "game": "2025 ECF G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    753,
+    310
+   ],
+   "radius": 12,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0059372.jpg",
+   "t": 5937.2,
+   "game": "2025 ECF G1",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0059561.jpg",
+   "t": 5956.1,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    946,
+    375
+   ],
+   "radius": 12,
+   "handler_verdict": "box",
+   "handler_box": [
+    942,
+    292,
+    1011,
+    436
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0061218.jpg",
+   "t": 6121.8,
+   "game": "2025 ECF G1",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "box",
+   "handler_box": [
+    569,
+    300,
+    669,
+    495
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0071244.jpg",
+   "t": 7124.4,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    990,
+    414
+   ],
+   "radius": 12,
+   "handler_verdict": "box",
+   "handler_box": [
+    938,
+    347,
+    1008,
+    506
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0071577.jpg",
+   "t": 7157.7,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    804,
+    190
+   ],
+   "radius": 12,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0007296.jpg",
+   "t": 729.6,
+   "game": "2025 ECF G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    434,
+    299
+   ],
+   "radius": 10,
+   "handler_verdict": "box",
+   "handler_box": [
+    438,
+    248,
+    497,
+    388
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0073967.jpg",
+   "t": 7396.7,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    1029,
+    344
+   ],
+   "radius": 12,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0075217.jpg",
+   "t": 7521.7,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    802,
+    158
+   ],
+   "radius": 12,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0007717.jpg",
+   "t": 771.7,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    744,
+    88
+   ],
+   "radius": 9,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0007747.jpg",
+   "t": 774.7,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    480,
+    341
+   ],
+   "radius": 9,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0007751.jpg",
+   "t": 775.1,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    404,
+    344
+   ],
+   "radius": 14,
+   "handler_verdict": null,
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0080203.jpg",
+   "t": 8020.3,
+   "game": "2025 ECF G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    792,
+    483
+   ],
+   "radius": 12,
+   "handler_verdict": "missing",
+   "handler_box": null,
+   "handler_at": [
+    750,
+    467
+   ]
+  },
+  {
+   "file": "T1d3VxVnDUo_0080239.jpg",
+   "t": 8023.9,
+   "game": "2025 ECF G1",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0009717.jpg",
+   "t": 971.7,
+   "game": "2025 ECF G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    716,
+    346
+   ],
+   "radius": 11,
+   "handler_verdict": "box",
+   "handler_box": [
+    591,
+    289,
+    698,
+    414
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "T1d3VxVnDUo_0009973.jpg",
+   "t": 997.3,
+   "game": "2025 ECF G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    360,
+    218
+   ],
+   "radius": 11,
+   "handler_verdict": "box",
+   "handler_box": [
+    303,
+    176,
+    361,
+    305
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0010400.jpg",
+   "t": 1040,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    856,
+    176
+   ],
+   "radius": 12,
+   "handler_verdict": "box",
+   "handler_box": [
+    793,
+    198,
+    861,
+    341
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0010415.jpg",
+   "t": 1041.5,
+   "game": "2025 Finals G1",
+   "pick": "random",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "box",
+   "handler_box": [
+    1150,
+    294,
+    1232,
+    450
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0010549.jpg",
+   "t": 1054.9,
+   "game": "2025 Finals G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    705,
+    369
+   ],
+   "radius": 12,
+   "handler_verdict": "box",
+   "handler_box": [
+    659,
+    258,
+    745,
+    413
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0001103.jpg",
+   "t": 110.3,
+   "game": "2025 Finals G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    817,
+    19
+   ],
+   "radius": 12,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0011225.jpg",
+   "t": 1122.5,
+   "game": "2025 Finals G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    1047,
+    380
+   ],
+   "radius": 12,
+   "handler_verdict": "box",
+   "handler_box": [
+    1037,
+    342,
+    1120,
+    508
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0011263.jpg",
+   "t": 1126.3,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    819,
+    405
+   ],
+   "radius": 12,
+   "handler_verdict": "box",
+   "handler_box": [
+    775,
+    316,
+    876,
+    434
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0001207.jpg",
+   "t": 120.7,
+   "game": "2025 Finals G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    307,
+    331
+   ],
+   "radius": 12,
+   "handler_verdict": "box",
+   "handler_box": [
+    254,
+    276,
+    318,
+    403
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0001217.jpg",
+   "t": 121.7,
+   "game": "2025 Finals G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    329,
+    319
+   ],
+   "radius": 12,
+   "handler_verdict": "box",
+   "handler_box": [
+    291,
+    272,
+    372,
+    503
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0012624.jpg",
+   "t": 1262.4,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "box",
+   "handler_box": [
+    420,
+    272,
+    471,
+    447
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0012640.jpg",
+   "t": 1264,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "box",
+   "handler_box": [
+    420,
+    266,
+    468,
+    443
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0013099.jpg",
+   "t": 1309.9,
+   "game": "2025 Finals G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    593,
+    414
+   ],
+   "radius": 12,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0014865.jpg",
+   "t": 1486.5,
+   "game": "2025 Finals G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    822,
+    113
+   ],
+   "radius": 12,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0001538.jpg",
+   "t": 153.8,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0001548.jpg",
+   "t": 154.8,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0016145.jpg",
+   "t": 1614.5,
+   "game": "2025 Finals G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    839,
+    143
+   ],
+   "radius": 12,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0016909.jpg",
+   "t": 1690.9,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "box",
+   "handler_box": [
+    364,
+    162,
+    404,
+    309
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0017065.jpg",
+   "t": 1706.5,
+   "game": "2025 Finals G1",
+   "pick": "random",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "box",
+   "handler_box": [
+    897,
+    201,
+    957,
+    346
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0018115.jpg",
+   "t": 1811.5,
+   "game": "2025 Finals G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    842,
+    336
+   ],
+   "radius": 12,
+   "handler_verdict": "box",
+   "handler_box": [
+    819,
+    241,
+    872,
+    349
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0001913.jpg",
+   "t": 191.3,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "box",
+   "handler_box": [
+    767,
+    313,
+    824,
+    452
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0019656.jpg",
+   "t": 1965.6,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    476,
+    352
+   ],
+   "radius": 12,
+   "handler_verdict": "missing",
+   "handler_box": null,
+   "handler_at": [
+    491,
+    407
+   ]
+  },
+  {
+   "file": "iVhcru3Gli0_0019712.jpg",
+   "t": 1971.2,
+   "game": "2025 Finals G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    855,
+    427
+   ],
+   "radius": 12,
+   "handler_verdict": "box",
+   "handler_box": [
+    825,
+    367,
+    928,
+    523
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0021038.jpg",
+   "t": 2103.8,
+   "game": "2025 Finals G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    857,
+    495
+   ],
+   "radius": 12,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0021699.jpg",
+   "t": 2169.9,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "box",
+   "handler_box": [
+    538,
+    325,
+    606,
+    410
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0022056.jpg",
+   "t": 2205.6,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "box",
+   "handler_box": [
+    848,
+    336,
+    897,
+    528
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0023034.jpg",
+   "t": 2303.4,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "box",
+   "handler_box": [
+    718,
+    356,
+    765,
+    481
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0023586.jpg",
+   "t": 2358.6,
+   "game": "2025 Finals G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    961,
+    116
+   ],
+   "radius": 12,
+   "handler_verdict": "missing",
+   "handler_box": null,
+   "handler_at": [
+    1066,
+    445
+   ]
+  },
+  {
+   "file": "iVhcru3Gli0_0023929.jpg",
+   "t": 2392.9,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    328,
+    351
+   ],
+   "radius": 12,
+   "handler_verdict": "missing",
+   "handler_box": null,
+   "handler_at": [
+    288,
+    414
+   ]
+  },
+  {
+   "file": "iVhcru3Gli0_0023996.jpg",
+   "t": 2399.6,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "box",
+   "handler_box": [
+    608,
+    383,
+    731,
+    528
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0024915.jpg",
+   "t": 2491.5,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0024974.jpg",
+   "t": 2497.4,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "box",
+   "handler_box": [
+    627,
+    221,
+    681,
+    384
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0025817.jpg",
+   "t": 2581.7,
+   "game": "2025 Finals G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    545,
+    314
+   ],
+   "radius": 12,
+   "handler_verdict": "box",
+   "handler_box": [
+    579,
+    267,
+    691,
+    397
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0025849.jpg",
+   "t": 2584.9,
+   "game": "2025 Finals G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    919,
+    305
+   ],
+   "radius": 12,
+   "handler_verdict": "box",
+   "handler_box": [
+    900,
+    256,
+    960,
+    370
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0025866.jpg",
+   "t": 2586.6,
+   "game": "2025 Finals G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    495,
+    180
+   ],
+   "radius": 12,
+   "handler_verdict": "box",
+   "handler_box": [
+    943,
+    248,
+    1003,
+    399
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0025970.jpg",
+   "t": 2597,
+   "game": "2025 Finals G1",
+   "pick": "random",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "box",
+   "handler_box": [
+    937,
+    313,
+    1003,
+    459
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0026091.jpg",
+   "t": 2609.1,
+   "game": "2025 Finals G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    501,
+    287
+   ],
+   "radius": 12,
+   "handler_verdict": "missing",
+   "handler_box": null,
+   "handler_at": [
+    536,
+    293
+   ]
+  },
+  {
+   "file": "iVhcru3Gli0_0026195.jpg",
+   "t": 2619.5,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    663,
+    325
+   ],
+   "radius": 12,
+   "handler_verdict": "box",
+   "handler_box": [
+    654,
+    256,
+    739,
+    405
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0026299.jpg",
+   "t": 2629.9,
+   "game": "2025 Finals G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    290,
+    421
+   ],
+   "radius": 12,
+   "handler_verdict": "box",
+   "handler_box": [
+    197,
+    301,
+    300,
+    441
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0026429.jpg",
+   "t": 2642.9,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    920,
+    285
+   ],
+   "radius": 12,
+   "handler_verdict": "box",
+   "handler_box": [
+    877,
+    294,
+    928,
+    448
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0027786.jpg",
+   "t": 2778.6,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "box",
+   "handler_box": [
+    99,
+    400,
+    153,
+    575
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0029522.jpg",
+   "t": 2952.2,
+   "game": "2025 Finals G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    488,
+    170
+   ],
+   "radius": 12,
+   "handler_verdict": "box",
+   "handler_box": [
+    1070,
+    332,
+    1162,
+    483
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0029719.jpg",
+   "t": 2971.9,
+   "game": "2025 Finals G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    944,
+    386
+   ],
+   "radius": 12,
+   "handler_verdict": "box",
+   "handler_box": [
+    932,
+    312,
+    1016,
+    451
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0029852.jpg",
+   "t": 2985.2,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    478,
+    313
+   ],
+   "radius": 12,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0031771.jpg",
+   "t": 3177.1,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    886,
+    287
+   ],
+   "radius": 12,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0031786.jpg",
+   "t": 3178.6,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    741,
+    480
+   ],
+   "radius": 12,
+   "handler_verdict": "missing",
+   "handler_box": null,
+   "handler_at": [
+    776,
+    483
+   ]
+  },
+  {
+   "file": "iVhcru3Gli0_0032653.jpg",
+   "t": 3265.3,
+   "game": "2025 Finals G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    747,
+    287
+   ],
+   "radius": 12,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0032678.jpg",
+   "t": 3267.8,
+   "game": "2025 Finals G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    949,
+    315
+   ],
+   "radius": 12,
+   "handler_verdict": "box",
+   "handler_box": [
+    978,
+    204,
+    1063,
+    328
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0033963.jpg",
+   "t": 3396.3,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "missing",
+   "handler_box": null,
+   "handler_at": [
+    1135,
+    449
+   ]
+  },
+  {
+   "file": "iVhcru3Gli0_0034009.jpg",
+   "t": 3400.9,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    473,
+    159
+   ],
+   "radius": 12,
+   "handler_verdict": "box",
+   "handler_box": [
+    858,
+    321,
+    927,
+    550
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0034019.jpg",
+   "t": 3401.9,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0034383.jpg",
+   "t": 3438.3,
+   "game": "2025 Finals G1",
+   "pick": "random",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "missing",
+   "handler_box": null,
+   "handler_at": [
+    328,
+    479
+   ]
+  },
+  {
+   "file": "iVhcru3Gli0_0034621.jpg",
+   "t": 3462.1,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "box",
+   "handler_box": [
+    427,
+    270,
+    490,
+    438
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0034633.jpg",
+   "t": 3463.3,
+   "game": "2025 Finals G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    580,
+    290
+   ],
+   "radius": 12,
+   "handler_verdict": "box",
+   "handler_box": [
+    506,
+    235,
+    596,
+    369
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0034718.jpg",
+   "t": 3471.8,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    1024,
+    320
+   ],
+   "radius": 12,
+   "handler_verdict": "box",
+   "handler_box": [
+    976,
+    274,
+    1081,
+    410
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0035146.jpg",
+   "t": 3514.6,
+   "game": "2025 Finals G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    411,
+    267
+   ],
+   "radius": 12,
+   "handler_verdict": "box",
+   "handler_box": [
+    332,
+    290,
+    429,
+    480
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0035389.jpg",
+   "t": 3538.9,
+   "game": "2025 Finals G1",
+   "pick": "random",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "box",
+   "handler_box": [
+    742,
+    311,
+    821,
+    424
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0035505.jpg",
+   "t": 3550.5,
+   "game": "2025 Finals G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    365,
+    204
+   ],
+   "radius": 9,
+   "handler_verdict": "missing",
+   "handler_box": null,
+   "handler_at": [
+    404,
+    270
+   ]
+  },
+  {
+   "file": "iVhcru3Gli0_0035975.jpg",
+   "t": 3597.5,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    523,
+    170
+   ],
+   "radius": 9,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0036427.jpg",
+   "t": 3642.7,
+   "game": "2025 Finals G1",
+   "pick": "random",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "box",
+   "handler_box": [
+    336,
+    323,
+    466,
+    428
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0038085.jpg",
+   "t": 3808.5,
+   "game": "2025 Finals G1",
+   "pick": "random",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "box",
+   "handler_box": [
+    675,
+    284,
+    731,
+    417
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0038765.jpg",
+   "t": 3876.5,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    626,
+    243
+   ],
+   "radius": 9,
+   "handler_verdict": "missing",
+   "handler_box": null,
+   "handler_at": [
+    604,
+    233
+   ]
+  },
+  {
+   "file": "iVhcru3Gli0_0040467.jpg",
+   "t": 4046.7,
+   "game": "2025 Finals G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    856,
+    285
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    759,
+    247,
+    888,
+    432
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0043120.jpg",
+   "t": 4312,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    480,
+    290
+   ],
+   "radius": 9,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0044721.jpg",
+   "t": 4472.1,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0045569.jpg",
+   "t": 4556.9,
+   "game": "2025 Finals G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    224,
+    412
+   ],
+   "radius": 9,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0045786.jpg",
+   "t": 4578.6,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    967,
+    352
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    946,
+    317,
+    1002,
+    429
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0046531.jpg",
+   "t": 4653.1,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    1142,
+    390
+   ],
+   "radius": 9,
+   "handler_verdict": "missing",
+   "handler_box": null,
+   "handler_at": [
+    1118,
+    390
+   ]
+  },
+  {
+   "file": "iVhcru3Gli0_0004692.jpg",
+   "t": 469.2,
+   "game": "2025 Finals G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    844,
+    230
+   ],
+   "radius": 12,
+   "handler_verdict": "box",
+   "handler_box": [
+    798,
+    250,
+    871,
+    493
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0047916.jpg",
+   "t": 4791.6,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0004819.jpg",
+   "t": 481.9,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    563,
+    129
+   ],
+   "radius": 12,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0004906.jpg",
+   "t": 490.6,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0004931.jpg",
+   "t": 493.1,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0049695.jpg",
+   "t": 4969.5,
+   "game": "2025 Finals G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    600,
+    415
+   ],
+   "radius": 9,
+   "handler_verdict": "missing",
+   "handler_box": null,
+   "handler_at": [
+    631,
+    467
+   ]
+  },
+  {
+   "file": "iVhcru3Gli0_0050088.jpg",
+   "t": 5008.8,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    665,
+    284
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    648,
+    272,
+    708,
+    392
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0050149.jpg",
+   "t": 5014.9,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0050393.jpg",
+   "t": 5039.3,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    465,
+    471
+   ],
+   "radius": 9,
+   "handler_verdict": "missing",
+   "handler_box": null,
+   "handler_at": [
+    515,
+    518
+   ]
+  },
+  {
+   "file": "iVhcru3Gli0_0051529.jpg",
+   "t": 5152.9,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    505,
+    418
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    447,
+    318,
+    566,
+    463
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0052126.jpg",
+   "t": 5212.6,
+   "game": "2025 Finals G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    519,
+    96
+   ],
+   "radius": 9,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0052127.jpg",
+   "t": 5212.7,
+   "game": "2025 Finals G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    524,
+    112
+   ],
+   "radius": 9,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0053089.jpg",
+   "t": 5308.9,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    1021,
+    292
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    1009,
+    274,
+    1078,
+    430
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0054340.jpg",
+   "t": 5434,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    711,
+    257
+   ],
+   "radius": 9,
+   "handler_verdict": "missing",
+   "handler_box": null,
+   "handler_at": [
+    722,
+    279
+   ]
+  },
+  {
+   "file": "iVhcru3Gli0_0054347.jpg",
+   "t": 5434.7,
+   "game": "2025 Finals G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    565,
+    165
+   ],
+   "radius": 9,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0054351.jpg",
+   "t": 5435.1,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    555,
+    169
+   ],
+   "radius": 9,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0056718.jpg",
+   "t": 5671.8,
+   "game": "2025 Finals G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    724,
+    442
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    721,
+    364,
+    829,
+    497
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0057127.jpg",
+   "t": 5712.7,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    696,
+    275
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    671,
+    223,
+    723,
+    342
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0058255.jpg",
+   "t": 5825.5,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    501,
+    212
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    480,
+    210,
+    536,
+    397
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0058276.jpg",
+   "t": 5827.6,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "box",
+   "handler_box": [
+    679,
+    318,
+    775,
+    511
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0059959.jpg",
+   "t": 5995.9,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    535,
+    185
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    505,
+    185,
+    603,
+    351
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0059996.jpg",
+   "t": 5999.6,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    849,
+    264
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    789,
+    232,
+    890,
+    381
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0006063.jpg",
+   "t": 606.3,
+   "game": "2025 Finals G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    605,
+    286
+   ],
+   "radius": 12,
+   "handler_verdict": "box",
+   "handler_box": [
+    572,
+    272,
+    629,
+    450
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "iVhcru3Gli0_0008907.jpg",
+   "t": 890.7,
+   "game": "2025 Finals G1",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    132,
+    419
+   ],
+   "radius": 12,
+   "handler_verdict": "missing",
+   "handler_box": null,
+   "handler_at": [
+    137,
+    371
+   ]
+  },
+  {
+   "file": "iVhcru3Gli0_0009287.jpg",
+   "t": 928.7,
+   "game": "2025 Finals G1",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    968,
+    275
+   ],
+   "radius": 12,
+   "handler_verdict": "box",
+   "handler_box": [
+    969,
+    236,
+    1038,
+    354
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0011530.jpg",
+   "t": 1153,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    340,
+    307
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    269,
+    256,
+    353,
+    366
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0013291.jpg",
+   "t": 1329.1,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "box",
+   "handler_box": [
+    324,
+    313,
+    419,
+    455
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0013316.jpg",
+   "t": 1331.6,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    670,
+    129
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    543,
+    246,
+    613,
+    449
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0013346.jpg",
+   "t": 1334.6,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    890,
+    350
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    884,
+    294,
+    971,
+    472
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0013573.jpg",
+   "t": 1357.3,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    157,
+    352
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    117,
+    296,
+    188,
+    405
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0014289.jpg",
+   "t": 1428.9,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    649,
+    339
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    635,
+    288,
+    708,
+    452
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0014303.jpg",
+   "t": 1430.3,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    604,
+    394
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    506,
+    334,
+    613,
+    467
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0014413.jpg",
+   "t": 1441.3,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    720,
+    390
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    713,
+    310,
+    773,
+    416
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0014422.jpg",
+   "t": 1442.2,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    772,
+    396
+   ],
+   "radius": 9,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0014617.jpg",
+   "t": 1461.7,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    435,
+    201
+   ],
+   "radius": 9,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0014939.jpg",
+   "t": 1493.9,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    228,
+    330
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    177,
+    271,
+    244,
+    424
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0015423.jpg",
+   "t": 1542.3,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    436,
+    372
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    424,
+    329,
+    498,
+    436
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0015440.jpg",
+   "t": 1544,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    418,
+    439
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    343,
+    365,
+    432,
+    520
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0015584.jpg",
+   "t": 1558.4,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "missing",
+   "handler_box": null,
+   "handler_at": [
+    788,
+    498
+   ]
+  },
+  {
+   "file": "fullgame_0015585.jpg",
+   "t": 1558.5,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "missing",
+   "handler_box": null,
+   "handler_at": [
+    792,
+    502
+   ]
+  },
+  {
+   "file": "fullgame_0015837.jpg",
+   "t": 1583.7,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    713,
+    357
+   ],
+   "radius": 9,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0016195.jpg",
+   "t": 1619.5,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    896,
+    121
+   ],
+   "radius": 9,
+   "handler_verdict": "missing",
+   "handler_box": null,
+   "handler_at": [
+    1003,
+    358
+   ]
+  },
+  {
+   "file": "fullgame_0016262.jpg",
+   "t": 1626.2,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    709,
+    378
+   ],
+   "radius": 9,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0016761.jpg",
+   "t": 1676.1,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "box",
+   "handler_box": [
+    908,
+    307,
+    973,
+    422
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0018122.jpg",
+   "t": 1812.2,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    841,
+    326
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    788,
+    303,
+    848,
+    373
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0018161.jpg",
+   "t": 1816.1,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    249,
+    307
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    244,
+    277,
+    310,
+    366
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0018367.jpg",
+   "t": 1836.7,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0018731.jpg",
+   "t": 1873.1,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    444,
+    56
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    729,
+    284,
+    825,
+    523
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0019679.jpg",
+   "t": 1967.9,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    739,
+    273
+   ],
+   "radius": 9,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0020508.jpg",
+   "t": 2050.8,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    1112,
+    378
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    1033,
+    310,
+    1123,
+    450
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0020908.jpg",
+   "t": 2090.8,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0021770.jpg",
+   "t": 2177,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "missing",
+   "handler_box": null,
+   "handler_at": [
+    903,
+    496
+   ]
+  },
+  {
+   "file": "fullgame_0022832.jpg",
+   "t": 2283.2,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    842,
+    155
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    807,
+    332,
+    899,
+    490
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0023379.jpg",
+   "t": 2337.9,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    865,
+    331
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    805,
+    282,
+    874,
+    406
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0024398.jpg",
+   "t": 2439.8,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    924,
+    257
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    926,
+    305,
+    980,
+    516
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0025228.jpg",
+   "t": 2522.8,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    838,
+    437
+   ],
+   "radius": 9,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0025254.jpg",
+   "t": 2525.4,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    497,
+    265
+   ],
+   "radius": 9,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0025435.jpg",
+   "t": 2543.5,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    471,
+    474
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    388,
+    382,
+    488,
+    556
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0026124.jpg",
+   "t": 2612.4,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    558,
+    298
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    526,
+    294,
+    582,
+    432
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0026233.jpg",
+   "t": 2623.3,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    518,
+    119
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    659,
+    359,
+    706,
+    511
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0026745.jpg",
+   "t": 2674.5,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    553,
+    333
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    471,
+    233,
+    538,
+    336
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0027656.jpg",
+   "t": 2765.6,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    983,
+    363
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    975,
+    284,
+    1041,
+    417
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0027673.jpg",
+   "t": 2767.3,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    956,
+    255
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    914,
+    195,
+    985,
+    314
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0028021.jpg",
+   "t": 2802.1,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    1067,
+    416
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    1060,
+    345,
+    1158,
+    516
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0028487.jpg",
+   "t": 2848.7,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "box",
+   "handler_box": [
+    293,
+    307,
+    343,
+    401
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0028739.jpg",
+   "t": 2873.9,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0029059.jpg",
+   "t": 2905.9,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0029842.jpg",
+   "t": 2984.2,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0030505.jpg",
+   "t": 3050.5,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0030610.jpg",
+   "t": 3061,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    897,
+    248
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    802,
+    239,
+    895,
+    393
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0032215.jpg",
+   "t": 3221.5,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    587,
+    360
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    520,
+    297,
+    602,
+    478
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0032725.jpg",
+   "t": 3272.5,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    182,
+    368
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    121,
+    320,
+    195,
+    469
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0032749.jpg",
+   "t": 3274.9,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0035415.jpg",
+   "t": 3541.5,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    1042,
+    315
+   ],
+   "radius": 9,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0035422.jpg",
+   "t": 3542.2,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    1202,
+    359
+   ],
+   "radius": 9,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0035436.jpg",
+   "t": 3543.6,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    1177,
+    364
+   ],
+   "radius": 9,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0035735.jpg",
+   "t": 3573.5,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    952,
+    152
+   ],
+   "radius": 9,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0035781.jpg",
+   "t": 3578.1,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    736,
+    268
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    703,
+    212,
+    779,
+    333
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0035928.jpg",
+   "t": 3592.8,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0036163.jpg",
+   "t": 3616.3,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "box",
+   "handler_box": [
+    726,
+    252,
+    797,
+    353
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0036166.jpg",
+   "t": 3616.6,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    656,
+    223
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    667,
+    210,
+    722,
+    343
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0036284.jpg",
+   "t": 3628.4,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": null,
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "box",
+   "handler_box": [
+    196,
+    286,
+    281,
+    452
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0037148.jpg",
+   "t": 3714.8,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    598,
+    282
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    532,
+    219,
+    608,
+    332
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0037214.jpg",
+   "t": 3721.4,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    912,
+    396
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    856,
+    342,
+    928,
+    517
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0037279.jpg",
+   "t": 3727.9,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "box",
+   "handler_box": [
+    759,
+    329,
+    867,
+    471
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0037297.jpg",
+   "t": 3729.7,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    878,
+    425
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    772,
+    334,
+    851,
+    438
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0037328.jpg",
+   "t": 3732.8,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    824,
+    246
+   ],
+   "radius": 9,
+   "handler_verdict": "missing",
+   "handler_box": null,
+   "handler_at": [
+    848,
+    295
+   ]
+  },
+  {
+   "file": "fullgame_0037923.jpg",
+   "t": 3792.3,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    352,
+    396
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    309,
+    337,
+    392,
+    468
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0037929.jpg",
+   "t": 3792.9,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "box",
+   "handler_box": [
+    270,
+    365,
+    351,
+    487
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0037943.jpg",
+   "t": 3794.3,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0039495.jpg",
+   "t": 3949.5,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0041261.jpg",
+   "t": 4126.1,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    540,
+    463
+   ],
+   "radius": 9,
+   "handler_verdict": "missing",
+   "handler_box": null,
+   "handler_at": [
+    490,
+    449
+   ]
+  },
+  {
+   "file": "fullgame_0041477.jpg",
+   "t": 4147.7,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    742,
+    268
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    718,
+    303,
+    779,
+    444
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0041503.jpg",
+   "t": 4150.3,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    991,
+    333
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    980,
+    262,
+    1077,
+    369
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0041739.jpg",
+   "t": 4173.9,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "box",
+   "handler_box": [
+    884,
+    248,
+    951,
+    394
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0042263.jpg",
+   "t": 4226.3,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    798,
+    368
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    745,
+    327,
+    811,
+    519
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0043582.jpg",
+   "t": 4358.2,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    804,
+    151
+   ],
+   "radius": 9,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0043763.jpg",
+   "t": 4376.3,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "missing",
+   "handler_box": null,
+   "handler_at": [
+    619,
+    262
+   ]
+  },
+  {
+   "file": "fullgame_0044211.jpg",
+   "t": 4421.1,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    788,
+    402
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    706,
+    290,
+    800,
+    442
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0044214.jpg",
+   "t": 4421.4,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    757,
+    336
+   ],
+   "radius": 9,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0044329.jpg",
+   "t": 4432.9,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    983,
+    355
+   ],
+   "radius": 9,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0044379.jpg",
+   "t": 4437.9,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    902,
+    420
+   ],
+   "radius": 9,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0044529.jpg",
+   "t": 4452.9,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    706,
+    369
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    619,
+    295,
+    719,
+    408
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0047388.jpg",
+   "t": 4738.8,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    564,
+    274
+   ],
+   "radius": 9,
+   "handler_verdict": "missing",
+   "handler_box": null,
+   "handler_at": [
+    577,
+    286
+   ]
+  },
+  {
+   "file": "fullgame_0047419.jpg",
+   "t": 4741.9,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    666,
+    286
+   ],
+   "radius": 9,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0048591.jpg",
+   "t": 4859.1,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    845,
+    181
+   ],
+   "radius": 9,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0048595.jpg",
+   "t": 4859.5,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    854,
+    150
+   ],
+   "radius": 9,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0049253.jpg",
+   "t": 4925.3,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    754,
+    222
+   ],
+   "radius": 9,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0050845.jpg",
+   "t": 5084.5,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    594,
+    236
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    530,
+    191,
+    596,
+    346
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0051327.jpg",
+   "t": 5132.7,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    677,
+    295
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    642,
+    289,
+    723,
+    514
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0052235.jpg",
+   "t": 5223.5,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    620,
+    311
+   ],
+   "radius": 9,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0052452.jpg",
+   "t": 5245.2,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    884,
+    333
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    872,
+    313,
+    942,
+    456
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0052701.jpg",
+   "t": 5270.1,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    564,
+    424
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    502,
+    305,
+    585,
+    452
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0052923.jpg",
+   "t": 5292.3,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0053627.jpg",
+   "t": 5362.7,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    771,
+    293
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    758,
+    283,
+    805,
+    470
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0005383.jpg",
+   "t": 538.3,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    720,
+    202
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    650,
+    267,
+    722,
+    462
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0055482.jpg",
+   "t": 5548.2,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    562,
+    291
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    462,
+    297,
+    559,
+    470
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0056001.jpg",
+   "t": 5600.1,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    384,
+    291
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    359,
+    302,
+    410,
+    523
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0005860.jpg",
+   "t": 586,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    407,
+    111
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    352,
+    168,
+    395,
+    322
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0005907.jpg",
+   "t": 590.7,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    956,
+    271
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    939,
+    208,
+    1003,
+    339
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0060015.jpg",
+   "t": 6001.5,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0061061.jpg",
+   "t": 6106.1,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    922,
+    376
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    850,
+    318,
+    987,
+    463
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0061225.jpg",
+   "t": 6122.5,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    1064,
+    301
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    1012,
+    306,
+    1090,
+    453
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0061919.jpg",
+   "t": 6191.9,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    944,
+    341
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    888,
+    257,
+    956,
+    435
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0062425.jpg",
+   "t": 6242.5,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    370,
+    239
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    349,
+    251,
+    442,
+    478
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0006415.jpg",
+   "t": 641.5,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    436,
+    139
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    385,
+    407,
+    447,
+    576
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0065742.jpg",
+   "t": 6574.2,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    256,
+    363
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    235,
+    321,
+    359,
+    452
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0066482.jpg",
+   "t": 6648.2,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    216,
+    449
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    123,
+    364,
+    267,
+    508
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0006755.jpg",
+   "t": 675.5,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    746,
+    214
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    742,
+    206,
+    805,
+    413
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0006825.jpg",
+   "t": 682.5,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0070164.jpg",
+   "t": 7016.4,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0070798.jpg",
+   "t": 7079.8,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    688,
+    256
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    658,
+    238,
+    729,
+    367
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0071970.jpg",
+   "t": 7197,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    728,
+    385
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    680,
+    330,
+    790,
+    448
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0007891.jpg",
+   "t": 789.1,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "ball",
+   "ball": [
+    1091,
+    316
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    1028,
+    265,
+    1098,
+    436
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0008378.jpg",
+   "t": 837.8,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    826,
+    355
+   ],
+   "radius": 9,
+   "handler_verdict": "missing",
+   "handler_box": null,
+   "handler_at": [
+    841,
+    355
+   ]
+  },
+  {
+   "file": "fullgame_0008510.jpg",
+   "t": 851,
+   "game": "2025 Finals G7",
+   "pick": "hard",
+   "ball_verdict": "ball",
+   "ball": [
+    882,
+    303
+   ],
+   "radius": 9,
+   "handler_verdict": "box",
+   "handler_box": [
+    851,
+    256,
+    913,
+    411
+   ],
+   "handler_at": null
+  },
+  {
+   "file": "fullgame_0009395.jpg",
+   "t": 939.5,
+   "game": "2025 Finals G7",
+   "pick": "random",
+   "ball_verdict": "unknown",
+   "ball": null,
+   "radius": 0,
+   "handler_verdict": "nobody",
+   "handler_box": null,
+   "handler_at": null
+  }
+ ]
+}
