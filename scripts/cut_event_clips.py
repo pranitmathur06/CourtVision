@@ -57,9 +57,13 @@ def wanted(event, skip=SKIP, max_error=MAX_ERROR_S):
     return event.get("video_s") is not None
 
 
-def clip_name(event):
-    """A stable name from the instant, so re-running does not duplicate work."""
-    return f"e{int(round(float(event['video_s']) * 10)):06d}.mp4"
+def clip_name(event, prefix="e"):
+    """A stable name from the instant, so re-running does not duplicate work.
+
+    The prefix keeps games apart: the instant alone collides, since every
+    broadcast has a 540.0 s in it.
+    """
+    return f"{prefix}{int(round(float(event['video_s']) * 10)):06d}.mp4"
 
 
 def cut(video, start, duration, out, width=WIDTH, crf=CRF):
@@ -80,9 +84,20 @@ def main() -> int:
     parser.add_argument("--lead", type=float, default=LEAD_S)
     parser.add_argument("--tail", type=float, default=TAIL_S)
     parser.add_argument("--limit", type=int, default=None)
+    parser.add_argument("--prefix", default="e",
+                        help="first letter of every clip name; one per game")
+    parser.add_argument("--skip", action="append", default=[],
+                        help="an action type to index but not cut. A published "
+                             "site has a size limit and a second game has to "
+                             "fit inside it; rebounds are the cheapest thing to "
+                             "drop, being the most numerous. The rows stay -- a "
+                             "game that answers \"every rebound\" with nothing "
+                             "is missing the event, not just the footage -- "
+                             "they simply carry no clip.")
     args = parser.parse_args()
 
     data = json.load(open(args.events))
+    uncut = set(args.skip)
     events = [e for e in data["events"] if wanted(e)]
     if args.limit:
         events = events[:args.limit]
@@ -91,10 +106,12 @@ def main() -> int:
 
     index, made, failed, skipped = [], 0, 0, 0
     for n, event in enumerate(events):
-        name = clip_name(event)
+        name = clip_name(event, args.prefix)
         target = out / name
         start = max(float(event["video_s"]) - args.lead, 0.0)
-        if not target.exists():
+        if event["action"] in uncut:
+            name = None
+        elif not target.exists():
             result = cut(args.video, start, args.lead + args.tail, target)
             if result.returncode != 0 or not target.exists():
                 failed += 1

@@ -1,0 +1,4589 @@
+{
+ "note": "clips cut at the instant the NBA's own play-by-play says the event happened, carried onto the video by a scoreboard clock read. Ground truth with a timestamp -- NOT the vision stack's output.",
+ "game_id": "0042400401",
+ "video": "data/games/iVhcru3Gli0.mp4",
+ "lead_s": 3.0,
+ "tail_s": 3.0,
+ "clips": [
+  {
+   "clip": "f001110.mp4",
+   "video_s": 111.0,
+   "start_s": 108.0,
+   "action": "Missed Shot",
+   "description": "MISS Dort 29' 3PT Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 21.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 114.0,
+   "start_s": 111.0,
+   "action": "Rebound",
+   "description": "Nesmith REBOUND (Off:0 Def:1)",
+   "error_s": 0.0,
+   "elapsed_s": 24.0,
+   "period": null
+  },
+  {
+   "clip": "f001230.mp4",
+   "video_s": 123.0,
+   "start_s": 120.0,
+   "action": "Missed Shot",
+   "description": "MISS Turner 25' 3PT Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 33.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 126.0,
+   "start_s": 123.0,
+   "action": "Rebound",
+   "description": "Dort REBOUND (Off:0 Def:1)",
+   "error_s": 0.0,
+   "elapsed_s": 36.0,
+   "period": null
+  },
+  {
+   "clip": "f001350.mp4",
+   "video_s": 135.0,
+   "start_s": 132.0,
+   "action": "Made Shot (2PT)",
+   "description": "Gilgeous-Alexander 1' Driving Reverse Layup (2 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 45.0,
+   "period": null
+  },
+  {
+   "clip": "f001550.mp4",
+   "video_s": 155.0,
+   "start_s": 152.0,
+   "action": "Missed Shot",
+   "description": "MISS Nembhard 27' 3PT Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 65.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 158.0,
+   "start_s": 155.0,
+   "action": "Rebound",
+   "description": "Dort REBOUND (Off:0 Def:2)",
+   "error_s": 0.0,
+   "elapsed_s": 68.0,
+   "period": null
+  },
+  {
+   "clip": "f001690.mp4",
+   "video_s": 169.0,
+   "start_s": 166.0,
+   "action": "Made Shot (2PT)",
+   "description": "Holmgren 2' Driving Layup (2 PTS) (Gilgeous-Alexander 1 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 79.0,
+   "period": null
+  },
+  {
+   "clip": "f001690.mp4",
+   "video_s": 169.0,
+   "start_s": 166.0,
+   "action": "Assist",
+   "description": "Holmgren 2' Driving Layup (2 PTS) (Gilgeous-Alexander 1 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 79.0,
+   "period": null
+  },
+  {
+   "clip": "f001910.mp4",
+   "video_s": 191.0,
+   "start_s": 188.0,
+   "action": "Missed Shot",
+   "description": "MISS Nesmith 3PT Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 101.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 192.0,
+   "start_s": 189.0,
+   "action": "Rebound",
+   "description": "Gilgeous-Alexander REBOUND (Off:0 Def:1)",
+   "error_s": 0.0,
+   "elapsed_s": 102.0,
+   "period": null
+  },
+  {
+   "clip": "f002040.mp4",
+   "video_s": 204.0,
+   "start_s": 201.0,
+   "action": "Missed Shot",
+   "description": "MISS Gilgeous-Alexander 4' Driving Layup",
+   "error_s": 0.0,
+   "elapsed_s": 114.0,
+   "period": null
+  },
+  {
+   "clip": "f002040.mp4",
+   "video_s": 204.0,
+   "start_s": 201.0,
+   "action": "Block",
+   "description": "Nesmith BLOCK (1 BLK)",
+   "error_s": 0.0,
+   "elapsed_s": 114.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 204.0,
+   "start_s": 201.0,
+   "action": "Rebound",
+   "description": "THUNDER Rebound",
+   "error_s": 0.0,
+   "elapsed_s": 114.0,
+   "period": null
+  },
+  {
+   "clip": "f002330.mp4",
+   "video_s": 233.0,
+   "start_s": 230.0,
+   "action": "Missed Shot",
+   "description": "MISS Dort 10' Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 121.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 235.0,
+   "start_s": 232.0,
+   "action": "Rebound",
+   "description": "Nesmith REBOUND (Off:0 Def:2)",
+   "error_s": 0.0,
+   "elapsed_s": 123.0,
+   "period": null
+  },
+  {
+   "clip": "f002450.mp4",
+   "video_s": 245.0,
+   "start_s": 242.0,
+   "action": "Missed Shot",
+   "description": "MISS Haliburton 8' Driving Floating Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 133.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 247.0,
+   "start_s": 244.0,
+   "action": "Rebound",
+   "description": "Jal. Williams REBOUND (Off:0 Def:1)",
+   "error_s": 0.0,
+   "elapsed_s": 135.0,
+   "period": null
+  },
+  {
+   "clip": "f002520.mp4",
+   "video_s": 252.0,
+   "start_s": 249.0,
+   "action": "Made Shot (3PT)",
+   "description": "Jal. Williams 26' 3PT Running Pull-Up Jump Shot (3 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 140.0,
+   "period": null
+  },
+  {
+   "clip": "f002620.mp4",
+   "video_s": 262.0,
+   "start_s": 259.0,
+   "action": "Foul",
+   "description": "Holmgren S.FOUL (P1.T1) (J.Goble)",
+   "error_s": 0.0,
+   "elapsed_s": 150.0,
+   "period": null
+  },
+  {
+   "clip": "f002620.mp4",
+   "video_s": 262.0,
+   "start_s": 259.0,
+   "action": "Free Throw (made)",
+   "description": "Turner Free Throw 1 of 2 (1 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 150.0,
+   "period": null
+  },
+  {
+   "clip": "f002620.mp4",
+   "video_s": 262.0,
+   "start_s": 259.0,
+   "action": "Free Throw (miss)",
+   "description": "MISS Turner Free Throw 2 of 2",
+   "error_s": 0.0,
+   "elapsed_s": 150.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 305.0,
+   "start_s": 302.0,
+   "action": "Rebound",
+   "description": "THUNDER Rebound",
+   "error_s": 0.0,
+   "elapsed_s": 151.0,
+   "period": null
+  },
+  {
+   "clip": "f003330.mp4",
+   "video_s": 333.0,
+   "start_s": 330.0,
+   "action": "Missed Shot",
+   "description": "MISS Jal. Williams 16' Turnaround Fadeaway Shot",
+   "error_s": 0.0,
+   "elapsed_s": 164.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 337.0,
+   "start_s": 334.0,
+   "action": "Rebound",
+   "description": "Siakam REBOUND (Off:0 Def:1)",
+   "error_s": 0.0,
+   "elapsed_s": 168.0,
+   "period": null
+  },
+  {
+   "clip": "f003530.mp4",
+   "video_s": 353.0,
+   "start_s": 350.0,
+   "action": "Made Shot (2PT)",
+   "description": "Siakam 2' Driving Layup (2 PTS) (Haliburton 1 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 184.0,
+   "period": null
+  },
+  {
+   "clip": "f003530.mp4",
+   "video_s": 353.0,
+   "start_s": 350.0,
+   "action": "Assist",
+   "description": "Siakam 2' Driving Layup (2 PTS) (Haliburton 1 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 184.0,
+   "period": null
+  },
+  {
+   "clip": "f003620.mp4",
+   "video_s": 362.0,
+   "start_s": 359.0,
+   "action": "Missed Shot",
+   "description": "MISS Dort 3PT Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 193.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 365.0,
+   "start_s": 362.0,
+   "action": "Rebound",
+   "description": "Nembhard REBOUND (Off:0 Def:1)",
+   "error_s": 0.0,
+   "elapsed_s": 196.0,
+   "period": null
+  },
+  {
+   "clip": "f003700.mp4",
+   "video_s": 370.0,
+   "start_s": 367.0,
+   "action": "Turnover",
+   "description": "Nembhard Traveling Turnover (P1.T1)",
+   "error_s": 0.0,
+   "elapsed_s": 201.0,
+   "period": null
+  },
+  {
+   "clip": "f003940.mp4",
+   "video_s": 394.0,
+   "start_s": 391.0,
+   "action": "Turnover",
+   "description": "Gilgeous-Alexander Out of Bounds Lost Ball Turnover (P1.T1)",
+   "error_s": 0.0,
+   "elapsed_s": 211.0,
+   "period": null
+  },
+  {
+   "clip": "f004170.mp4",
+   "video_s": 417.0,
+   "start_s": 414.0,
+   "action": "Turnover",
+   "description": "Nesmith Bad Pass Turnover (P1.T2)",
+   "error_s": 0.0,
+   "elapsed_s": 226.0,
+   "period": null
+  },
+  {
+   "clip": "f004170.mp4",
+   "video_s": 417.0,
+   "start_s": 414.0,
+   "action": "Steal",
+   "description": "Dort STEAL (1 STL)",
+   "error_s": 0.0,
+   "elapsed_s": 226.0,
+   "period": null
+  },
+  {
+   "clip": "f004190.mp4",
+   "video_s": 419.0,
+   "start_s": 416.0,
+   "action": "Turnover",
+   "description": "Holmgren Out of Bounds - Bad Pass Turnover Turnover (P1.T2)",
+   "error_s": 0.0,
+   "elapsed_s": 228.0,
+   "period": null
+  },
+  {
+   "clip": "f004430.mp4",
+   "video_s": 443.0,
+   "start_s": 440.0,
+   "action": "Made Shot (2PT)",
+   "description": "Siakam 14' Pullup Jump Shot (4 PTS) (Nembhard 1 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 244.0,
+   "period": null
+  },
+  {
+   "clip": "f004430.mp4",
+   "video_s": 443.0,
+   "start_s": 440.0,
+   "action": "Assist",
+   "description": "Siakam 14' Pullup Jump Shot (4 PTS) (Nembhard 1 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 244.0,
+   "period": null
+  },
+  {
+   "clip": "f004560.mp4",
+   "video_s": 456.0,
+   "start_s": 453.0,
+   "action": "Made Shot (3PT)",
+   "description": "Gilgeous-Alexander 26' 3PT Pullup Jump Shot (5 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 257.0,
+   "period": null
+  },
+  {
+   "clip": "f004690.mp4",
+   "video_s": 469.0,
+   "start_s": 466.0,
+   "action": "Made Shot (2PT)",
+   "description": "Turner 15' Pullup Jump Shot (3 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 270.0,
+   "period": null
+  },
+  {
+   "clip": "f004840.mp4",
+   "video_s": 484.0,
+   "start_s": 481.0,
+   "action": "Missed Shot",
+   "description": "MISS Jal. Williams 20' Pullup Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 285.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 486.0,
+   "start_s": 483.0,
+   "action": "Rebound",
+   "description": "Haliburton REBOUND (Off:0 Def:1)",
+   "error_s": 0.0,
+   "elapsed_s": 287.0,
+   "period": null
+  },
+  {
+   "clip": "f004920.mp4",
+   "video_s": 492.0,
+   "start_s": 489.0,
+   "action": "Made Shot (3PT)",
+   "description": "Nembhard 3PT Running Jump Shot (3 PTS) (Siakam 1 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 293.0,
+   "period": null
+  },
+  {
+   "clip": "f004920.mp4",
+   "video_s": 492.0,
+   "start_s": 489.0,
+   "action": "Assist",
+   "description": "Nembhard 3PT Running Jump Shot (3 PTS) (Siakam 1 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 293.0,
+   "period": null
+  },
+  {
+   "clip": "f005750.mp4",
+   "video_s": 575.0,
+   "start_s": 572.0,
+   "action": "Turnover",
+   "description": "Toppin Out of Bounds - Bad Pass Turnover Turnover (P1.T3)",
+   "error_s": 0.0,
+   "elapsed_s": 332.0,
+   "period": null
+  },
+  {
+   "clip": "f006080.mp4",
+   "video_s": 608.0,
+   "start_s": 605.0,
+   "action": "Made Shot (2PT)",
+   "description": "Gilgeous-Alexander 8' Driving Floating Jump Shot (7 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 342.0,
+   "period": null
+  },
+  {
+   "clip": "f006240.mp4",
+   "video_s": 624.0,
+   "start_s": 621.0,
+   "action": "Turnover",
+   "description": "Turner Lost Ball Turnover (P1.T4)",
+   "error_s": 0.0,
+   "elapsed_s": 358.0,
+   "period": null
+  },
+  {
+   "clip": "f006240.mp4",
+   "video_s": 624.0,
+   "start_s": 621.0,
+   "action": "Steal",
+   "description": "Dort STEAL (2 STL)",
+   "error_s": 0.0,
+   "elapsed_s": 358.0,
+   "period": null
+  },
+  {
+   "clip": "f006310.mp4",
+   "video_s": 631.0,
+   "start_s": 628.0,
+   "action": "Missed Shot",
+   "description": "MISS Gilgeous-Alexander 12' Running Pull-Up Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 365.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 633.0,
+   "start_s": 630.0,
+   "action": "Rebound",
+   "description": "Dort REBOUND (Off:1 Def:2)",
+   "error_s": 0.0,
+   "elapsed_s": 367.0,
+   "period": null
+  },
+  {
+   "clip": "f006400.mp4",
+   "video_s": 640.0,
+   "start_s": 637.0,
+   "action": "Missed Shot",
+   "description": "MISS Holmgren 4' Driving Layup",
+   "error_s": 0.0,
+   "elapsed_s": 374.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 640.0,
+   "start_s": 637.0,
+   "action": "Rebound",
+   "description": "Pacers Rebound",
+   "error_s": 0.0,
+   "elapsed_s": 374.0,
+   "period": null
+  },
+  {
+   "clip": "f006630.mp4",
+   "video_s": 663.0,
+   "start_s": 660.0,
+   "action": "Missed Shot",
+   "description": "MISS Turner 26' 3PT Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 387.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 666.0,
+   "start_s": 663.0,
+   "action": "Rebound",
+   "description": "Jal. Williams REBOUND (Off:0 Def:2)",
+   "error_s": 0.0,
+   "elapsed_s": 390.0,
+   "period": null
+  },
+  {
+   "clip": "f006730.mp4",
+   "video_s": 673.0,
+   "start_s": 670.0,
+   "action": "Foul",
+   "description": "Sheppard P.FOUL (P1.T1) (J.Goble)",
+   "error_s": 0.0,
+   "elapsed_s": 397.0,
+   "period": null
+  },
+  {
+   "clip": "f007080.mp4",
+   "video_s": 708.0,
+   "start_s": 705.0,
+   "action": "Missed Shot",
+   "description": "MISS Wallace 26' 3PT Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 408.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 712.0,
+   "start_s": 709.0,
+   "action": "Rebound",
+   "description": "Dort REBOUND (Off:2 Def:2)",
+   "error_s": 0.0,
+   "elapsed_s": 412.0,
+   "period": null
+  },
+  {
+   "clip": "f007150.mp4",
+   "video_s": 715.0,
+   "start_s": 712.0,
+   "action": "Missed Shot",
+   "description": "MISS Holmgren 2' Driving Layup",
+   "error_s": 0.0,
+   "elapsed_s": 415.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 715.0,
+   "start_s": 712.0,
+   "action": "Rebound",
+   "description": "THUNDER Rebound",
+   "error_s": 0.0,
+   "elapsed_s": 415.0,
+   "period": null
+  },
+  {
+   "clip": "f007150.mp4",
+   "video_s": 715.0,
+   "start_s": 712.0,
+   "action": "Foul",
+   "description": "Toppin L.B.FOUL (P1.T2) (M.Davis)",
+   "error_s": 0.0,
+   "elapsed_s": 415.0,
+   "period": null
+  },
+  {
+   "clip": "f007520.mp4",
+   "video_s": 752.0,
+   "start_s": 749.0,
+   "action": "Made Shot (2PT)",
+   "description": "Gilgeous-Alexander 2' Driving Finger Roll Layup (9 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 420.0,
+   "period": null
+  },
+  {
+   "clip": "f008070.mp4",
+   "video_s": 807.0,
+   "start_s": 804.0,
+   "action": "Missed Shot",
+   "description": "MISS Nesmith 4' Layup",
+   "error_s": 0.0,
+   "elapsed_s": 437.0,
+   "period": null
+  },
+  {
+   "clip": "f008070.mp4",
+   "video_s": 807.0,
+   "start_s": 804.0,
+   "action": "Block",
+   "description": "Caruso BLOCK (1 BLK)",
+   "error_s": 0.0,
+   "elapsed_s": 437.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 807.0,
+   "start_s": 804.0,
+   "action": "Rebound",
+   "description": "Pacers Rebound",
+   "error_s": 0.0,
+   "elapsed_s": 437.0,
+   "period": null
+  },
+  {
+   "clip": "f008260.mp4",
+   "video_s": 826.0,
+   "start_s": 823.0,
+   "action": "Missed Shot",
+   "description": "MISS Haliburton 3PT Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 438.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 829.0,
+   "start_s": 826.0,
+   "action": "Rebound",
+   "description": "Caruso REBOUND (Off:0 Def:1)",
+   "error_s": 0.0,
+   "elapsed_s": 441.0,
+   "period": null
+  },
+  {
+   "clip": "f008360.mp4",
+   "video_s": 836.0,
+   "start_s": 833.0,
+   "action": "Missed Shot",
+   "description": "MISS Gilgeous-Alexander 20' Pullup Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 448.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 840.0,
+   "start_s": 837.0,
+   "action": "Rebound",
+   "description": "Nesmith REBOUND (Off:0 Def:3)",
+   "error_s": 0.0,
+   "elapsed_s": 452.0,
+   "period": null
+  },
+  {
+   "clip": "f008460.mp4",
+   "video_s": 846.0,
+   "start_s": 843.0,
+   "action": "Turnover",
+   "description": "Nesmith Step Out of Bounds Turnover (P2.T5)",
+   "error_s": 0.0,
+   "elapsed_s": 458.0,
+   "period": null
+  },
+  {
+   "clip": "f008700.mp4",
+   "video_s": 870.0,
+   "start_s": 867.0,
+   "action": "Made Shot (2PT)",
+   "description": "Joe 15' Step Back Jump Shot (2 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 474.0,
+   "period": null
+  },
+  {
+   "clip": "f008930.mp4",
+   "video_s": 893.0,
+   "start_s": 890.0,
+   "action": "Turnover",
+   "description": "Toppin Backcourt Turnover (P2.T6)",
+   "error_s": 0.0,
+   "elapsed_s": 497.0,
+   "period": null
+  },
+  {
+   "clip": "f009200.mp4",
+   "video_s": 920.0,
+   "start_s": 917.0,
+   "action": "Missed Shot",
+   "description": "MISS Gilgeous-Alexander 4' Driving Floating Bank Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 503.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 920.0,
+   "start_s": 917.0,
+   "action": "Rebound",
+   "description": "McConnell REBOUND (Off:0 Def:1)",
+   "error_s": 0.0,
+   "elapsed_s": 503.0,
+   "period": null
+  },
+  {
+   "clip": "f009270.mp4",
+   "video_s": 927.0,
+   "start_s": 924.0,
+   "action": "Made Shot (3PT)",
+   "description": "Haliburton 25' 3PT Running Pull-Up Jump Shot (3 PTS) (McConnell 1 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 510.0,
+   "period": null
+  },
+  {
+   "clip": "f009270.mp4",
+   "video_s": 927.0,
+   "start_s": 924.0,
+   "action": "Assist",
+   "description": "Haliburton 25' 3PT Running Pull-Up Jump Shot (3 PTS) (McConnell 1 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 510.0,
+   "period": null
+  },
+  {
+   "clip": "f009490.mp4",
+   "video_s": 949.0,
+   "start_s": 946.0,
+   "action": "Made Shot (3PT)",
+   "description": "Caruso 25' 3PT Jump Shot (3 PTS) (Dort 1 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 532.0,
+   "period": null
+  },
+  {
+   "clip": "f009490.mp4",
+   "video_s": 949.0,
+   "start_s": 946.0,
+   "action": "Assist",
+   "description": "Caruso 25' 3PT Jump Shot (3 PTS) (Dort 1 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 532.0,
+   "period": null
+  },
+  {
+   "clip": "f009600.mp4",
+   "video_s": 960.0,
+   "start_s": 957.0,
+   "action": "Turnover",
+   "description": "Toppin Lost Ball Turnover (P3.T7)",
+   "error_s": 0.0,
+   "elapsed_s": 543.0,
+   "period": null
+  },
+  {
+   "clip": "f009600.mp4",
+   "video_s": 960.0,
+   "start_s": 957.0,
+   "action": "Steal",
+   "description": "Hartenstein STEAL (1 STL)",
+   "error_s": 0.0,
+   "elapsed_s": 543.0,
+   "period": null
+  },
+  {
+   "clip": "f009700.mp4",
+   "video_s": 970.0,
+   "start_s": 967.0,
+   "action": "Missed Shot",
+   "description": "MISS Gilgeous-Alexander 12' Fadeaway Jumper",
+   "error_s": 0.0,
+   "elapsed_s": 553.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 972.0,
+   "start_s": 969.0,
+   "action": "Rebound",
+   "description": "Toppin REBOUND (Off:0 Def:1)",
+   "error_s": 0.0,
+   "elapsed_s": 555.0,
+   "period": null
+  },
+  {
+   "clip": "f009840.mp4",
+   "video_s": 984.0,
+   "start_s": 981.0,
+   "action": "Foul",
+   "description": "Siakam OFF.Foul (P1) (D.Guthrie)",
+   "error_s": 0.0,
+   "elapsed_s": 567.0,
+   "period": null
+  },
+  {
+   "clip": "f009840.mp4",
+   "video_s": 984.0,
+   "start_s": 981.0,
+   "action": "Turnover",
+   "description": "Siakam Offensive Foul Turnover (P1.T8)",
+   "error_s": 0.0,
+   "elapsed_s": 567.0,
+   "period": null
+  },
+  {
+   "clip": "f010230.mp4",
+   "video_s": 1023.0,
+   "start_s": 1020.0,
+   "action": "Turnover",
+   "description": "Wiggins Out of Bounds Lost Ball Turnover (P1.T3)",
+   "error_s": 0.0,
+   "elapsed_s": 573.0,
+   "period": null
+  },
+  {
+   "clip": "f010420.mp4",
+   "video_s": 1042.0,
+   "start_s": 1039.0,
+   "action": "Made Shot (2PT)",
+   "description": "McConnell 2' Driving Finger Roll Layup (2 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 583.0,
+   "period": null
+  },
+  {
+   "clip": "f010530.mp4",
+   "video_s": 1053.0,
+   "start_s": 1050.0,
+   "action": "Foul",
+   "description": "Turner S.FOUL (P1.T3) (M.Davis)",
+   "error_s": 0.0,
+   "elapsed_s": 594.0,
+   "period": null
+  },
+  {
+   "clip": "f010530.mp4",
+   "video_s": 1053.0,
+   "start_s": 1050.0,
+   "action": "Free Throw (made)",
+   "description": "Hartenstein Free Throw 1 of 2 (1 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 594.0,
+   "period": null
+  },
+  {
+   "clip": "f010530.mp4",
+   "video_s": 1053.0,
+   "start_s": 1050.0,
+   "action": "Free Throw (made)",
+   "description": "Hartenstein Free Throw 2 of 2 (2 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 594.0,
+   "period": null
+  },
+  {
+   "clip": "f011200.mp4",
+   "video_s": 1120.0,
+   "start_s": 1117.0,
+   "action": "Missed Shot",
+   "description": "MISS Nembhard 3PT Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 609.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 1122.0,
+   "start_s": 1119.0,
+   "action": "Rebound",
+   "description": "Gilgeous-Alexander REBOUND (Off:0 Def:2)",
+   "error_s": 0.0,
+   "elapsed_s": 611.0,
+   "period": null
+  },
+  {
+   "clip": "f011290.mp4",
+   "video_s": 1129.0,
+   "start_s": 1126.0,
+   "action": "Missed Shot",
+   "description": "MISS Gilgeous-Alexander 4' Driving Floating Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 618.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 1132.0,
+   "start_s": 1129.0,
+   "action": "Rebound",
+   "description": "Hartenstein REBOUND (Off:1 Def:0)",
+   "error_s": 0.0,
+   "elapsed_s": 621.0,
+   "period": null
+  },
+  {
+   "clip": "f011320.mp4",
+   "video_s": 1132.0,
+   "start_s": 1129.0,
+   "action": "Made Shot (2PT)",
+   "description": "Hartenstein 1' Putback Layup (4 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 621.0,
+   "period": null
+  },
+  {
+   "clip": "f011450.mp4",
+   "video_s": 1145.0,
+   "start_s": 1142.0,
+   "action": "Foul",
+   "description": "Hartenstein P.FOUL (P1.T2) (M.Davis)",
+   "error_s": 0.0,
+   "elapsed_s": 634.0,
+   "period": null
+  },
+  {
+   "clip": "f011800.mp4",
+   "video_s": 1180.0,
+   "start_s": 1177.0,
+   "action": "Missed Shot",
+   "description": "MISS Mathurin 7' Driving Layup",
+   "error_s": 0.0,
+   "elapsed_s": 645.0,
+   "period": null
+  },
+  {
+   "clip": "f011800.mp4",
+   "video_s": 1180.0,
+   "start_s": 1177.0,
+   "action": "Block",
+   "description": "Caruso BLOCK (2 BLK)",
+   "error_s": 0.0,
+   "elapsed_s": 645.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 1181.0,
+   "start_s": 1178.0,
+   "action": "Rebound",
+   "description": "Hartenstein REBOUND (Off:1 Def:1)",
+   "error_s": 0.0,
+   "elapsed_s": 646.0,
+   "period": null
+  },
+  {
+   "clip": "f011900.mp4",
+   "video_s": 1190.0,
+   "start_s": 1187.0,
+   "action": "Made Shot (2PT)",
+   "description": "Gilgeous-Alexander 14' Step Back Jump Shot (11 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 655.0,
+   "period": null
+  },
+  {
+   "clip": "f012470.mp4",
+   "video_s": 1247.0,
+   "start_s": 1244.0,
+   "action": "Made Shot (2PT)",
+   "description": "McConnell 8' Turnaround Fadeaway (4 PTS)",
+   "error_s": 0.1,
+   "elapsed_s": 670.3,
+   "period": null
+  },
+  {
+   "clip": "f012620.mp4",
+   "video_s": 1262.0,
+   "start_s": 1259.0,
+   "action": "Made Shot (2PT)",
+   "description": "Hartenstein 1' Driving Reverse Layup (6 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 680.9,
+   "period": null
+  },
+  {
+   "clip": "f012620.mp4",
+   "video_s": 1262.0,
+   "start_s": 1259.0,
+   "action": "Foul",
+   "description": "Bryant S.FOUL (P1.T4) (J.Goble)",
+   "error_s": 0.0,
+   "elapsed_s": 680.9,
+   "period": null
+  },
+  {
+   "clip": "f012620.mp4",
+   "video_s": 1262.0,
+   "start_s": 1259.0,
+   "action": "Free Throw (made)",
+   "description": "Hartenstein Free Throw 1 of 1 (7 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 680.9,
+   "period": null
+  },
+  {
+   "clip": "f013120.mp4",
+   "video_s": 1312.0,
+   "start_s": 1309.0,
+   "action": "Made Shot (3PT)",
+   "description": "Toppin 25' 3PT Jump Shot (3 PTS) (McConnell 2 AST)",
+   "error_s": 0.1,
+   "elapsed_s": 689.5,
+   "period": null
+  },
+  {
+   "clip": "f013120.mp4",
+   "video_s": 1312.0,
+   "start_s": 1309.0,
+   "action": "Assist",
+   "description": "Toppin 25' 3PT Jump Shot (3 PTS) (McConnell 2 AST)",
+   "error_s": 0.1,
+   "elapsed_s": 689.5,
+   "period": null
+  },
+  {
+   "clip": "f013200.mp4",
+   "video_s": 1320.0,
+   "start_s": 1317.0,
+   "action": "Foul",
+   "description": "Nembhard P.FOUL (P1.PN) (J.Goble)",
+   "error_s": 0.0,
+   "elapsed_s": 694.7,
+   "period": null
+  },
+  {
+   "clip": "f013200.mp4",
+   "video_s": 1320.0,
+   "start_s": 1317.0,
+   "action": "Free Throw (made)",
+   "description": "Gilgeous-Alexander Free Throw 1 of 2 (12 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 694.7,
+   "period": null
+  },
+  {
+   "clip": "f013200.mp4",
+   "video_s": 1320.0,
+   "start_s": 1317.0,
+   "action": "Free Throw (miss)",
+   "description": "MISS Gilgeous-Alexander Free Throw 2 of 2",
+   "error_s": 0.0,
+   "elapsed_s": 694.7,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 1380.0,
+   "start_s": 1377.0,
+   "action": "Rebound",
+   "description": "Toppin REBOUND (Off:0 Def:2)",
+   "error_s": 0.3,
+   "elapsed_s": 696.6,
+   "period": null
+  },
+  {
+   "clip": "f014480.mp4",
+   "video_s": 1448.0,
+   "start_s": 1445.0,
+   "action": "Made Shot (3PT)",
+   "description": "Toppin 3PT Jump Shot (6 PTS) (Mathurin 1 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 739.0,
+   "period": null
+  },
+  {
+   "clip": "f014480.mp4",
+   "video_s": 1448.0,
+   "start_s": 1445.0,
+   "action": "Assist",
+   "description": "Toppin 3PT Jump Shot (6 PTS) (Mathurin 1 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 739.0,
+   "period": null
+  },
+  {
+   "clip": "f014650.mp4",
+   "video_s": 1465.0,
+   "start_s": 1462.0,
+   "action": "Made Shot (2PT)",
+   "description": "Wiggins 6' Fadeaway Bank Shot (2 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 756.0,
+   "period": null
+  },
+  {
+   "clip": "f014860.mp4",
+   "video_s": 1486.0,
+   "start_s": 1483.0,
+   "action": "Missed Shot",
+   "description": "MISS Toppin 25' 3PT Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 777.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 1492.0,
+   "start_s": 1489.0,
+   "action": "Rebound",
+   "description": "Hartenstein REBOUND (Off:1 Def:2)",
+   "error_s": 0.0,
+   "elapsed_s": 783.0,
+   "period": null
+  },
+  {
+   "clip": "f015030.mp4",
+   "video_s": 1503.0,
+   "start_s": 1500.0,
+   "action": "Missed Shot",
+   "description": "MISS Jal. Williams 19' Pullup Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 794.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 1505.0,
+   "start_s": 1502.0,
+   "action": "Rebound",
+   "description": "Toppin REBOUND (Off:0 Def:3)",
+   "error_s": 0.0,
+   "elapsed_s": 796.0,
+   "period": null
+  },
+  {
+   "clip": "f015220.mp4",
+   "video_s": 1522.0,
+   "start_s": 1519.0,
+   "action": "Foul",
+   "description": "Caruso S.FOUL (P1.T1) (D.Guthrie)",
+   "error_s": 0.0,
+   "elapsed_s": 807.0,
+   "period": null
+  },
+  {
+   "clip": "f015220.mp4",
+   "video_s": 1522.0,
+   "start_s": 1519.0,
+   "action": "Free Throw (made)",
+   "description": "Siakam Free Throw 1 of 2 (5 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 807.0,
+   "period": null
+  },
+  {
+   "clip": "f015220.mp4",
+   "video_s": 1522.0,
+   "start_s": 1519.0,
+   "action": "Free Throw (made)",
+   "description": "Siakam Free Throw 2 of 2 (6 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 807.0,
+   "period": null
+  },
+  {
+   "clip": "f015840.mp4",
+   "video_s": 1584.0,
+   "start_s": 1581.0,
+   "action": "Made Shot (2PT)",
+   "description": "Caruso 1' Driving Finger Roll Layup (5 PTS) (Jal. Williams 1 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 814.0,
+   "period": null
+  },
+  {
+   "clip": "f015840.mp4",
+   "video_s": 1584.0,
+   "start_s": 1581.0,
+   "action": "Assist",
+   "description": "Caruso 1' Driving Finger Roll Layup (5 PTS) (Jal. Williams 1 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 814.0,
+   "period": null
+  },
+  {
+   "clip": "f015900.mp4",
+   "video_s": 1590.0,
+   "start_s": 1587.0,
+   "action": "Foul",
+   "description": "Jal. Williams P.FOUL (P1.T2) (M.Davis)",
+   "error_s": 0.0,
+   "elapsed_s": 820.0,
+   "period": null
+  },
+  {
+   "clip": "f016150.mp4",
+   "video_s": 1615.0,
+   "start_s": 1612.0,
+   "action": "Missed Shot",
+   "description": "MISS Mathurin 15' Driving Floating Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 827.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 1619.0,
+   "start_s": 1616.0,
+   "action": "Rebound",
+   "description": "Caruso REBOUND (Off:0 Def:2)",
+   "error_s": 0.0,
+   "elapsed_s": 831.0,
+   "period": null
+  },
+  {
+   "clip": "f016250.mp4",
+   "video_s": 1625.0,
+   "start_s": 1622.0,
+   "action": "Foul",
+   "description": "Sheppard S.FOUL (P2.T1) (M.Davis)",
+   "error_s": 0.0,
+   "elapsed_s": 837.0,
+   "period": null
+  },
+  {
+   "clip": "f016250.mp4",
+   "video_s": 1625.0,
+   "start_s": 1622.0,
+   "action": "Free Throw (made)",
+   "description": "Caruso Free Throw 1 of 2 (6 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 837.0,
+   "period": null
+  },
+  {
+   "clip": "f016250.mp4",
+   "video_s": 1625.0,
+   "start_s": 1622.0,
+   "action": "Free Throw (made)",
+   "description": "Caruso Free Throw 2 of 2 (7 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 837.0,
+   "period": null
+  },
+  {
+   "clip": "f016920.mp4",
+   "video_s": 1692.0,
+   "start_s": 1689.0,
+   "action": "Made Shot (3PT)",
+   "description": "Sheppard 24' 3PT Jump Shot (3 PTS) (Siakam 2 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 846.0,
+   "period": null
+  },
+  {
+   "clip": "f016920.mp4",
+   "video_s": 1692.0,
+   "start_s": 1689.0,
+   "action": "Assist",
+   "description": "Sheppard 24' 3PT Jump Shot (3 PTS) (Siakam 2 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 846.0,
+   "period": null
+  },
+  {
+   "clip": "f017050.mp4",
+   "video_s": 1705.0,
+   "start_s": 1702.0,
+   "action": "Missed Shot",
+   "description": "MISS Hartenstein 2' Driving Layup",
+   "error_s": 0.0,
+   "elapsed_s": 859.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 1708.0,
+   "start_s": 1705.0,
+   "action": "Rebound",
+   "description": "Mitchell REBOUND (Off:1 Def:0)",
+   "error_s": 0.0,
+   "elapsed_s": 862.0,
+   "period": null
+  },
+  {
+   "clip": "f017090.mp4",
+   "video_s": 1709.0,
+   "start_s": 1706.0,
+   "action": "Missed Shot",
+   "description": "MISS Wiggins 24' 3PT Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 863.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 1711.0,
+   "start_s": 1708.0,
+   "action": "Rebound",
+   "description": "Sheppard REBOUND (Off:0 Def:1)",
+   "error_s": 0.0,
+   "elapsed_s": 865.0,
+   "period": null
+  },
+  {
+   "clip": "f017270.mp4",
+   "video_s": 1727.0,
+   "start_s": 1724.0,
+   "action": "Missed Shot",
+   "description": "MISS Siakam 12' Turnaround Fadeaway Shot",
+   "error_s": 0.0,
+   "elapsed_s": 881.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 1730.0,
+   "start_s": 1727.0,
+   "action": "Rebound",
+   "description": "Hartenstein REBOUND (Off:1 Def:3)",
+   "error_s": 0.0,
+   "elapsed_s": 884.0,
+   "period": null
+  },
+  {
+   "clip": "f017370.mp4",
+   "video_s": 1737.0,
+   "start_s": 1734.0,
+   "action": "Foul",
+   "description": "Mathurin S.FOUL (P1.T2) (J.Goble)",
+   "error_s": 0.0,
+   "elapsed_s": 891.0,
+   "period": null
+  },
+  {
+   "clip": "f017370.mp4",
+   "video_s": 1737.0,
+   "start_s": 1734.0,
+   "action": "Free Throw (made)",
+   "description": "Jal. Williams Free Throw 1 of 2 (4 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 891.0,
+   "period": null
+  },
+  {
+   "clip": "f017370.mp4",
+   "video_s": 1737.0,
+   "start_s": 1734.0,
+   "action": "Free Throw (made)",
+   "description": "Jal. Williams Free Throw 2 of 2 (5 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 891.0,
+   "period": null
+  },
+  {
+   "clip": "f018070.mp4",
+   "video_s": 1807.0,
+   "start_s": 1804.0,
+   "action": "Missed Shot",
+   "description": "MISS Sheppard 27' 3PT Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 908.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 1809.0,
+   "start_s": 1806.0,
+   "action": "Rebound",
+   "description": "Turner REBOUND (Off:1 Def:0)",
+   "error_s": 0.0,
+   "elapsed_s": 910.0,
+   "period": null
+  },
+  {
+   "clip": "f018090.mp4",
+   "video_s": 1809.0,
+   "start_s": 1806.0,
+   "action": "Turnover",
+   "description": "Turner Lost Ball Turnover (P2.T10)",
+   "error_s": 0.0,
+   "elapsed_s": 910.0,
+   "period": null
+  },
+  {
+   "clip": "f018090.mp4",
+   "video_s": 1809.0,
+   "start_s": 1806.0,
+   "action": "Steal",
+   "description": "Caruso STEAL (1 STL)",
+   "error_s": 0.0,
+   "elapsed_s": 910.0,
+   "period": null
+  },
+  {
+   "clip": "f018140.mp4",
+   "video_s": 1814.0,
+   "start_s": 1811.0,
+   "action": "Foul",
+   "description": "Sheppard S.FOUL (P3.T3) (M.Davis)",
+   "error_s": 0.0,
+   "elapsed_s": 915.0,
+   "period": null
+  },
+  {
+   "clip": "f018140.mp4",
+   "video_s": 1814.0,
+   "start_s": 1811.0,
+   "action": "Free Throw (made)",
+   "description": "Holmgren Free Throw 1 of 2 (3 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 915.0,
+   "period": null
+  },
+  {
+   "clip": "f018140.mp4",
+   "video_s": 1814.0,
+   "start_s": 1811.0,
+   "action": "Free Throw (made)",
+   "description": "Holmgren Free Throw 2 of 2 (4 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 915.0,
+   "period": null
+  },
+  {
+   "clip": "f019010.mp4",
+   "video_s": 1901.0,
+   "start_s": 1898.0,
+   "action": "Missed Shot",
+   "description": "MISS Turner 3' Layup",
+   "error_s": 0.0,
+   "elapsed_s": 931.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 1901.0,
+   "start_s": 1898.0,
+   "action": "Rebound",
+   "description": "Turner REBOUND (Off:2 Def:0)",
+   "error_s": 0.0,
+   "elapsed_s": 931.0,
+   "period": null
+  },
+  {
+   "clip": "f019010.mp4",
+   "video_s": 1901.0,
+   "start_s": 1898.0,
+   "action": "Foul",
+   "description": "Dort S.FOUL (P1.T3) (M.Davis)",
+   "error_s": 0.0,
+   "elapsed_s": 931.0,
+   "period": null
+  },
+  {
+   "clip": "f019010.mp4",
+   "video_s": 1901.0,
+   "start_s": 1898.0,
+   "action": "Free Throw (made)",
+   "description": "Turner Free Throw 1 of 2 (4 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 931.0,
+   "period": null
+  },
+  {
+   "clip": "f019010.mp4",
+   "video_s": 1901.0,
+   "start_s": 1898.0,
+   "action": "Free Throw (made)",
+   "description": "Turner Free Throw 2 of 2 (5 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 931.0,
+   "period": null
+  },
+  {
+   "clip": "f019620.mp4",
+   "video_s": 1962.0,
+   "start_s": 1959.0,
+   "action": "Missed Shot",
+   "description": "MISS Mitchell 4' Driving Layup",
+   "error_s": 0.0,
+   "elapsed_s": 944.0,
+   "period": null
+  },
+  {
+   "clip": "f019620.mp4",
+   "video_s": 1962.0,
+   "start_s": 1959.0,
+   "action": "Block",
+   "description": "Turner BLOCK (1 BLK)",
+   "error_s": 0.0,
+   "elapsed_s": 944.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 1965.0,
+   "start_s": 1962.0,
+   "action": "Rebound",
+   "description": "Mitchell REBOUND (Off:2 Def:0)",
+   "error_s": 0.0,
+   "elapsed_s": 947.0,
+   "period": null
+  },
+  {
+   "clip": "f019680.mp4",
+   "video_s": 1968.0,
+   "start_s": 1965.0,
+   "action": "Missed Shot",
+   "description": "MISS Wallace 7' Driving Layup",
+   "error_s": 0.0,
+   "elapsed_s": 950.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 1970.0,
+   "start_s": 1967.0,
+   "action": "Rebound",
+   "description": "Turner REBOUND (Off:2 Def:1)",
+   "error_s": 1.0,
+   "elapsed_s": 953.0,
+   "period": null
+  },
+  {
+   "clip": "f019700.mp4",
+   "video_s": 1970.0,
+   "start_s": 1967.0,
+   "action": "Turnover",
+   "description": "Turner Lost Ball Turnover (P3.T11)",
+   "error_s": 1.0,
+   "elapsed_s": 953.0,
+   "period": null
+  },
+  {
+   "clip": "f019700.mp4",
+   "video_s": 1970.0,
+   "start_s": 1967.0,
+   "action": "Steal",
+   "description": "Wallace STEAL (1 STL)",
+   "error_s": 1.0,
+   "elapsed_s": 953.0,
+   "period": null
+  },
+  {
+   "clip": "f019740.mp4",
+   "video_s": 1974.0,
+   "start_s": 1971.0,
+   "action": "Missed Shot",
+   "description": "MISS Mitchell 26' 3PT Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 956.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 1976.0,
+   "start_s": 1973.0,
+   "action": "Rebound",
+   "description": "Mitchell REBOUND (Off:3 Def:0)",
+   "error_s": 0.0,
+   "elapsed_s": 958.0,
+   "period": null
+  },
+  {
+   "clip": "f019770.mp4",
+   "video_s": 1977.0,
+   "start_s": 1974.0,
+   "action": "Missed Shot",
+   "description": "MISS Mitchell 3' Driving Floating Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 959.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 1977.0,
+   "start_s": 1974.0,
+   "action": "Rebound",
+   "description": "Haliburton REBOUND (Off:0 Def:3)",
+   "error_s": 0.0,
+   "elapsed_s": 959.0,
+   "period": null
+  },
+  {
+   "clip": "f019870.mp4",
+   "video_s": 1987.0,
+   "start_s": 1984.0,
+   "action": "Made Shot (3PT)",
+   "description": "Haliburton 26' 3PT Pullup Jump Shot (6 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 969.0,
+   "period": null
+  },
+  {
+   "clip": "f020510.mp4",
+   "video_s": 2051.0,
+   "start_s": 2048.0,
+   "action": "Made Shot (2PT)",
+   "description": "Gilgeous-Alexander 21' Step Back Jump Shot (14 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 990.0,
+   "period": null
+  },
+  {
+   "clip": "f020730.mp4",
+   "video_s": 2073.0,
+   "start_s": 2070.0,
+   "action": "Missed Shot",
+   "description": "MISS Nesmith 25' 3PT Pullup Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 1012.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 2075.0,
+   "start_s": 2072.0,
+   "action": "Rebound",
+   "description": "Holmgren REBOUND (Off:0 Def:1)",
+   "error_s": 0.0,
+   "elapsed_s": 1014.0,
+   "period": null
+  },
+  {
+   "clip": "f020840.mp4",
+   "video_s": 2084.0,
+   "start_s": 2081.0,
+   "action": "Missed Shot",
+   "description": "MISS Holmgren 5' Driving Hook Shot",
+   "error_s": 0.0,
+   "elapsed_s": 1023.0,
+   "period": null
+  },
+  {
+   "clip": "f020840.mp4",
+   "video_s": 2084.0,
+   "start_s": 2081.0,
+   "action": "Block",
+   "description": "Turner BLOCK (2 BLK)",
+   "error_s": 0.0,
+   "elapsed_s": 1023.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 2086.0,
+   "start_s": 2083.0,
+   "action": "Rebound",
+   "description": "Haliburton REBOUND (Off:0 Def:4)",
+   "error_s": 0.0,
+   "elapsed_s": 1025.0,
+   "period": null
+  },
+  {
+   "clip": "f021040.mp4",
+   "video_s": 2104.0,
+   "start_s": 2101.0,
+   "action": "Foul",
+   "description": "Dort S.FOUL (P2.T4) (J.Goble)",
+   "error_s": 0.0,
+   "elapsed_s": 1043.0,
+   "period": null
+  },
+  {
+   "clip": "f021040.mp4",
+   "video_s": 2104.0,
+   "start_s": 2101.0,
+   "action": "Free Throw (made)",
+   "description": "Nembhard Free Throw 1 of 2 (4 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 1043.0,
+   "period": null
+  },
+  {
+   "clip": "f021040.mp4",
+   "video_s": 2104.0,
+   "start_s": 2101.0,
+   "action": "Free Throw (miss)",
+   "description": "MISS Nembhard Free Throw 2 of 2",
+   "error_s": 0.0,
+   "elapsed_s": 1043.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 2151.0,
+   "start_s": 2148.0,
+   "action": "Rebound",
+   "description": "Holmgren REBOUND (Off:0 Def:2)",
+   "error_s": 0.0,
+   "elapsed_s": 1045.0,
+   "period": null
+  },
+  {
+   "clip": "f021630.mp4",
+   "video_s": 2163.0,
+   "start_s": 2160.0,
+   "action": "Missed Shot",
+   "description": "MISS Joe 2' Driving Layup",
+   "error_s": 0.0,
+   "elapsed_s": 1057.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 2163.0,
+   "start_s": 2160.0,
+   "action": "Rebound",
+   "description": "Nesmith REBOUND (Off:0 Def:4)",
+   "error_s": 2.0,
+   "elapsed_s": 1059.0,
+   "period": null
+  },
+  {
+   "clip": "f021690.mp4",
+   "video_s": 2169.0,
+   "start_s": 2166.0,
+   "action": "Foul",
+   "description": "Nembhard Offensive Charge Foul (P2) (D.Guthrie)",
+   "error_s": 0.0,
+   "elapsed_s": 1063.0,
+   "period": null
+  },
+  {
+   "clip": "f021690.mp4",
+   "video_s": 2169.0,
+   "start_s": 2166.0,
+   "action": "Turnover",
+   "description": "Nembhard Offensive Foul Turnover (P2.T12)",
+   "error_s": 0.0,
+   "elapsed_s": 1063.0,
+   "period": null
+  },
+  {
+   "clip": "f022070.mp4",
+   "video_s": 2207.0,
+   "start_s": 2204.0,
+   "action": "Missed Shot",
+   "description": "MISS Gilgeous-Alexander 26' 3PT Step Back Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 1078.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 2211.0,
+   "start_s": 2208.0,
+   "action": "Rebound",
+   "description": "Haliburton REBOUND (Off:0 Def:5)",
+   "error_s": 0.0,
+   "elapsed_s": 1082.0,
+   "period": null
+  },
+  {
+   "clip": "f022210.mp4",
+   "video_s": 2221.0,
+   "start_s": 2218.0,
+   "action": "Missed Shot",
+   "description": "MISS Nembhard 24' 3PT Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 1092.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 2223.0,
+   "start_s": 2220.0,
+   "action": "Rebound",
+   "description": "Wallace REBOUND (Off:0 Def:1)",
+   "error_s": 0.0,
+   "elapsed_s": 1094.0,
+   "period": null
+  },
+  {
+   "clip": "f022300.mp4",
+   "video_s": 2230.0,
+   "start_s": 2227.0,
+   "action": "Missed Shot",
+   "description": "MISS Wallace 3' Driving Floating Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 1101.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 2231.0,
+   "start_s": 2228.0,
+   "action": "Rebound",
+   "description": "Nesmith REBOUND (Off:0 Def:5)",
+   "error_s": 0.0,
+   "elapsed_s": 1102.0,
+   "period": null
+  },
+  {
+   "clip": "f022310.mp4",
+   "video_s": 2231.0,
+   "start_s": 2228.0,
+   "action": "Foul",
+   "description": "Wallace P.FOUL (P1.PN) (J.Goble)",
+   "error_s": 0.0,
+   "elapsed_s": 1102.0,
+   "period": null
+  },
+  {
+   "clip": "f022310.mp4",
+   "video_s": 2231.0,
+   "start_s": 2228.0,
+   "action": "Free Throw (made)",
+   "description": "Nesmith Free Throw 1 of 2 (1 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 1102.0,
+   "period": null
+  },
+  {
+   "clip": "f022310.mp4",
+   "video_s": 2231.0,
+   "start_s": 2228.0,
+   "action": "Free Throw (miss)",
+   "description": "MISS Nesmith Free Throw 2 of 2",
+   "error_s": 0.0,
+   "elapsed_s": 1102.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 2300.0,
+   "start_s": 2297.0,
+   "action": "Rebound",
+   "description": "Siakam REBOUND (Off:1 Def:1)",
+   "error_s": 0.0,
+   "elapsed_s": 1103.0,
+   "period": null
+  },
+  {
+   "clip": "f023060.mp4",
+   "video_s": 2306.0,
+   "start_s": 2303.0,
+   "action": "Made Shot (2PT)",
+   "description": "Siakam 1' Driving Reverse Layup (8 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 1109.0,
+   "period": null
+  },
+  {
+   "clip": "f023240.mp4",
+   "video_s": 2324.0,
+   "start_s": 2321.0,
+   "action": "Made Shot (3PT)",
+   "description": "Dort 3PT Jump Shot (3 PTS) (Jal. Williams 2 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 1127.0,
+   "period": null
+  },
+  {
+   "clip": "f023240.mp4",
+   "video_s": 2324.0,
+   "start_s": 2321.0,
+   "action": "Assist",
+   "description": "Dort 3PT Jump Shot (3 PTS) (Jal. Williams 2 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 1127.0,
+   "period": null
+  },
+  {
+   "clip": "f023420.mp4",
+   "video_s": 2342.0,
+   "start_s": 2339.0,
+   "action": "Turnover",
+   "description": "Haliburton Bad Pass Turnover (P1.T13)",
+   "error_s": 0.0,
+   "elapsed_s": 1145.0,
+   "period": null
+  },
+  {
+   "clip": "f023420.mp4",
+   "video_s": 2342.0,
+   "start_s": 2339.0,
+   "action": "Steal",
+   "description": "Gilgeous-Alexander STEAL (2 STL)",
+   "error_s": 0.0,
+   "elapsed_s": 1145.0,
+   "period": null
+  },
+  {
+   "clip": "f023500.mp4",
+   "video_s": 2350.0,
+   "start_s": 2347.0,
+   "action": "Missed Shot",
+   "description": "MISS Gilgeous-Alexander 27' 3PT Step Back Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 1153.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 2354.0,
+   "start_s": 2351.0,
+   "action": "Rebound",
+   "description": "Siakam REBOUND (Off:1 Def:2)",
+   "error_s": 0.0,
+   "elapsed_s": 1157.0,
+   "period": null
+  },
+  {
+   "clip": "f023560.mp4",
+   "video_s": 2356.0,
+   "start_s": 2353.0,
+   "action": "Foul",
+   "description": "Turner OFF.Foul (P2) (M.Davis)",
+   "error_s": 0.0,
+   "elapsed_s": 1159.0,
+   "period": null
+  },
+  {
+   "clip": "f023560.mp4",
+   "video_s": 2356.0,
+   "start_s": 2353.0,
+   "action": "Turnover",
+   "description": "Turner Offensive Foul Turnover (P4.T14)",
+   "error_s": 0.0,
+   "elapsed_s": 1159.0,
+   "period": null
+  },
+  {
+   "clip": "f023950.mp4",
+   "video_s": 2395.0,
+   "start_s": 2392.0,
+   "action": "Missed Shot",
+   "description": "MISS Holmgren 3PT Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 1170.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 2399.0,
+   "start_s": 2396.0,
+   "action": "Rebound",
+   "description": "Haliburton REBOUND (Off:0 Def:6)",
+   "error_s": 0.0,
+   "elapsed_s": 1174.0,
+   "period": null
+  },
+  {
+   "clip": "f024010.mp4",
+   "video_s": 2401.0,
+   "start_s": 2398.0,
+   "action": "Turnover",
+   "description": "Haliburton Lost Ball Turnover (P2.T15)",
+   "error_s": 0.0,
+   "elapsed_s": 1176.0,
+   "period": null
+  },
+  {
+   "clip": "f024010.mp4",
+   "video_s": 2401.0,
+   "start_s": 2398.0,
+   "action": "Steal",
+   "description": "Dort STEAL (3 STL)",
+   "error_s": 0.0,
+   "elapsed_s": 1176.0,
+   "period": null
+  },
+  {
+   "clip": "f024120.mp4",
+   "video_s": 2412.0,
+   "start_s": 2409.0,
+   "action": "Made Shot (3PT)",
+   "description": "Dort 24' 3PT Jump Shot (6 PTS) (Jal. Williams 3 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 1187.0,
+   "period": null
+  },
+  {
+   "clip": "f024120.mp4",
+   "video_s": 2412.0,
+   "start_s": 2409.0,
+   "action": "Assist",
+   "description": "Dort 24' 3PT Jump Shot (6 PTS) (Jal. Williams 3 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 1187.0,
+   "period": null
+  },
+  {
+   "clip": "f024940.mp4",
+   "video_s": 2494.0,
+   "start_s": 2491.0,
+   "action": "Missed Shot",
+   "description": "MISS Siakam 18' Pullup Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 1211.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 2496.0,
+   "start_s": 2493.0,
+   "action": "Rebound",
+   "description": "Mathurin REBOUND (Off:1 Def:0)",
+   "error_s": 0.0,
+   "elapsed_s": 1213.0,
+   "period": null
+  },
+  {
+   "clip": "f024960.mp4",
+   "video_s": 2496.0,
+   "start_s": 2493.0,
+   "action": "Turnover",
+   "description": "Pacers Turnover: Shot Clock (T#16)",
+   "error_s": 0.0,
+   "elapsed_s": 1213.0,
+   "period": null
+  },
+  {
+   "clip": "f025190.mp4",
+   "video_s": 2519.0,
+   "start_s": 2516.0,
+   "action": "Missed Shot",
+   "description": "MISS Caruso 3PT Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 1224.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 2525.0,
+   "start_s": 2522.0,
+   "action": "Rebound",
+   "description": "Haliburton REBOUND (Off:0 Def:7)",
+   "error_s": 0.0,
+   "elapsed_s": 1229.0,
+   "period": null
+  },
+  {
+   "clip": "f025280.mp4",
+   "video_s": 2528.0,
+   "start_s": 2525.0,
+   "action": "Turnover",
+   "description": "Mathurin Lost Ball Turnover (P1.T17)",
+   "error_s": 0.0,
+   "elapsed_s": 1232.0,
+   "period": null
+  },
+  {
+   "clip": "f025280.mp4",
+   "video_s": 2528.0,
+   "start_s": 2525.0,
+   "action": "Steal",
+   "description": "Caruso STEAL (2 STL)",
+   "error_s": 0.0,
+   "elapsed_s": 1232.0,
+   "period": null
+  },
+  {
+   "clip": "f025300.mp4",
+   "video_s": 2530.0,
+   "start_s": 2527.0,
+   "action": "Foul",
+   "description": "Caruso Offensive Charge Foul (P2) (J.Goble)",
+   "error_s": 0.0,
+   "elapsed_s": 1234.0,
+   "period": null
+  },
+  {
+   "clip": "f025300.mp4",
+   "video_s": 2530.0,
+   "start_s": 2527.0,
+   "action": "Turnover",
+   "description": "Caruso Offensive Foul Turnover (P1.T4)",
+   "error_s": 0.0,
+   "elapsed_s": 1234.0,
+   "period": null
+  },
+  {
+   "clip": "f025820.mp4",
+   "video_s": 2582.0,
+   "start_s": 2579.0,
+   "action": "Turnover",
+   "description": "Nesmith Bad Pass Turnover (P4.T18)",
+   "error_s": 0.0,
+   "elapsed_s": 1254.0,
+   "period": null
+  },
+  {
+   "clip": "f025820.mp4",
+   "video_s": 2582.0,
+   "start_s": 2579.0,
+   "action": "Steal",
+   "description": "Caruso STEAL (3 STL)",
+   "error_s": 0.0,
+   "elapsed_s": 1254.0,
+   "period": null
+  },
+  {
+   "clip": "f025860.mp4",
+   "video_s": 2586.0,
+   "start_s": 2583.0,
+   "action": "Missed Shot",
+   "description": "MISS Jal. Williams 26' 3PT Running Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 1258.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 2591.0,
+   "start_s": 2588.0,
+   "action": "Rebound",
+   "description": "Nesmith REBOUND (Off:0 Def:6)",
+   "error_s": 0.0,
+   "elapsed_s": 1263.0,
+   "period": null
+  },
+  {
+   "clip": "f025970.mp4",
+   "video_s": 2597.0,
+   "start_s": 2594.0,
+   "action": "Missed Shot",
+   "description": "MISS Toppin 28' 3PT Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 1269.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 2599.0,
+   "start_s": 2596.0,
+   "action": "Rebound",
+   "description": "Gilgeous-Alexander REBOUND (Off:0 Def:3)",
+   "error_s": 0.0,
+   "elapsed_s": 1271.0,
+   "period": null
+  },
+  {
+   "clip": "f026090.mp4",
+   "video_s": 2609.0,
+   "start_s": 2606.0,
+   "action": "Made Shot (3PT)",
+   "description": "Dort 3PT Jump Shot (9 PTS) (Caruso 1 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 1281.0,
+   "period": null
+  },
+  {
+   "clip": "f026090.mp4",
+   "video_s": 2609.0,
+   "start_s": 2606.0,
+   "action": "Assist",
+   "description": "Dort 3PT Jump Shot (9 PTS) (Caruso 1 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 1281.0,
+   "period": null
+  },
+  {
+   "clip": "f026200.mp4",
+   "video_s": 2620.0,
+   "start_s": 2617.0,
+   "action": "Turnover",
+   "description": "McConnell Bad Pass Turnover (P1.T19)",
+   "error_s": 0.0,
+   "elapsed_s": 1292.0,
+   "period": null
+  },
+  {
+   "clip": "f026200.mp4",
+   "video_s": 2620.0,
+   "start_s": 2617.0,
+   "action": "Steal",
+   "description": "Dort STEAL (4 STL)",
+   "error_s": 0.0,
+   "elapsed_s": 1292.0,
+   "period": null
+  },
+  {
+   "clip": "f026270.mp4",
+   "video_s": 2627.0,
+   "start_s": 2624.0,
+   "action": "Missed Shot",
+   "description": "MISS Gilgeous-Alexander 26' 3PT Step Back Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 1299.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 2629.0,
+   "start_s": 2626.0,
+   "action": "Rebound",
+   "description": "Nesmith REBOUND (Off:0 Def:7)",
+   "error_s": 0.0,
+   "elapsed_s": 1301.0,
+   "period": null
+  },
+  {
+   "clip": "f026400.mp4",
+   "video_s": 2640.0,
+   "start_s": 2637.0,
+   "action": "Made Shot (3PT)",
+   "description": "McConnell 26' 3PT Jump Shot (7 PTS) (Haliburton 2 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 1312.0,
+   "period": null
+  },
+  {
+   "clip": "f026400.mp4",
+   "video_s": 2640.0,
+   "start_s": 2637.0,
+   "action": "Assist",
+   "description": "McConnell 26' 3PT Jump Shot (7 PTS) (Haliburton 2 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 1312.0,
+   "period": null
+  },
+  {
+   "clip": "f026580.mp4",
+   "video_s": 2658.0,
+   "start_s": 2655.0,
+   "action": "Made Shot (2PT)",
+   "description": "Jal. Williams 2' Driving Floating Bank Jump Shot (7 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 1330.0,
+   "period": null
+  },
+  {
+   "clip": "f026690.mp4",
+   "video_s": 2669.0,
+   "start_s": 2666.0,
+   "action": "Made Shot (3PT)",
+   "description": "Nesmith 3PT Jump Shot (4 PTS) (Haliburton 3 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 1341.0,
+   "period": null
+  },
+  {
+   "clip": "f026690.mp4",
+   "video_s": 2669.0,
+   "start_s": 2666.0,
+   "action": "Assist",
+   "description": "Nesmith 3PT Jump Shot (4 PTS) (Haliburton 3 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 1341.0,
+   "period": null
+  },
+  {
+   "clip": "f026900.mp4",
+   "video_s": 2690.0,
+   "start_s": 2687.0,
+   "action": "Made Shot (2PT)",
+   "description": "Gilgeous-Alexander 3' Driving Layup (16 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 1362.0,
+   "period": null
+  },
+  {
+   "clip": "f027060.mp4",
+   "video_s": 2706.0,
+   "start_s": 2703.0,
+   "action": "Made Shot (2PT)",
+   "description": "McConnell 8' Jump Shot (9 PTS) (Toppin 1 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 1378.0,
+   "period": null
+  },
+  {
+   "clip": "f027060.mp4",
+   "video_s": 2706.0,
+   "start_s": 2703.0,
+   "action": "Assist",
+   "description": "McConnell 8' Jump Shot (9 PTS) (Toppin 1 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 1378.0,
+   "period": null
+  },
+  {
+   "clip": "f027250.mp4",
+   "video_s": 2725.0,
+   "start_s": 2722.0,
+   "action": "Made Shot (3PT)",
+   "description": "Gilgeous-Alexander 26' 3PT Jump Shot (19 PTS) (Jal. Williams 4 AST)",
+   "error_s": 0.4,
+   "elapsed_s": 1393.8,
+   "period": null
+  },
+  {
+   "clip": "f027250.mp4",
+   "video_s": 2725.0,
+   "start_s": 2722.0,
+   "action": "Assist",
+   "description": "Gilgeous-Alexander 26' 3PT Jump Shot (19 PTS) (Jal. Williams 4 AST)",
+   "error_s": 0.4,
+   "elapsed_s": 1393.8,
+   "period": null
+  },
+  {
+   "clip": "f027410.mp4",
+   "video_s": 2741.0,
+   "start_s": 2738.0,
+   "action": "Missed Shot",
+   "description": "MISS McConnell 6' Driving Layup",
+   "error_s": 0.0,
+   "elapsed_s": 1406.7,
+   "period": null
+  },
+  {
+   "clip": "f027410.mp4",
+   "video_s": 2741.0,
+   "start_s": 2738.0,
+   "action": "Block",
+   "description": "Wallace BLOCK (1 BLK)",
+   "error_s": 0.0,
+   "elapsed_s": 1406.7,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 2741.0,
+   "start_s": 2738.0,
+   "action": "Rebound",
+   "description": "Pacers Rebound",
+   "error_s": 0.0,
+   "elapsed_s": 1406.7,
+   "period": null
+  },
+  {
+   "clip": "f027800.mp4",
+   "video_s": 2780.0,
+   "start_s": 2777.0,
+   "action": "Missed Shot",
+   "description": "MISS Siakam 11' Driving Floating Jump Shot",
+   "error_s": 0.4,
+   "elapsed_s": 1411.4,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 2784.0,
+   "start_s": 2781.0,
+   "action": "Rebound",
+   "description": "Holmgren REBOUND (Off:0 Def:3)",
+   "error_s": 0.2,
+   "elapsed_s": 1414.7,
+   "period": null
+  },
+  {
+   "clip": "f029420.mp4",
+   "video_s": 2942.0,
+   "start_s": 2939.0,
+   "action": "Missed Shot",
+   "description": "MISS Nembhard 3' Driving Finger Roll Layup",
+   "error_s": 0.0,
+   "elapsed_s": 1459.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 2945.0,
+   "start_s": 2942.0,
+   "action": "Rebound",
+   "description": "Turner REBOUND (Off:3 Def:1)",
+   "error_s": 0.0,
+   "elapsed_s": 1462.0,
+   "period": null
+  },
+  {
+   "clip": "f029450.mp4",
+   "video_s": 2945.0,
+   "start_s": 2942.0,
+   "action": "Missed Shot",
+   "description": "MISS Turner 1' Tip Layup Shot",
+   "error_s": 0.0,
+   "elapsed_s": 1462.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 2947.0,
+   "start_s": 2944.0,
+   "action": "Rebound",
+   "description": "Turner REBOUND (Off:4 Def:1)",
+   "error_s": 0.0,
+   "elapsed_s": 1464.0,
+   "period": null
+  },
+  {
+   "clip": "f029520.mp4",
+   "video_s": 2952.0,
+   "start_s": 2949.0,
+   "action": "Missed Shot",
+   "description": "MISS Haliburton 28' 3PT Pullup Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 1469.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 2955.0,
+   "start_s": 2952.0,
+   "action": "Rebound",
+   "description": "Holmgren REBOUND (Off:0 Def:4)",
+   "error_s": 0.0,
+   "elapsed_s": 1472.0,
+   "period": null
+  },
+  {
+   "clip": "f029690.mp4",
+   "video_s": 2969.0,
+   "start_s": 2966.0,
+   "action": "Made Shot (2PT)",
+   "description": "Gilgeous-Alexander 14' Step Back Jump Shot (21 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 1486.0,
+   "period": null
+  },
+  {
+   "clip": "f029850.mp4",
+   "video_s": 2985.0,
+   "start_s": 2982.0,
+   "action": "Made Shot (2PT)",
+   "description": "Turner 2' Layup (7 PTS) (Haliburton 4 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 1502.0,
+   "period": null
+  },
+  {
+   "clip": "f029850.mp4",
+   "video_s": 2985.0,
+   "start_s": 2982.0,
+   "action": "Assist",
+   "description": "Turner 2' Layup (7 PTS) (Haliburton 4 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 1502.0,
+   "period": null
+  },
+  {
+   "clip": "f030040.mp4",
+   "video_s": 3004.0,
+   "start_s": 3001.0,
+   "action": "Missed Shot",
+   "description": "MISS Holmgren 2' Driving Layup",
+   "error_s": 0.0,
+   "elapsed_s": 1521.0,
+   "period": null
+  },
+  {
+   "clip": "f030040.mp4",
+   "video_s": 3004.0,
+   "start_s": 3001.0,
+   "action": "Block",
+   "description": "Turner BLOCK (3 BLK)",
+   "error_s": 0.0,
+   "elapsed_s": 1521.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 3007.0,
+   "start_s": 3004.0,
+   "action": "Rebound",
+   "description": "Haliburton REBOUND (Off:0 Def:8)",
+   "error_s": 0.0,
+   "elapsed_s": 1524.0,
+   "period": null
+  },
+  {
+   "clip": "f030090.mp4",
+   "video_s": 3009.0,
+   "start_s": 3006.0,
+   "action": "Foul",
+   "description": "Jal. Williams S.FOUL (P2.T1) (M.Davis)",
+   "error_s": 0.0,
+   "elapsed_s": 1526.0,
+   "period": null
+  },
+  {
+   "clip": "f030090.mp4",
+   "video_s": 3009.0,
+   "start_s": 3006.0,
+   "action": "Free Throw (miss)",
+   "description": "MISS Siakam Free Throw 1 of 2",
+   "error_s": 0.0,
+   "elapsed_s": 1526.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 3009.0,
+   "start_s": 3006.0,
+   "action": "Rebound",
+   "description": "Pacers Rebound",
+   "error_s": 0.0,
+   "elapsed_s": 1526.0,
+   "period": null
+  },
+  {
+   "clip": "f030090.mp4",
+   "video_s": 3009.0,
+   "start_s": 3006.0,
+   "action": "Free Throw (made)",
+   "description": "Siakam Free Throw 2 of 2 (9 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 1526.0,
+   "period": null
+  },
+  {
+   "clip": "f030840.mp4",
+   "video_s": 3084.0,
+   "start_s": 3081.0,
+   "action": "Missed Shot",
+   "description": "MISS Jal. Williams 3PT Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 1541.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 3089.0,
+   "start_s": 3086.0,
+   "action": "Rebound",
+   "description": "Siakam REBOUND (Off:1 Def:3)",
+   "error_s": 0.0,
+   "elapsed_s": 1546.0,
+   "period": null
+  },
+  {
+   "clip": "f030990.mp4",
+   "video_s": 3099.0,
+   "start_s": 3096.0,
+   "action": "Missed Shot",
+   "description": "MISS Siakam 5' Driving Hook Shot",
+   "error_s": 0.0,
+   "elapsed_s": 1556.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 3101.0,
+   "start_s": 3098.0,
+   "action": "Rebound",
+   "description": "Holmgren REBOUND (Off:0 Def:5)",
+   "error_s": 0.0,
+   "elapsed_s": 1558.0,
+   "period": null
+  },
+  {
+   "clip": "f031100.mp4",
+   "video_s": 3110.0,
+   "start_s": 3107.0,
+   "action": "Made Shot (2PT)",
+   "description": "Gilgeous-Alexander 16' Pullup Jump Shot (23 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 1567.0,
+   "period": null
+  },
+  {
+   "clip": "f031340.mp4",
+   "video_s": 3134.0,
+   "start_s": 3131.0,
+   "action": "Missed Shot",
+   "description": "MISS Haliburton 25' 3PT Step Back Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 1581.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 3138.0,
+   "start_s": 3135.0,
+   "action": "Rebound",
+   "description": "Nembhard REBOUND (Off:1 Def:1)",
+   "error_s": 0.0,
+   "elapsed_s": 1585.0,
+   "period": null
+  },
+  {
+   "clip": "f031410.mp4",
+   "video_s": 3141.0,
+   "start_s": 3138.0,
+   "action": "Missed Shot",
+   "description": "MISS Siakam 21' Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 1588.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 3144.0,
+   "start_s": 3141.0,
+   "action": "Rebound",
+   "description": "Wallace REBOUND (Off:0 Def:2)",
+   "error_s": 0.0,
+   "elapsed_s": 1591.0,
+   "period": null
+  },
+  {
+   "clip": "f031520.mp4",
+   "video_s": 3152.0,
+   "start_s": 3149.0,
+   "action": "Missed Shot",
+   "description": "MISS Gilgeous-Alexander 9' Turnaround Fadeaway Shot",
+   "error_s": 0.0,
+   "elapsed_s": 1599.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 3155.0,
+   "start_s": 3152.0,
+   "action": "Rebound",
+   "description": "Turner REBOUND (Off:4 Def:2)",
+   "error_s": 0.0,
+   "elapsed_s": 1602.0,
+   "period": null
+  },
+  {
+   "clip": "f031590.mp4",
+   "video_s": 3159.0,
+   "start_s": 3156.0,
+   "action": "Made Shot (2PT)",
+   "description": "Siakam 1' Running Finger Roll Layup (11 PTS) (Haliburton 5 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 1606.0,
+   "period": null
+  },
+  {
+   "clip": "f031590.mp4",
+   "video_s": 3159.0,
+   "start_s": 3156.0,
+   "action": "Assist",
+   "description": "Siakam 1' Running Finger Roll Layup (11 PTS) (Haliburton 5 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 1606.0,
+   "period": null
+  },
+  {
+   "clip": "f031770.mp4",
+   "video_s": 3177.0,
+   "start_s": 3174.0,
+   "action": "Made Shot (2PT)",
+   "description": "Wallace 2' Driving Finger Roll Layup (2 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 1624.0,
+   "period": null
+  },
+  {
+   "clip": "f031880.mp4",
+   "video_s": 3188.0,
+   "start_s": 3185.0,
+   "action": "Made Shot (3PT)",
+   "description": "Nesmith 25' 3PT Jump Shot (7 PTS) (Siakam 3 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 1635.0,
+   "period": null
+  },
+  {
+   "clip": "f031880.mp4",
+   "video_s": 3188.0,
+   "start_s": 3185.0,
+   "action": "Assist",
+   "description": "Nesmith 25' 3PT Jump Shot (7 PTS) (Siakam 3 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 1635.0,
+   "period": null
+  },
+  {
+   "clip": "f032030.mp4",
+   "video_s": 3203.0,
+   "start_s": 3200.0,
+   "action": "Made Shot (2PT)",
+   "description": "Jal. Williams 2' Alley Oop Dunk (9 PTS) (Wallace 1 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 1650.0,
+   "period": null
+  },
+  {
+   "clip": "f032030.mp4",
+   "video_s": 3203.0,
+   "start_s": 3200.0,
+   "action": "Assist",
+   "description": "Jal. Williams 2' Alley Oop Dunk (9 PTS) (Wallace 1 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 1650.0,
+   "period": null
+  },
+  {
+   "clip": "f032220.mp4",
+   "video_s": 3222.0,
+   "start_s": 3219.0,
+   "action": "Foul",
+   "description": "Nesmith Offensive Charge Foul (P1) (M.Davis)",
+   "error_s": 0.0,
+   "elapsed_s": 1669.0,
+   "period": null
+  },
+  {
+   "clip": "f032220.mp4",
+   "video_s": 3222.0,
+   "start_s": 3219.0,
+   "action": "Turnover",
+   "description": "Nesmith Offensive Foul Turnover (P5.T21)",
+   "error_s": 0.0,
+   "elapsed_s": 1669.0,
+   "period": null
+  },
+  {
+   "clip": "f032660.mp4",
+   "video_s": 3266.0,
+   "start_s": 3263.0,
+   "action": "Missed Shot",
+   "description": "MISS Jal. Williams 1' Driving Finger Roll Layup",
+   "error_s": 0.0,
+   "elapsed_s": 1684.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 3268.0,
+   "start_s": 3265.0,
+   "action": "Rebound",
+   "description": "Turner REBOUND (Off:4 Def:3)",
+   "error_s": 0.0,
+   "elapsed_s": 1686.0,
+   "period": null
+  },
+  {
+   "clip": "f032890.mp4",
+   "video_s": 3289.0,
+   "start_s": 3286.0,
+   "action": "Missed Shot",
+   "description": "MISS Nesmith 3PT Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 1707.0,
+   "period": null
+  },
+  {
+   "clip": "f032890.mp4",
+   "video_s": 3289.0,
+   "start_s": 3286.0,
+   "action": "Block",
+   "description": "Holmgren BLOCK (1 BLK)",
+   "error_s": 0.0,
+   "elapsed_s": 1707.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 3292.0,
+   "start_s": 3289.0,
+   "action": "Rebound",
+   "description": "Siakam REBOUND (Off:2 Def:3)",
+   "error_s": 0.0,
+   "elapsed_s": 1710.0,
+   "period": null
+  },
+  {
+   "clip": "f032930.mp4",
+   "video_s": 3293.0,
+   "start_s": 3290.0,
+   "action": "Made Shot (2PT)",
+   "description": "Siakam 2' Putback Layup (13 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 1711.0,
+   "period": null
+  },
+  {
+   "clip": "f033030.mp4",
+   "video_s": 3303.0,
+   "start_s": 3300.0,
+   "action": "Made Shot (2PT)",
+   "description": "Wallace 1' Cutting Layup Shot (4 PTS) (Gilgeous-Alexander 2 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 1721.0,
+   "period": null
+  },
+  {
+   "clip": "f033030.mp4",
+   "video_s": 3303.0,
+   "start_s": 3300.0,
+   "action": "Assist",
+   "description": "Wallace 1' Cutting Layup Shot (4 PTS) (Gilgeous-Alexander 2 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 1721.0,
+   "period": null
+  },
+  {
+   "clip": "f033210.mp4",
+   "video_s": 3321.0,
+   "start_s": 3318.0,
+   "action": "Turnover",
+   "description": "Turner Traveling Turnover (P5.T22)",
+   "error_s": 0.0,
+   "elapsed_s": 1739.0,
+   "period": null
+  },
+  {
+   "clip": "f033930.mp4",
+   "video_s": 3393.0,
+   "start_s": 3390.0,
+   "action": "Missed Shot",
+   "description": "MISS Wallace 7' Driving Floating Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 1759.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 3394.0,
+   "start_s": 3391.0,
+   "action": "Rebound",
+   "description": "Jal. Williams REBOUND (Off:1 Def:2)",
+   "error_s": 0.0,
+   "elapsed_s": 1760.0,
+   "period": null
+  },
+  {
+   "clip": "f033940.mp4",
+   "video_s": 3394.0,
+   "start_s": 3391.0,
+   "action": "Missed Shot",
+   "description": "MISS Jal. Williams Tip Layup Shot",
+   "error_s": 0.0,
+   "elapsed_s": 1760.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 3395.0,
+   "start_s": 3392.0,
+   "action": "Rebound",
+   "description": "Turner REBOUND (Off:4 Def:4)",
+   "error_s": 0.0,
+   "elapsed_s": 1761.0,
+   "period": null
+  },
+  {
+   "clip": "f034010.mp4",
+   "video_s": 3401.0,
+   "start_s": 3398.0,
+   "action": "Made Shot (2PT)",
+   "description": "Haliburton 12' Pullup Jump Shot (8 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 1767.0,
+   "period": null
+  },
+  {
+   "clip": "f034140.mp4",
+   "video_s": 3414.0,
+   "start_s": 3411.0,
+   "action": "Made Shot (3PT)",
+   "description": "Dort 25' 3PT Step Back Jump Shot (12 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 1780.0,
+   "period": null
+  },
+  {
+   "clip": "f034400.mp4",
+   "video_s": 3440.0,
+   "start_s": 3437.0,
+   "action": "Made Shot (3PT)",
+   "description": "Toppin 3PT Jump Shot (9 PTS) (Nembhard 2 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 1806.0,
+   "period": null
+  },
+  {
+   "clip": "f034400.mp4",
+   "video_s": 3440.0,
+   "start_s": 3437.0,
+   "action": "Assist",
+   "description": "Toppin 3PT Jump Shot (9 PTS) (Nembhard 2 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 1806.0,
+   "period": null
+  },
+  {
+   "clip": "f034630.mp4",
+   "video_s": 3463.0,
+   "start_s": 3460.0,
+   "action": "Made Shot (2PT)",
+   "description": "Nembhard 3' Driving Layup (6 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 1829.0,
+   "period": null
+  },
+  {
+   "clip": "f034720.mp4",
+   "video_s": 3472.0,
+   "start_s": 3469.0,
+   "action": "Made Shot (2PT)",
+   "description": "Holmgren 1' Cutting Dunk Shot (6 PTS) (Gilgeous-Alexander 3 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 1838.0,
+   "period": null
+  },
+  {
+   "clip": "f034720.mp4",
+   "video_s": 3472.0,
+   "start_s": 3469.0,
+   "action": "Assist",
+   "description": "Holmgren 1' Cutting Dunk Shot (6 PTS) (Gilgeous-Alexander 3 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 1838.0,
+   "period": null
+  },
+  {
+   "clip": "f034800.mp4",
+   "video_s": 3480.0,
+   "start_s": 3477.0,
+   "action": "Foul",
+   "description": "Gilgeous-Alexander P.FOUL (P1.T2) (J.Goble)",
+   "error_s": 0.0,
+   "elapsed_s": 1846.0,
+   "period": null
+  },
+  {
+   "clip": "f035140.mp4",
+   "video_s": 3514.0,
+   "start_s": 3511.0,
+   "action": "Made Shot (2PT)",
+   "description": "Haliburton 14' Driving Floating Jump Shot (10 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 1854.0,
+   "period": null
+  },
+  {
+   "clip": "f035280.mp4",
+   "video_s": 3528.0,
+   "start_s": 3525.0,
+   "action": "Missed Shot",
+   "description": "MISS Gilgeous-Alexander 14' Pullup Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 1868.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 3531.0,
+   "start_s": 3528.0,
+   "action": "Rebound",
+   "description": "Caruso REBOUND (Off:1 Def:2)",
+   "error_s": 1.0,
+   "elapsed_s": 1872.0,
+   "period": null
+  },
+  {
+   "clip": "f035400.mp4",
+   "video_s": 3540.0,
+   "start_s": 3537.0,
+   "action": "Missed Shot",
+   "description": "MISS Jal. Williams 3' Driving Dunk",
+   "error_s": 0.0,
+   "elapsed_s": 1880.0,
+   "period": null
+  },
+  {
+   "clip": "f035400.mp4",
+   "video_s": 3540.0,
+   "start_s": 3537.0,
+   "action": "Block",
+   "description": "Mathurin BLOCK (1 BLK)",
+   "error_s": 0.0,
+   "elapsed_s": 1880.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 3543.0,
+   "start_s": 3540.0,
+   "action": "Rebound",
+   "description": "Nembhard REBOUND (Off:1 Def:2)",
+   "error_s": 0.0,
+   "elapsed_s": 1883.0,
+   "period": null
+  },
+  {
+   "clip": "f035500.mp4",
+   "video_s": 3550.0,
+   "start_s": 3547.0,
+   "action": "Missed Shot",
+   "description": "MISS Haliburton 32' 3PT Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 1890.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 3552.0,
+   "start_s": 3549.0,
+   "action": "Rebound",
+   "description": "Hartenstein REBOUND (Off:1 Def:4)",
+   "error_s": 0.0,
+   "elapsed_s": 1892.0,
+   "period": null
+  },
+  {
+   "clip": "f035580.mp4",
+   "video_s": 3558.0,
+   "start_s": 3555.0,
+   "action": "Foul",
+   "description": "Gilgeous-Alexander OFF.Foul (P2) (J.Goble)",
+   "error_s": 0.0,
+   "elapsed_s": 1898.0,
+   "period": null
+  },
+  {
+   "clip": "f035580.mp4",
+   "video_s": 3558.0,
+   "start_s": 3555.0,
+   "action": "Turnover",
+   "description": "Gilgeous-Alexander Offensive Foul Turnover (P2.T5)",
+   "error_s": 0.0,
+   "elapsed_s": 1898.0,
+   "period": null
+  },
+  {
+   "clip": "f035970.mp4",
+   "video_s": 3597.0,
+   "start_s": 3594.0,
+   "action": "Missed Shot",
+   "description": "MISS Toppin 26' 3PT Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 1911.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 3599.0,
+   "start_s": 3596.0,
+   "action": "Rebound",
+   "description": "Hartenstein REBOUND (Off:1 Def:5)",
+   "error_s": 0.0,
+   "elapsed_s": 1913.0,
+   "period": null
+  },
+  {
+   "clip": "f036130.mp4",
+   "video_s": 3613.0,
+   "start_s": 3610.0,
+   "action": "Made Shot (2PT)",
+   "description": "Gilgeous-Alexander 9' Step Back Jump Shot (25 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 1927.0,
+   "period": null
+  },
+  {
+   "clip": "f036260.mp4",
+   "video_s": 3626.0,
+   "start_s": 3623.0,
+   "action": "Made Shot (2PT)",
+   "description": "Toppin 3' Layup (11 PTS) (Nembhard 3 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 1940.0,
+   "period": null
+  },
+  {
+   "clip": "f036260.mp4",
+   "video_s": 3626.0,
+   "start_s": 3623.0,
+   "action": "Assist",
+   "description": "Toppin 3' Layup (11 PTS) (Nembhard 3 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 1940.0,
+   "period": null
+  },
+  {
+   "clip": "f036420.mp4",
+   "video_s": 3642.0,
+   "start_s": 3639.0,
+   "action": "Foul",
+   "description": "Bryant P.FOUL (P2.T1) (M.Davis)",
+   "error_s": 0.0,
+   "elapsed_s": 1956.0,
+   "period": null
+  },
+  {
+   "clip": "f036910.mp4",
+   "video_s": 3691.0,
+   "start_s": 3688.0,
+   "action": "Turnover",
+   "description": "THUNDER Turnover: Shot Clock (T#6)",
+   "error_s": 0.0,
+   "elapsed_s": 1971.0,
+   "period": null
+  },
+  {
+   "clip": "f038100.mp4",
+   "video_s": 3810.0,
+   "start_s": 3807.0,
+   "action": "Missed Shot",
+   "description": "MISS Siakam 13' Turnaround Fadeaway Shot",
+   "error_s": 0.0,
+   "elapsed_s": 1992.0,
+   "period": null
+  },
+  {
+   "clip": "f038100.mp4",
+   "video_s": 3810.0,
+   "start_s": 3807.0,
+   "action": "Block",
+   "description": "Dort BLOCK (1 BLK)",
+   "error_s": 0.0,
+   "elapsed_s": 1992.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 3813.0,
+   "start_s": 3810.0,
+   "action": "Rebound",
+   "description": "Gilgeous-Alexander REBOUND (Off:0 Def:4)",
+   "error_s": 0.0,
+   "elapsed_s": 1995.0,
+   "period": null
+  },
+  {
+   "clip": "f038180.mp4",
+   "video_s": 3818.0,
+   "start_s": 3815.0,
+   "action": "Missed Shot",
+   "description": "MISS Caruso 3' Running Finger Roll Layup",
+   "error_s": 0.0,
+   "elapsed_s": 2000.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 3819.0,
+   "start_s": 3816.0,
+   "action": "Rebound",
+   "description": "Hartenstein REBOUND (Off:2 Def:5)",
+   "error_s": 0.0,
+   "elapsed_s": 2001.0,
+   "period": null
+  },
+  {
+   "clip": "f038200.mp4",
+   "video_s": 3820.0,
+   "start_s": 3817.0,
+   "action": "Made Shot (2PT)",
+   "description": "Hartenstein Tip Dunk Shot (9 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 2002.0,
+   "period": null
+  },
+  {
+   "clip": "f038340.mp4",
+   "video_s": 3834.0,
+   "start_s": 3831.0,
+   "action": "Made Shot (2PT)",
+   "description": "Bryant 1' Cutting Dunk Shot (2 PTS) (Mathurin 2 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 2016.0,
+   "period": null
+  },
+  {
+   "clip": "f038340.mp4",
+   "video_s": 3834.0,
+   "start_s": 3831.0,
+   "action": "Assist",
+   "description": "Bryant 1' Cutting Dunk Shot (2 PTS) (Mathurin 2 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 2016.0,
+   "period": null
+  },
+  {
+   "clip": "f038480.mp4",
+   "video_s": 3848.0,
+   "start_s": 3845.0,
+   "action": "Missed Shot",
+   "description": "MISS Caruso 3PT Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 2030.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 3851.0,
+   "start_s": 3848.0,
+   "action": "Rebound",
+   "description": "Siakam REBOUND (Off:2 Def:4)",
+   "error_s": 0.0,
+   "elapsed_s": 2033.0,
+   "period": null
+  },
+  {
+   "clip": "f038630.mp4",
+   "video_s": 3863.0,
+   "start_s": 3860.0,
+   "action": "Missed Shot",
+   "description": "MISS Siakam 26' 3PT Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 2045.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 3866.0,
+   "start_s": 3863.0,
+   "action": "Rebound",
+   "description": "Hartenstein REBOUND (Off:2 Def:6)",
+   "error_s": 0.0,
+   "elapsed_s": 2048.0,
+   "period": null
+  },
+  {
+   "clip": "f038740.mp4",
+   "video_s": 3874.0,
+   "start_s": 3871.0,
+   "action": "Missed Shot",
+   "description": "MISS Caruso 3PT Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 2056.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 3878.0,
+   "start_s": 3875.0,
+   "action": "Rebound",
+   "description": "Siakam REBOUND (Off:2 Def:5)",
+   "error_s": 0.0,
+   "elapsed_s": 2060.0,
+   "period": null
+  },
+  {
+   "clip": "f038910.mp4",
+   "video_s": 3891.0,
+   "start_s": 3888.0,
+   "action": "Foul",
+   "description": "Dort P.FOUL (P3.T3) (D.Guthrie)",
+   "error_s": 0.0,
+   "elapsed_s": 2073.0,
+   "period": null
+  },
+  {
+   "clip": "f039300.mp4",
+   "video_s": 3930.0,
+   "start_s": 3927.0,
+   "action": "Foul",
+   "description": "Hartenstein P.FOUL (P2.PN) (J.Goble)",
+   "error_s": 0.0,
+   "elapsed_s": 2076.0,
+   "period": null
+  },
+  {
+   "clip": "f039300.mp4",
+   "video_s": 3930.0,
+   "start_s": 3927.0,
+   "action": "Free Throw (made)",
+   "description": "Mathurin Free Throw 1 of 2 (1 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 2076.0,
+   "period": null
+  },
+  {
+   "clip": "f039300.mp4",
+   "video_s": 3930.0,
+   "start_s": 3927.0,
+   "action": "Free Throw (made)",
+   "description": "Mathurin Free Throw 2 of 2 (2 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 2076.0,
+   "period": null
+  },
+  {
+   "clip": "f040460.mp4",
+   "video_s": 4046.0,
+   "start_s": 4043.0,
+   "action": "Missed Shot",
+   "description": "MISS Gilgeous-Alexander 7' Pullup Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 2087.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 4049.0,
+   "start_s": 4046.0,
+   "action": "Rebound",
+   "description": "Caruso REBOUND (Off:2 Def:2)",
+   "error_s": 0.0,
+   "elapsed_s": 2090.0,
+   "period": null
+  },
+  {
+   "clip": "f040500.mp4",
+   "video_s": 4050.0,
+   "start_s": 4047.0,
+   "action": "Made Shot (3PT)",
+   "description": "Joe 26' 3PT Jump Shot (5 PTS) (Caruso 2 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 2091.0,
+   "period": null
+  },
+  {
+   "clip": "f040500.mp4",
+   "video_s": 4050.0,
+   "start_s": 4047.0,
+   "action": "Assist",
+   "description": "Joe 26' 3PT Jump Shot (5 PTS) (Caruso 2 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 2091.0,
+   "period": null
+  },
+  {
+   "clip": "f040630.mp4",
+   "video_s": 4063.0,
+   "start_s": 4060.0,
+   "action": "Made Shot (3PT)",
+   "description": "Bryant 3PT Jump Shot (5 PTS) (McConnell 3 AST)",
+   "error_s": 0.1,
+   "elapsed_s": 2103.0,
+   "period": null
+  },
+  {
+   "clip": "f040630.mp4",
+   "video_s": 4063.0,
+   "start_s": 4060.0,
+   "action": "Assist",
+   "description": "Bryant 3PT Jump Shot (5 PTS) (McConnell 3 AST)",
+   "error_s": 0.1,
+   "elapsed_s": 2103.0,
+   "period": null
+  },
+  {
+   "clip": "f040720.mp4",
+   "video_s": 4072.0,
+   "start_s": 4069.0,
+   "action": "Foul",
+   "description": "Bryant P.FOUL (P3.T2) (D.Guthrie)",
+   "error_s": 0.0,
+   "elapsed_s": 2110.8,
+   "period": null
+  },
+  {
+   "clip": "f041080.mp4",
+   "video_s": 4108.0,
+   "start_s": 4105.0,
+   "action": "Missed Shot",
+   "description": "MISS Gilgeous-Alexander 17' Step Back Jump Shot",
+   "error_s": 1.7,
+   "elapsed_s": 2126.1,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 4108.0,
+   "start_s": 4105.0,
+   "action": "Rebound",
+   "description": "Sheppard REBOUND (Off:0 Def:2)",
+   "error_s": 0.1,
+   "elapsed_s": 2127.9,
+   "period": null
+  },
+  {
+   "clip": "f041230.mp4",
+   "video_s": 4123.0,
+   "start_s": 4120.0,
+   "action": "Made Shot (3PT)",
+   "description": "Siakam 3PT Jump Shot (16 PTS) (McConnell 4 AST)",
+   "error_s": 0.1,
+   "elapsed_s": 2142.7,
+   "period": null
+  },
+  {
+   "clip": "f041230.mp4",
+   "video_s": 4123.0,
+   "start_s": 4120.0,
+   "action": "Assist",
+   "description": "Siakam 3PT Jump Shot (16 PTS) (McConnell 4 AST)",
+   "error_s": 0.1,
+   "elapsed_s": 2142.7,
+   "period": null
+  },
+  {
+   "clip": "f041890.mp4",
+   "video_s": 4189.0,
+   "start_s": 4186.0,
+   "action": "Made Shot (3PT)",
+   "description": "Gilgeous-Alexander 26' 3PT Pullup Jump Shot (28 PTS)",
+   "error_s": 1.2,
+   "elapsed_s": 2158.8,
+   "period": null
+  },
+  {
+   "clip": "f042010.mp4",
+   "video_s": 4201.0,
+   "start_s": 4198.0,
+   "action": "Foul",
+   "description": "Mathurin S.FOUL (P2.T1) (M.Davis)",
+   "error_s": 0.0,
+   "elapsed_s": 2168.0,
+   "period": null
+  },
+  {
+   "clip": "f042010.mp4",
+   "video_s": 4201.0,
+   "start_s": 4198.0,
+   "action": "Free Throw (made)",
+   "description": "Caruso Free Throw 1 of 2 (8 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 2168.0,
+   "period": null
+  },
+  {
+   "clip": "f042010.mp4",
+   "video_s": 4201.0,
+   "start_s": 4198.0,
+   "action": "Free Throw (made)",
+   "description": "Caruso Free Throw 2 of 2 (9 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 2168.0,
+   "period": null
+  },
+  {
+   "clip": "f042840.mp4",
+   "video_s": 4284.0,
+   "start_s": 4281.0,
+   "action": "Missed Shot",
+   "description": "MISS McConnell 6' Pullup Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 2188.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 4287.0,
+   "start_s": 4284.0,
+   "action": "Rebound",
+   "description": "Hartenstein REBOUND (Off:2 Def:7)",
+   "error_s": 0.0,
+   "elapsed_s": 2191.0,
+   "period": null
+  },
+  {
+   "clip": "f043020.mp4",
+   "video_s": 4302.0,
+   "start_s": 4299.0,
+   "action": "Made Shot (2PT)",
+   "description": "Jal. Williams 2' Driving Layup (11 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 2206.0,
+   "period": null
+  },
+  {
+   "clip": "f043120.mp4",
+   "video_s": 4312.0,
+   "start_s": 4309.0,
+   "action": "Foul",
+   "description": "Caruso P.FOUL (P3.T1) (D.Guthrie)",
+   "error_s": 0.0,
+   "elapsed_s": 2216.0,
+   "period": null
+  },
+  {
+   "clip": "f043330.mp4",
+   "video_s": 4333.0,
+   "start_s": 4330.0,
+   "action": "Foul",
+   "description": "Jal. Williams S.FOUL (P3.T2) (J.Goble)",
+   "error_s": 0.0,
+   "elapsed_s": 2218.0,
+   "period": null
+  },
+  {
+   "clip": "f043330.mp4",
+   "video_s": 4333.0,
+   "start_s": 4330.0,
+   "action": "Free Throw (miss)",
+   "description": "MISS Mathurin Free Throw 1 of 2",
+   "error_s": 0.0,
+   "elapsed_s": 2218.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 4333.0,
+   "start_s": 4330.0,
+   "action": "Rebound",
+   "description": "Pacers Rebound",
+   "error_s": 0.0,
+   "elapsed_s": 2218.0,
+   "period": null
+  },
+  {
+   "clip": "f043330.mp4",
+   "video_s": 4333.0,
+   "start_s": 4330.0,
+   "action": "Free Throw (made)",
+   "description": "Mathurin Free Throw 2 of 2 (3 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 2218.0,
+   "period": null
+  },
+  {
+   "clip": "f044080.mp4",
+   "video_s": 4408.0,
+   "start_s": 4405.0,
+   "action": "Foul",
+   "description": "McConnell S.FOUL (P1.T2) (J.Goble)",
+   "error_s": 0.0,
+   "elapsed_s": 2235.0,
+   "period": null
+  },
+  {
+   "clip": "f044080.mp4",
+   "video_s": 4408.0,
+   "start_s": 4405.0,
+   "action": "Free Throw (miss)",
+   "description": "MISS Wiggins Free Throw 1 of 2",
+   "error_s": 0.0,
+   "elapsed_s": 2235.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 4408.0,
+   "start_s": 4405.0,
+   "action": "Rebound",
+   "description": "THUNDER Rebound",
+   "error_s": 0.0,
+   "elapsed_s": 2235.0,
+   "period": null
+  },
+  {
+   "clip": "f044080.mp4",
+   "video_s": 4408.0,
+   "start_s": 4405.0,
+   "action": "Free Throw (made)",
+   "description": "Wiggins Free Throw 2 of 2 (3 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 2235.0,
+   "period": null
+  },
+  {
+   "clip": "f044740.mp4",
+   "video_s": 4474.0,
+   "start_s": 4471.0,
+   "action": "Made Shot (2PT)",
+   "description": "Mathurin 1' Driving Finger Roll Layup (5 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 2246.0,
+   "period": null
+  },
+  {
+   "clip": "f044860.mp4",
+   "video_s": 4486.0,
+   "start_s": 4483.0,
+   "action": "Made Shot (2PT)",
+   "description": "Jal. Williams 2' Driving Layup (13 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 2258.0,
+   "period": null
+  },
+  {
+   "clip": "f045080.mp4",
+   "video_s": 4508.0,
+   "start_s": 4505.0,
+   "action": "Turnover",
+   "description": "McConnell Bad Pass Turnover (P2.T23)",
+   "error_s": 0.0,
+   "elapsed_s": 2280.0,
+   "period": null
+  },
+  {
+   "clip": "f045080.mp4",
+   "video_s": 4508.0,
+   "start_s": 4505.0,
+   "action": "Steal",
+   "description": "Wiggins STEAL (1 STL)",
+   "error_s": 0.0,
+   "elapsed_s": 2280.0,
+   "period": null
+  },
+  {
+   "clip": "f045100.mp4",
+   "video_s": 4510.0,
+   "start_s": 4507.0,
+   "action": "Turnover",
+   "description": "Wiggins Lost Ball Turnover (P2.T7)",
+   "error_s": 0.0,
+   "elapsed_s": 2282.0,
+   "period": null
+  },
+  {
+   "clip": "f045100.mp4",
+   "video_s": 4510.0,
+   "start_s": 4507.0,
+   "action": "Steal",
+   "description": "McConnell STEAL (1 STL)",
+   "error_s": 0.0,
+   "elapsed_s": 2282.0,
+   "period": null
+  },
+  {
+   "clip": "f045530.mp4",
+   "video_s": 4553.0,
+   "start_s": 4550.0,
+   "action": "Missed Shot",
+   "description": "MISS Siakam 3' Driving Floating Bank Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 2290.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 4556.0,
+   "start_s": 4553.0,
+   "action": "Rebound",
+   "description": "Mathurin REBOUND (Off:2 Def:0)",
+   "error_s": 0.0,
+   "elapsed_s": 2293.0,
+   "period": null
+  },
+  {
+   "clip": "f045560.mp4",
+   "video_s": 4556.0,
+   "start_s": 4553.0,
+   "action": "Missed Shot",
+   "description": "MISS Mathurin 4' Putback Layup",
+   "error_s": 0.0,
+   "elapsed_s": 2293.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 4557.0,
+   "start_s": 4554.0,
+   "action": "Rebound",
+   "description": "Mathurin REBOUND (Off:3 Def:0)",
+   "error_s": 0.0,
+   "elapsed_s": 2294.0,
+   "period": null
+  },
+  {
+   "clip": "f045570.mp4",
+   "video_s": 4557.0,
+   "start_s": 4554.0,
+   "action": "Missed Shot",
+   "description": "MISS Mathurin 2' Tip Layup Shot",
+   "error_s": 0.0,
+   "elapsed_s": 2294.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 4557.0,
+   "start_s": 4554.0,
+   "action": "Rebound",
+   "description": "Pacers Rebound",
+   "error_s": 0.0,
+   "elapsed_s": 2294.0,
+   "period": null
+  },
+  {
+   "clip": "f045790.mp4",
+   "video_s": 4579.0,
+   "start_s": 4576.0,
+   "action": "Turnover",
+   "description": "McConnell Bad Pass Turnover (P3.T24)",
+   "error_s": 0.0,
+   "elapsed_s": 2295.0,
+   "period": null
+  },
+  {
+   "clip": "f045790.mp4",
+   "video_s": 4579.0,
+   "start_s": 4576.0,
+   "action": "Steal",
+   "description": "Jal. Williams STEAL (1 STL)",
+   "error_s": 0.0,
+   "elapsed_s": 2295.0,
+   "period": null
+  },
+  {
+   "clip": "f045820.mp4",
+   "video_s": 4582.0,
+   "start_s": 4579.0,
+   "action": "Made Shot (2PT)",
+   "description": "Jal. Williams 2' Running Dunk (15 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 2298.0,
+   "period": null
+  },
+  {
+   "clip": "f046560.mp4",
+   "video_s": 4656.0,
+   "start_s": 4653.0,
+   "action": "Made Shot (2PT)",
+   "description": "Nembhard 5' Driving Layup (8 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 2313.0,
+   "period": null
+  },
+  {
+   "clip": "f046560.mp4",
+   "video_s": 4656.0,
+   "start_s": 4653.0,
+   "action": "Foul",
+   "description": "Caruso S.FOUL (P4.T3) (J.Goble)",
+   "error_s": 0.0,
+   "elapsed_s": 2313.0,
+   "period": null
+  },
+  {
+   "clip": "f046560.mp4",
+   "video_s": 4656.0,
+   "start_s": 4653.0,
+   "action": "Free Throw (made)",
+   "description": "Nembhard Free Throw 1 of 1 (9 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 2313.0,
+   "period": null
+  },
+  {
+   "clip": "f047020.mp4",
+   "video_s": 4702.0,
+   "start_s": 4699.0,
+   "action": "Missed Shot",
+   "description": "MISS Wallace 24' 3PT Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 2329.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 4707.0,
+   "start_s": 4704.0,
+   "action": "Rebound",
+   "description": "THUNDER Rebound",
+   "error_s": 0.0,
+   "elapsed_s": 2334.0,
+   "period": null
+  },
+  {
+   "clip": "f047410.mp4",
+   "video_s": 4741.0,
+   "start_s": 4738.0,
+   "action": "Made Shot (2PT)",
+   "description": "Caruso 4' Driving Layup (11 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 2342.0,
+   "period": null
+  },
+  {
+   "clip": "f047410.mp4",
+   "video_s": 4741.0,
+   "start_s": 4738.0,
+   "action": "Foul",
+   "description": "Toppin S.FOUL (P2.T3) (D.Guthrie)",
+   "error_s": 0.0,
+   "elapsed_s": 2342.0,
+   "period": null
+  },
+  {
+   "clip": "f047410.mp4",
+   "video_s": 4741.0,
+   "start_s": 4738.0,
+   "action": "Free Throw (miss)",
+   "description": "MISS Caruso Free Throw 1 of 1",
+   "error_s": 0.0,
+   "elapsed_s": 2342.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 4771.0,
+   "start_s": 4768.0,
+   "action": "Rebound",
+   "description": "Pacers Rebound",
+   "error_s": 0.0,
+   "elapsed_s": 2343.0,
+   "period": null
+  },
+  {
+   "clip": "f047900.mp4",
+   "video_s": 4790.0,
+   "start_s": 4787.0,
+   "action": "Made Shot (3PT)",
+   "description": "Toppin 27' 3PT Jump Shot (14 PTS) (Nembhard 4 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 2353.0,
+   "period": null
+  },
+  {
+   "clip": "f047900.mp4",
+   "video_s": 4790.0,
+   "start_s": 4787.0,
+   "action": "Assist",
+   "description": "Toppin 27' 3PT Jump Shot (14 PTS) (Nembhard 4 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 2353.0,
+   "period": null
+  },
+  {
+   "clip": "f048140.mp4",
+   "video_s": 4814.0,
+   "start_s": 4811.0,
+   "action": "Missed Shot",
+   "description": "MISS Jal. Williams 7' Pullup Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 2377.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 4817.0,
+   "start_s": 4814.0,
+   "action": "Rebound",
+   "description": "Nesmith REBOUND (Off:0 Def:9)",
+   "error_s": 0.0,
+   "elapsed_s": 2380.0,
+   "period": null
+  },
+  {
+   "clip": "f048240.mp4",
+   "video_s": 4824.0,
+   "start_s": 4821.0,
+   "action": "Missed Shot",
+   "description": "MISS Nembhard 3' Driving Layup",
+   "error_s": 0.0,
+   "elapsed_s": 2387.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 4827.0,
+   "start_s": 4824.0,
+   "action": "Rebound",
+   "description": "Caruso REBOUND (Off:2 Def:3)",
+   "error_s": 0.0,
+   "elapsed_s": 2390.0,
+   "period": null
+  },
+  {
+   "clip": "f048390.mp4",
+   "video_s": 4839.0,
+   "start_s": 4836.0,
+   "action": "Missed Shot",
+   "description": "MISS Hartenstein 7' Floating Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 2402.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 4840.0,
+   "start_s": 4837.0,
+   "action": "Rebound",
+   "description": "Toppin REBOUND (Off:0 Def:4)",
+   "error_s": 0.0,
+   "elapsed_s": 2403.0,
+   "period": null
+  },
+  {
+   "clip": "f048500.mp4",
+   "video_s": 4850.0,
+   "start_s": 4847.0,
+   "action": "Made Shot (3PT)",
+   "description": "Turner 3PT Jump Shot (10 PTS) (Haliburton 6 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 2413.0,
+   "period": null
+  },
+  {
+   "clip": "f048500.mp4",
+   "video_s": 4850.0,
+   "start_s": 4847.0,
+   "action": "Assist",
+   "description": "Turner 3PT Jump Shot (10 PTS) (Haliburton 6 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 2413.0,
+   "period": null
+  },
+  {
+   "clip": "f049240.mp4",
+   "video_s": 4924.0,
+   "start_s": 4921.0,
+   "action": "Made Shot (2PT)",
+   "description": "Wallace 1' Cutting Layup Shot (6 PTS) (Jal. Williams 6 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 2428.0,
+   "period": null
+  },
+  {
+   "clip": "f049240.mp4",
+   "video_s": 4924.0,
+   "start_s": 4921.0,
+   "action": "Assist",
+   "description": "Wallace 1' Cutting Layup Shot (6 PTS) (Jal. Williams 6 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 2428.0,
+   "period": null
+  },
+  {
+   "clip": "f049370.mp4",
+   "video_s": 4937.0,
+   "start_s": 4934.0,
+   "action": "Foul",
+   "description": "Turner OFF.Foul (P3) (M.Davis)",
+   "error_s": 0.0,
+   "elapsed_s": 2441.0,
+   "period": null
+  },
+  {
+   "clip": "f049370.mp4",
+   "video_s": 4937.0,
+   "start_s": 4934.0,
+   "action": "Turnover",
+   "description": "Turner Offensive Foul Turnover (P6.T25)",
+   "error_s": 0.0,
+   "elapsed_s": 2441.0,
+   "period": null
+  },
+  {
+   "clip": "f049710.mp4",
+   "video_s": 4971.0,
+   "start_s": 4968.0,
+   "action": "Missed Shot",
+   "description": "MISS Wallace 26' 3PT Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 2454.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 4975.0,
+   "start_s": 4972.0,
+   "action": "Rebound",
+   "description": "Nembhard REBOUND (Off:1 Def:3)",
+   "error_s": 0.0,
+   "elapsed_s": 2458.0,
+   "period": null
+  },
+  {
+   "clip": "f049870.mp4",
+   "video_s": 4987.0,
+   "start_s": 4984.0,
+   "action": "Made Shot (3PT)",
+   "description": "Toppin 25' 3PT Jump Shot (17 PTS) (Nesmith 1 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 2470.0,
+   "period": null
+  },
+  {
+   "clip": "f049870.mp4",
+   "video_s": 4987.0,
+   "start_s": 4984.0,
+   "action": "Assist",
+   "description": "Toppin 25' 3PT Jump Shot (17 PTS) (Nesmith 1 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 2470.0,
+   "period": null
+  },
+  {
+   "clip": "f050060.mp4",
+   "video_s": 5006.0,
+   "start_s": 5003.0,
+   "action": "Missed Shot",
+   "description": "MISS Dort 25' 3PT Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 2489.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 5010.0,
+   "start_s": 5007.0,
+   "action": "Rebound",
+   "description": "Haliburton REBOUND (Off:0 Def:9)",
+   "error_s": 0.0,
+   "elapsed_s": 2493.0,
+   "period": null
+  },
+  {
+   "clip": "f050150.mp4",
+   "video_s": 5015.0,
+   "start_s": 5012.0,
+   "action": "Missed Shot",
+   "description": "MISS Nesmith 3PT Running Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 2498.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 5015.0,
+   "start_s": 5012.0,
+   "action": "Rebound",
+   "description": "Turner REBOUND (Off:5 Def:4)",
+   "error_s": 0.0,
+   "elapsed_s": 2498.0,
+   "period": null
+  },
+  {
+   "clip": "f050150.mp4",
+   "video_s": 5015.0,
+   "start_s": 5012.0,
+   "action": "Foul",
+   "description": "Jal. Williams P.FOUL (P4.T4) (D.Guthrie)",
+   "error_s": 0.0,
+   "elapsed_s": 2498.0,
+   "period": null
+  },
+  {
+   "clip": "f050420.mp4",
+   "video_s": 5042.0,
+   "start_s": 5039.0,
+   "action": "Made Shot (3PT)",
+   "description": "Turner 24' 3PT Step Back Bank Jump Shot (13 PTS) (Nembhard 5 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 2504.0,
+   "period": null
+  },
+  {
+   "clip": "f050420.mp4",
+   "video_s": 5042.0,
+   "start_s": 5039.0,
+   "action": "Assist",
+   "description": "Turner 24' 3PT Step Back Bank Jump Shot (13 PTS) (Nembhard 5 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 2504.0,
+   "period": null
+  },
+  {
+   "clip": "f050610.mp4",
+   "video_s": 5061.0,
+   "start_s": 5058.0,
+   "action": "Foul",
+   "description": "Nembhard S.FOUL (P3.T4) (D.Guthrie)",
+   "error_s": 0.0,
+   "elapsed_s": 2523.0,
+   "period": null
+  },
+  {
+   "clip": "f050610.mp4",
+   "video_s": 5061.0,
+   "start_s": 5058.0,
+   "action": "Free Throw (made)",
+   "description": "Gilgeous-Alexander Free Throw 1 of 2 (29 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 2523.0,
+   "period": null
+  },
+  {
+   "clip": "f050610.mp4",
+   "video_s": 5061.0,
+   "start_s": 5058.0,
+   "action": "Free Throw (made)",
+   "description": "Gilgeous-Alexander Free Throw 2 of 2 (30 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 2523.0,
+   "period": null
+  },
+  {
+   "clip": "f051380.mp4",
+   "video_s": 5138.0,
+   "start_s": 5135.0,
+   "action": "Made Shot (2PT)",
+   "description": "Turner 16' Jump Shot (15 PTS) (Nembhard 6 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 2538.0,
+   "period": null
+  },
+  {
+   "clip": "f051380.mp4",
+   "video_s": 5138.0,
+   "start_s": 5135.0,
+   "action": "Assist",
+   "description": "Turner 16' Jump Shot (15 PTS) (Nembhard 6 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 2538.0,
+   "period": null
+  },
+  {
+   "clip": "f051550.mp4",
+   "video_s": 5155.0,
+   "start_s": 5152.0,
+   "action": "Foul",
+   "description": "Nesmith S.FOUL (P2.PN) (M.Davis)",
+   "error_s": 0.0,
+   "elapsed_s": 2555.0,
+   "period": null
+  },
+  {
+   "clip": "f051550.mp4",
+   "video_s": 5155.0,
+   "start_s": 5152.0,
+   "action": "Free Throw (made)",
+   "description": "Jal. Williams Free Throw 1 of 2 (16 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 2555.0,
+   "period": null
+  },
+  {
+   "clip": "f051550.mp4",
+   "video_s": 5155.0,
+   "start_s": 5152.0,
+   "action": "Free Throw (made)",
+   "description": "Jal. Williams Free Throw 2 of 2 (17 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 2555.0,
+   "period": null
+  },
+  {
+   "clip": "f052150.mp4",
+   "video_s": 5215.0,
+   "start_s": 5212.0,
+   "action": "Missed Shot",
+   "description": "MISS Nembhard 3' Driving Layup",
+   "error_s": 0.0,
+   "elapsed_s": 2565.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 5216.0,
+   "start_s": 5213.0,
+   "action": "Rebound",
+   "description": "Holmgren REBOUND (Off:0 Def:6)",
+   "error_s": 0.0,
+   "elapsed_s": 2566.0,
+   "period": null
+  },
+  {
+   "clip": "f052310.mp4",
+   "video_s": 5231.0,
+   "start_s": 5228.0,
+   "action": "Missed Shot",
+   "description": "MISS Jal. Williams 2' Driving Layup",
+   "error_s": 0.0,
+   "elapsed_s": 2581.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 5232.0,
+   "start_s": 5229.0,
+   "action": "Rebound",
+   "description": "Haliburton REBOUND (Off:0 Def:10)",
+   "error_s": 0.0,
+   "elapsed_s": 2582.0,
+   "period": null
+  },
+  {
+   "clip": "f052390.mp4",
+   "video_s": 5239.0,
+   "start_s": 5236.0,
+   "action": "Made Shot (2PT)",
+   "description": "Haliburton 3' Running Finger Roll Layup (12 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 2589.0,
+   "period": null
+  },
+  {
+   "clip": "f052510.mp4",
+   "video_s": 5251.0,
+   "start_s": 5248.0,
+   "action": "Missed Shot",
+   "description": "MISS Holmgren 1' Driving Layup",
+   "error_s": 0.0,
+   "elapsed_s": 2601.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 5254.0,
+   "start_s": 5251.0,
+   "action": "Rebound",
+   "description": "Siakam REBOUND (Off:2 Def:6)",
+   "error_s": 0.0,
+   "elapsed_s": 2604.0,
+   "period": null
+  },
+  {
+   "clip": "f052700.mp4",
+   "video_s": 5270.0,
+   "start_s": 5267.0,
+   "action": "Missed Shot",
+   "description": "MISS Turner 26' 3PT Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 2620.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 5275.0,
+   "start_s": 5272.0,
+   "action": "Rebound",
+   "description": "Caruso REBOUND (Off:2 Def:4)",
+   "error_s": 0.0,
+   "elapsed_s": 2625.0,
+   "period": null
+  },
+  {
+   "clip": "f052890.mp4",
+   "video_s": 5289.0,
+   "start_s": 5286.0,
+   "action": "Made Shot (2PT)",
+   "description": "Gilgeous-Alexander 2' Driving Layup (32 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 2639.0,
+   "period": null
+  },
+  {
+   "clip": "f053110.mp4",
+   "video_s": 5311.0,
+   "start_s": 5308.0,
+   "action": "Missed Shot",
+   "description": "MISS Haliburton 27' 3PT Step Back Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 2661.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 5314.0,
+   "start_s": 5311.0,
+   "action": "Rebound",
+   "description": "Jal. Williams REBOUND (Off:1 Def:3)",
+   "error_s": 0.0,
+   "elapsed_s": 2664.0,
+   "period": null
+  },
+  {
+   "clip": "f053260.mp4",
+   "video_s": 5326.0,
+   "start_s": 5323.0,
+   "action": "Foul",
+   "description": "Haliburton S.FOUL (P1.PN) (M.Davis)",
+   "error_s": 0.0,
+   "elapsed_s": 2676.0,
+   "period": null
+  },
+  {
+   "clip": "f053260.mp4",
+   "video_s": 5326.0,
+   "start_s": 5323.0,
+   "action": "Free Throw (made)",
+   "description": "Gilgeous-Alexander Free Throw 1 of 2 (33 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 2676.0,
+   "period": null
+  },
+  {
+   "clip": "f053260.mp4",
+   "video_s": 5326.0,
+   "start_s": 5323.0,
+   "action": "Free Throw (made)",
+   "description": "Gilgeous-Alexander Free Throw 2 of 2 (34 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 2676.0,
+   "period": null
+  },
+  {
+   "clip": "f054360.mp4",
+   "video_s": 5436.0,
+   "start_s": 5433.0,
+   "action": "Missed Shot",
+   "description": "MISS Haliburton 4' Driving Floating Bank Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 2692.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 5437.0,
+   "start_s": 5434.0,
+   "action": "Rebound",
+   "description": "Siakam REBOUND (Off:3 Def:6)",
+   "error_s": 0.0,
+   "elapsed_s": 2693.0,
+   "period": null
+  },
+  {
+   "clip": "f054370.mp4",
+   "video_s": 5437.0,
+   "start_s": 5434.0,
+   "action": "Foul",
+   "description": "Wallace S.FOUL (P2.PN) (J.Goble)",
+   "error_s": 0.0,
+   "elapsed_s": 2693.0,
+   "period": null
+  },
+  {
+   "clip": "f054370.mp4",
+   "video_s": 5437.0,
+   "start_s": 5434.0,
+   "action": "Free Throw (miss)",
+   "description": "MISS Siakam Free Throw 1 of 2",
+   "error_s": 0.0,
+   "elapsed_s": 2693.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 5437.0,
+   "start_s": 5434.0,
+   "action": "Rebound",
+   "description": "Pacers Rebound",
+   "error_s": 0.0,
+   "elapsed_s": 2693.0,
+   "period": null
+  },
+  {
+   "clip": "f054370.mp4",
+   "video_s": 5437.0,
+   "start_s": 5434.0,
+   "action": "Violation",
+   "description": "Lane",
+   "error_s": 0.0,
+   "elapsed_s": 2693.0,
+   "period": null
+  },
+  {
+   "clip": "f054370.mp4",
+   "video_s": 5437.0,
+   "start_s": 5434.0,
+   "action": "Free Throw (made)",
+   "description": "Siakam Free Throw 2 of 2 (17 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 2693.0,
+   "period": null
+  },
+  {
+   "clip": "f055830.mp4",
+   "video_s": 5583.0,
+   "start_s": 5580.0,
+   "action": "Foul",
+   "description": "Haliburton P.FOUL (P2.PN) (M.Davis)",
+   "error_s": 0.0,
+   "elapsed_s": 2708.0,
+   "period": null
+  },
+  {
+   "clip": "f055830.mp4",
+   "video_s": 5583.0,
+   "start_s": 5580.0,
+   "action": "Free Throw (made)",
+   "description": "Gilgeous-Alexander Free Throw 1 of 2 (35 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 2708.0,
+   "period": null
+  },
+  {
+   "clip": "f055830.mp4",
+   "video_s": 5583.0,
+   "start_s": 5580.0,
+   "action": "Free Throw (made)",
+   "description": "Gilgeous-Alexander Free Throw 2 of 2 (36 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 2708.0,
+   "period": null
+  },
+  {
+   "clip": "f056480.mp4",
+   "video_s": 5648.0,
+   "start_s": 5645.0,
+   "action": "Made Shot (3PT)",
+   "description": "Nesmith 3PT Jump Shot (10 PTS) (Toppin 2 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 2722.0,
+   "period": null
+  },
+  {
+   "clip": "f056480.mp4",
+   "video_s": 5648.0,
+   "start_s": 5645.0,
+   "action": "Assist",
+   "description": "Nesmith 3PT Jump Shot (10 PTS) (Toppin 2 AST)",
+   "error_s": 0.0,
+   "elapsed_s": 2722.0,
+   "period": null
+  },
+  {
+   "clip": "f056700.mp4",
+   "video_s": 5670.0,
+   "start_s": 5667.0,
+   "action": "Missed Shot",
+   "description": "MISS Jal. Williams 26' 3PT Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 2744.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 5672.0,
+   "start_s": 5669.0,
+   "action": "Rebound",
+   "description": "Nesmith REBOUND (Off:0 Def:10)",
+   "error_s": 0.0,
+   "elapsed_s": 2746.0,
+   "period": null
+  },
+  {
+   "clip": "f056870.mp4",
+   "video_s": 5687.0,
+   "start_s": 5684.0,
+   "action": "Made Shot (3PT)",
+   "description": "Nembhard 26' 3PT Step Back Jump Shot (12 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 2761.0,
+   "period": null
+  },
+  {
+   "clip": "f057100.mp4",
+   "video_s": 5710.0,
+   "start_s": 5707.0,
+   "action": "Missed Shot",
+   "description": "MISS Dort 26' 3PT Jump Shot",
+   "error_s": 0.0,
+   "elapsed_s": 2776.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 5714.0,
+   "start_s": 5711.0,
+   "action": "Rebound",
+   "description": "Toppin REBOUND (Off:0 Def:5)",
+   "error_s": 0.0,
+   "elapsed_s": 2780.0,
+   "period": null
+  },
+  {
+   "clip": "f057210.mp4",
+   "video_s": 5721.0,
+   "start_s": 5718.0,
+   "action": "Missed Shot",
+   "description": "MISS Nesmith 6' Driving Layup",
+   "error_s": 0.0,
+   "elapsed_s": 2787.0,
+   "period": null
+  },
+  {
+   "clip": "f057210.mp4",
+   "video_s": 5721.0,
+   "start_s": 5718.0,
+   "action": "Block",
+   "description": "Dort BLOCK (2 BLK)",
+   "error_s": 0.0,
+   "elapsed_s": 2787.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 5724.0,
+   "start_s": 5721.0,
+   "action": "Rebound",
+   "description": "Gilgeous-Alexander REBOUND (Off:0 Def:5)",
+   "error_s": 0.0,
+   "elapsed_s": 2790.0,
+   "period": null
+  },
+  {
+   "clip": "f057270.mp4",
+   "video_s": 5727.0,
+   "start_s": 5724.0,
+   "action": "Made Shot (2PT)",
+   "description": "Gilgeous-Alexander 1' Running Layup (38 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 2793.0,
+   "period": null
+  },
+  {
+   "clip": "f057350.mp4",
+   "video_s": 5735.0,
+   "start_s": 5732.0,
+   "action": "Foul",
+   "description": "Caruso P.FOUL (P5.PN) (D.Guthrie)",
+   "error_s": 0.0,
+   "elapsed_s": 2798.0,
+   "period": null
+  },
+  {
+   "clip": "f057350.mp4",
+   "video_s": 5735.0,
+   "start_s": 5732.0,
+   "action": "Free Throw (made)",
+   "description": "Nembhard Free Throw 1 of 2 (13 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 2798.0,
+   "period": null
+  },
+  {
+   "clip": "f057350.mp4",
+   "video_s": 5735.0,
+   "start_s": 5732.0,
+   "action": "Free Throw (made)",
+   "description": "Nembhard Free Throw 2 of 2 (14 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 2798.0,
+   "period": null
+  },
+  {
+   "clip": "f058080.mp4",
+   "video_s": 5808.0,
+   "start_s": 5805.0,
+   "action": "Missed Shot",
+   "description": "MISS Gilgeous-Alexander 3' Driving Layup",
+   "error_s": 0.0,
+   "elapsed_s": 2813.0,
+   "period": null
+  },
+  {
+   "clip": "f058080.mp4",
+   "video_s": 5808.0,
+   "start_s": 5805.0,
+   "action": "Block",
+   "description": "Siakam BLOCK (1 BLK)",
+   "error_s": 0.0,
+   "elapsed_s": 2813.0,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 5810.0,
+   "start_s": 5807.0,
+   "action": "Rebound",
+   "description": "Nesmith REBOUND (Off:0 Def:11)",
+   "error_s": 0.0,
+   "elapsed_s": 2815.0,
+   "period": null
+  },
+  {
+   "clip": "f058250.mp4",
+   "video_s": 5825.0,
+   "start_s": 5822.0,
+   "action": "Missed Shot",
+   "description": "MISS Nembhard 28' 3PT Step Back Jump Shot",
+   "error_s": 0.2,
+   "elapsed_s": 2829.6,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 5827.0,
+   "start_s": 5824.0,
+   "action": "Rebound",
+   "description": "Siakam REBOUND (Off:4 Def:6)",
+   "error_s": 0.0,
+   "elapsed_s": 2831.4,
+   "period": null
+  },
+  {
+   "clip": "f058270.mp4",
+   "video_s": 5827.0,
+   "start_s": 5824.0,
+   "action": "Made Shot (2PT)",
+   "description": "Siakam 2' Putback Layup (19 PTS)",
+   "error_s": 0.0,
+   "elapsed_s": 2831.4,
+   "period": null
+  },
+  {
+   "clip": "f058530.mp4",
+   "video_s": 5853.0,
+   "start_s": 5850.0,
+   "action": "Missed Shot",
+   "description": "MISS Jal. Williams 7' Driving Floating Bank Jump Shot",
+   "error_s": 0.3,
+   "elapsed_s": 2855.1,
+   "period": null
+  },
+  {
+   "clip": null,
+   "video_s": 5856.0,
+   "start_s": 5853.0,
+   "action": "Rebound",
+   "description": "THUNDER Rebound",
+   "error_s": 0.0,
+   "elapsed_s": 2857.5,
+   "period": null
+  },
+  {
+   "clip": "f059970.mp4",
+   "video_s": 5997.0,
+   "start_s": 5994.0,
+   "action": "Missed Shot",
+   "description": "MISS Gilgeous-Alexander 15' Fadeaway Jumper",
+   "error_s": 0.0,
+   "elapsed_s": 2868.9,
+   "period": null
+  }
+ ]
+}

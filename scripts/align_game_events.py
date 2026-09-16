@@ -70,6 +70,11 @@ def main() -> int:
     from nba_api.stats.endpoints import playbyplayv3
 
     readings = json.loads(Path(args.clock).read_text())
+    # read_game_clock.py writes the readings inside a file that also carries the
+    # raw candidates and the region it read them from; a bare list is the older
+    # shape and still works.
+    if isinstance(readings, dict):
+        readings = readings["readings"]
     actions = playbyplayv3.PlayByPlayV3(
         game_id=args.game_id, timeout=60).get_dict()["game"]["actions"]
 

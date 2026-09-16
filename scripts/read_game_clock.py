@@ -168,6 +168,51 @@ def elapsed(period: int, seconds: float) -> float:
     return 4 * PERIOD_S + (period - 5) * OT_S + (OT_S - seconds)
 
 
+def stream(video, start, seconds, step, crop=None):
+    """Frames every `step` seconds from `start`, decoded in one pass.
+
+    ffmpeg reads the file once and drops the frames in between, which is what
+    makes this minutes rather than hours; `crop` keeps only the clock, so most
+    of the pixels are never copied out at all.
+    """
+    import subprocess
+
+    import numpy as np
+
+    filters = [f"fps=1/{step}"]
+    if crop:
+        top, bottom, left, right = crop
+        filters.append(f"crop={right - left}:{bottom - top}:{left}:{top}")
+    width, height = ((right - left, bottom - top) if crop else (None, None))
+    command = ["ffmpeg", "-nostdin", "-loglevel", "error",
+               "-ss", f"{start:.3f}", "-t", f"{seconds:.3f}", "-i", str(video),
+               "-vf", ",".join(filters), "-f", "rawvideo",
+               "-pix_fmt", "bgr24", "-"]
+    if not crop:
+        # The learning pass needs whole frames, so ask ffmpeg for the size.
+        import json as _json
+        probe = subprocess.run(
+            ["ffprobe", "-v", "error", "-select_streams", "v:0",
+             "-show_entries", "stream=width,height", "-of", "json", str(video)],
+            capture_output=True, text=True)
+        stream_info = _json.loads(probe.stdout)["streams"][0]
+        width, height = int(stream_info["width"]), int(stream_info["height"])
+
+    size = width * height * 3
+    process = subprocess.Popen(command, stdout=subprocess.PIPE,
+                               stderr=subprocess.DEVNULL, bufsize=size * 4)
+    try:
+        while True:
+            buffer = process.stdout.read(size)
+            if not buffer or len(buffer) < size:
+                return
+            yield np.frombuffer(buffer, np.uint8).reshape(height, width, 3)
+    finally:
+        process.stdout.close()
+        process.terminate()
+        process.wait(timeout=5)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--video", required=True)
@@ -193,15 +238,14 @@ def main() -> int:
 
     capture = cv2.VideoCapture(args.video)
     duration = capture.get(cv2.CAP_PROP_FRAME_COUNT) / capture.get(cv2.CAP_PROP_FPS)
-
-    def frame_at(t):
-        capture.set(cv2.CAP_PROP_POS_MSEC, t * 1000)
-        ok, frame = capture.read()
-        return frame if ok else None
+    capture.release()
 
     location, templates = None, {}
-    for start in (args.learn_start, args.learn_start + 600, args.learn_start + 1800, 2 * args.learn_start + 1800):
-        frames = [f for f in (frame_at(start + s) for s in range(args.learn_seconds)) if f is not None]
+    for start in (args.learn_start, args.learn_start + 600,
+                  args.learn_start + 1800, 2 * args.learn_start + 1800):
+        frames = list(stream(args.video, start, args.learn_seconds, 1.0))
+        if not frames:
+            continue
         location = locate_clock(frames)
         if location is None:
             continue
@@ -212,19 +256,24 @@ def main() -> int:
         print(f"FAIL - clock not located or digits not learned (roi {location}, digits {sorted(templates)})")
         return 1
     top, bottom, left, right = location.roi
-    print(f"clock at rows {top}-{bottom}, cols {left}-{right}; ticks {location.ticks}/{location.samples}; digits {sorted(templates)}")
+    print(f"clock at rows {top}-{bottom}, cols {left}-{right}; "
+          f"ticks {location.ticks}/{location.samples}; digits {sorted(templates)}",
+          flush=True)
 
-    candidates = []
-    for t in np.arange(0.0, duration, args.step):
-        frame = frame_at(float(t))
-        if frame is None:
-            continue
-        text, _ = read_clock(frame[top:bottom, left:right], templates)
+    # Only the clock is read, so only the clock is decoded and moved: the crop
+    # happens inside ffmpeg. Seeking to each second separately made this a
+    # five-hour pass on a two-hour broadcast, because every seek decodes from
+    # the keyframe before it; one sequential pass over the same video is
+    # minutes. Same frames, same readings.
+    candidates, sampled = [], 0
+    for i, crop in enumerate(stream(args.video, 0.0, duration, args.step,
+                                    crop=(top, bottom, left, right))):
+        sampled += 1
+        text, _ = read_clock(crop, templates)
         options = readings_from(text)
         if options:
-            candidates.append((float(t), options))
-    return _write(args, candidates, len(np.arange(0.0, duration, args.step)),
-                  list(location.roi), args.step)
+            candidates.append((i * args.step, options))
+    return _write(args, candidates, sampled, list(location.roi), args.step)
 
 
 def _write(args, candidates, sampled, roi, step):
