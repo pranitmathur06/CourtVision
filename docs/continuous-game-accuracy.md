@@ -6395,3 +6395,60 @@ court and too few landmarks. That is out-of-distribution rejection, not a
 localisation failure, and it is what scale and crop augmentation is for. But the
 band it has to improve starts at 42%, not 0%, and whole-game coverage starts at
 79%, not 75%.
+
+## Round 93: the ball's 13 points are real, and the path does not recover them
+
+`eval_ball_selection.py` measured the headroom: on 130 uniformly sampled frames
+the detector proposes a candidate within 28 px on **91.5%** and the pipeline
+reports the right one on **78.5%**. Thirteen points of pure selection.
+
+`src/courtvision/ball_track.py` has held an exact Viterbi selector, with a
+passing unit test, since before that gap was measured, and nothing had ever
+called it. `scripts/eval_ball_temporal.py` calls it.
+
+### It does not work, and the constants say so themselves
+
+Windows of 9 frames at 1/15 s, the two path constants fitted on the **hard** half
+of each game and reported on the **uniform** half:
+
+    game            oracle   argmax   viterbi   paired (exact McNemar)
+    Finals G7        92.7%    87.8%     87.8%   0 vs 0
+    Finals G1        85.3%    64.7%     67.6%   1 vs 0,  p = 1.00
+    ECF G1           94.5%    80.0%     80.0%   1 vs 1,  p = 1.00
+    ------------------------------------------------------------------
+    pooled           91.5%    78.5%     79.2%   one frame, not significant
+
+The fit chose `move_weight` of 0.0005 to 0.002 on all three -- the bottom of the
+grid. **The best thing the fitted model can do with the smoothness prior is
+switch it off**, at which point the Viterbi degenerates into the per-frame
+argmax it was meant to beat. With the constants as written (0.02, tuned for
+10 fps) it is far worse: 63-71%, and significantly so.
+
+### Why, measured
+
+On the 17 frames across three games where the ball IS proposed and argmax picks
+something else -- the exact frames the selector exists to fix:
+
+    the real ball, nearest candidate in an adjacent frame   median  90.5 px
+    the decoy                                               median   6.5 px
+    the decoy is the smoother of the two on                 13/17 = 76%
+
+`ball_track.py` opens with *"a ball moves smoothly and a false positive
+teleports."* **On this detector's failures that is backwards.** The false
+positives are stationary things -- a head, a shoe, a logo, 6.5 px of apparent
+motion -- and the frames where the ball is hard to see are precisely the frames
+where it is in flight at 90 px between samples. A prior that rewards not moving
+prefers the decoy, and the fit discovering `move_weight = 0` is that fact
+arriving through the optimiser.
+
+### What this says to try instead
+
+Not a smoothness prior but a **motion model that expects the ball to move**: fit
+a ballistic or constant-velocity track and score a candidate by its residual
+against the predicted position, so the flying ball is cheap and the stationary
+decoy is expensive. That is the same information used with the opposite sign,
+and it is the version this measurement supports rather than refutes. The 13
+points are still there and still a selection problem.
+
+Kept: `eval_ball_temporal.py`, the per-game uniform and hard truth files, and
+the measurement above.
