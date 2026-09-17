@@ -380,10 +380,17 @@ Yield improved as the detector improved — a virtuous loop:
 |---|---:|---:|---:|---|
 | 0 | 191 | 24% | 0.55 | 1/4 — worse than proximity |
 | 1 | 680 | 49% | 0.85 | 5/7 |
-| 2 | 3,550 | 60% | 0.84 | 6/7 → **9/9 on the expanded key** |
+| 2 | 3,550 | 60% | 0.84 | 6/7 → 9/9 on the expanded key |
 
 `raw_holder` now prefers the learned handler and falls back to nearest-player when
 it does not fire.
+
+**That 9/9 did not survive contact with a properly-powered measurement.** V6 is a
+sanity gate on ten hand-picked moments, and it passed. On 157 frames sampled
+uniformly and labelled cold, the same handler class names the right player
+**49.7%** of the time (CI 42–57%). Ten moments cannot distinguish 90% from 50%;
+the gate was never wrong, it was just never evidence of a rate. See §6 and
+[docs/v8-possession-kernels.md](v8-possession-kernels.md).
 
 ### An evaluation-design lesson worth stealing
 
@@ -834,14 +841,15 @@ Two structural lessons from failures:
 | v1 pipeline | Done — 11 gates, 287 tests, runs end to end |
 | Action classifier on **clips** | 0.816, every class 0.76–0.90, confound closed |
 | Action classifier on **games** | **Not usable.** 27× over-prediction on rebound; `background` class built, not yet retrained and re-measured |
-| Tracking across cuts | Broken by design — ByteTrack has no re-ID. 8,602 IDs on 84 minutes |
+| Tracking across cuts | Broken by design — no re-ID. 463 identities for 10 players over 5 minutes; 34 ids per 6 s clip after the rewritten tracker |
 | Render at length | 4.8 GB / 84 min with `mp4v`; needs segment extraction or a modern codec |
-| Possession | 9/9 on the answer key; the underlying signal is genuinely ambiguous in 61% of frames |
+| Possession | **59.2%** on 157 held-out frames (CI 51–67%), against 49.7% for what ships; **66.9% of the frames that are winnable at all**, since on 18 of 157 the detector drew no box for the handler |
 | Player naming | Working end to end against the official feed; cannot separate events inside a dead-ball stoppage |
-| Court registration | 0.36 ft synthetic, 0.42 score on real footage — works, but not unattended |
+| Court registration | Accurate — 0.30/0.42/0.49 ft on three broadcasts against 5.8 ft for the method it replaced — but covers 75% of frames and **0% of normal wide play shots** |
 | Screen / set detection | Geometric sets implemented; **never fired on real footage** — a 1–2 ft registration resolution limit |
 | Set *calls* | Genuine data gap. No dataset carries them |
-| CUDA kernel | Compiles, matches the oracle; speedup does not reproduce across machines |
+| CUDA kernel | Two: a fused possession operator and a forward–backward scan over time, both with hand-derived backwards, verified against NumPy and autograd and compiled on an A6000 |
+| Ball | **78.5%** top-1 within 28 px on 130 uniform frames; the detector proposes a candidate on **91.5%**, so 13 points are a selection problem |
 | Dual-GPU split | Verified, and measurably not worth it for this workload |
 
 **Next, in value order:**

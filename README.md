@@ -30,10 +30,10 @@ python -m scripts.run_pipeline clip.mp4 --out outputs/run
 | | |
 |---|---|
 | **Stack** | PyTorch · YOLO11 · VideoMAE · ByteTrack · OpenCV · scikit-learn · LangGraph · CUDA C++ |
-| **Scale** | ~4,500 lines of library code, 346 tests, 11 validation gates, 150 commits |
+| **Scale** | ~4,500 lines of library code, 1,087 tests, 11 validation gates, 200 commits |
 | **Throughput** | 84 minutes of video in 47.7 minutes — **1.76× real time** on one RTX 4090 |
 | **Action recognition** | **0.816** across 7 classes on 735 held-out clips (chance 0.143) |
-| **Possession** | 9/9 on a human-annotated answer key |
+| **Possession** | **59.2%** on 157 held-out frames a person labelled (CI 51–67%) |
 | **Player naming** | Real names, no jersey OCR — joined against the official NBA play-by-play |
 
 ---
@@ -53,6 +53,30 @@ classification → event structuring → commentary → render.
 | rebound | 0.78 | **overall** | **0.816** |
 
 Every class lands between 0.76 and 0.90 against a uniform chance of 0.143.
+
+## Which numbers come from vision, and which come from the feed
+
+This is the most important thing to know about the accuracy above, and it was
+not stated anywhere until now.
+
+**The event text comes from the official NBA play-by-play, not from vision.**
+What vision does is put that record onto the video — reading the game clock off
+the scoreboard and aligning it — and draw boxes over the footage. So:
+
+| | |
+|---|---|
+| Timestamping a known event onto the video | **94.6 / 97.3 / 96.6%** over three full games, 1,752 events |
+| Published clips landing within 1 s of the event | **93–99%** over 1,195 clips |
+| Deciding *what happened* from pixels alone | shots F1 **0.65** inside the 27–48% of video where the clock reads, **0.45–0.50** without that filter |
+| Deciding *who* has the ball from pixels alone | **59.2%** |
+| Naming a player from his jersey | **45%** |
+
+The demo reads well because the first two rows are strong. The last three are
+the honest state of vision-only understanding, and the project does not claim
+otherwise. An earlier version of this table said possession was "9/9 on a
+human-annotated answer key" — that was the v1 spec's sanity gate on ten
+hand-picked moments, and the properly-powered number on 157 uniformly-sampled
+held-out frames is fifty points lower.
 
 **Players get real names without solving jersey OCR.** Jersey-number recognition
 is a hard open research problem — small text, motion blur, occlusion. But you

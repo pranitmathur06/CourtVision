@@ -17,9 +17,10 @@ why steal ran at 33.8x the official count however it was trained.
 The reason is that these are not visual categories. A steal is not a look; it
 is possession changing team without a shot. A rebound is possession resolving
 after a shot goes up. A block is a shot the defence retains. They are defined by
-the possession structure, which the pipeline already computes to 9/9 on the
-human-annotated answer key, and by shots, which the classifier already gets
-right.
+the possession structure, which the pipeline computes to 59.2% on 157 held-out
+frames (CI 51-67%) -- not the 9/9 an earlier version of this docstring claimed,
+which was a ten-moment sanity gate and not a rate -- and by shots, which the
+classifier already gets right. Everything derived here inherits that 59.2%.
 
 So derive them instead of recognising them.
 """

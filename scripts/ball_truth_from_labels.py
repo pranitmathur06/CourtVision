@@ -77,6 +77,7 @@ def main() -> int:
                        "both sides of the accuracy",
                "tolerance_px": args.tolerance_px,
                "frames_dir": args.frames,
+               "game": args.game,
                "unknown_count": len(unknown), "absent_count": len(absent),
                "frames": [{"t": r["t"], "ball": r["ball"],
                            "radius": r.get("radius", 0),

@@ -20,8 +20,21 @@ What goes in:
               two positives, because the failure being fixed is a false
               positive, not a miss.
 
-Held out: crops from within HOLDOUT_S of the thirteen hand-located ball
-instants, so `eval_ball_choice.py` keeps measuring unseen frames.
+Held out: crops from within HOLDOUT_S of EVERY hand-located ball instant this
+project scores against, so the ball evaluators keep measuring unseen frames.
+
+That used to mean thirteen instants, from `ball_truth_handlocated.json` and
+`ball_truth_hard.json`. It is now several hundred: a uniform 25 s grid across
+this broadcast, plus the uniform half of the possession round. Holding out only
+the original thirteen while scoring against the rest would have trained on the
+evaluation set the moment anyone retrained the ball -- the same family of
+mistake as a by-file split whose val frames sit half a second from a training
+frame. Nothing had retrained yet, so nothing was contaminated; this closes it
+before something does.
+
+The holdout is keyed to THIS broadcast. A timestamp in one game is not the same
+moment as the same timestamp in another, so pooling every game's instants would
+hold out a great deal of usable footage for no reason.
 """
 
 from __future__ import annotations
@@ -43,14 +56,62 @@ BALL_TRACK = Path("data/ball_track")
 BALL_CLASS_IN_SOURCE = 1
 
 
-def truth_instants():
+#: The broadcast the tile sources are cut from. Holdout instants are taken from
+#: this game only, because a timestamp means a different moment in another.
+SOURCE_GAME = "2025 Finals G7"
+
+
+def truth_instants(game: str = SOURCE_GAME):
+    """Every instant the ball is scored against, in `game`.
+
+    Missing one of these files is not a warning -- it is a silent leak the next
+    retrain would inherit -- so every ball truth file in the directory is read
+    by glob rather than by name.
+    """
     out = []
-    for name in ("ball_truth_handlocated", "ball_truth_hard"):
-        path = Path("data/labeling/rim_ball") / f"{name}.json"
-        if path.exists():
-            out += [float(r["t"]) for r in json.load(open(path))["frames"]
-                    if r.get("ball")]
-    return out
+    for path in sorted(Path("data/labeling/rim_ball").glob("ball_truth*.json")):
+        blob = json.load(open(path))
+        # A file with no game named is one of the originals, which are this
+        # broadcast. A file naming a different game holds different moments and
+        # blocking this broadcast's footage on them would cost a lot for nothing.
+        if (blob.get("game") or SOURCE_GAME) != game:
+            continue
+        out += [float(r["t"]) for r in blob.get("frames", []) if r.get("ball")]
+        # 'absent' and 'unknown' frames are scored too -- as the false-alarm
+        # denominator and as exclusions -- so they must not be trained on either.
+        out += [float(r["t"]) for r in blob.get("absent", [])]
+        out += [float(r["t"]) for r in blob.get("unknown", [])]
+    for labels in ("data/labels/possession_labels.json",
+                   "data/labels/handler_labels.json"):
+        path = Path(labels)
+        if not path.exists():
+            continue
+        for row in json.load(open(path))["frames"]:
+            if row.get("game") == game and row.get("pick") == "random":
+                out.append(float(row["t"]))
+    return sorted(set(out))
+
+
+def blocked_share(instants, holdout=None, span=None):
+    """Fraction of the broadcast the holdout puts out of reach, 0 when empty.
+
+    Printed because it is the quantity that decides whether a broadcast can
+    still supply training data at all, and it moves every time a labelling
+    round lands.
+    """
+    holdout = HOLDOUT_S if holdout is None else holdout
+    if not instants:
+        return 0.0
+    merged = []
+    for point in sorted(instants):
+        low, high = point - holdout, point + holdout
+        if merged and low <= merged[-1][1]:
+            merged[-1][1] = max(merged[-1][1], high)
+        else:
+            merged.append([low, high])
+    covered = sum(high - low for low, high in merged)
+    reach = span if span else (max(instants) - min(instants)) + 2 * holdout
+    return min(1.0, covered / reach) if reach > 0 else 0.0
 
 
 def crop_around(image, cx, cy, tile=TILE):
@@ -196,6 +257,15 @@ def main() -> int:
     print(f"  {positives} positives, {negatives} negatives")
     print(f"  {train_n} train tiles, {val_n} val tiles")
     print(f"  {held_out} tiles held out as too close to a hand-located frame")
+    blocked = blocked_share(held)
+    print(f"  the holdout blocks {blocked:.0%} of {SOURCE_GAME}'s span "
+          f"({len(held)} scored instants at +/-{HOLDOUT_S:.0f}s)")
+    if blocked > 0.6:
+        print("  NOTE: this broadcast is now mostly EVALUATION footage. Its "
+              "uniform grid\n        is dense enough that holding it out leaves "
+              "little to train on --\n        which is correct, and means new "
+              "ball training data has to come\n        from a broadcast that is "
+              "not scored as heavily.")
     print(f"  -> {out / 'ball.yaml'}")
     return 0
 
