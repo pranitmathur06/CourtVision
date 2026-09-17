@@ -6322,3 +6322,76 @@ of what mining by colour does to a model trained on it.
     object   located   accuracy   95% CI          gate
     rim       55/59     0.932   0.838-0.973      0.95   in game
     ball       5/13     0.385   0.177-0.645      0.95
+
+## Round 92: the registration coverage wall was a default nobody had examined
+
+Two Wave-0 diagnostics, no training, no labels. Both overturned a recorded
+conclusion in this document.
+
+### The 0% was a small-sample zero
+
+Round 41 onward reported registration coverage per band as
+
+    a lot of floor (>30%)          70%
+    a normal wide play shot         0%
+    a little floor                  0%
+    almost none (close-up, replay)  0%
+
+measured with `check_registration_coverage.py --every 60`, which is about twenty
+frames a band. A 0/20 has a Wilson upper bound near 16%, so those zeros could
+never have meant what they were read to mean. At `--every 10` -- 630 frames,
+thirty times the sample -- the normal-wide-play band is **42%**.
+
+### And the knob that mattered had never been turned
+
+The same section concluded *"the failure is not a threshold"* on the evidence
+that dropping the **per-keypoint** floor from 0.6 to 0.3 moved coverage 75.0% to
+76.6%. That is true and it is the wrong knob. This is a pose model: it emits
+keypoints only for a **detected court instance**, so a court scored below the
+detection threshold yields not a few landmarks but none. That is exactly the
+bimodality the same section reports and treats as evidence of generalisation
+failure -- 0 landmarks on 45% of frames, 6+ on 55%, literally 0% at 4-5.
+
+Ultralytics' default detection floor is 0.25. On the same 630 frames:
+
+    band                          n     0.25     0.001
+    almost no floor              25       4%       52%
+    a little floor               46       2%       50%
+    a normal wide play shot      76       1%       42%
+    a lot of floor              483      70%       89%
+    ------------------------------------------------------
+    whole game                  630      54%       79%
+
+### Is the new coverage real, or hallucinated landmarks?
+
+The question the coverage number cannot answer, and the reason
+`check_registration_consistency.py` exists: two independent registrations of one
+instant, ORB-carried, must agree. No annotations, nothing scored against a model.
+
+    broadcast          0.25              0.001            change
+    Finals G7      71.1%  0.48 ft    81.1%  0.55 ft    +10.0 pts, +0.07 ft
+    Finals G1      61.3%  0.72 ft    74.2%  0.79 ft    +12.9 pts, +0.07 ft
+    ECF G1         75.5%  0.62 ft    86.4%  0.67 ft    +10.9 pts, +0.05 ft
+
+Ten to thirteen points of coverage on every broadcast for five to seven
+hundredths of a foot, against a gate of 2 ft. The p90 moves 2.35 to 3.13 ft on
+G7, so the tail is genuinely worse -- and the whole of that cost is paid at 0.10
+and then flat, which is why the floor goes all the way down rather than stopping
+half way.
+
+The floor was chosen on **Finals G7** under a rule fixed before any number was
+read -- maximise coverage subject to p50 <= 1.0 ft, half the gate -- and Finals
+G1 and ECF G1 are the held-out report. It replicates on both.
+
+`court_keypoints.COURT_DETECTION_CONF` is now that number, in the library, with
+the table beside it, because nine scripts each called the pose model with its
+own threshold and this finding would otherwise have to be made nine times.
+
+### What is left for the augmentation retrain
+
+Less than was thought, and the mechanism is confirmed. Even at 0.001 the model
+finds **no court at all** on 44-55% of tight shots, against 0-4% that find a
+court and too few landmarks. That is out-of-distribution rejection, not a
+localisation failure, and it is what scale and crop augmentation is for. But the
+band it has to improve starts at 42%, not 0%, and whole-game coverage starts at
+79%, not 75%.

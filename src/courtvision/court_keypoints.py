@@ -97,6 +97,32 @@ FLIP_INDEX = [35, 36, 2, 38, 39, 5, 41, 42, 34, 32, 10, 33, 29, 30, 31, 15,
 # error whether or not the correspondences were right -- the trap `court.py`
 # already documents. Six leaves something for RANSAC to disagree with.
 MIN_KEYPOINTS = 6
+#: Confidence floor for detecting the COURT ITSELF, which is not the same knob
+#: as the per-keypoint floor and is the one that was costing coverage.
+#:
+#: This is a pose model: it emits keypoints only for a detected `court`
+#: instance, so a court it scores below the detection threshold yields not "a
+#: few landmarks" but none at all. That is why coverage is strictly bimodal --
+#: 0 landmarks on 45% of frames, 6+ on 55%, and literally 0% of frames at 4-5.
+#:
+#: Dropping the PER-KEYPOINT floor was tried and does almost nothing: 0.6 to 0.3
+#: moved coverage 75.0% to 76.6%. Dropping the DETECTION floor from ultralytics'
+#: default 0.25 to 0.001 is worth ten to thirteen points on every broadcast,
+#: because on a tight shot the model does find the court and scores the box low
+#: rather than finding nothing:
+#:
+#:     broadcast          0.25              0.001            cost
+#:     Finals G7      71.1%  0.48 ft    81.1%  0.55 ft     +10.0 pts, +0.07 ft
+#:     Finals G1      61.3%  0.72 ft    74.2%  0.79 ft     +12.9 pts, +0.07 ft
+#:     ECF G1         75.5%  0.62 ft    86.4%  0.67 ft     +10.9 pts, +0.05 ft
+#:
+#: Coverage is `check_registration_coverage.py`; the feet are two independent
+#: registrations of one instant disagreeing, `check_registration_consistency.py`,
+#: which uses no annotations at all. The gate is p50 <= 2 ft, so the accuracy
+#: cost is a fifteenth of the budget. The floor was chosen on Finals G7 under a
+#: rule fixed first -- maximise coverage subject to p50 <= 1.0 ft -- and the
+#: other two broadcasts are the held-out report.
+COURT_DETECTION_CONF = 0.001
 #: Reprojection tolerance for the image -> court fit. cv2 measures its
 #: residual in the DESTINATION space, so this is FEET, not pixels. It was
 #: written as `RANSAC_PX = 6.0` and read as six pixels; six feet accepts
@@ -110,6 +136,26 @@ RANSAC_FT = 1.0
 #: so half a foot is a loose ~17 px -- deliberately, since the medians being
 #: fitted have already had their outliers removed.
 FUSE_RANSAC_FT = 0.5
+
+
+def landmark_points(result, conf: float, minimum: int = MIN_KEYPOINTS):
+    """The landmarks a pose result places confidently, as {index: (x, y)}.
+
+    One place, so `COURT_DETECTION_CONF` does not have to be rediscovered in
+    each of the nine scripts that run this model. Returns None when the frame
+    cannot register, which is the same answer the callers were computing by
+    hand three slightly different ways.
+    """
+    import numpy as np
+
+    if result is None or result.keypoints is None or len(result.keypoints) == 0:
+        return None
+    xy = result.keypoints.xy[0].cpu().numpy()
+    scores = (result.keypoints.conf[0].cpu().numpy()
+              if result.keypoints.conf is not None else np.ones(len(xy)))
+    seen = {i: (float(xy[i][0]), float(xy[i][1])) for i in range(len(xy))
+            if i in KEYPOINTS and scores[i] >= conf and (xy[i] > 0).all()}
+    return seen if len(seen) >= minimum else None
 
 
 def homography_from_keypoints(points: dict[int, tuple[float, float]],

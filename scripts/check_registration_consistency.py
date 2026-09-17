@@ -25,10 +25,18 @@ import numpy as np
 GAP_S = 0.2
 
 
-def _register(model, frame, device, conf, min_conf_points):
+def _register(model, frame, device, conf, min_conf_points, instance_conf=0.25):
     from courtvision.court_keypoints import KEYPOINTS, homography_from_keypoints
 
-    result = model.predict(frame, device=device, verbose=False)[0]
+    # `instance_conf` is the COURT DETECTION floor and it is not the same knob
+    # as `conf`, which is the per-keypoint floor. Dropping the keypoint floor
+    # from 0.6 to 0.3 was measured and moved coverage 75% to 76.6%; dropping the
+    # DETECTION floor from 0.25 to 0.001 moves it from 54% to 79%, because on a
+    # tight shot the model finds the court and scores the box low rather than
+    # finding nothing. Which of those registrations are trustworthy is exactly
+    # what this file answers.
+    result = model.predict(frame, device=device, verbose=False,
+                           conf=instance_conf)[0]
     if result.keypoints is None or len(result.keypoints) == 0:
         return None
     xy = result.keypoints.xy[0].cpu().numpy()
@@ -46,9 +54,13 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--video", default="data/raw_clips/fullgame.mp4")
     parser.add_argument("--weights",
-                        default="runs/pose/checkpoints/court_keypoints/weights/best.pt")
+                        default="runs/pose/checkpoints/court_kp_960_ft/weights/best.pt")
     parser.add_argument("--samples", type=int, default=120)
-    parser.add_argument("--conf", type=float, default=0.5)
+    parser.add_argument("--conf", type=float, default=0.5,
+                        help="per-keypoint confidence floor")
+    parser.add_argument("--instance-conf", type=float, default=None,
+                        help="court DETECTION floor; 0.001 admits the tight "
+                             "shots the default rejects outright")
     parser.add_argument("--fuse", type=int, default=0,
                         help="half-width, in frames, of the window fused onto "
                              "each instant. 0 registers the single frame. The "
@@ -78,7 +90,7 @@ def main() -> int:
     device = resolve_device()
 
     def register(frame):
-        return _register(model, frame, device, args.conf, 6)
+        return _register(model, frame, device, args.conf, 6, instance_conf)
     capture = cv2.VideoCapture(args.video)
     if not capture.isOpened():
         print(f"FAIL - cannot open {args.video}")
