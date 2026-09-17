@@ -65,7 +65,7 @@ the scoreboard and aligning it — and draw boxes over the footage. So:
 
 | | |
 |---|---|
-| Timestamping a known event onto the video | **94.6 / 97.3 / 96.6%** over three full games, 1,752 events |
+| Timestamping a known event onto the video | **97.3 / 96.6 / 88.8%** over three full games |
 | Published clips landing within 1 s of the event | **93–99%** over 1,195 clips |
 | Deciding *what happened* from pixels alone | shots F1 **0.65** inside the 27–48% of video where the clock reads, **0.45–0.50** without that filter |
 | Deciding *who* has the ball from pixels alone | **59.2%** |

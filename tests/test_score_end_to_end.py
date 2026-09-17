@@ -89,13 +89,34 @@ def test_one_official_play_cannot_be_claimed_by_two_calls():
 
 
 def test_matching_does_not_depend_on_the_order_the_calls_arrive_in():
-    """detect_shots.score and run_broadcast.match both walk in list order."""
-    plays = [play(100.0), play(103.5)]
-    calls = [call(100.2), call(103.4)]
-    forward = match(calls, plays, 3.0)
-    backward = match(list(reversed(calls)), plays, 3.0)
-    assert {calls[i].video_s for i in forward} == \
-           {list(reversed(calls))[i].video_s for i in backward}
+    """detect_shots.score and run_broadcast.match both walk in list order.
+
+    The case has to DISCRIMINATE. An earlier version of this test used two
+    calls that a list-order matcher also pairs correctly, so it passed under the
+    very algorithm it claims to exclude -- a vacuous test, found by an
+    adversarial check. Here one play is in range of two calls: a list-order
+    matcher takes whichever comes first, and a globally greedy one takes the
+    nearer, whatever order they arrive in.
+    """
+    plays = [play(100.0)]
+    far, near = call(102.0), call(100.5)
+    def chosen(calls):
+        return {calls[i].video_s for i in match(calls, plays, 3.0)}
+    assert chosen([far, near]) == {100.5}
+    assert chosen([near, far]) == {100.5}
+
+    # and the list-order matcher this excludes would fail that
+    def list_order(calls):
+        used, out = set(), set()
+        for c in calls:
+            for j, p in enumerate(plays):
+                if j not in used and c.kind == p.kind \
+                        and abs(c.video_s - p.video_s) <= 3.0:
+                    used.add(j)
+                    out.add(c.video_s)
+                    break
+        return out
+    assert list_order([far, near]) != list_order([near, far])
 
 
 def test_identity_is_never_a_matching_key():
@@ -187,6 +208,43 @@ def test_a_blocked_mode_is_reported_as_blocked_and_not_as_zero():
 
 
 # ---- the weighted statistic -------------------------------------------------
+
+def test_the_live_gate_is_applied_on_top_of_the_readable_span():
+    """Truth cannot exist where the clock could not be read.
+
+    Calls outside the readable span are misses by construction, so scoring them
+    credits a gated mode for suppressing calls in a region the truth could
+    never occupy -- the circular result this scorer claims to prevent, and did
+    not until an adversarial check found 31 of 286 such calls on one broadcast.
+    Every mode is now restricted to the readable span; the live gate sits on
+    top of it, and the only difference between gated and ungated is running
+    versus held.
+    """
+    plays = [play(100.0)]
+    calls = [call(100.0), call(9000.0)]          # the second is off the clock
+    readable = lambda t: t < 5000.0              # noqa: E731
+    got = score_mode(stream(calls), plays, label="readable", span_s=600.0,
+                     live_mask=readable)
+    assert got.emitted == 1, "a call outside the readable span is not scored"
+    assert got.timestamped == 1
+
+
+def test_two_modes_under_different_masks_are_still_paired_on_shared_plays():
+    """Comparing capture vectors by LENGTH silently skipped every comparison.
+
+    Two modes under different masks have different denominators, so the only
+    pair that ever printed was vision against feed-assisted -- trivially
+    significant, and an answer to nothing. Pairing is keyed by the play.
+    """
+    plays = [play(100.0), play(900.0)]
+    wide = score_mode(stream([call(100.0), call(900.0)]), plays, label="wide",
+                      span_s=1000.0)
+    narrow = score_mode(stream([call(100.0)]), plays, label="narrow",
+                        span_s=1000.0, live_mask=lambda t: t < 500.0)
+    shared = set(wide.captured_plays) & set(narrow.captured_plays)
+    assert shared == {100.0}
+    assert wide.captured_plays[100.0] and narrow.captured_plays[100.0]
+
 
 def test_the_weights_come_from_the_whole_game_not_from_a_resample():
     """A bootstrap draw containing no rebounds must not reweight the statistic

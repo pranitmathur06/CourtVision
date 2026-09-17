@@ -6551,3 +6551,111 @@ The truth is itself vision-derived: official plays reach the video through the
 same clock reader the live-play gate uses, so 2.7-5.4% never arrive and the two
 error sources are correlated. This is capture *within the span the clock could
 read*, and it is labelled that way everywhere it appears.
+
+
+## Round 95: an adversarial check of Round 94, and what it broke
+
+Round 94's scorer was handed to an independent verifier with instructions to
+break it rather than confirm it. It found thirteen defects. Six changed
+published numbers and one of them broke the claim the file was proudest of.
+
+### The circularity guard did not guard
+
+`score_game_end_to_end.py` opens by saying the live-play filter "restricts the
+denominator too, so the circular cell cannot be printed". The mask was applied
+to both sides, and that was not enough. Official plays reach the video ONLY
+through the clock reader, so **truth cannot exist outside the readable span at
+all** -- and masking a region where truth cannot exist removes nothing from the
+denominator while removing every call in it from the numerator.
+
+Measured: 31 of 286 vision calls on Finals G1 and 92 of 317 on G7 lay outside
+the readable span, and every one was a miss by construction. The ungated mode
+was being charged for them and the gated mode was not.
+
+Every mode is now restricted to the readable span, with the live gate applied on
+top, so the only difference between gated and ungated is running versus held --
+a comparison the truth can occupy on both sides.
+
+    Finals G1, vision      (a) 0.228 -> 0.244      (b) 0.427 -> 0.478
+    Finals G7, vision      (a) 0.181 -> 0.203      (b) 0.350 -> 0.436
+
+About a quarter of the "+0.18 precision from clock gating" was the scorer
+crediting the gate for suppressing calls in a region the truth could never
+occupy.
+
+### And the paired test was silently skipping every comparison that mattered
+
+It compared capture vectors BY LENGTH, and two modes under different masks have
+different denominators, so the only pair that ever printed was vision against
+feed-assisted -- trivially significant and an answer to nothing. Pairing is now
+keyed by the play. What it says is sharper than the claim it replaces:
+
+    Finals G1   vision vs vision+clock   0 vs 0   p = 1.00  (309 shared plays)
+    Finals G7   vision vs vision+clock   0 vs 0   p = 1.00  (239 shared plays)
+
+**The clock gate captures exactly the same plays.** Its entire contribution is
+precision -- it changes what the system SAYS, not what it FINDS. Round 94 said
+"+0.05 captured and +0.18 precision" and the first half of that was an artefact
+of the two modes being scored on different denominators.
+
+### G7's truth was eleven days stale, and fixing it vindicated a component
+
+`outputs/aligned_events.json` was dated Sep 5; the clock resolver fix landed
+Sep 11 and `outputs/clock/fullgame.json` was rebuilt then. Re-running the
+alignment against the current clock gives **498/561 = 88.8%**, not the 545/576 =
+94.6% this document has quoted since.
+
+The other two reproduce to the event: Finals G1 537/552 = 97.3% and ECF G1
+603/624 = 96.6%, both byte-identical on a re-run. So the pipeline is
+reproducible and one artefact was stale. **The corrected headline is 97.3 /
+96.6 / 88.8%.**
+
+Scored on the fresh truth, G7's vision+clock field-goal precision is **0.563** --
+exactly what `detect_shots` records for that broadcast. The verifier had flagged
+the old 0.517 as evidence that "the composed number reproduces its component"
+held only on G1. With the stale truth replaced it holds on both.
+
+### The corrected table
+
+    Finals G1, nothing tuned on it
+      vision              (a) 0.244  (0.222-0.266)   (b) 122/255 = 0.478
+      vision + clock      (a) 0.279  (0.257-0.296)   (b) 121/200 = 0.605
+    Finals G7, thresholds tuned on its first half
+      vision              (a) 0.203  (0.181-0.221)   (b)  98/225 = 0.436
+      vision + clock      (a) 0.251  (0.235-0.266)   (b)  98/174 = 0.563
+
+The answer to the 85% question is unchanged in substance and better grounded:
+**no, on both readings, by a wide margin.**
+
+### The smaller ones, each fixed
+
+- **The dead-ball rate was wrong.** Every miss counted as clock-running whenever
+  the mode was ungated: G1 printed 2.37 running / 0.00 held where the truth is
+  1.14 / 1.85. It reads as though the dead ball were free, and the dead ball is
+  46% of basketball-looking footage.
+- **The bootstrap could not draw blocks holding calls but no plays** -- 22 of
+  G7's false alarms, all pregame and halftime -- so its mean sat above its own
+  point estimate.
+- **"Weighting on attempts" was false**; both matching and weighting are on free-
+  throw trips. Weighting on attempts would move the headline about 0.01. The
+  claim is corrected rather than the code.
+- **The order-independence test was vacuous**: its case passes under a list-order
+  matcher too. It now uses a case that discriminates, and asserts that a
+  list-order matcher would fail it.
+- **`--require-names` was documented and did not exist**, and `require_names` in
+  `match()` was a no-op. Both removed.
+
+### What the verifier could not break
+
+The arithmetic. It recomputed `sum(weight * f1)` from the JSON independently and
+it equals the printed headline to four decimals, with weights summing to 1.000
+in every runnable mode. `match()` is one-to-one with no double counting. The
+architectural cap holds.
+
+It also noted two things worth keeping in view rather than fixing. `feed-assisted
+= 1.000` validates less than Round 94 implied -- it is built from the merged
+plays, so it checks that `match()` pairs identical timestamps and little more.
+And steal and block share an official row with the turnover or missed shot they
+belong to, which deflates the headline by about 0.015; removing them would give
+G1 vision 0.243 rather than 0.228. They stay in, declared, because they are
+plays a commentary system is expected to say.

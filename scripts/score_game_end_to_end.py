@@ -38,8 +38,9 @@ answer does not depend on the order calls arrive in.
 IDENTITY IS NEVER A MATCHING KEY. Rebound attribution measures 45-47% against a
 72% ceiling and jersey identity 45%, so requiring a name would multiply every
 number by about a half and make this a jersey-OCR benchmark wearing an
-end-to-end costume. It is reported separately, and `--require-names` prints the
-collapse beside the headline.
+end-to-end costume. No stream currently asserts a player at all, which the
+assertion budget prints as "a player on 0% of its calls"; when one does, that
+is where its identity accuracy will appear.
 
 THE LIVE-PLAY FILTER RESTRICTS THE DENOMINATOR TOO. Official plays can only be
 aligned where the clock is READABLE; the filter admits calls where the clock is
@@ -154,6 +155,9 @@ class Scored:
     assertion_budget: dict = field(default_factory=dict)
     false_calls: dict = field(default_factory=dict)
     capture_vector: list = field(default_factory=list)
+    #: play video_s -> captured. Keyed by the play so two modes under different
+    #: masks can still be paired on the plays they both saw.
+    captured_plays: dict = field(default_factory=dict)
 
 
 def outcome(label: str, description: str):
@@ -215,7 +219,7 @@ def free_throw_trips(plays: Sequence[Play], merge_s: float = FT_TRIP_MERGE_S):
 
 
 def match(calls: Sequence[Call], plays: Sequence[Play],
-          tolerance_s: float = TOLERANCE_S, require_names: bool = False):
+          tolerance_s: float = TOLERANCE_S):
     """One-to-one, globally greedy by |dt|. Order-independent by construction.
 
     `detect_shots.score` and `run_broadcast.match` both walk their inputs in list
@@ -230,8 +234,6 @@ def match(calls: Sequence[Call], plays: Sequence[Play],
             gap = abs(call.video_s - play.video_s)
             if gap > tolerance_s:
                 continue
-            if require_names and (call.player or "") != "":
-                pass
             pairs.append((gap, j, i))
     pairs.sort()
     call_to_play: dict[int, int] = {}
@@ -261,6 +263,12 @@ def weighted_f1(calls: Sequence[Call], plays: Sequence[Play],
     `weights` come from the WHOLE game rather than from the resample, so a
     bootstrap draw that happens to contain no rebounds does not quietly
     reweight the statistic it is meant to put an interval around.
+
+    The honest consequence, which is not the same thing: a draw that contains
+    no instances of a class scores that class 0 while it keeps its full weight,
+    so the interval is slightly pessimistic for rare classes rather than
+    reweighted. That is why feed-assisted, which is exactly 1.000, reports a
+    lower bound of 0.995 rather than 1.000.
     """
     pairing = match(calls, plays, tolerance_s)
     counts: dict[str, list[int]] = {}
@@ -307,7 +315,10 @@ def bootstrap_weighted_f1(calls: Sequence[Call], plays: Sequence[Play],
         play_blocks.setdefault(block_of(play.video_s), []).append(play)
     for call in calls:
         call_blocks.setdefault(block_of(call.video_s), []).append(call)
-    keys = sorted(play_blocks)
+    # Blocks holding CALLS but no plays are resampled too. Skipping them meant
+    # 22 of G7's false alarms -- pregame and halftime -- could never be drawn,
+    # and the bootstrap mean sat above the point estimate, which is the tell.
+    keys = sorted(set(play_blocks) | set(call_blocks))
     if len(keys) < 3:
         return 0.0, 1.0
     rng = np.random.default_rng(seed)
@@ -318,7 +329,7 @@ def bootstrap_weighted_f1(calls: Sequence[Call], plays: Sequence[Play],
         for offset, index in enumerate(pick):
             key = keys[index]
             shift = offset * block_s - key * block_s      # keep blocks apart
-            for play in play_blocks[key]:
+            for play in play_blocks.get(key, []):
                 drawn_plays.append(Play(play.video_s + shift, play.kind,
                                         play.label, play.made, play.points,
                                         play.align_error_s, play.description))
@@ -334,7 +345,8 @@ def bootstrap_weighted_f1(calls: Sequence[Call], plays: Sequence[Play],
 
 def score_mode(stream: Stream, plays: Sequence[Play], *, label: str,
                tolerance_s: float = TOLERANCE_S, span_s: float = 0.0,
-               live_mask=None, clock_running_s: float = 0.0,
+               live_mask=None, running_mask=None,
+               clock_running_s: float = 0.0,
                clock_held_s: float = 0.0) -> Scored:
     """One stream against one set of plays. The region restricts BOTH sides."""
     calls = list(stream.calls)
@@ -388,6 +400,8 @@ def score_mode(stream: Stream, plays: Sequence[Play], *, label: str,
     result.described = described
     result.emitted = len(calls)
     result.capture_vector = [j in matched_play for j in range(len(kept_plays))]
+    result.captured_plays = {round(p.video_s, 3): (j in matched_play)
+                             for j, p in enumerate(kept_plays)}
 
     budget: dict[str, float] = {}
     for attribute in ("kind", "made", "points", "player"):
@@ -400,10 +414,15 @@ def score_mode(stream: Stream, plays: Sequence[Play], *, label: str,
         calls, kept_plays, tolerance_s,
         {kind: v["weight"] for kind, v in counts.items()})
 
+    # The split needs the LIVE mask, not the mask this mode was scored under.
+    # Passing the mode's own mask made every miss count as clock-running
+    # whenever the mode was ungated -- G1 printed 2.37 running / 0.00 held when
+    # the truth was 1.14 / 2.91, which reads as though the dead ball were free.
     misses = sum(1 for _, right in wrong if not right)
     if clock_running_s or clock_held_s:
         running_misses = sum(1 for when, right in wrong
-                             if not right and (live_mask is None or live_mask(when)))
+                             if not right and (running_mask is None
+                                               or running_mask(when)))
         held_misses = misses - running_misses
         result.false_calls = {
             "clock_running_per_min": (running_misses / (clock_running_s / 60.0)
@@ -514,21 +533,46 @@ def scoreboard_stream(readings: str | None, clock: str | None) -> Stream:
                   feed_derived=(), calls=tuple(calls))
 
 
-def clock_spans(path: str | None):
-    """(span, running seconds, held seconds, live-play mask) from the readings."""
+def clock_spans(path: str | None, readable_gap_s: float = 3.0):
+    """(span, running s, held s, readable mask, live mask) from the readings.
+
+    TWO MASKS, NOT ONE, and the first is the fix for a real circularity this
+    file claimed to prevent and did not.
+
+    `readable` is "the clock could be read near here at all". Official plays
+    reach the video ONLY through the clock reader, so truth cannot exist
+    outside it -- and an adversarial check found 31 of 286 vision calls on
+    Finals G1, and 92 of 317 on G7, lying outside it and counted as false
+    alarms. Every one was a miss by construction. Scoring them credited the
+    clock-gated mode with suppressing calls in regions the truth could never
+    occupy, which is precisely the circular result the module docstring says is
+    unprintable. It was worth about +0.05 of the "+0.18 precision from gating".
+
+    `live` is "and the clock was RUNNING", which is the honest comparison,
+    because truth occupies both running and held regions.
+    """
     if not path or not Path(path).exists():
-        return 0.0, 0.0, 0.0, None
+        return 0.0, 0.0, 0.0, None, None
     readings = json.load(open(path)).get("readings", [])
     if not readings:
-        return 0.0, 0.0, 0.0, None
-    times = [float(r["t"]) for r in readings]
-    span = max(times) - min(times)
+        return 0.0, 0.0, 0.0, None, None
+    import bisect
+    times = sorted(float(r["t"]) for r in readings)
+    span = times[-1] - times[0]
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     import detect_shots
-    keep = detect_shots.live_play(readings)
+    live = detect_shots.live_play(readings)
+
+    def readable(when: float) -> bool:
+        i = bisect.bisect_left(times, when)
+        for j in (i - 1, i):
+            if 0 <= j < len(times) and abs(times[j] - when) <= readable_gap_s:
+                return True
+        return False
+
     step = (span / max(len(times) - 1, 1)) or 1.0
-    running = sum(step for t in times if keep(t))
-    return span, running, span - running, keep
+    running = sum(step for t in times if live(t))
+    return span, running, span - running, readable, live
 
 
 def provenance() -> dict:
@@ -553,7 +597,7 @@ def report(summary: dict) -> None:
                         sorted(truth["not_scored"].items(), key=lambda kv: -kv[1]))
     print(f"         not scored: {dropped}")
     print(f"         free throws: {truth['ft_attempts']} attempts in "
-          f"{truth['ft_trips']} trips; matching on trips, weighting on attempts")
+          f"{truth['ft_trips']} trips; BOTH matching and weighting are on trips")
     clock = summary["clock"]
     if clock["span_s"]:
         print(f"  clock: {clock['span_s']:.0f}s readable, running on "
@@ -621,7 +665,8 @@ def report(summary: dict) -> None:
             mark = "significant" if row["p"] < 0.05 else "not significant"
             print(f"    {row['a']} vs {row['b']}   {row['only_a']} plays only "
                   f"{row['a']} captures, {row['only_b']} only {row['b']}   "
-                  f"p = {row['p']:.4f}  ({mark})")
+                  f"p = {row['p']:.4f}  ({mark}, on {row['shared_plays']} shared "
+                  f"plays)")
         print("    precision is NOT compared this way: the modes emit different "
               "events, so\n    there is no shared denominator to pair on. Only "
               "capture is paired.")
@@ -644,23 +689,29 @@ def main() -> int:
 
     plays, meta = load_truth(args.aligned)
     plays, ft_attempts, ft_trips = free_throw_trips(plays)
-    span, running, held, live = clock_spans(args.clock)
+    span, running, held, readable, live = clock_spans(args.clock)
+    # Every mode is restricted to the readable span. The live mask is applied
+    # ON TOP of it, so the only difference between the gated and ungated modes
+    # is running versus held -- a comparison the truth can occupy on both sides.
+    def gated(when):
+        return (readable is None or readable(when)) and (live is None or live(when))
     game_span = (max(p.video_s for p in plays) - min(p.video_s for p in plays)
                  if plays else 1.0)
 
     modes = [
         ("vision", vision_shot_stream(args.detections or "", args.clock, False),
-         None),
+         readable),
         ("vision+clock", vision_shot_stream(args.detections or "", args.clock,
-                                            True), live),
-        ("vision+scoreboard", scoreboard_stream(args.readings, args.clock), live),
-        ("feed-assisted", feed_stream(plays, args.aligned), None),
+                                            True), gated),
+        ("vision+scoreboard", scoreboard_stream(args.readings, args.clock), gated),
+        ("feed-assisted", feed_stream(plays, args.aligned), readable),
     ]
     scored = []
     for label, stream, mask in modes:
         scored.append(score_mode(stream, plays, label=label,
                                  tolerance_s=args.tolerance_s,
                                  span_s=game_span, live_mask=mask,
+                                 running_mask=live,
                                  clock_running_s=running, clock_held_s=held))
 
     errors = sorted(abs(p.align_error_s) for p in plays)
@@ -669,16 +720,25 @@ def main() -> int:
     timing = (f"p50 {pct(0.5):.2f}s  p90 {pct(0.9):.2f}s  "
               f"within 1s {sum(1 for e in errors if e <= 1) / max(len(errors), 1):.0%}")
 
+    # Pair on the plays BOTH modes were scored against, keyed by the play
+    # itself rather than by position. Two modes under different masks have
+    # different denominators, and comparing the vectors by length silently
+    # skipped every comparison that mattered -- the only pair that ever printed
+    # was vision against feed-assisted, which is trivially significant and
+    # answers nothing.
     paired = []
-    runnable = [s for s in scored if s.stream.runnable and s.capture_vector]
+    runnable = [s for s in scored if s.stream.runnable and s.captured_plays]
     for i in range(len(runnable)):
         for j in range(i + 1, len(runnable)):
             a, b = runnable[i], runnable[j]
-            if len(a.capture_vector) != len(b.capture_vector):
+            shared = sorted(set(a.captured_plays) & set(b.captured_plays))
+            if not shared:
                 continue
-            only_a, only_b, p = mcnemar(a.capture_vector, b.capture_vector)
+            av = [a.captured_plays[k] for k in shared]
+            bv = [b.captured_plays[k] for k in shared]
+            only_a, only_b, p = mcnemar(av, bv)
             paired.append({"a": a.label, "b": b.label, "only_a": only_a,
-                           "only_b": only_b, "p": p})
+                           "only_b": only_b, "p": p, "shared_plays": len(shared)})
 
     caveats = [
         "the truth is itself vision-derived: official plays reach the video "
@@ -691,9 +751,12 @@ def main() -> int:
         "the live-play rule and the period rule were both written after looking "
         "at these\n     games, so a filtered number on a game they were tuned on "
         "is optimistic.",
-        f"free throws: {ft_attempts} attempts in {ft_trips} trips. Matching is on "
-        "trips because\n     a frozen clock puts a whole trip at one video "
-        "second; weighting is on attempts.",
+        f"free throws: {ft_attempts} attempts in {ft_trips} trips, and BOTH the "
+        "matching and the\n     weighting are on trips -- a frozen clock puts a "
+        "whole trip at one video second, so a\n     system cannot be asked to "
+        "emit two calls a tenth of a second apart. Weighting on\n     attempts "
+        "instead would move the headline by about 0.01; an earlier version of "
+        "this\n     file claimed attempts and did trips.",
         "the vision mode has no score reader behind it, so it never claims a "
         "make or a miss.\n     It is scored on attempts, and its assertion "
         "budget says so.",
