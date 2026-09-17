@@ -178,3 +178,20 @@ is, learned from 314 labelled windows rather than assumed. The staleness penalty
 settles near zero (-0.02), so carrying a box forward through a frame where the
 detector lost a player costs the model almost nothing; 0.25 s is short enough
 that the old box is still roughly right.
+
+## Wired into the pipeline, behind a flag
+
+`scripts/clip_boxes.py --possession checkpoints/possession/temporal.json` picks
+the clip's subject from the kernels instead of the detector's handler class.
+Without the flag nothing changes, so the old path stays measurable.
+
+On 25 clips of the ECF game the two disagree on 16, which is the rate the
+held-out set predicts (they disagree on 43 of 157 frames there, and the kernels
+are right on 29 of those). The kernels also draw a subject on more clips -- 19
+of 25 against 16 -- because the handler class simply fails to fire on some
+frames and a scan over a window does not have to.
+
+Writing it turned up one defect worth naming: the scan is free to name a track
+the *window* saw and the *logged frame* did not, and the clip is then rendered
+with no subject box at all. It did exactly that on one clip in six. Candidate
+tracks are now restricted to those on screen at the logged instant.

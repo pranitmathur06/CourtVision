@@ -580,6 +580,30 @@ def temporal_reference(scores: np.ndarray, stay_raw: float, target: int = -1,
     }
 
 
+def frame_logits(image, boxes, ball, parameters, grid: int = GRID,
+                 beta: float = BETA) -> np.ndarray:
+    """Kernel 1's per-player scores for one frame, unnormalised. NumPy.
+
+    The scan wants log-scores per frame, not probabilities: normalising each
+    frame on its own and then combining would throw away how confident the
+    frame was, which is the whole reason a frame with no visible ball should
+    defer to its neighbours.
+    """
+    _, features = possession_reference(image, boxes, ball, parameters, grid, beta)
+    standard = ((features - parameters["feature_mean"])
+                / np.maximum(parameters["feature_scale"], EPS))
+    hidden = np.tanh(standard @ parameters["first"].T + parameters["first_bias"])
+    return hidden @ parameters["second"] + parameters["second_bias"]
+
+
+def load_parameters(path) -> dict[str, np.ndarray]:
+    """Trained weights from disk, as the arrays every path here expects."""
+    import json
+
+    raw = json.load(open(path))
+    return {k: np.asarray(v, dtype=np.float64) for k, v in raw.items()}
+
+
 def temporal_torch(scores, stay_raw, centre: int = -1):
     """The same scan in torch, differentiable. The gradient oracle.
 

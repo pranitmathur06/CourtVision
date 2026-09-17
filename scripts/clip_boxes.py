@@ -373,7 +373,63 @@ def interpolate(by_frame, max_gap=MAX_GAP):
     return out
 
 
-def assemble(detected, count, fps):
+#: Half-width, in seconds, of the window the possession kernels scan around the
+#: logged instant. Matches the 0.75 s either side the windows were trained on.
+POSSESSION_HALF_S = 0.75
+
+
+def kernel_subject(detected, player_tracks, middle, half, parameters):
+    """The subject, from the possession kernels rather than the handler class.
+
+    Scored on 157 held-out frames a person labelled: 59.2% against the handler
+    class's 49.7%, paired McNemar p = 0.031. The handler class remains the
+    default because it needs no weights and no pixels; this path needs both.
+
+    A frame contributes a column of log-scores over the tracks, and the scan
+    over time combines them with the learned cost of changing hands. A track the
+    detector lost in a frame keeps its last box, exactly as in training, and
+    `stale` is the penalty the model learned for that.
+    """
+    import numpy as np
+
+    from courtvision.kernels.possession import temporal_reference
+
+    window = [d for d in detected
+              if middle - half <= d["f"] <= middle + half and "feat" in d]
+    # Only tracks that are ON SCREEN at the logged instant can be the subject.
+    # Without this the scan is free to name a track the window saw and the
+    # middle frame did not, and the clip is then drawn with no subject at all --
+    # which it did, on one clip in six.
+    ids = sorted(t for t, by_frame in player_tracks.items()
+                 if by_frame.get(middle) is not None)
+    if not window or not ids:
+        return None
+    rows = []
+    for d in window:
+        here = np.full(len(ids) + 1, float(parameters["nobody"]))
+        for k, tid in enumerate(ids):
+            box = player_tracks[tid].get(d["f"])
+            if box is None:
+                here[k] = float(parameters["nobody"])
+                continue
+            # which detection in this frame is that track, if any
+            best, score = None, 0.9
+            for j, candidate in enumerate(d["p"]):
+                overlap = iou(box, candidate)
+                if overlap > score:
+                    best, score = j, overlap
+            if best is None or best >= len(d["feat"]):
+                here[k] = float(parameters["nobody"]) + float(parameters["stale"])
+            else:
+                here[k] = d["feat"][best]
+        rows.append(here)
+    posterior, _, _ = temporal_reference(np.array(rows), float(parameters["stay_raw"]),
+                                         target=-1, centre=len(rows) // 2)
+    best = int(np.argmax(posterior[:len(ids)]))
+    return ids[best]
+
+
+def assemble(detected, count, fps, parameters=None):
     """Rows of drawn boxes for one clip, from what the detector saw.
 
     `detected` is one entry per DETECTED frame, in order:
@@ -437,6 +493,11 @@ def assemble(detected, count, fps):
             if best is not None:
                 holding[best] += 1
     subject = max(holding, key=holding.get) if holding else None
+    if parameters is not None:
+        chosen = kernel_subject(detected, player_tracks, middle,
+                                int(round(POSSESSION_HALF_S * fps)), parameters)
+        if chosen is not None:
+            subject = chosen
 
     # Two tracks can settle on the same player -- one of them usually held
     # through a gap by prediction -- and then he is drawn twice. The longer
@@ -503,14 +564,30 @@ def main() -> int:
                         help="recompute the court mask this often; it moves slowly")
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--out", required=True)
+    parser.add_argument("--possession", default=None,
+                        help="weights from train_possession_temporal.py. With "
+                             "them the subject comes from the fused possession "
+                             "kernels (59.2%% on held-out frames) instead of the "
+                             "detector's handler class (49.7%%); without them "
+                             "nothing changes, so the old path stays measurable.")
     args = parser.parse_args()
+
+    parameters = None
+    if args.possession:
+        from courtvision.kernels.possession import load_parameters
+        parameters = load_parameters(args.possession)
+        print(f"  subject from the possession kernels: {args.possession}")
 
     if args.from_cache:
         cached, clips = from_cache(args.from_cache, args.limit)
         fps = cached.get("fps", 30.0)
         count = cached.get("frames_per_clip", int(round(args.duration * fps)))
         size = cached.get("source_size", [1280, 720])
-        out = {clip: assemble(detected, count, fps)
+        if parameters is not None and not any(
+                "feat" in d for rows in clips.values() for d in rows):
+            parser.error("--possession needs the pixels and the cache has none; "
+                         "run without --from-cache, or add features to the cache")
+        out = {clip: assemble(detected, count, fps, parameters)
                for clip, detected in clips.items()}
         report(out, count)
         return write(args.out, out, size, fps)
@@ -524,6 +601,7 @@ def main() -> int:
 
     from courtvision.candidates import court_region, stands_on_court
     from courtvision.device import resolve_device
+    from courtvision.kernels.possession import frame_logits
 
     clips = {}
     for path in args.index:
@@ -578,9 +656,23 @@ def main() -> int:
                 on = stands_on_court(region, np.array(here_p, float))
                 here_p = [b for b, keep in zip(here_p, on) if keep]
                 here_h = [b for b in here_h if any(iou(b, p) > 0.9 for p in here_p)]
-            detected.append({"f": f, "p": here_p, "h": here_h,
-                             "r": here_r, "b": here_b, "court": court})
-        out[clip] = assemble(detected, count, fps)
+            here = {"f": f, "p": here_p, "h": here_h,
+                    "r": here_r, "b": here_b, "court": court}
+            if parameters is not None and here_p and abs(f - count // 2) <= \
+                    round(POSSESSION_HALF_S * fps):
+                # Only near the logged instant: the sweep is 64 samples per
+                # player and there is no reason to pay for it on frames the
+                # scan will never look at.
+                top = max(here_b, key=lambda e: e[1], default=None)
+                ball = np.zeros(3)
+                if top is not None:
+                    box, conf = top
+                    ball = np.array([(box[0] + box[2]) / 2,
+                                     (box[1] + box[3]) / 2, conf])
+                here["feat"] = frame_logits(frame, np.array(here_p, float),
+                                            ball, parameters)
+            detected.append(here)
+        out[clip] = assemble(detected, count, fps, parameters)
         if (n + 1) % 20 == 0:
             print(f"  {n + 1}/{len(names)} clips", flush=True)
     capture.release()
