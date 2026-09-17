@@ -98,31 +98,39 @@ FLIP_INDEX = [35, 36, 2, 38, 39, 5, 41, 42, 34, 32, 10, 33, 29, 30, 31, 15,
 # already documents. Six leaves something for RANSAC to disagree with.
 MIN_KEYPOINTS = 6
 #: Confidence floor for detecting the COURT ITSELF, which is not the same knob
-#: as the per-keypoint floor and is the one that was costing coverage.
+#: as the per-keypoint floor.
 #:
 #: This is a pose model: it emits keypoints only for a detected `court`
 #: instance, so a court it scores below the detection threshold yields not "a
 #: few landmarks" but none at all. That is why coverage is strictly bimodal --
 #: 0 landmarks on 45% of frames, 6+ on 55%, and literally 0% of frames at 4-5.
 #:
-#: Dropping the PER-KEYPOINT floor was tried and does almost nothing: 0.6 to 0.3
-#: moved coverage 75.0% to 76.6%. Dropping the DETECTION floor from ultralytics'
-#: default 0.25 to 0.001 is worth ten to thirteen points on every broadcast,
-#: because on a tight shot the model does find the court and scores the box low
-#: rather than finding nothing:
+#: IT STAYS AT ULTRALYTICS' DEFAULT, AND THAT IS A RETRACTION. Lowering it to
+#: 0.001 was published as ten to thirteen points of free coverage for seven
+#: hundredths of a foot. The seven hundredths was a POOLING ARTEFACT. The
+#: instants both floors admit register bit-identically -- 0 of 64 changed by
+#: more than 0.01 ft -- so every point of the pooled difference came from the
+#: newly admitted frames, diluted by the 90% that did not move. Measured alone,
+#: with `check_registration_consistency.py --marginal-against`:
 #:
-#:     broadcast          0.25              0.001            cost
-#:     Finals G7      71.1%  0.48 ft    81.1%  0.55 ft     +10.0 pts, +0.07 ft
-#:     Finals G1      61.3%  0.72 ft    74.2%  0.79 ft     +12.9 pts, +0.07 ft
-#:     ECF G1         75.5%  0.62 ft    86.4%  0.67 ft     +10.9 pts, +0.05 ft
+#:     floor    newly admitted    their own p50    their p90
+#:     0.15         3 instants        2.43 ft        3.83 ft
+#:     0.10         5                 3.18 ft        4.59 ft
+#:     0.05         6                 2.73 ft        4.48 ft
+#:     0.001        9                 2.61 ft       31.00 ft
 #:
-#: Coverage is `check_registration_coverage.py`; the feet are two independent
-#: registrations of one instant disagreeing, `check_registration_consistency.py`,
-#: which uses no annotations at all. The gate is p50 <= 2 ft, so the accuracy
-#: cost is a fifteenth of the budget. The floor was chosen on Finals G7 under a
-#: rule fixed first -- maximise coverage subject to p50 <= 1.0 ft -- and the
-#: other two broadcasts are the held-out report.
-COURT_DETECTION_CONF = 0.001
+#: Against a 2 ft gate, every floor tested fails on the frames it adds. The
+#: coverage was bought with registrations that disagree with themselves by two
+#: to thirty feet, which is the hallucinated-landmark hypothesis the original
+#: claim said it had ruled out -- using a pooled median that could not see it.
+#:
+#: What survives: dropping the PER-KEYPOINT floor does almost nothing (0.6 to
+#: 0.3 moves coverage 75.0% to 76.6%), and the tight-shot failure really is
+#: out-of-distribution REJECTION rather than poor localisation -- at 0.001 the
+#: model finds no court at all on 44-55% of tight shots against 0-4% that find
+#: one and too few landmarks. That is what scale and crop augmentation is for,
+#: and it remains the open lead. A threshold is not the fix.
+COURT_DETECTION_CONF = 0.25
 #: Reprojection tolerance for the image -> court fit. cv2 measures its
 #: residual in the DESTINATION space, so this is FEET, not pixels. It was
 #: written as `RANSAC_PX = 6.0` and read as six pixels; six feet accepts
@@ -141,10 +149,14 @@ FUSE_RANSAC_FT = 0.5
 def landmark_points(result, conf: float, minimum: int = MIN_KEYPOINTS):
     """The landmarks a pose result places confidently, as {index: (x, y)}.
 
-    One place, so `COURT_DETECTION_CONF` does not have to be rediscovered in
-    each of the nine scripts that run this model. Returns None when the frame
-    cannot register, which is the same answer the callers were computing by
-    hand three slightly different ways.
+    Returns None when the frame cannot register, which is the answer eleven
+    scripts were each computing by hand in slightly different ways.
+
+    Honest scope: this is a shared helper, not yet a seam. An earlier docstring
+    claimed it centralised the detection floor "so it does not have to be
+    rediscovered in nine scripts", and at the time nothing called it at all.
+    The eleven `model.predict(...)` sites that read a court pose model still
+    call it directly; converting them is worth doing and has not been done.
     """
     import numpy as np
 

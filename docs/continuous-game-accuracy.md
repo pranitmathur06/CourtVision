@@ -6659,3 +6659,72 @@ And steal and block share an official row with the turnover or missed shot they
 belong to, which deflates the headline by about 0.015; removing them would give
 G1 vision 0.243 rather than 0.228. They stay in, declared, because they are
 plays a commentary system is expected to say.
+
+## Round 96: Round 92 is retracted. The coverage was bought with bad registrations
+
+Round 92 claimed that lowering the court DETECTION floor from 0.25 to 0.001 buys
+ten to thirteen points of registration coverage on every broadcast for five to
+seven hundredths of a foot. An independent adversarial check took it apart, and
+the central claim is wrong.
+
+### The "+0.07 ft" was a pooling artefact
+
+`check_registration_consistency.py` reported a median over every probe point of
+every instant. The instants that BOTH floors admit register **bit-identically**
+-- 0 of 64 on G7 changed by more than 0.01 ft, 0 of 19 on Finals G1, 0 of 83 on
+ECF G1. So every point of the pooled difference came from the newly admitted
+frames, diluted by the ~90% that did not move at all.
+
+Measured alone, which is the only number the claim ever rested on:
+
+    floor    newly admitted    their own p50    their p90
+    0.15         3 instants        2.43 ft        3.83 ft
+    0.10         5                 3.18 ft        4.59 ft
+    0.05         6                 2.73 ft        4.48 ft
+    0.001        9                 2.61 ft       31.00 ft
+
+**Every floor tested fails the 2 ft gate on the frames it adds.** Individual
+marginal instants on G7 run 0.36, 0.89, 2.29, 2.31, 2.39, 2.71, 3.72, 4.24 and
+35.45 ft. On ECF G1 one reads 91.89 ft.
+
+That is precisely the hallucinated-landmark hypothesis Round 92 said it had
+ruled out -- using a statistic that could not see it. The p90 moving 2.35 to
+3.13 ft was the tell, and Round 92 reported it and then explained it away.
+
+`COURT_DETECTION_CONF` goes back to 0.25, and
+`check_registration_consistency.py` gains `--marginal-against`, which measures
+the newly admitted instants alone and prints FAILS when their own median clears
+the gate. The floor cannot be lowered again without that number.
+
+### Four more defects in the same round
+
+- **The committed script could not run.** `check_registration_consistency.py:93`
+  referenced an unbound `instance_conf` and raised NameError. The published feet
+  were produced by a working version that was not what got committed, and no
+  test imported the script. Fixed.
+- **The guard is blind to 61% of the coverage gain.** It skips any instant
+  failing `has_court` (wood >= 0.20). Joining the 630 coverage frames against
+  that gate: frames the guard can see gained 61, frames it cannot see gained
+  **96**. The tight-shot bands where the dramatic movement was claimed were
+  never accuracy-checked at all.
+- **Coverage was counted at four landmarks; production needs six and a RANSAC
+  fit.** On production's bar the same 630 frames read **52.4% -> 69.0%**, not
+  54% -> 79%.
+- **The Finals G1 "replication" rests on four instants**, two of which ORB
+  refused, so its "+0.07 ft" came from two measurements. ECF G1 (n=110) is a
+  real sample; Finals G1 is not evidence either way.
+
+### What survives Round 92
+
+Two things, and they are the ones worth keeping.
+
+**The 0% was a small-sample zero.** `--every 60` gives ~20 frames a band and a
+0/20 has a Wilson upper bound near 16%. At `--every 10` the normal-wide-play
+band is 42% at the low floor and 1% at 0.25. The old table's zeros were never
+evidence of an absolute failure.
+
+**The mechanism is out-of-distribution REJECTION, not poor localisation.** Even
+at 0.001 the model finds no court at all on 44-55% of tight shots, against 0-4%
+that find a court and too few landmarks. Scale and crop augmentation is the
+lever, and it is untried. A threshold is not the fix -- which is the one thing
+Round 41 got right and Round 92 talked itself out of.

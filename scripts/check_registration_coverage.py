@@ -17,30 +17,44 @@ band, and a 0/20 has a Wilson upper bound near 16%; it was a small-sample zero
 being read as an absolute one. At `--every 10` -- 630 frames, thirty times the
 sample -- the normal-wide-play band is 42%, not 0%.
 
-The second was the knob. This file concluded "the failure is not a threshold"
-after dropping the per-keypoint floor from 0.6 to 0.3 and watching coverage move
-75.0% to 76.6%. But a pose model emits keypoints only for a DETECTED COURT, and
-nobody had touched the DETECTION floor. At ultralytics' default of 0.25 the
-model reports no court at all on 97% of tight shots; at 0.001 that falls to 55%,
-and coverage over the whole game goes 54% to 79%. Measured on the same 630
-frames:
+The second was the knob -- and chasing it produced a finding that did not
+survive, which is worth recording rather than deleting.
+
+A pose model emits keypoints only for a DETECTED COURT, and nobody had touched
+the DETECTION floor. Dropping it from ultralytics' 0.25 to 0.001 moves coverage
+on the same 630 frames a long way:
 
     band                          n     0.25     0.001
     almost no floor              25       4%       52%
     a little floor               46       2%       50%
     a normal wide play shot      76       1%       42%
     a lot of floor              483      70%       89%
+    whole game                  630      54%       79%
 
-The frames were never invisible to the model. They were being thrown away by a
-default nobody had examined, and `court_keypoints.COURT_DETECTION_CONF` is now
-that number with the evidence beside it.
+**And the coverage it buys is not trustworthy.** The frames only the lower floor
+admits disagree with themselves by 2.4 to 3.2 ft at every floor tested, against
+a 2 ft gate -- see `check_registration_consistency.py --marginal-against` and
+`court_keypoints.COURT_DETECTION_CONF`, which stays at 0.25 for that reason.
+The pooled median could not see it, because the instants both floors admit do
+not move at all.
 
-What remains after the threshold is still a training-data problem, and it is
-still the same one: the model finds NO COURT on half the tight shots even at
-0.001, against 0-4% that find a court and too few landmarks. That is
-out-of-distribution rejection rather than a localisation failure, which is what
-scale and crop augmentation is for -- the model was trained on frames showing
-most of the court.
+TWO FURTHER CAUTIONS ABOUT THE COVERAGE NUMBER ITSELF, both of which make it
+read higher than production's:
+
+  IT COUNTS FOUR LANDMARKS. `NEEDED = 4` is what a homography needs in
+  principle; `court_keypoints.MIN_KEYPOINTS` is 6 and production also has to
+  survive the RANSAC fit. On production's bar the same 630 frames read 52.4% ->
+  69.0%, not 54% -> 79%.
+
+  IT IS NOT THE PRODUCTION PATH. `court_register.register_frame` has a
+  landmark-free fallback this file does not exercise, so the number here is
+  about the pose model rather than about the system.
+
+What survives, and it is the useful part: the tight-shot failure is
+out-of-distribution REJECTION rather than poor localisation -- even at 0.001 the
+model finds no court at all on 44-55% of tight shots against 0-4% that find one
+and too few landmarks. That is what scale and crop augmentation is for. A
+threshold is not the fix.
 
 Reported per band because the aggregate hides it: a game is mostly wide shots,
 so an average over all frames reads as a coverage problem when it is a

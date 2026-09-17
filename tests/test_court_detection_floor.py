@@ -43,15 +43,18 @@ def scene(found=MIN_KEYPOINTS, score=0.9):
     return FakeResult(xy, conf)
 
 
-def test_the_detection_floor_is_far_below_the_library_default():
-    """0.25 threw away ten to thirteen points of coverage on every broadcast.
+def test_the_detection_floor_stays_at_the_library_default():
+    """Lowering it was published as free coverage and retracted.
 
-    Measured two independent ways, neither of them annotated: coverage by
-    check_registration_coverage.py, and accuracy by two registrations of one
-    instant disagreeing in check_registration_consistency.py.
+    Every floor tested below 0.25 admits instants whose own disagreement is
+    2.4-3.2 ft against a 2 ft gate. The pooled median could not see it because
+    the instants both floors admit register bit-identically, so the pooled
+    number was the unchanged 90% diluting the marginal 10%.
+
+    This test exists so the number is not lowered again without the marginal
+    measurement -- `check_registration_consistency.py --marginal-against`.
     """
-    assert COURT_DETECTION_CONF < 0.01
-    assert COURT_DETECTION_CONF > 0.0
+    assert COURT_DETECTION_CONF == 0.25
 
 
 def test_a_frame_with_no_court_instance_cannot_register():

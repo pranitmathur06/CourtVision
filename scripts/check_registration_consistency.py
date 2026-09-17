@@ -13,6 +13,20 @@ chosen after seeing the answer: the two paths either agree or they do not.
 
 A player moves under 3 ft in 0.2 s, so any disagreement much above that is the
 registration moving, not the sport.
+
+## The pooled median cannot answer "is this extra coverage any good"
+
+Lowering the court DETECTION floor admits instants the higher floor rejected.
+The instants BOTH floors admit register bit-identically -- verified, 0 of 64 on
+one broadcast changed by more than 0.01 ft -- so every point of difference in the
+pooled median comes from the newly admitted frames, diluted by the ~90% that did
+not change. On one broadcast that made a pooled 0.48 -> 0.55 ft out of marginal
+frames whose own median was 2.61 ft and whose p90 was 31 ft.
+
+`--marginal-against` measures the newly admitted instants ALONE, which is the
+only number that answers whether coverage was bought with hallucinated
+landmarks. A claim about a coverage gain that quotes the pooled median is
+measuring the frames it did not change.
 """
 
 from __future__ import annotations
@@ -59,8 +73,13 @@ def main() -> int:
     parser.add_argument("--conf", type=float, default=0.5,
                         help="per-keypoint confidence floor")
     parser.add_argument("--instance-conf", type=float, default=None,
-                        help="court DETECTION floor; 0.001 admits the tight "
-                             "shots the default rejects outright")
+                        help="court DETECTION floor; a lower one admits the "
+                             "tight shots the default rejects outright. "
+                             "Defaults to court_keypoints.COURT_DETECTION_CONF.")
+    parser.add_argument("--marginal-against", type=float, default=None,
+                        help="report the disagreement on the instants THIS "
+                             "floor admits and that floor does not. The pooled "
+                             "median cannot see them -- see the docstring.")
     parser.add_argument("--fuse", type=int, default=0,
                         help="half-width, in frames, of the window fused onto "
                              "each instant. 0 registers the single frame. The "
@@ -86,11 +105,15 @@ def main() -> int:
     if not Path(args.weights).exists():
         print(f"FAIL - no weights at {args.weights}")
         return 1
+    from courtvision.court_keypoints import COURT_DETECTION_CONF
+    instance_conf = (COURT_DETECTION_CONF if args.instance_conf is None
+                     else args.instance_conf)
     model = YOLO(args.weights)
     device = resolve_device()
 
-    def register(frame):
-        return _register(model, frame, device, args.conf, 6, instance_conf)
+    def register(frame, floor=None):
+        return _register(model, frame, device, args.conf, 6,
+                         instance_conf if floor is None else floor)
     capture = cv2.VideoCapture(args.video)
     if not capture.isOpened():
         print(f"FAIL - cannot open {args.video}")
@@ -133,6 +156,8 @@ def main() -> int:
     # a model that had in fact registered more -- ORB refusing to align two
     # frames says nothing about whether either was registered.
     court_frames, both_registered, orb_failed, errors = 0, 0, 0, []
+    marginal: list[float] = []
+    per_instant: list[tuple[float, float]] = []
     times = np.linspace(args.start, args.end, args.samples)
     for t in times:
         matrix_a, frame_a = registration(t)
@@ -155,7 +180,15 @@ def main() -> int:
                          for x in np.linspace(width * 0.15, width * 0.85, 6)
                          for y in np.linspace(height * 0.55, height * 0.92, 4)],
                         dtype=np.float32)
-        errors.extend(registration_disagreement(matrix_a, matrix_b, carry, grid))
+        here = registration_disagreement(matrix_a, matrix_b, carry, grid)
+        errors.extend(here)
+        per_instant.append((float(t), float(np.median(here))))
+        if args.marginal_against is not None:
+            # Would the reference floor have registered this instant at all?
+            reference_a = register(frame_a, floor=args.marginal_against)
+            reference_b = register(frame_b, floor=args.marginal_against)
+            if reference_a is None or reference_b is None:
+                marginal.extend(here)
 
     errors = np.array(errors)
     print(f"{args.video}  fps {fps:.1f}  "
@@ -172,6 +205,27 @@ def main() -> int:
               f"painted key 5.8]")
     else:
         print("  no instant registered twice - nothing to compare")
+
+    if args.marginal_against is not None:
+        newly = [m for t, m in per_instant
+                 if any(abs(t - tt) < 1e-9 for tt, _ in per_instant)]
+        print(f"\n  MARGINAL: the instants {instance_conf} admits and "
+              f"{args.marginal_against} does not")
+        if marginal:
+            marginal_array = np.array(marginal)
+            over_two = sum(1 for _, m in per_instant if m > 2.0)
+            print(f"    {len(marginal) // len(grid)} instants, "
+                  f"p50 {np.median(marginal_array):.2f} ft   "
+                  f"p90 {np.percentile(marginal_array, 90):.2f} ft")
+            print(f"    THIS is the number a coverage claim rests on. The "
+                  f"pooled median above\n    is the old instants, which do not "
+                  f"move, diluted by these.")
+            if np.median(marginal_array) > 2.0:
+                print(f"    -> FAILS the 2 ft gate. Coverage bought here is "
+                      f"bought with registrations\n       that disagree with "
+                      f"themselves.")
+        else:
+            print("    none -- this floor admits nothing the reference does not")
     return 0
 
 
