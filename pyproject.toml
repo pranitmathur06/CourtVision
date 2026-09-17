@@ -12,10 +12,12 @@ dependencies = [
     "torch>=2.4",
     "torchvision>=0.19",
     "ultralytics>=8.3",
-    # ByteTrack is deprecated in 0.28 and REMOVED in 0.31, with no in-package
-    # replacement offered. Pinned below the removal so tracking cannot break
-    # silently; PlayerTracker exists to absorb the swap when one lands.
-    "supervision>=0.25,<0.31",
+    # supervision is gone. It was here only for sv.ByteTrack, which it
+    # deprecates in 0.28 and removes in 0.31 -- and which was replaced by
+    # courtvision.motion_tracking, not because of the deprecation but because it
+    # was measurably worse on this footage: 127 identities per six-second clip
+    # for ten players against 34. The pin that was waiting for that swap can go
+    # with it.
     "scikit-learn>=1.5",
     "transformers>=4.44",
     "langgraph>=1.0",

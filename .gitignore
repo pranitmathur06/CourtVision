@@ -18,3 +18,20 @@ data/rim_scale/
 data/ball_rim/
 data/ball_track/
 data/ball_tiles/
+
+# Labelling rounds that were tracked before they were ignored, so these entries
+# do nothing until a history rewrite untracks them. They are here so nothing NEW
+# lands in git: together these directories are 4.6 GB of ~107k files, which is
+# 88% of what a clone costs, against docs/clips' 12%.
+data/rim_hand2/
+data/rim_hand3/
+data/rim_prop/
+data/rim_scale_v2/
+data/rim_scale_v3/
+data/jersey_crops/
+datasets/
+
+# Published clips. They are served from the site today, which is why they were
+# allowed in; they move to object storage and out of git.
+# docs/clips/
+

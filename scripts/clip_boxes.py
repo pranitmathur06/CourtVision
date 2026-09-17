@@ -40,8 +40,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from collections import defaultdict
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+
+from courtvision.motion_tracking import (TrackerConfig, deduplicate,  # noqa: E402
+                                         interpolate, iou, smooth, track)
 
 #: Per-frame linking: two boxes this close are the same object.
 LINK_IOU = 0.4
@@ -223,17 +229,6 @@ def rim_shaped(box):
             and RIM_ASPECT[0] <= w / h <= RIM_ASPECT[1])
 
 
-def iou(a, b):
-    x1, y1 = max(a[0], b[0]), max(a[1], b[1])
-    x2, y2 = min(a[2], b[2]), min(a[3], b[3])
-    if x2 <= x1 or y2 <= y1:
-        return 0.0
-    inter = (x2 - x1) * (y2 - y1)
-    ua = max(a[2] - a[0], 0) * max(a[3] - a[1], 0)
-    ub = max(b[2] - b[0], 0) * max(b[3] - b[1], 0)
-    return inter / (ua + ub - inter) if (ua + ub - inter) > 0 else 0.0
-
-
 def link(per_frame, min_iou=LINK_IOU):
     """{track: {frame: box}} by greedy overlap against the previous frame."""
     tracks: dict[int, dict[int, list]] = defaultdict(dict)
@@ -256,121 +251,6 @@ def link(per_frame, min_iou=LINK_IOU):
             assigned.append((best, box))
         previous = assigned
     return tracks
-
-
-def track(per_frame, max_age=TRACK_MAX_AGE, min_iou=TRACK_MIN_IOU,
-          gate=TRACK_GATE_SHARE):
-    """{track: {frame: box}}, joined across gaps and across camera motion.
-
-    Greedy overlap against the previous frame alone gave 127 identities per
-    six-second clip for the ten players on the floor, 77% of them living under
-    half a second. Two things caused that, and neither is the detector:
-
-      THE CAMERA MOVES. On a pan a stationary player's box slides several of
-      its own widths between frames, so the overlap with its own previous box
-      is zero and it becomes a new person. The global shift is estimated here
-      from the matches themselves -- the median displacement of everything
-      that did match -- and applied before matching the rest.
-
-      A PLAYER DISAPPEARS FOR A MOMENT. Behind another player, at the edge of
-      frame, or simply missed. Matching only against the previous frame ends
-      the track; a track here survives `max_age` frames of absence, moving at
-      its last known velocity, and is picked up again when it reappears.
-
-    Assignment is Hungarian over 1 - IoU rather than greedy, so one obvious
-    match no longer steals the box a better one needed.
-    """
-    import numpy as np
-    from scipy.optimize import linear_sum_assignment
-
-    tracks, live, nxt = defaultdict(dict), {}, 0
-    shift = (0.0, 0.0)
-    for f, boxes in enumerate(per_frame):
-        predicted = {}
-        for tid, state in live.items():
-            age = f - state["frame"]
-            vx, vy = state["vel"]
-            dx = vx * age + shift[0] * age
-            dy = vy * age + shift[1] * age
-            b = state["box"]
-            predicted[tid] = [b[0] + dx, b[1] + dy, b[2] + dx, b[3] + dy]
-
-        matches = {}
-        if predicted and boxes:
-            ids = sorted(predicted)
-            cost = np.ones((len(ids), len(boxes)), dtype=float)
-            for i, tid in enumerate(ids):
-                pb = predicted[tid]
-                width = max(pb[2] - pb[0], 1.0)
-                height = max(pb[3] - pb[1], 1.0)
-                for j, box in enumerate(boxes):
-                    overlap = iou(pb, box)
-                    near = (abs((box[0] + box[2]) / 2 - (pb[0] + pb[2]) / 2) < gate * width
-                            and abs((box[1] + box[3]) / 2 - (pb[1] + pb[3]) / 2) < gate * height)
-                    sized = 0.5 <= (box[2] - box[0]) / width <= 2.0
-                    if overlap >= min_iou or (near and sized):
-                        cost[i, j] = 1.0 - max(overlap, 0.05)
-            rows, cols = linear_sum_assignment(cost)
-            for i, j in zip(rows, cols):
-                if cost[i, j] < 1.0:
-                    matches[ids[i]] = j
-
-        moved = [((boxes[j][0] + boxes[j][2]) / 2 - (predicted[t][0] + predicted[t][2]) / 2,
-                  (boxes[j][1] + boxes[j][3]) / 2 - (predicted[t][1] + predicted[t][3]) / 2)
-                 for t, j in matches.items()]
-        if len(moved) >= 3:
-            shift = (float(np.median([m[0] for m in moved])),
-                     float(np.median([m[1] for m in moved])))
-        else:
-            shift = (0.0, 0.0)
-
-        taken = set(matches.values())
-        for tid, j in matches.items():
-            box = boxes[j]
-            state = live[tid]
-            gap = max(f - state["frame"], 1)
-            centre = ((box[0] + box[2]) / 2, (box[1] + box[3]) / 2)
-            was = ((state["box"][0] + state["box"][2]) / 2,
-                   (state["box"][1] + state["box"][3]) / 2)
-            vel = ((centre[0] - was[0]) / gap, (centre[1] - was[1]) / gap)
-            state["vel"] = (0.6 * state["vel"][0] + 0.4 * vel[0],
-                            0.6 * state["vel"][1] + 0.4 * vel[1])
-            state["box"], state["frame"] = box, f
-            tracks[tid][f] = box
-        for j, box in enumerate(boxes):
-            if j in taken:
-                continue
-            live[nxt] = {"box": box, "frame": f, "vel": (0.0, 0.0)}
-            tracks[nxt][f] = box
-            nxt += 1
-        live = {tid: s for tid, s in live.items() if f - s["frame"] <= max_age}
-    return tracks
-
-
-def smooth(by_frame, window=SMOOTH):
-    """Centred moving average over a track, keyed by frame."""
-    order = sorted(by_frame)
-    out = {}
-    for i, f in enumerate(order):
-        lo, hi = max(0, i - window), min(len(order), i + window + 1)
-        chunk = [by_frame[order[k]] for k in range(lo, hi)]
-        out[f] = [sum(b[k] for b in chunk) / len(chunk) for k in range(4)]
-    return out
-
-
-def interpolate(by_frame, max_gap=MAX_GAP):
-    """Fill short gaps in a track so a box does not blink."""
-    order = sorted(by_frame)
-    out = dict(by_frame)
-    for a, b in zip(order, order[1:]):
-        gap = b - a
-        if gap <= 1 or gap > max_gap:
-            continue
-        for k in range(1, gap):
-            t = k / gap
-            out[a + k] = [by_frame[a][i] + (by_frame[b][i] - by_frame[a][i]) * t
-                          for i in range(4)]
-    return out
 
 
 #: Half-width, in seconds, of the window the possession kernels scan around the

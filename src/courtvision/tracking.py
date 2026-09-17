@@ -1,64 +1,66 @@
-"""Stage 3 — persistent player identities via ByteTrack.
+"""Stage 3 — persistent player identities.
 
 Only players are tracked. The ball is small, fast and often occluded; running it
 through a tracker yields flickering IDs that help nothing, since stage 5 needs
 only its position. Ball and rim therefore pass through with track_id = -1.
 
-`sv.ByteTrack` is deprecated in supervision 0.28 and removed in 0.31, and the
-library currently offers no in-package replacement — hence the `<0.31` pin in
-pyproject.toml. This wrapper is the seam that keeps that swap to one file.
+THIS NO LONGER WRAPS BYTETRACK. `sv.ByteTrack` is deprecated in supervision 0.28
+and removed in 0.31 with nothing offered in its place, and this file was written
+as the seam that would keep that swap to one file. The swap has now happened,
+and not because of the deprecation: `motion_tracking` was built in the clip
+renderer because ByteTrack was measurably not good enough on this footage --
+127 identities per six-second clip for ten players, 77% of them living under
+half a second, against 34 and under half. The whole pipeline now gets what the
+clip renderer already had.
+
+What is NOT fixed by it: there is still no re-identification, so a track ends at
+a camera cut and the same player returns as somebody new.
 """
 
 from __future__ import annotations
 
 from collections.abc import Sequence
 
-import numpy as np
-import supervision as sv
-
+from courtvision.motion_tracking import MotionTracker, TrackerConfig
 from courtvision.types import HANDLER, PLAYER, Box, Detection, Frame, Track
 
 UNTRACKED = -1
 
 
 class PlayerTracker:
-    """ByteTrack behind a `Detection` list in / `Track` list out interface."""
+    """`motion_tracking` behind a `Detection` list in / `Track` list out seam.
 
-    def __init__(self) -> None:
-        self._tracker = sv.ByteTrack()
+    `fps` is the rate of the SAMPLED sequence, not of the video: the tracker's
+    thresholds are in seconds and a caller detecting every second frame of 30 Hz
+    footage is running at 15. Getting this wrong does not raise -- it silently
+    changes how long a track survives an occlusion, which is why it is an
+    argument rather than a constant.
+    """
+
+    def __init__(self, fps: float = 15.0, config: TrackerConfig | None = None) -> None:
+        self._tracker = MotionTracker(fps=fps, config=config)
+        self._frame = 0
+
+    def end_segment(self) -> None:
+        """The camera cut; nothing carries across it. See MotionTracker."""
+        self._tracker.end_segment()
 
     def update(self, detections: list[Detection]) -> list[Track]:
         # Handlers are people too: they must be tracked so their identity
-        # persists, but their label has to survive tracking. supervision keeps
-        # class_id through ByteTrack, so it carries the distinction.
+        # persists, but their label has to survive tracking.
         players = [d for d in detections if d.label in (PLAYER, HANDLER)]
         others = [d for d in detections if d.label not in (PLAYER, HANDLER)]
 
         tracks: list[Track] = [
             Track(UNTRACKED, d.box, d.label, d.conf) for d in others
         ]
-
-        if players:
-            sv_detections = sv.Detections(
-                xyxy=np.array(
-                    [[d.box.x1, d.box.y1, d.box.x2, d.box.y2] for d in players],
-                    dtype=np.float32,
-                ),
-                confidence=np.array([d.conf for d in players], dtype=np.float32),
-                class_id=np.array(
-                    [1 if d.label == HANDLER else 0 for d in players], dtype=int
-                ),
-            )
-            tracked = self._tracker.update_with_detections(sv_detections)
-            for xyxy, conf, track_id, class_id in zip(
-                tracked.xyxy, tracked.confidence, tracked.tracker_id, tracked.class_id
-            ):
-                x1, y1, x2, y2 = (float(v) for v in xyxy)
-                label = HANDLER if int(class_id) == 1 else PLAYER
-                tracks.append(
-                    Track(int(track_id), Box(x1, y1, x2, y2), label, float(conf))
-                )
-
+        boxes = [[d.box.x1, d.box.y1, d.box.x2, d.box.y2] for d in players]
+        for detection, (track_id, box) in zip(
+                players, self._tracker.update(boxes, self._frame)):
+            tracks.append(Track(int(track_id),
+                                Box(box[0], box[1], box[2], box[3]),
+                                detection.label, detection.conf))
+        self._frame += 1
         return tracks
 
 
