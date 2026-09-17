@@ -5,13 +5,21 @@ which is how it ended up sitting on a spectator for whole possessions: a
 stationary orange thing in the crowd is free under a smoothness prior, and
 eyes skim past it.
 
-Thirteen frames in this game carry a ball position located by eye, on a 1280 px
-panel with a 50 px grid, BEFORE any system's claim was looked at, with a stated
-tolerance of 28 px (`data/labeling/rim_ball/ball_truth_handlocated.json` and
-`ball_truth_hard.json`, the second being frames where the detector's best
-candidate is under 0.35 -- the ball is buried or absent). Thirteen is few, and
-the confidence interval says so, but it is truth nobody in this project
-produced by agreeing with a detector.
+Truth is a ball position located by eye on a 1280 px panel with a 50 px grid,
+BEFORE any system's claim was looked at, with a stated tolerance of 28 px. Truth
+files are named on the command line; pass --truth more than once to pool them.
+
+    ball_truth_uniform.json       135 balls on a UNIFORM 25 s grid across the
+                                  whole game. This is the default and it is the
+                                  one to quote: uniform sampling makes it an
+                                  estimate of in-game accuracy.
+    ball_truth_handlocated.json   the original 13, and
+    ball_truth_hard.json          frames where the detector's best candidate is
+                                  under 0.35 -- the ball is buried or absent.
+                                  Together they are a HARD-CASE sample and the
+                                  number they produce is a worst case, not an
+                                  average. Scoring 5/13 and reading it as the
+                                  in-game rate is the mistake this default fixes.
 
 The window around each instant is detected once and cached, so a change to the
 choosing costs seconds. `--cache` writes it; later runs read it.
@@ -29,8 +37,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import clip_boxes  # noqa: E402
 
-TRUTH = ["data/labeling/rim_ball/ball_truth_handlocated.json",
-         "data/labeling/rim_ball/ball_truth_hard.json"]
+#: Uniformly sampled, so the number it produces estimates in-game accuracy.
+UNIFORM_TRUTH = ["data/labeling/rim_ball/ball_truth_uniform.json"]
+#: The original hard-case sample, kept for the worst-case number.
+HARD_TRUTH = ["data/labeling/rim_ball/ball_truth_handlocated.json",
+              "data/labeling/rim_ball/ball_truth_hard.json"]
 TOLERANCE_PX = 28.0
 WINDOW_S = 3.0
 
@@ -174,12 +185,16 @@ def wilson(hits, n, z=1.96):
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--video", default="data/raw_clips/fullgame.mp4")
-    parser.add_argument("--cache", default="outputs/ball_choice_windows.json")
+    parser.add_argument("--cache", default="outputs/ball_choice_windows_uniform.json")
+    parser.add_argument("--truth", action="append", default=None,
+                        help="a truth file; repeat to pool. Defaults to the "
+                             "uniform 135; pass the two hard-case files instead "
+                             "for the worst case.")
     parser.add_argument("--build", action="store_true",
                         help="detect the windows again (a few minutes)")
     args = parser.parse_args()
 
-    points = truth_points(TRUTH)
+    points = truth_points(args.truth or UNIFORM_TRUTH)
     print(f"{len(points)} hand-located ball positions, tolerance {TOLERANCE_PX:.0f} px")
     if args.build or not Path(args.cache).exists():
         build_cache(args.video, points, args.cache)

@@ -24,15 +24,36 @@ from pathlib import Path
 
 def split(rows):
     """(located, absent, unknown) from verdict rows."""
-    located = [r for r in rows if r.get("verdict") == "ball" and r.get("ball")]
-    absent = [r for r in rows if r.get("verdict") == "none"]
-    unknown = [r for r in rows if r.get("verdict") == "unknown"]
+    # Two label rounds, two field names for the same judgement.
+    def verdict(row):
+        return row.get("verdict") or row.get("ball_verdict")
+
+    located = [r for r in rows if verdict(r) == "ball" and r.get("ball")]
+    absent = [r for r in rows if verdict(r) == "none"]
+    unknown = [r for r in rows if verdict(r) == "unknown"]
     return located, absent, unknown
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--labels", action="append", required=True)
+    parser.add_argument("--game", default=None,
+                        help="keep only this game's rows. Two label rounds cover "
+                             "three broadcasts and the ball is not equally hard "
+                             "in each, so a pooled number hides a per-game "
+                             "spread that the per-game harness exists to show.")
+    parser.add_argument("--pick", default=None, choices=["random", "hard"],
+                        help="'random' keeps the uniformly sampled half, which is "
+                             "the only half that estimates in-game accuracy; "
+                             "anything else in the file was sampled because the "
+                             "model was already struggling there.")
+    parser.add_argument("--frames", default=None,
+                        help="directory holding the JPEGs the labeller actually "
+                             "looked at. Recorded in the truth file so scorers "
+                             "read THAT frame rather than seeking the video: the "
+                             "labelled times were written at 30.0 fps and rounded "
+                             "to 0.1 s, so a seek lands a frame or more away, and "
+                             "a ball crosses several of its own widths in 33 ms.")
     parser.add_argument("--tolerance-px", type=float, default=28.0)
     parser.add_argument("--out", required=True)
     args = parser.parse_args()
@@ -40,6 +61,12 @@ def main() -> int:
     rows = []
     for path in args.labels:
         rows.extend(json.load(open(path))["frames"])
+    if args.game:
+        rows = [r for r in rows if r.get("game") == args.game]
+    if args.pick:
+        keep = (lambda r: r.get("pick") == "random") if args.pick == "random" \
+            else (lambda r: r.get("pick") not in (None, "random"))
+        rows = [r for r in rows if keep(r)]
     located, absent, unknown = split(rows)
     total = len(located) + len(absent) + len(unknown)
 
@@ -49,9 +76,11 @@ def main() -> int:
                        "the false-alarm denominator; 'unknown' frames are excluded from "
                        "both sides of the accuracy",
                "tolerance_px": args.tolerance_px,
+               "frames_dir": args.frames,
                "unknown_count": len(unknown), "absent_count": len(absent),
                "frames": [{"t": r["t"], "ball": r["ball"],
-                           "radius": r.get("radius", 0)} for r in located],
+                           "radius": r.get("radius", 0),
+                           "file": r.get("file")} for r in located],
                "absent": [{"t": r["t"]} for r in absent],
                "unknown": [{"t": r["t"]} for r in unknown]}, open(out, "w"), indent=1)
 

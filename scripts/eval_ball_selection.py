@@ -20,6 +20,24 @@ not say so.
 `--ranker` re-scores the detector's candidates with the context ranker instead
 of using the detector's confidence. Both orderings are reported from the same
 candidate list, so the comparison is of SELECTORS and not of two pipelines.
+
+TWO CORRECTIONS, made when this was first pointed at a uniform sample and its
+answer disagreed with `eval_possession.py` on the same 130 frames:
+
+  IT WAS SCORING THE WRONG PICTURE. Truth times were written at 30.0 fps and
+  rounded to 0.1 s, so seeking the video by timestamp lands a frame or more
+  away, and a ball crosses several of its own widths in 33 ms. It now reads the
+  JPEG the labeller looked at, named by the truth file's `frames_dir`, and only
+  seeks when there is none. Worth 11 points.
+
+  IT WAS ASKING THE WRONG QUESTION. `delivered` asked whether the candidate
+  NEAREST to truth ranked first. Two detections often land on the same ball, and
+  when the other one outranks it that reads as a miss although the system --
+  which reports its top-scoring candidate -- was right. It now asks whether the
+  reported candidate is within tolerance, which is what the product does. Worth
+  another 10 points.
+
+With both, this file and `eval_possession.py` agree to the frame: 102/130.
 """
 
 from __future__ import annotations
@@ -41,6 +59,23 @@ def wilson(hits, total, z=1.96):
     return max(0.0, centre - spread), min(1.0, centre + spread)
 
 
+def first_within(order, gaps, tolerance):
+    """Rank of the best-scoring candidate that is ACTUALLY ON the ball.
+
+    Not the rank of the single nearest one. Two detections often land on the
+    same ball, and asking whether the NEAREST of them ranks first calls it a
+    miss whenever the other one outranks it -- while the system, which reports
+    its top-scoring candidate, was right. Scored that way this file read 92/130
+    where eval_possession.py, asking whether the reported candidate is within
+    tolerance, read 102/130 on the same frames with the same weights. The
+    difference was ten frames of definition, not of detector.
+    """
+    for place, index in enumerate(order, start=1):
+        if gaps[index] <= tolerance:
+            return place
+    return len(order) + 1
+
+
 def scored_order(candidates, scores):
     """Indices of `candidates` best first, ties broken by the earlier one."""
     return sorted(range(len(candidates)), key=lambda i: (-scores[i], i))
@@ -57,6 +92,8 @@ def main() -> int:
                              "crops were cut at; anything larger shows the model "
                              "a ball bigger than it was trained on")
     parser.add_argument("--conf", type=float, default=0.03)
+    parser.add_argument("--frames", default=None,
+                        help="override the truth file's frames_dir")
     parser.add_argument("--ranker", default=None,
                         help="train_ball_context_ranker.py output")
     args = parser.parse_args()
@@ -72,11 +109,14 @@ def main() -> int:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     from train_ball_context_ranker import context_patch
 
-    rows, tolerance = [], None
+    rows, tolerance, frames_dir_hint = [], None, None
     for path in args.truth:
         data = json.load(open(path))
         tolerance = float(data.get("tolerance_px", tolerance or 28.0))
+        frames_dir_hint = data.get("frames_dir") or frames_dir_hint
         rows.extend(data["frames"])
+    if args.frames:
+        frames_dir_hint = args.frames
     device = resolve_device()
     model = YOLO(args.detector)
 
@@ -93,14 +133,29 @@ def main() -> int:
         ranker.load_state_dict(blob["state"])
         ranker.eval().to(device)
 
+    # Read the frame the LABELLER looked at when the truth file names one. The
+    # labelled times were written at 30.0 fps and rounded to 0.1 s, so seeking
+    # the video by timestamp lands a frame or more away -- and at 33 ms a ball
+    # crosses several of its own widths. Scored by seeking, this detector reads
+    # 57% on the same 130 frames that eval_possession.py, which reads the saved
+    # JPEG, scores at 78.5%. The frame, not the detector, was the difference.
+    frames_dir = Path(frames_dir_hint) if frames_dir_hint else None
     capture = cv2.VideoCapture(args.video)
     proposed = delivered_conf = delivered_rank = 0
     ranks_conf, ranks_rank, counts = [], [], []
+    read_from_disk = 0
     for row in rows:
-        capture.set(cv2.CAP_PROP_POS_MSEC, row["t"] * 1000)
-        ok, frame = capture.read()
-        if not ok:
-            continue
+        saved = frames_dir / row["file"] if frames_dir and row.get("file") else None
+        if saved is not None and saved.exists():
+            frame = cv2.imread(str(saved))
+            read_from_disk += 1
+        else:
+            frame = None
+        if frame is None:
+            capture.set(cv2.CAP_PROP_POS_MSEC, row["t"] * 1000)
+            ok, frame = capture.read()
+            if not ok:
+                continue
         found = model.predict(frame, device=device, verbose=False,
                               imgsz=args.imgsz, conf=args.conf)[0].boxes
         candidates, confidences = [], []
@@ -128,7 +183,7 @@ def main() -> int:
         proposed += 1
 
         order = scored_order(candidates, confidences)
-        rank = order.index(nearest) + 1
+        rank = first_within(order, gaps, tolerance)
         ranks_conf.append(rank)
         delivered_conf += int(rank == 1)
 
@@ -145,7 +200,7 @@ def main() -> int:
                 scores = np.full(len(candidates), -1.0)
                 scores[usable] = got
                 order = scored_order(candidates, scores)
-                rank = order.index(nearest) + 1
+                rank = first_within(order, gaps, tolerance)
                 ranks_rank.append(rank)
                 delivered_rank += int(rank == 1)
                 line += f", rank {rank} by the ranker"
@@ -153,6 +208,8 @@ def main() -> int:
     capture.release()
 
     total = len(rows)
+    print(f"\n  {read_from_disk}/{total} frames read from the labeller's own "
+          f"JPEG; the rest were seeked in the video")
     print(f"\n{total} hand-located balls, tolerance {tolerance:.0f} px, "
           f"{np.mean(counts):.1f} candidates a frame")
     for name, hits, ranks in (("proposed (the ceiling)", proposed, None),
