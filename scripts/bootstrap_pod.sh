@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # One command to paste into a fresh RunPod web terminal.
 #
-#   bash <(curl -sSL https://raw.githubusercontent.com/pranitmathur06/CourtVision/feat/v1-pipeline/scripts/bootstrap_pod.sh)
+#   bash <(curl -sSL https://raw.githubusercontent.com/pranitmathur06/CourtVision/main/scripts/bootstrap_pod.sh)
 #
 # ...or, since the repo may be private, clone first and run it locally:
 #
-#   git clone -b feat/v1-pipeline https://github.com/pranitmathur06/CourtVision.git
+#   git clone -b main https://github.com/pranitmathur06/CourtVision.git
 #   cd CourtVision && bash scripts/bootstrap_pod.sh
 #
 # Installs into the image's EXISTING Python rather than a fresh venv. RunPod's
@@ -21,7 +21,7 @@
 # Each is actionable rather than a stack trace at $0.60/hour.
 set -uo pipefail
 
-REPO_BRANCH="feat/v1-pipeline"
+REPO_BRANCH="main"
 say() { printf "\n\033[1m>>> %s\033[0m\n" "$*"; }
 die() { printf "\n\033[31mFAILED: %s\033[0m\n" "$*"; exit 1; }
 

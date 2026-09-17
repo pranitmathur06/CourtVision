@@ -32,5 +32,12 @@ live = ["nba_api>=1.4"]
 [tool.setuptools.packages.find]
 where = ["src"]
 
+# load_fused_kernel() reads the .cu next to its own module file, which works
+# today only because everything is installed -e. A non-editable install would
+# ship the Python and leave the kernel behind, and the failure would be a
+# silent fall back to the portable path rather than an error.
+[tool.setuptools.package-data]
+"courtvision.kernels" = ["*.cu"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

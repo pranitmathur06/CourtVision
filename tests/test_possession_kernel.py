@@ -14,7 +14,9 @@ from courtvision.kernels.possession import (BETA, FEATURES, GRID,
                                             default_parameters,
                                             load_fused_kernel,
                                             possession_reference,
-                                            possession_torch)
+                                            possession_torch,
+                                            temporal_reference,
+                                            temporal_torch)
 
 torch = pytest.importorskip("torch")
 
@@ -158,3 +160,93 @@ def test_the_real_kernel_compiles_and_matches_the_oracle_on_the_host():
                             capture_output=True, text=True)
     assert result.returncode == 0, result.stdout[-3000:] + result.stderr[-2000:]
     assert "PASS" in result.stdout
+
+
+# ---- kernel 2: the scan over time -----------------------------------------
+
+def scores_over_time(frames=7, states=5, seed=17):
+    rng = np.random.default_rng(seed)
+    return rng.normal(0.0, 1.8, size=(frames, states)), float(rng.normal(0.4, 0.8))
+
+
+def test_the_scan_agrees_with_the_torch_path():
+    scores, stay = scores_over_time()
+    expected, _, _ = temporal_reference(scores, stay, target=-1)
+    got = temporal_torch(torch.tensor(scores), torch.tensor(stay, dtype=torch.float64))
+    assert np.abs(expected - got.detach().numpy()).max() < 1e-9
+
+
+def test_the_hand_derived_gradient_is_free_minus_clamped():
+    """The backward is two expectations, not a differentiated recursion.
+
+    -log(posterior) is logZ - logZ_clamped, so its gradient is the difference of
+    two log-partition gradients. Autograd through the portable scan is the
+    independent witness; deriving it a second time by hand would only prove the
+    same mistake twice.
+    """
+    scores, stay = scores_over_time()
+    target = 2
+    _, loss, grads = temporal_reference(scores, stay, target)
+    tensor = torch.tensor(scores, requires_grad=True)
+    raw = torch.tensor(stay, dtype=torch.float64, requires_grad=True)
+    value = -torch.log(temporal_torch(tensor, raw)[target])
+    value.backward()
+    assert abs(loss - float(value.detach())) < 1e-8
+    assert np.abs(grads["scores"] - tensor.grad.numpy()).max() < 1e-7
+    assert abs(grads["stay_raw"] - float(raw.grad)) < 1e-7
+
+
+def test_the_posterior_is_a_distribution_and_the_centre_is_what_is_read():
+    scores, stay = scores_over_time()
+    posterior, _, _ = temporal_reference(scores, stay, target=-1, centre=3)
+    assert posterior.shape == (scores.shape[1],)
+    assert posterior.min() >= 0.0
+    assert abs(posterior.sum() - 1.0) < 1e-12
+
+
+def test_a_zero_stay_bonus_leaves_every_frame_independent():
+    """With no reward for keeping the ball the scan must do nothing at all.
+
+    softplus(x) -> 0 as x -> -inf, and a transition matrix of all zeros makes
+    the posterior at the centre the centre frame's own softmax. If the scan
+    changed the answer here it would be adding something that is not in the
+    model.
+    """
+    scores, _ = scores_over_time()
+    posterior, _, _ = temporal_reference(scores, -60.0, target=-1, centre=3)
+    alone = np.exp(scores[3] - scores[3].max())
+    assert np.abs(posterior - alone / alone.sum()).max() < 1e-9
+
+
+def test_a_large_stay_bonus_makes_one_state_win_every_frame():
+    """Turned up, the scan should answer with the best state OVER THE WINDOW.
+
+    This is the behaviour the kernel exists for: a frame where the evidence is
+    poor gets the answer from its neighbours instead.
+    """
+    scores = np.array([[0.0, 3.0], [0.0, 3.0], [0.2, 0.0], [0.0, 3.0],
+                       [0.0, 3.0], [0.0, 3.0], [0.0, 3.0]])
+    alone = int(np.argmax(scores[2]))
+    posterior, _, _ = temporal_reference(scores, 20.0, target=-1, centre=2)
+    assert alone == 0                       # the centre frame on its own says 0
+    assert int(np.argmax(posterior)) == 1   # the window says 1, and it is right
+
+
+def test_the_stay_bonus_can_never_punish_keeping_the_ball():
+    """softplus, so the transition is a bonus by construction.
+
+    A negative stay bonus would be a model that believes the ball changes hands
+    more often than it is kept, which is false in every broadcast, and training
+    could still wander there on 314 frames.
+    """
+    from courtvision.kernels.possession import softplus
+    assert float(softplus(-50.0)) >= 0.0
+    assert float(softplus(0.0)) > 0.0
+    assert abs(float(softplus(30.0)) - 30.0) < 1e-6
+
+
+def test_the_cuda_source_declares_the_temporal_entry_points():
+    source = Path("src/courtvision/kernels/possession.cu").read_text()
+    for wanted in ("__global__ void temporal_kernel", "temporal_forward",
+                   "forward_backward", "block_max", "block_sum"):
+        assert wanted in source

@@ -415,7 +415,288 @@ std::vector<torch::Tensor> possession_backward(
           grad_nobody, grad_region};
 }
 
+// ---------------------------------------------------------------------------
+// Kernel 2: possession over time -- a fused forward-backward with its own
+// hand-derived backward, one block per window.
+//
+// WHY THIS ONE IS THE INTERESTING KERNEL. It is a sequential scan over time
+// that is parallel over states, with a reduction shared by every state at each
+// step. That shape does not decompose into library ops: cuBLAS has no scan,
+// and writing it as T separate small launches pays a launch and a round trip
+// to global memory per frame for arithmetic that fits in shared memory.
+//
+// The transition is STAY on the diagonal and zero off it, so
+//
+//   logsumexp_j(alpha[t-1,j] + M[j,k]) = log( exp(alpha[t-1,k]) * (e^S - 1)
+//                                             + sum_j exp(alpha[t-1,j]) )
+//
+// -- one max and one sum for the whole state set, then O(1) per state.
+//
+// THE BACKWARD IS FOUR SCANS IN ONE LAUNCH. The loss is -log of the centre
+// posterior at the labelled track, which equals logZ - logZ_clamped where the
+// clamped model pins frame `centre` to `target`. Both are log partition
+// functions, so both gradients are expectations and the loss gradient is their
+// difference: gamma_free - gamma_clamped for the scores, and the difference of
+// the expected stay-counts for STAY. So the free pass and the clamped pass --
+// forward and backward each -- produce the value AND the gradient together,
+// and nothing intermediate is written to global memory.
+//
+// Threads stride over states rather than owning one each, so a launch with a
+// single thread computes the same numbers as a launch with 64. That is what
+// lets verify_possession_numerics.py prove the reductions on a machine with no
+// GPU, and it is not optional: the one-thread path is the oracle.
+
+namespace {
+
+constexpr float kClampFloor = -1e30f;
+// -inf as a literal: the identity for a max over log-scores.
+constexpr float kNegativeInfinity = -3.4028234663852886e+38f;
+
+__device__ __forceinline__ float block_max(float value, float* buffer) {
+  buffer[threadIdx.x] = value;
+  __syncthreads();
+  for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
+    if (threadIdx.x < stride) {
+      buffer[threadIdx.x] = fmaxf(buffer[threadIdx.x], buffer[threadIdx.x + stride]);
+    }
+    __syncthreads();
+  }
+  const float answer = buffer[0];
+  __syncthreads();
+  return answer;
+}
+
+__device__ __forceinline__ float block_sum(float value, float* buffer) {
+  buffer[threadIdx.x] = value;
+  __syncthreads();
+  for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
+    if (threadIdx.x < stride) {
+      buffer[threadIdx.x] += buffer[threadIdx.x + stride];
+    }
+    __syncthreads();
+  }
+  const float answer = buffer[0];
+  __syncthreads();
+  return answer;
+}
+
+// One free-or-clamped forward-backward. Writes the per-frame posteriors into
+// `gamma`, and returns logZ and the expected number of frames that keep the
+// ball through `out_log_z` / `out_xi`. Every thread must call it.
+__device__ void forward_backward(const float* scores, float stay, int frames,
+                                 int states, float* alpha, float* beta,
+                                 float* buffer, float* gamma,
+                                 float* out_log_z, float* out_xi) {
+  const float boost = expm1f(stay);
+
+  for (int k = threadIdx.x; k < states; k += blockDim.x) {
+    alpha[k] = scores[k];
+  }
+  __syncthreads();
+  for (int t = 1; t < frames; ++t) {
+    float best = kNegativeInfinity;
+    for (int k = threadIdx.x; k < states; k += blockDim.x) {
+      best = fmaxf(best, alpha[(t - 1) * states + k]);
+    }
+    const float shift = block_max(best, buffer);
+    float mass = 0.0f;
+    for (int k = threadIdx.x; k < states; k += blockDim.x) {
+      mass += expf(alpha[(t - 1) * states + k] - shift);
+    }
+    const float total = block_sum(mass, buffer);
+    for (int k = threadIdx.x; k < states; k += blockDim.x) {
+      const float weight = expf(alpha[(t - 1) * states + k] - shift);
+      alpha[t * states + k] =
+          scores[t * states + k] + shift + logf(weight * boost + total);
+    }
+    __syncthreads();
+  }
+
+  for (int k = threadIdx.x; k < states; k += blockDim.x) {
+    beta[(frames - 1) * states + k] = 0.0f;
+  }
+  __syncthreads();
+  for (int t = frames - 2; t >= 0; --t) {
+    float best = kNegativeInfinity;
+    for (int k = threadIdx.x; k < states; k += blockDim.x) {
+      best = fmaxf(best, scores[(t + 1) * states + k] + beta[(t + 1) * states + k]);
+    }
+    const float shift = block_max(best, buffer);
+    float mass = 0.0f;
+    for (int k = threadIdx.x; k < states; k += blockDim.x) {
+      mass += expf(scores[(t + 1) * states + k] + beta[(t + 1) * states + k] - shift);
+    }
+    const float total = block_sum(mass, buffer);
+    for (int k = threadIdx.x; k < states; k += blockDim.x) {
+      const float weight =
+          expf(scores[(t + 1) * states + k] + beta[(t + 1) * states + k] - shift);
+      beta[t * states + k] = shift + logf(weight * boost + total);
+    }
+    __syncthreads();
+  }
+
+  float best = kNegativeInfinity;
+  for (int k = threadIdx.x; k < states; k += blockDim.x) {
+    best = fmaxf(best, alpha[(frames - 1) * states + k]);
+  }
+  const float shift = block_max(best, buffer);
+  float mass = 0.0f;
+  for (int k = threadIdx.x; k < states; k += blockDim.x) {
+    mass += expf(alpha[(frames - 1) * states + k] - shift);
+  }
+  const float log_z = shift + logf(block_sum(mass, buffer));
+
+  for (int t = 0; t < frames; ++t) {
+    for (int k = threadIdx.x; k < states; k += blockDim.x) {
+      gamma[t * states + k] =
+          expf(alpha[t * states + k] + beta[t * states + k] - log_z);
+    }
+  }
+  __syncthreads();
+
+  float stay_mass = 0.0f;
+  for (int t = 0; t < frames - 1; ++t) {
+    for (int k = threadIdx.x; k < states; k += blockDim.x) {
+      stay_mass += expf(alpha[t * states + k] + stay
+                        + scores[(t + 1) * states + k]
+                        + beta[(t + 1) * states + k] - log_z);
+    }
+  }
+  const float xi = block_sum(stay_mass, buffer);
+  *out_log_z = log_z;
+  *out_xi = xi;
+  __syncthreads();
+}
+
+__global__ void temporal_kernel(const float* scores, const float* stay_raw,
+                                int target, int centre, float* posterior,
+                                float* loss, float* grad_scores,
+                                float* grad_stay, int frames, int states) {
+  extern __shared__ float shared[];
+  float* alpha = shared;
+  float* beta = alpha + frames * states;
+  float* clamped = beta + frames * states;
+  float* gamma = clamped + frames * states;
+  float* buffer = gamma + frames * states;
+  float* scalars = buffer + blockDim.x;
+
+  // softplus, written the way that does not overflow for large inputs
+  const float raw = stay_raw[0];
+  const float stay = fmaxf(raw, 0.0f) + log1pf(expf(-fabsf(raw)));
+  const float sigmoid = 1.0f / (1.0f + expf(-raw));
+
+  float log_z = 0.0f;
+  float xi = 0.0f;
+  forward_backward(scores, stay, frames, states, alpha, beta, buffer, gamma,
+                   &log_z, &xi);
+
+  float centre_mass = 0.0f;
+  for (int k = threadIdx.x; k < states; k += blockDim.x) {
+    centre_mass += gamma[centre * states + k];
+  }
+  const float centre_total = block_sum(centre_mass, buffer);
+  for (int k = threadIdx.x; k < states; k += blockDim.x) {
+    posterior[k] = gamma[centre * states + k] / centre_total;
+  }
+  for (int i = threadIdx.x; i < frames * states; i += blockDim.x) {
+    grad_scores[i] = gamma[i];
+  }
+  if (threadIdx.x == 0) {
+    scalars[0] = log_z;
+    scalars[1] = xi;
+    loss[0] = 0.0f;
+    grad_stay[0] = 0.0f;
+  }
+  __syncthreads();
+  if (target < 0) {
+    for (int i = threadIdx.x; i < frames * states; i += blockDim.x) {
+      grad_scores[i] = 0.0f;
+    }
+    return;
+  }
+
+  // The clamped model: frame `centre` may only be in state `target`. Its log
+  // partition function is exactly alpha[centre, target] + beta[centre, target],
+  // so the loss is the difference of two log partition functions and its
+  // gradient is the difference of two expectations.
+  for (int i = threadIdx.x; i < frames * states; i += blockDim.x) {
+    clamped[i] = scores[i];
+  }
+  __syncthreads();
+  for (int k = threadIdx.x; k < states; k += blockDim.x) {
+    if (k != target) {
+      clamped[centre * states + k] = kClampFloor;
+    }
+  }
+  __syncthreads();
+
+  float clamped_log_z = 0.0f;
+  float clamped_xi = 0.0f;
+  forward_backward(clamped, stay, frames, states, alpha, beta, buffer, gamma,
+                   &clamped_log_z, &clamped_xi);
+
+  for (int i = threadIdx.x; i < frames * states; i += blockDim.x) {
+    grad_scores[i] -= gamma[i];
+  }
+  if (threadIdx.x == 0) {
+    loss[0] = scalars[0] - clamped_log_z;
+    grad_stay[0] = (scalars[1] - clamped_xi) * sigmoid;
+  }
+}
+
+}  // namespace
+
+std::vector<torch::Tensor> temporal_forward(torch::Tensor scores,
+                                            torch::Tensor stay_raw,
+                                            int64_t target, int64_t centre) {
+  const int frames = scores.size(0);
+  const int states = scores.size(1);
+  auto options = torch::TensorOptions().dtype(torch::kFloat32).device(scores.device());
+  auto posterior = torch::zeros({states}, options);
+  auto loss = torch::zeros({1}, options);
+  auto grad_scores = torch::zeros({frames, states}, options);
+  auto grad_stay = torch::zeros({1}, options);
+  const int threads = 64;
+  const size_t bytes = (4 * frames * states + threads + 8) * sizeof(float);
+  temporal_kernel<<<1, threads, bytes>>>(
+      scores.data_ptr<float>(), stay_raw.data_ptr<float>(), (int)target,
+      (int)centre, posterior.data_ptr<float>(), loss.data_ptr<float>(),
+      grad_scores.data_ptr<float>(), grad_stay.data_ptr<float>(), frames,
+      states);
+  return {posterior, loss, grad_scores, grad_stay};
+}
+
+// Occupancy straight from the runtime, because Nsight cannot always be run.
+// `ncu` needs the host driver to allow performance counters, and inside a
+// rented container it answers ERR_NVGPUCTRPERM, which no amount of being root
+// in the container fixes. cudaOccupancyMaxActiveBlocksPerMultiprocessor needs
+// no counters -- it reads the kernel's registers and shared memory and answers
+// how many blocks an SM can hold, which is the number the runbook asked for.
+std::vector<torch::Tensor> kernel_occupancy(int64_t threads, int64_t players,
+                                            int64_t frames, int64_t states) {
+  int possession_blocks = 0, temporal_blocks = 0;
+  const size_t possession_bytes = (4 * threads + players + 1) * sizeof(float);
+  const size_t temporal_bytes = (4 * frames * states + threads + 8) * sizeof(float);
+  cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+      &possession_blocks, possession_forward_kernel, (int)threads, possession_bytes);
+  cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+      &temporal_blocks, temporal_kernel, (int)threads, temporal_bytes);
+  cudaDeviceProp properties{};
+  cudaGetDeviceProperties(&properties, 0);
+  auto options = torch::TensorOptions().dtype(torch::kInt64);
+  auto answer = torch::zeros({5}, options);
+  auto* data = answer.data_ptr<int64_t>();
+  data[0] = possession_blocks;
+  data[1] = temporal_blocks;
+  data[2] = properties.maxThreadsPerMultiProcessor;
+  data[3] = properties.multiProcessorCount;
+  data[4] = (int64_t)properties.sharedMemPerBlock;
+  return {answer};
+}
+
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
   m.def("possession_forward", &possession_forward, "fused possession forward");
   m.def("possession_backward", &possession_backward, "fused possession backward");
+  m.def("temporal_forward", &temporal_forward, "fused possession over time");
+  m.def("kernel_occupancy", &kernel_occupancy, "blocks per SM for both kernels");
 }

@@ -302,16 +302,45 @@ def possession_torch(image, boxes, ball, parameters, grid: int = GRID,
 _FUSED_CACHE: list = []
 
 
+def entry_point_declarations(source: str) -> list[str]:
+    """The `std::vector<torch::Tensor> name(...)` signatures in the .cu, as
+    declarations.
+
+    Read from the definitions rather than copied, so the two cannot drift.
+    """
+    out = []
+    cursor = 0
+    needle = "std::vector<torch::Tensor> "
+    while True:
+        start = source.find(needle, cursor)
+        if start < 0:
+            return out
+        stop = source.index(") {", start)
+        out.append(source[start:stop + 1] + ";")
+        cursor = stop
+
+
 def load_fused_kernel():
     """Compile possession.cu on first use, or None when there is no CUDA.
 
-    Two mechanics here are not obvious and both were paid for once already in
-    `torso_color.py`: load_inline generates its own pybind module, so the .cu's
-    own PYBIND11_MODULE block is a duplicate and has to go; and the generated
-    glue calls the entry points without ever seeing them, so their declarations
-    must be handed over as `cpp_sources`. With `cpp_sources=""` nvcc compiles
-    the .cu perfectly and the build then dies in the glue with "not declared in
-    this scope", which reads like a CUDA failure and is not one.
+    Three mechanics here are not obvious and each was paid for once. The first
+    two came from `torso_color.py`: load_inline generates its own pybind module,
+    so the .cu's own PYBIND11_MODULE block is a duplicate and has to go; and the
+    generated glue calls the entry points without ever seeing them, so their
+    declarations must be handed over as `cpp_sources`. With `cpp_sources=""`
+    nvcc compiles the .cu perfectly and the build then dies in the glue with
+    "not declared in this scope", which reads like a CUDA failure and is not.
+
+    The third is why the declarations are READ OUT OF THE .cu rather than
+    written here. Kept by hand they went stale: the feature standardisation
+    added two tensors to both entry points and this copy did not follow, so the
+    extension compiled, linked, and failed at import with
+
+        undefined symbol: _Z19possession_backwardN2at6TensorE...
+
+    -- a mangled-name mismatch, which is what a wrong declaration looks like
+    from the outside. Taking them from the definitions makes the two impossible
+    to disagree.
     """
     import torch
 
@@ -327,23 +356,13 @@ def load_fused_kernel():
     marker = "PYBIND11_MODULE"
     if marker in source:
         source = source[:source.index(marker)].rstrip() + "\n"
-    declarations = """
-std::vector<torch::Tensor> possession_forward(
-    torch::Tensor image, torch::Tensor boxes, torch::Tensor ball,
-    torch::Tensor first, torch::Tensor first_bias, torch::Tensor second,
-    torch::Tensor second_bias, torch::Tensor nobody, torch::Tensor region,
-    double beta);
-std::vector<torch::Tensor> possession_backward(
-    torch::Tensor image, torch::Tensor boxes, torch::Tensor first,
-    torch::Tensor first_bias, torch::Tensor second, torch::Tensor region,
-    torch::Tensor features, torch::Tensor probs, torch::Tensor grad_probs,
-    double beta);
-"""
+    declarations = "\n".join(entry_point_declarations(source))
     module = load_inline(
         name="courtvision_possession",
         cpp_sources=declarations,
         cuda_sources=source,
-        functions=["possession_forward", "possession_backward"],
+        functions=["possession_forward", "possession_backward",
+                   "temporal_forward", "kernel_occupancy"],
         verbose=False,
     )
     _FUSED_CACHE.append(module)
@@ -412,3 +431,245 @@ def possession(image, boxes, ball, parameters, beta: float = BETA):
             parameters["region"], beta)
     probs, _ = possession_torch(image, boxes, ball, parameters, beta=beta)
     return probs
+
+
+# ---- kernel 2: possession over time ---------------------------------------
+#
+# WHY A SECOND KERNEL. Kernel 1 answers each frame alone, and possession is not
+# a per-frame quantity: a player holds the ball for seconds and hand-offs are
+# rare. On the held-out frames the shipped detector draws no handler box at all
+# on 37 of 157 -- automatic misses for a per-frame method, and frames where a
+# neighbour 0.25 s away is perfectly clear.
+#
+# A hard vote over a 1.2 s window was already tried and did not help (44.6%
+# against 44.6%). This is a different object: the per-frame evidence stays SOFT,
+# the cost of changing hands is LEARNED rather than assumed, and the whole thing
+# is differentiable so kernel 1 trains through it.
+#
+# THE MODEL. States are the tracks in the window plus 'nobody'. A path assigns
+# one state per frame and scores
+#
+#     sum_t s[t, k_t]  +  STAY * #{t : k_t = k_{t+1}}
+#
+# with STAY >= 0 (softplus of the trained parameter) so that keeping the ball is
+# never punished. The answer read out is the posterior marginal at the centre
+# frame, which is the frame a person labelled.
+#
+# WHY THIS SHAPE IS WORTH FUSING. The transition matrix is STAY on the diagonal
+# and zero everywhere else, so the log-sum-exp over predecessors collapses:
+#
+#     logsumexp_j(alpha[t-1, j] + M[j, k]) = log( exp(alpha[t-1, k]) * (e^S - 1)
+#                                                 + sum_j exp(alpha[t-1, j]) )
+#
+# One reduction shared by every state, then O(1) per state. That makes the pass
+# a sequential scan over time that is parallel over states with a shared-memory
+# reduction per step -- the classic shape that does not decompose into library
+# ops, and the reason this is a kernel rather than a matmul.
+#
+# THE BACKWARD, DERIVED BY HAND. The loss is -log of the centre posterior at the
+# labelled track, and
+#
+#     -log gamma[c, y] = logZ - logZ_clamped
+#
+# where the clamped model is the same model with frame c pinned to y -- because
+# alpha[c, y] + beta[c, y] is precisely the log sum over paths through (c, y).
+# Both terms are log partition functions, so each one's gradient is an
+# expectation, and the gradient of the loss is the difference of two:
+#
+#     dL/ds[t, k] = gamma_free[t, k] - gamma_clamped[t, k]
+#     dL/dSTAY    = sum_t xi_free[t]  - sum_t xi_clamped[t]
+#
+# with xi[t] the posterior probability that frame t and t+1 share a state. So
+# the whole backward is a second forward-backward over a clamped model, and no
+# recursion has to be differentiated term by term. The fused kernel runs both
+# scans in one launch; `temporal_torch` runs the free one and lets autograd
+# derive the rest, which is what the hand-written version is checked against.
+
+#: Log-scores below the best by more than this contribute nothing measurable and
+#: are floored, which keeps exp() away from underflow in the clamped pass.
+CLAMP_FLOOR = -1e30
+
+
+def softplus(x):
+    """log(1 + e^x), computed the way that does not overflow."""
+    x = np.asarray(x, dtype=np.float64)
+    return np.maximum(x, 0.0) + np.log1p(np.exp(-np.abs(x)))
+
+
+def _scan(scores: np.ndarray, stay: float, reverse: bool = False) -> np.ndarray:
+    """Forward (or backward) log-messages for the stay/switch transition.
+
+    Forward:  alpha[0] = scores[0]
+              alpha[t] = scores[t] + combine(alpha[t-1])
+    Backward: beta[T-1] = 0
+              beta[t]   = combine(scores[t+1] + beta[t+1])
+
+    where combine(v)[k] = log( exp(v[k]) * (e^S - 1) + sum_j exp(v[j]) ), shifted
+    by max(v) so nothing overflows. e^S - 1 is written expm1(S) because S is
+    often small and the subtraction would lose every digit of it.
+    """
+    frames = len(scores)
+    out = np.zeros_like(scores)
+    boost = np.expm1(stay)
+    if not reverse:
+        out[0] = scores[0]
+        for t in range(1, frames):
+            previous = out[t - 1]
+            shift = previous.max()
+            weights = np.exp(previous - shift)
+            out[t] = scores[t] + shift + np.log(weights * boost + weights.sum())
+    else:
+        for t in range(frames - 2, -1, -1):
+            previous = scores[t + 1] + out[t + 1]
+            shift = previous.max()
+            weights = np.exp(previous - shift)
+            out[t] = shift + np.log(weights * boost + weights.sum())
+    return out
+
+
+def _marginals(scores: np.ndarray, stay: float):
+    """Posterior over states per frame, the pairwise stay mass, and logZ."""
+    alpha = _scan(scores, stay, reverse=False)
+    beta = _scan(scores, stay, reverse=True)
+    total = alpha[-1]
+    shift = total.max()
+    log_z = shift + np.log(np.exp(total - shift).sum())
+    gamma = np.exp(alpha + beta - log_z)
+    # xi[t] = P(state_t = state_{t+1}), summed over which state it is
+    xi = 0.0
+    for t in range(len(scores) - 1):
+        joint = alpha[t] + stay + scores[t + 1] + beta[t + 1] - log_z
+        xi += float(np.exp(joint).sum())
+    return gamma, xi, log_z
+
+
+def temporal_reference(scores: np.ndarray, stay_raw: float, target: int = -1,
+                       centre: int = -1):
+    """Forward-backward over a window. The oracle.
+
+    `scores` (T, S) log-scores per frame per state, the last state being
+    'nobody'. `stay_raw` is the untransformed stay parameter; the bonus applied
+    is softplus(stay_raw), which cannot be negative.
+
+    Returns (posterior at the centre frame (S,), loss, gradients dict). When
+    `target` is negative only the posterior is meaningful -- there is nothing to
+    take a loss against.
+    """
+    scores = np.asarray(scores, dtype=np.float64)
+    frames = len(scores)
+    centre = frames // 2 if centre < 0 else centre
+    stay = float(softplus(stay_raw))
+
+    gamma, xi, log_z = _marginals(scores, stay)
+    posterior = gamma[centre] / gamma[centre].sum()
+    if target < 0:
+        return posterior, 0.0, {"scores": np.zeros_like(scores), "stay_raw": 0.0}
+
+    clamped_scores = scores.copy()
+    keep = clamped_scores[centre, target]
+    clamped_scores[centre] = CLAMP_FLOOR
+    clamped_scores[centre, target] = keep
+    clamped_gamma, clamped_xi, clamped_log_z = _marginals(clamped_scores, stay)
+
+    loss = log_z - clamped_log_z
+    # d(softplus)/dx = sigmoid(x)
+    sigmoid = 1.0 / (1.0 + np.exp(-np.float64(stay_raw)))
+    return posterior, loss, {
+        "scores": gamma - clamped_gamma,
+        "stay_raw": (xi - clamped_xi) * float(sigmoid),
+    }
+
+
+def temporal_torch(scores, stay_raw, centre: int = -1):
+    """The same scan in torch, differentiable. The gradient oracle.
+
+    Only the free pass is written here. Autograd derives the gradient of
+    -log(posterior[target]) from it, and that is what the hand-derived
+    free-minus-clamped expressions above are checked against -- rather than
+    against a second hand derivation, which would only prove the same mistake
+    twice.
+    """
+    import torch
+
+    frames = scores.shape[0]
+    centre = frames // 2 if centre < 0 else centre
+    stay = torch.nn.functional.softplus(stay_raw)
+    boost = torch.expm1(stay)
+
+    forward = [scores[0]]
+    for t in range(1, frames):
+        previous = forward[-1]
+        shift = previous.max().detach()
+        weights = torch.exp(previous - shift)
+        forward.append(scores[t] + shift
+                       + torch.log(weights * boost + weights.sum()))
+    backward = [None] * frames
+    backward[frames - 1] = torch.zeros_like(scores[0])
+    for t in range(frames - 2, -1, -1):
+        previous = scores[t + 1] + backward[t + 1]
+        shift = previous.max().detach()
+        weights = torch.exp(previous - shift)
+        backward[t] = shift + torch.log(weights * boost + weights.sum())
+
+    log_z = torch.logsumexp(forward[-1], dim=0)
+    centre_log = forward[centre] + backward[centre] - log_z
+    return torch.softmax(centre_log, dim=0)
+
+
+class TemporalFunction:
+    """Autograd bridge for the fused scan. Built lazily so torch is optional.
+
+    The kernel returns the loss AND its gradients from one launch, because the
+    clamped pass it needs for the gradient is most of the work of the forward
+    anyway. So `forward` keeps the gradients and `backward` only scales them by
+    what came from above -- which is exact here, the loss being a scalar.
+    """
+
+    _built: list = []
+
+    @classmethod
+    def get(cls):
+        import torch
+
+        if cls._built:
+            return cls._built[0]
+
+        class _Fused(torch.autograd.Function):
+            @staticmethod
+            def forward(ctx, scores, stay_raw, target, centre):
+                module = load_fused_kernel()
+                posterior, loss, grad_scores, grad_stay = module.temporal_forward(
+                    scores.contiguous(), stay_raw.reshape(1).contiguous(),
+                    int(target), int(centre))
+                ctx.save_for_backward(grad_scores, grad_stay)
+                ctx.mark_non_differentiable(posterior)
+                return loss.reshape(()), posterior
+
+            @staticmethod
+            def backward(ctx, grad_loss, _grad_posterior):
+                grad_scores, grad_stay = ctx.saved_tensors
+                return (grad_loss * grad_scores, grad_loss * grad_stay.reshape(()),
+                        None, None)
+
+        cls._built.append(_Fused)
+        return _Fused
+
+
+def temporal(scores, stay_raw, target: int = -1, centre: int = -1):
+    """Loss and centre-frame posterior for one window.
+
+    Takes the fused kernel when the scores are on a CUDA device and it compiles;
+    otherwise the portable scan, which autograd differentiates for itself. Both
+    produce the same numbers -- that is what the tests and the host harness
+    check.
+    """
+    import torch
+
+    frames = scores.shape[0]
+    centre = frames // 2 if centre < 0 else centre
+    if torch.cuda.is_available() and scores.is_cuda:
+        return TemporalFunction.get().apply(scores, stay_raw, target, centre)
+    posterior = temporal_torch(scores, stay_raw, centre)
+    if target < 0:
+        return torch.zeros((), dtype=scores.dtype, device=scores.device), posterior
+    return -torch.log(posterior[target] + 1e-12), posterior

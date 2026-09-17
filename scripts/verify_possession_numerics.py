@@ -12,11 +12,16 @@ shared-memory tree reductions are exercised as written rather than as a serial
 paraphrase. This is the same trick `verify_kernel_numerics.py` uses for
 torso_color.cu, extended to cover gradients.
 
-Three things are checked:
+Five things are checked, three for each kernel:
 
-  FORWARD at 1 thread against the NumPy oracle          -- the arithmetic
-  FORWARD at 64 threads against 1 thread                -- the reductions
-  BACKWARD at 64 threads against torch autograd         -- the chain rule
+  KERNEL 1, the per-frame operator
+    FORWARD at 1 thread against the NumPy oracle        -- the arithmetic
+    FORWARD at 64 threads against 1 thread              -- the reductions
+    BACKWARD at 64 threads against torch autograd       -- the chain rule
+
+  KERNEL 2, the forward-backward over time
+    POSTERIOR AND LOSS at 1 and 64 threads vs the oracle -- the scan
+    GRADIENTS at 64 threads against torch autograd       -- free minus clamped
 
 The last is the point. The backward is hand-derived — through a softmax over
 players, a tanh head, a smooth maximum over 64 samples, and a bilinear read of
@@ -179,13 +184,77 @@ int main(int argc, char** argv) {
 """
 
 
+TEMPORAL_MAIN = r"""
+// ---- driver for the scan over time ----------------------------------------
+// stdin: frames states target centre stay_raw / scores
+int main(int argc, char** argv) {
+  int threads = argc > 1 ? atoi(argv[1]) : 1;
+  int frames = 0, states = 0, target = 0, centre = 0; float stay_raw = 0.0f;
+  if (scanf("%d %d %d %d %f", &frames, &states, &target, &centre, &stay_raw) != 5)
+    return 2;
+  std::vector<float> scores((size_t)frames * states);
+  for (size_t i = 0; i < scores.size(); ++i) {
+    if (scanf("%f", &scores[i]) != 1) return 2;
+  }
+  std::vector<float> posterior(states, 0.0f), loss(1, 0.0f);
+  std::vector<float> grad_scores((size_t)frames * states, 0.0f), grad_stay(1, 0.0f);
+  std::vector<float> stay_holder(1, stay_raw);
+
+  blockDim.x = threads;
+  g_block_threads = threads;
+  shared_storage.assign((size_t)4 * frames * states + threads + 8, 0.0f);
+  {
+    std::vector<std::thread> pool;
+    for (int t = 0; t < threads; ++t) {
+      pool.emplace_back([&, t] {
+        threadIdx.x = t;
+        temporal_kernel(scores.data(), stay_holder.data(), target, centre,
+                        posterior.data(), loss.data(), grad_scores.data(),
+                        grad_stay.data(), frames, states);
+      });
+    }
+    for (auto& th : pool) th.join();
+  }
+  for (float v : posterior) printf("%.8f ", v);
+  printf("%.8f ", loss[0]);
+  for (float v : grad_scores) printf("%.8f ", v);
+  printf("%.8f\n", grad_stay[0]);
+  return 0;
+}
+"""
+
+
+def kernel_body(text: str) -> str:
+    """Every anonymous-namespace block in the real .cu, and nothing else.
+
+    The file alternates device code with the torch wrappers that launch it,
+    and the wrappers need headers this harness does not have. A device section
+    runs from a `namespace {` to the first wrapper after it -- which is a wider
+    net than the namespace's own closing brace, because the __global__ entry
+    points sit outside the anonymous namespace so the launchers can see them.
+    """
+    body = []
+    cursor = 0
+    while True:
+        start = text.find("namespace {", cursor)
+        if start < 0:
+            break
+        end = text.find("std::vector<torch::Tensor> ", start)
+        end = len(text) if end < 0 else end
+        body.append(text[start:end])
+        cursor = end + 1
+    joined = "\n".join(body)
+    return joined.replace("extern __shared__ float shared[];", "extern_shared_decl")
+
+
 def build_source(text: str) -> str:
-    """The real kernel body, between the helpers and the torch wrappers."""
-    start = text.index("namespace {")
-    end = text.index("std::vector<torch::Tensor> possession_forward(")
-    body = text[start:end]
-    body = body.replace("extern __shared__ float shared[];", "extern_shared_decl")
-    return STUBS + body + MAIN
+    """The per-frame kernel behind host stubs, with its driver."""
+    return STUBS + kernel_body(text) + MAIN
+
+
+def build_temporal_source(text: str) -> str:
+    """The same device code, with the driver for the scan over time."""
+    return STUBS + kernel_body(text) + TEMPORAL_MAIN
 
 
 def main() -> int:
@@ -296,9 +365,83 @@ def main() -> int:
         print(f"    d/d{name:<12} max |diff| {error:.3e}")
     print(f"  backward vs autograd        worst {worst:.3e} on {worst_name}")
 
+    # ---- kernel 2: the scan over time -------------------------------------
+    from courtvision.kernels.possession import (temporal_reference,
+                                                temporal_torch)
+
+    print()
+    temporal_worst = 0.0
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "temporal_host.cpp"
+        path.write_text(build_temporal_source(KERNEL.read_text()))
+        binary = Path(tmp) / "temporal_host"
+        build = subprocess.run([compiler, "-std=c++17", "-O2", "-pthread",
+                                str(path), "-o", str(binary)],
+                               capture_output=True, text=True)
+        if build.returncode != 0:
+            print("FAIL - the temporal kernel did not compile as host C++")
+            print(build.stderr[-2500:])
+            return 1
+
+        rng = np.random.default_rng(29)
+        frames, states = 7, 6
+        centre = frames // 2
+        # Scores with real spread, so a scan that dropped the transition term
+        # entirely would not still land on the right answer by symmetry.
+        scores = rng.normal(0.0, 1.8, size=(frames, states))
+        stay_raw = float(rng.normal(0.4, 0.8))
+        target = int(rng.integers(0, states))
+
+        payload = [f"{frames} {states} {target} {centre} {stay_raw:.10g}",
+                   " ".join(f"{v:.10g}" for v in scores.ravel())]
+        stdin = "\n".join(payload) + "\n"
+        temporal = {}
+        for threads in (1, 64):
+            run = subprocess.run([str(binary), str(threads)], input=stdin,
+                                 capture_output=True, text=True)
+            if run.returncode != 0:
+                print(f"FAIL - the temporal kernel crashed at {threads} threads")
+                print(run.stderr[-1500:])
+                return 1
+            temporal[threads] = np.array([float(v) for v in run.stdout.split()])
+
+    want = states + 1 + frames * states + 1
+    if temporal[1].size != want:
+        print(f"FAIL - temporal kernel produced {temporal[1].size} numbers, "
+              f"expected {want}")
+        return 1
+    scan_spread = np.abs(temporal[1] - temporal[64]).max()
+    print(f"  temporal 1 vs 64 threads    max |diff| {scan_spread:.3e}")
+
+    reference_post, reference_loss, reference_grads = temporal_reference(
+        scores, stay_raw, target, centre)
+    got = temporal[64]
+    post_error = np.abs(got[:states] - reference_post).max()
+    loss_error = abs(float(got[states]) - reference_loss)
+    grad_error = np.abs(got[states + 1:states + 1 + frames * states]
+                        .reshape(frames, states) - reference_grads["scores"]).max()
+    stay_error = abs(float(got[-1]) - reference_grads["stay_raw"])
+    print(f"  posterior vs NumPy oracle   max |diff| {post_error:.3e}")
+    print(f"  loss vs NumPy oracle            |diff| {loss_error:.3e}")
+
+    # The hand-derived free-minus-clamped gradient, against autograd through
+    # the portable scan -- the independent witness, exactly as for kernel 1.
+    scores_t = torch.tensor(scores, requires_grad=True)
+    stay_t = torch.tensor(stay_raw, dtype=torch.float64, requires_grad=True)
+    (-torch.log(temporal_torch(scores_t, stay_t, centre)[target])).backward()
+    autograd_error = np.abs(
+        got[states + 1:states + 1 + frames * states].reshape(frames, states)
+        - scores_t.grad.numpy()).max()
+    autograd_stay = abs(float(got[-1]) - float(stay_t.grad))
+    print(f"    d/dscores  vs oracle {grad_error:.3e}   vs autograd {autograd_error:.3e}")
+    print(f"    d/dstay    vs oracle {stay_error:.3e}   vs autograd {autograd_stay:.3e}")
+    temporal_worst = max(post_error, loss_error, grad_error, stay_error,
+                         autograd_error, autograd_stay)
+    print(f"  temporal backward           worst {temporal_worst:.3e}")
+
     # float32 kernel against float64 oracles; 1e-4 is the honest bar
     ok = (spread < 1e-5 and feature_error < 1e-4 and prob_error < 1e-4
-          and worst < 1e-4)
+          and worst < 1e-4 and scan_spread < 1e-5 and temporal_worst < 1e-4)
     print("PASS" if ok else "FAIL")
     return 0 if ok else 1
 
