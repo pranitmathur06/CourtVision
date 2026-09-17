@@ -2,9 +2,12 @@
 
 `wilson` had four copies -- `eval_possession.py:46`, `eval_handler.py:29`,
 `eval_possession_temporal.py:39`, `eval_ball_selection.py:33` -- and `iou` had
-more. They agreed, which is luck rather than design: a scorer whose interval
-drifts from another scorer's is a scorer whose numbers cannot be compared, and
-this project's whole method is comparing numbers.
+more. They did NOT agree: three answered an empty denominator with (0, 0) and
+the fourth with (0, 1), which is the difference between "measured, and zero" and
+"nothing measured". Consolidating them is what made that show up, and the fourth
+was right. A scorer whose interval drifts from another scorer's is a scorer
+whose numbers cannot be compared, and comparing numbers is this project's whole
+method.
 
 WHY THESE THREE AND NOT A LIBRARY. Wilson because a normal approximation is
 wrong at the sample sizes here -- at n=13 it puts an interval outside [0, 1].
@@ -29,12 +32,20 @@ from collections.abc import Sequence
 def wilson(hits: int, total: int, z: float = 1.96) -> tuple[float, float]:
     """95% interval for a proportion, correct at small n.
 
-    An empty denominator answers (0, 0) rather than raising, because a scorer
-    that dies on a class with no instances is a scorer that cannot report on a
-    new broadcast.
+    AN EMPTY DENOMINATOR ANSWERS (0, 1), NOT (0, 0). Nothing measured is not a
+    claim of zero -- it is a claim of no idea, and the interval that says so is
+    the whole width. Three of the four copies this replaced returned (0, 0),
+    which reports a class with no instances as a confident failure; the fourth
+    returned (0, 1) and had a test named
+    `test_nothing_measured_is_not_a_claim_of_zero` explaining why. Consolidating
+    them is what made the four disagree out loud.
+
+    It matters more now than it did: a per-game report on a NEW broadcast will
+    routinely have classes with no instances yet, and every one of them would
+    have printed 0%-0%.
     """
     if not total:
-        return 0.0, 0.0
+        return 0.0, 1.0
     p = hits / total
     denominator = 1 + z * z / total
     centre = (p + z * z / (2 * total)) / denominator

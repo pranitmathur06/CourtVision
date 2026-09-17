@@ -28,9 +28,16 @@ def test_wilson_stays_inside_zero_and_one_where_the_normal_approximation_does_no
     assert wilson(0, 13)[0] == 0.0
 
 
-def test_an_empty_denominator_answers_rather_than_raising():
-    """A class with no instances must not kill a report on a new broadcast."""
-    assert wilson(0, 0) == (0.0, 0.0)
+def test_nothing_measured_is_not_a_claim_of_zero():
+    """An empty denominator is no idea, not a confident failure.
+
+    Three of the four copies this module replaced returned (0, 0) and the
+    fourth returned (0, 1). They were never consistent; consolidating them is
+    what made the disagreement show up. A per-game report on a new broadcast
+    will routinely have classes with no instances yet, and every one of them
+    would otherwise print 0%-0%.
+    """
+    assert wilson(0, 0) == (0.0, 1.0)
 
 
 def test_wilson_narrows_as_the_sample_grows():
