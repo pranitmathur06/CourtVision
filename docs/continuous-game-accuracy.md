@@ -6452,3 +6452,102 @@ points are still there and still a selection problem.
 
 Kept: `eval_ball_temporal.py`, the per-game uniform and hard truth files, and
 the measurement above.
+
+## Round 94: the 85% bar, measured on video for the first time
+
+Every previous answer to "does this reach 85%" came from 25 Hz SportVU tracking
+coordinates with perfect ball height and stable player identities. This document
+said so at Round 19 -- *"the vision gap is unmeasured"* -- and its last statement
+of the ledger says the real-video version is *"not close"*. There was no
+composed metric, and no event-weighted-F1 code anywhere, so **neither 0.751 nor
+0.879 was reproducible by anyone, including us.**
+
+`scripts/score_game_end_to_end.py` is that measurement.
+
+### The headline, on Finals G1 -- the broadcast nothing was tuned on
+
+    mode                 (a) plays captured        (b) what it says is true
+    vision                0.228  (0.208-0.251)      122/286 = 0.427
+    vision + clock        0.279  (0.257-0.296)      121/200 = 0.605
+    vision + scoreboard   BLOCKED -- no reader exists in this repository
+    feed-assisted         1.000  (0.998-1.000)      tautological, not reported
+
+and on Finals G7, labelled because `detect_shots`' thresholds were tuned on its
+first half and the live-play rule informed by its second:
+
+    vision                0.181  (0.170-0.203)      111/317 = 0.350
+    vision + clock        0.231  (0.207-0.246)       90/174 = 0.517
+
+**Against the 85% bar: no, on both readings, by a wide margin -- and now it is
+measured rather than simulated.** 0.23-0.28 captured against a tracking-data
+ceiling of 0.751; 0.43-0.61 said-and-true against 0.879.
+
+### Why (a) cannot be large, arithmetically
+
+A shots-only system can capture at most the share of a game's plays that ARE
+shots. On these broadcasts:
+
+    field_goal 0.38-0.43   rebound 0.25-0.26   free_throw 0.07-0.10
+    foul 0.10-0.12         turnover 0.07-0.08  steal 0.03-0.05   block 0.02-0.03
+
+The printed `architectural coverage` is that number -- 0.43 on Finals G1 -- and
+every class the mode cannot emit keeps its full weight in the F1. So even a
+perfect shot detector caps reading (a) at 0.43, and the remaining gap to 0.751
+is not a better model, it is five classes nothing currently emits.
+
+### The scorer validates against known answers before reporting unknown ones
+
+- `feed-assisted` must be 1.000, and is. It is the official record placed on the
+  video by the clock reader, so it can only be wrong about TIMING, and the
+  printer refuses to report its precision as an accuracy at all -- it prints
+  p50 0.00s, p90 0.00s, within 1 s 99% instead.
+- `vision+clock` on Finals G1 reports field-goal precision **0.605**, which is
+  the figure `detect_shots` records for this broadcast to three decimals. The
+  composed number reproduces its component.
+
+Two bugs the validation caught before any vision number was published:
+
+  THE FEED MODE SCORED 0.622 ON FREE THROWS. Truth is merged into trips -- a
+  frozen clock puts a whole trip at one video second -- and the feed stream was
+  still emitting one call per ATTEMPT. A mode that is right by definition is for
+  exactly this.
+
+  THE BOOTSTRAP INTERVAL DID NOT CONTAIN ITS POINT ESTIMATE. It was resampling
+  the per-play capture vector, which is a bootstrap of recall wearing an F1's
+  label. It now resamples whole 120 s blocks of time with their calls AND their
+  plays travelling together, which is what preserves the matching.
+
+### What the ladder says about where accuracy comes from
+
+Gating on the clock is worth **+0.05 captured and +0.18 precision** on Finals
+G1, and it is the only lever in the ladder that currently works. The rung above
+it -- the scoreboard, the one architecture this document ever measured at 85% --
+**cannot be run**: `scoreboard_events.py` records F1 0.918 for any make and
+0.864 for free throws, `outputs/broadcast/timeline.json` holds 449 events from
+that run, and **nothing in this repository writes the readings those came from**.
+It is reported as blocked rather than as zero, because reporting it as zero
+would hide that the best result this project has is currently unreproducible.
+
+Writing `scripts/read_scoreboard.py` is now the single highest-value piece of
+work in the repo, and it is a driver script rather than research:
+`autoscoreboard.locate_scores()` and `score_change_times()` already exist.
+
+### Guards, so the only way to raise this number is to improve the system
+
+Nineteen tests, each pinning one:
+
+- a class the mode never emits scores 0 and **keeps its full weight**
+- precision cannot print without its coverage
+- the live-play filter removes truth from the denominator as well as calls, so
+  the circular cell is structurally unprintable
+- identity is never a matching key
+- matching is order-independent
+- a blocked mode is reported as blocked, never as zero
+- bootstrap weights come from the whole game, not from the resample
+
+### What is still not established
+
+The truth is itself vision-derived: official plays reach the video through the
+same clock reader the live-play gate uses, so 2.7-5.4% never arrive and the two
+error sources are correlated. This is capture *within the span the clock could
+read*, and it is labelled that way everywhere it appears.
