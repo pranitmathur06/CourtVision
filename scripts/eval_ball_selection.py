@@ -44,19 +44,16 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
+from pathlib import Path
 
 import numpy as np
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-def wilson(hits, total, z=1.96):
-    """95% interval for a proportion; small samples need it stated."""
-    if total == 0:
-        return 0.0, 1.0
-    p = hits / total
-    denominator = 1 + z * z / total
-    centre = (p + z * z / (2 * total)) / denominator
-    spread = z * np.sqrt(p * (1 - p) / total + z * z / (4 * total * total)) / denominator
-    return max(0.0, centre - spread), min(1.0, centre + spread)
+from courtvision.stats import wilson  # noqa: E402
+
+
 
 
 def first_within(order, gaps, tolerance):

@@ -35,6 +35,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+from courtvision.stats import wilson  # noqa: E402
+
 import clip_boxes  # noqa: E402
 
 #: Uniformly sampled, so the number it produces estimates in-game accuracy.
@@ -172,14 +174,6 @@ def score(cache_path, anchored=True):
     return found, elsewhere, missing, rows
 
 
-def wilson(hits, n, z=1.96):
-    if not n:
-        return 0.0, 0.0
-    p = hits / n
-    d = 1 + z * z / n
-    centre = (p + z * z / (2 * n)) / d
-    half = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / d
-    return max(0.0, centre - half), min(1.0, centre + half)
 
 
 def main() -> int:

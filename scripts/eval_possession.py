@@ -36,6 +36,8 @@ import json
 import math
 from pathlib import Path
 
+from courtvision.stats import wilson  # noqa: E402
+
 TOLERANCE_PX = 28.0
 #: A predicted handler box overlapping the labelled one by this much is right.
 HANDLER_IOU = 0.5
@@ -43,14 +45,6 @@ LABELS = "data/labels/possession_labels.json"
 FRAMES = "data/labeling/possession/images"
 
 
-def wilson(hits, n, z=1.96):
-    if not n:
-        return 0.0, 0.0
-    p = hits / n
-    d = 1 + z * z / n
-    centre = (p + z * z / (2 * n)) / d
-    half = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / d
-    return max(0.0, centre - half), min(1.0, centre + half)
 
 
 def iou(a, b):

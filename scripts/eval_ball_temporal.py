@@ -48,6 +48,8 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
+from courtvision.stats import mcnemar, wilson  # noqa: E402
+
 from courtvision.ball_track import (MISSING_COST,  # noqa: E402
                                     MOVE_WEIGHT, choose)
 
@@ -57,26 +59,8 @@ WINDOW = 7
 STEP_S = 0.25
 
 
-def wilson(hits, total, z=1.96):
-    if not total:
-        return 0.0, 0.0
-    p = hits / total
-    d = 1 + z * z / total
-    centre = (p + z * z / (2 * total)) / d
-    half = z * math.sqrt(p * (1 - p) / total + z * z / (4 * total * total)) / d
-    return max(0.0, centre - half), min(1.0, centre + half)
 
 
-def mcnemar(a: np.ndarray, b: np.ndarray):
-    """Exact two-sided McNemar on paired right/wrong vectors."""
-    only_a = int(np.sum(a & ~b))
-    only_b = int(np.sum(b & ~a))
-    n = only_a + only_b
-    if n == 0:
-        return only_a, only_b, 1.0
-    smaller = min(only_a, only_b)
-    tail = sum(math.comb(n, k) for k in range(smaller + 1)) / (2.0 ** n)
-    return only_a, only_b, min(1.0, 2.0 * tail)
 
 
 def load_truth(paths):

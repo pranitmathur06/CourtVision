@@ -35,33 +35,11 @@ from pathlib import Path
 
 import numpy as np
 
-
-def wilson(hits, n, z=1.96):
-    if not n:
-        return 0.0, 0.0
-    p = hits / n
-    d = 1 + z * z / n
-    centre = (p + z * z / (2 * n)) / d
-    half = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / d
-    return max(0.0, centre - half), min(1.0, centre + half)
+from courtvision.stats import mcnemar, wilson  # noqa: E402
 
 
-def mcnemar(a: np.ndarray, b: np.ndarray):
-    """Exact two-sided McNemar on paired right/wrong vectors.
 
-    Only the frames where the two disagree carry information. Under the null
-    each disagreement is a fair coin, so the p-value is a binomial tail -- and
-    exact rather than the chi-square approximation, because with 20-odd
-    discordant pairs the approximation is not trustworthy.
-    """
-    only_a = int(np.sum(a & ~b))
-    only_b = int(np.sum(b & ~a))
-    n = only_a + only_b
-    if n == 0:
-        return only_a, only_b, 1.0
-    smaller = min(only_a, only_b)
-    tail = sum(math.comb(n, k) for k in range(smaller + 1)) / (2.0 ** n)
-    return only_a, only_b, min(1.0, 2.0 * tail)
+
 
 
 def iou(a, b):

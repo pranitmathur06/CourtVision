@@ -36,15 +36,9 @@ from pathlib import Path
 
 import numpy as np
 
+from courtvision.stats import wilson  # noqa: E402
 
-def wilson(hits, n, z=1.96):
-    if not n:
-        return 0.0, 0.0
-    p = hits / n
-    d = 1 + z * z / n
-    centre = (p + z * z / (2 * n)) / d
-    half = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / d
-    return max(0.0, centre - half), min(1.0, centre + half)
+
 
 
 def drawn_boxes():
