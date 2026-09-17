@@ -80,7 +80,8 @@ def main() -> int:
     from ultralytics import YOLO
 
     from courtvision.candidates import court_region, stands_on_court
-    from courtvision.device import resolve_device
+    from courtvision.device import describe, resolve_device
+    from courtvision.fast_detect import half_precision_ok
 
     clips = {}
     for path in args.index:
@@ -95,6 +96,15 @@ def main() -> int:
 
     model, device = YOLO(args.detector), resolve_device()
     ball_model = YOLO(args.ball_detector) if args.ball_detector else None
+    # fp16 where it pays and nowhere else. `half_precision_ok` is CUDA-only by
+    # measurement, not by assumption: asked for on this Mac's MPS the same pass
+    # ran 446 ms a frame against 202 in fp32, and every timing in this
+    # repository was taken on MPS in fp32. On a rented CUDA box it is close to
+    # free speed, which is the difference between a three-hour pass and a
+    # twenty-minute one.
+    precision = {"quantize": 16} if half_precision_ok(device) else {}
+    print(f"  {describe()}"
+          f"{'  fp16' if precision else '  fp32'}", flush=True)
     capture = cv2.VideoCapture(args.video)
     fps = capture.get(cv2.CAP_PROP_FPS) or 30.0
     count = int(round(args.duration * fps))
@@ -118,9 +128,10 @@ def main() -> int:
         for start in range(0, len(frames), BATCH):
             chunk = frames[start:start + BATCH]
             results = model.predict(chunk, device=device, verbose=False,
-                                    imgsz=args.imgsz, conf=CONF_FLOOR)
+                                    imgsz=args.imgsz, conf=CONF_FLOOR, **precision)
             ball_results = (ball_model.predict(chunk, device=device, verbose=False,
-                                               imgsz=args.imgsz, conf=CONF_FLOOR)
+                                               imgsz=args.imgsz, conf=CONF_FLOOR,
+                                               **precision)
                             if ball_model is not None else None)
             for offset, result in enumerate(results):
                 i = start + offset
