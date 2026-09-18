@@ -86,8 +86,22 @@ static inline void __syncthreads() {
 // this harness doing its job before a pod is ever rented.
 static inline int min(int a, int b) { return a < b ? a : b; }
 static inline int max(int a, int b) { return a > b ? a : b; }
-static inline float __expf(float a) { return expf(a); }
-static inline float __logf(float a) { return logf(a); }
+// MACROS, NOT FUNCTIONS, AND AFTER EVERY SYSTEM HEADER. glibc's <cmath>
+// already DECLARES `__expf` and `__logf` -- they are its own internal symbols --
+// so `static inline float __expf(float)` is a redeclaration with different
+// linkage and the build fails on Linux while succeeding on macOS, where those
+// names are free. This harness exists to check the numerics without renting a
+// GPU, and it could only do that on one operating system until CI said so.
+// Function-like macros expand only at call sites, and every system header is
+// already parsed above, so nothing but the kernel body is rewritten.
+#ifdef __expf
+#undef __expf
+#endif
+#define __expf(x) expf(x)
+#ifdef __logf
+#undef __logf
+#endif
+#define __logf(x) logf(x)
 static std::vector<float> shared_storage;
 #define extern_shared_decl float* shared = shared_storage.data();
 """
