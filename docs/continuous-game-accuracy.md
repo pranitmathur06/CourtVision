@@ -7192,7 +7192,7 @@ fitted on the HARD half and reported on the UNIFORM half:
     confidence     0.769   130   0.829   0.647   0.800
     penalty        0.777   130   0.829   0.647   0.818
     handler        0.777   130   0.854   0.676   0.782
-    reject         0.777   130   0.829   0.818   0.818
+    reject         0.777   130   0.829   0.647   0.818
 
     paired, exact McNemar against plain confidence:
       penalty   2 frames only it gets, 1 only confidence   p = 1.0000
@@ -7200,10 +7200,11 @@ fitted on the HARD half and reported on the UNIFORM half:
       reject    2 frames only it gets, 1 only confidence   p = 1.0000
 
 **A fourteenth negative, and a useful one.** Geometry is not what separates the
-ball from the box that outranks it: the decoys are already near people. Two
-thirds of the losing margins are wide -- 0.71 against 0.08, 0.51 against 0.32 --
-so the detector is not narrowly confused, it is confidently wrong about a
-specific kind of object. That points at appearance, and it says something the
+ball from the box that outranks it: the decoys are already near people. On the
+18 frames where the ball is proposed but not first, the confidence margin
+against it has a median of **0.217** and is wider than 0.15 on **13 of 18**;
+only 3 are inside 0.05. The detector is not narrowly confused, it is
+confidently wrong about a specific kind of object. That points at appearance, and it says something the
 ledger's entry 11 ("orange colour prior: true balls are LESS orange than the
 false") already hinted at and nobody followed: the decoys are a *population*,
 not noise.
