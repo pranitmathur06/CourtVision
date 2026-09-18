@@ -8099,3 +8099,71 @@ tried in the possession kernels -- which score candidates by centre distance.
 p = 0.18 at n = 61 settles nothing, but it is a one-line change to test against
 the 157-frame handler set where the 49.7% and 59.2% numbers live, and that set
 is three times larger.
+
+## Round 111: cards built from pixels, and whether what they say is true
+
+Rounds 107 and 108 built real embeddings, a hybrid retriever and a measured
+evaluation -- **over cards made from the official play-by-play.** That is a
+better index over a record somebody else produced. It is not vision-based
+retrieval, and the distinction had not been drawn plainly enough.
+
+`retrieval/vision_cards.py` builds a card per clip from what the stack itself
+left behind -- the players it tracked, the ball path it chose, the rim it
+followed, and the SUBJECT it believes is carrying -- with no play-by-play
+anywhere in it. **238 cards on the fourth broadcast**, every distance in rim
+widths rather than pixels, because a rim is 18 inches and is the one object in
+frame whose real size is known.
+
+### First measurement, and it was the wrong one
+
+"The ball reaches the rim" scores **precision 0.723 against a base rate of
+0.664** when the truth is "this clip is shot-like", which reads as barely better
+than saying yes to everything.
+
+**That base rate was my own construction.** Clips are cut around events and I
+counted rebounds as shot-like, so two thirds of clips qualified by definition.
+Broken out by what the official record actually says happened:
+
+    official action        n    reaches rim   no carrier   drive   players p50
+    Missed Shot           93       0.914         0.301     0.204       4.0
+    Made Shot (2PT)       26       0.923         0.385     0.038       3.2
+    Assist                41       0.854         0.366     0.073       3.0
+    Free Throw (made)     17       0.824         0.353     0.118       3.6
+    Block                 18       0.778         0.167     0.278       4.5
+    Foul                   9       0.778         0.667     0.000       4.8
+    Steal                 18       0.444         0.222     0.333       5.6
+    Turnover               8       0.250         0.375     0.125       3.8
+
+**The camera-derived facts separate the things a fan would ask about**, and none
+of it came from a feed:
+
+  "the ball reaches the rim" is **0.91-0.92 on shots and 0.25-0.44 on turnovers
+  and steals** -- a two-to-threefold separation;
+
+  "no carrier identified" peaks at **0.667 on fouls**, which is what a stoppage
+  looks like from the outside;
+
+  "the carrier drives" peaks at **0.333 on steals** against 0.038 on made shots,
+  and steals also show the most players in frame at 5.6 against 3.0 -- which is
+  what a transition looks like.
+
+### One fact in these cards is broken and is recorded rather than removed
+
+"The ball changes hands" fires on **0.000 to 0.056** of clips in every action
+type. Either the subject is far more stable than a real possession, or the
+three-rim-width jump that defines a change is the wrong threshold. It is not
+carrying information and the card text should not claim it until it does.
+
+### What this does and does not establish about vision-based RAG at scale
+
+**Established:** a card built only from pixels carries facts that separate
+shots from turnovers, stoppages from live play, and transition from set
+offence -- the facts with no keyword, which is the entire argument for embedding
+anything.
+
+**Not established:** that those facts are individually accurate enough to answer
+on. "Reaches rim" on a turnover clip is right a quarter of the time, and the
+card says so in its own text -- it tells the reader the carrier it names is
+right half to two thirds of the time. The next thing this needs is not more
+retrieval machinery; it is the per-fact precision of every claim a card makes,
+measured the way this table measures one of them.
