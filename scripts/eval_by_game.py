@@ -121,14 +121,14 @@ class Arm:
 
     def row(self, bar: float) -> str:
         if not self.total and self.weighted is None:
-            return (f"  {self.name:<26}{'--':>9}{'':>9}"
-                    f"   0.00-1.00   {'NO DATA':<14}{self.note}")
+            return (f"  {self.name:<34}{'--':>9}{'':>9}"
+                    f"   0.00-1.00   {'NO DATA':<16}{self.note}")
         # A weighted rate prints no n, because it has none. An empty column is
         # the honest thing there; a number would be an invented sample size.
         count = "" if self.weighted is not None else f"n={self.total}"
-        return (f"  {self.name:<26}{self.rate:>9.3f}{count:>9}"
+        return (f"  {self.name:<34}{self.rate:>9.3f}{count:>9}"
                 f"   {self.low:.2f}-{self.high:.2f}   "
-                f"{self.verdict(bar):<14}{self.note}")
+                f"{self.verdict(bar):<16}{self.note}")
 
     def as_dict(self) -> dict:
         return {"name": self.name,
@@ -142,6 +142,11 @@ class Arm:
 
 
 # -- label-free arms --------------------------------------------------------
+
+def _official(game: Broadcast) -> list[dict]:
+    """This game's official actions, from the cache. Never the network."""
+    return json.loads(game.pbp.read_text()) if game.pbp.exists() else []
+
 
 def clock_arm(game: Broadcast) -> list[Arm]:
     """How much of the broadcast the clock could be read on, and when it ran.
@@ -166,14 +171,26 @@ def clock_arm(game: Broadcast) -> list[Arm]:
     elapsed = sorted({round(float(r["elapsed"])) for r in readings
                       if r.get("elapsed") is not None})
     periods = sorted({r["period"] for r in readings if r.get("period")})
-    game_seconds = 720 * 4 + 300 * max(len(periods) - 4, 0)
+    # HOW LONG THE GAME WAS COMES FROM THE OFFICIAL FEED, NOT FROM THE READER.
+    # Taking it from the periods the reader SAW makes the denominator depend on
+    # the numerator: one misread period number in a four-period game adds five
+    # minutes of overtime that never happened and drops the coverage figure by
+    # seven points, and a reader that missed period 3 entirely would be scored
+    # against a shorter game and look better for it.
+    official = max((a.get("period") or 0) for a in _official(game)) if \
+        game.pbp.exists() else max(periods or [4])
+    game_seconds = 720 * 4 + 300 * max(official - 4, 0)
     sys.path.insert(0, str(ROOT / "scripts"))
     import detect_shots
     live = detect_shots.live_play(readings)
     running = sum(1 for t in times if live(t))
+    unexpected = [p for p in periods if p > official]
     return [
         Arm("clock: game seconds seen", len(elapsed), game_seconds,
-            note=f"periods {periods}; {span / 60:.0f} min of video span"),
+            note=f"periods {periods} against the feed's {official}; "
+                 f"{span / 60:.0f} min of video span"
+                 + (f"  <-- READER SAW PERIODS THE GAME DID NOT HAVE: "
+                    f"{unexpected}" if unexpected else "")),
         Arm("clock: running share", running, len(times), descriptive=True,
             note=f"of {len(times)} readings at {step:g}s steps -- a fact about "
                  f"the game, not an accuracy"),
@@ -665,8 +682,13 @@ def evaluate(game: Broadcast, args) -> dict:
     arms += handler_arm(game)
     arms += ball_arm(game)
     arms += end_to_end_arms(game)
+    held = sorted(k for k, v in (game.held_out or {}).items() if v)
     return {"game": game.key, "game_id": game.game_id, "label": game.label,
             "unseen": game.unseen, "bar": args.bar,
+            "held_out": held,
+            "not_held_out": sorted(k for k, v in (game.held_out or {}).items()
+                                   if not v),
+            "held_out_note": game.held_out_note,
             "arms": [a.as_dict() for a in arms],
             "alignment_vectors": {k: [int(b) for b in v] for k, v in vectors.items()},
             "_arms": arms}
@@ -676,20 +698,28 @@ def print_report(result: dict, bar: float) -> None:
     game = result["label"]
     print(f"\n  eval_by_game.py   {game}  ({result['game']}, "
           f"official {result['game_id']})")
-    if result["unseen"]:
-        print("  UNSEEN BROADCAST -- no threshold in this repository was chosen "
-              "on it and\n  no model was trained on it. These numbers are the "
-              "acceptance test.")
+    held, not_held, note = (result["held_out"], result["not_held_out"],
+                            result["held_out_note"])
+    if held:
+        print(f"  HELD OUT for: {', '.join(held)}")
+        print("  -- no threshold in this repository was chosen on this "
+              "broadcast for those arms\n  and no model was trained on it. "
+              "Those numbers are an acceptance test.")
+    if not_held:
+        print(f"  NOT held out for: {', '.join(not_held)}. Numbers on those arms "
+              f"are not\n  acceptance results and must not be quoted as any.")
+    if note:
+        print(f"  {note}")
     print(f"  bar {bar:.2f}. PASS means the LOWER end of the interval clears it; "
           f"'PASS (point)'\n  means the point estimate does and the interval "
           f"does not; CAPPED means the arm's\n  architecture cannot reach the "
           f"bar however good its model gets.\n")
-    print(f"  {'arm':<26}{'rate':>9}{'n':>9}   95% CI      verdict")
-    print(f"  {'-' * 76}")
+    print(f"  {'arm':<34}{'rate':>9}{'n':>9}   95% CI      verdict")
+    print(f"  {'-' * 84}")
     labelled_seen = False
     for arm in result["_arms"]:
         if arm.labelled and not labelled_seen:
-            print(f"  {'-- needs labels ' + '-' * 60}")
+            print("  " + "-- needs labels " + "-" * 68)
             labelled_seen = True
         print(arm.row(bar))
     missing = [a.name for a in result["_arms"]

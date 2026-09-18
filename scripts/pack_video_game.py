@@ -108,6 +108,13 @@ def main() -> int:
                         help="cut_event_clips vision index -- what the pipeline called "
                              "from PIXELS, added as its own game so the reader can watch "
                              "it succeed and fail against the official record")
+    parser.add_argument("--tip-off-s", type=float, default=524.0,
+                        help="video seconds at which the game clock starts. It "
+                             "was the bare literal 524.0 in the middle of a "
+                             "list comprehension, with nothing saying it "
+                             "belonged to one broadcast; a second game packed "
+                             "with it would have every vision row's period and "
+                             "clock wrong by however far its tip-off differs.")
     parser.add_argument("--out", required=True)
     args = parser.parse_args()
 
@@ -188,7 +195,7 @@ def main() -> int:
             # MEASURED precision on the held-out half, which is exactly how much
             # any single call is worth, and 0 for a shot it never made.
             conf = 0.0 if action == "vision miss" else round(vision.get("precision", 0.52), 2)
-            period, clock = clock_of(max(c["video_s"] - 524.0, 0.0))
+            period, clock = clock_of(max(c["video_s"] - args.tip_off_s, 0.0))
             vrows.append([round(float(c["video_s"]), 1), period, clock,
                           action_index[action], 0, -1, None, None, conf,
                           detail_index.get(detail, -1), 0, c["clip"]])
@@ -200,7 +207,12 @@ def main() -> int:
             "rim detected per frame, no play-by-play involved. Held-out F1 0.619, "
             "precision 0.522, recall 0.762 -- so about half its calls are wrong, and "
             "those are in here to be watched rather than hidden.")
-    stream["fields"] = stream["fields"] + ["clip"]
+    # ONCE, not once per game. This appended unconditionally, so packing three
+    # games produced `[..., "clip", "clip", "clip"]` -- the shipped stream has
+    # exactly that -- and every row carries one clip value at index 11, leaving
+    # the extra names pointing at columns that do not exist.
+    if "clip" not in stream["fields"]:
+        stream["fields"] = stream["fields"] + ["clip"]
     stream["video_note"] = (
         "Rows for this game are the NBA's own play-by-play placed on the video's "
         "clock, not the vision stack's output. Confidence here is how exactly the "

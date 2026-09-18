@@ -116,3 +116,60 @@ def test_both_sides_rising_at_once_also_moves_the_baseline():
     readings = [(0.0, 0, 0), (10.0, 3, 2), (20.0, 5, 2)]
     events = score_events(readings)
     assert [e.points for e in events] == [2]
+
+
+# -- the score-region search, which was a hand-fitted constant twice ----------
+
+def _band_candidates(*args, **kwargs):
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+    from read_scoreboard import band_candidates
+    return band_candidates(*args, **kwargs)
+
+
+#: The clock region the reader measured on the two 720p Finals broadcasts, and
+#: on the 1080p regular-season one. Both are real, from `outputs/clock/*.json`.
+FINALS_720P = (627, 671, 806, 916)          # 110 wide, 44 tall
+HOUSTON_1080P = (996, 1024, 777, 887)       # 110 wide, 28 tall
+
+
+def test_the_box_sizes_reproduce_the_fitted_ones_on_the_footage_they_were_fitted_to():
+    """1.6, 2.0 and 2.5 clock-heights are 70, 88 and 110 on a 44-pixel clock.
+
+    The constants they replace were 70, 90 and 110. Expressed as ratios they
+    have to land back on the same boxes for the broadcast they were measured on,
+    or the change is not a generalisation but a different search."""
+    boxes = _band_candidates(FINALS_720P, 1280)
+    assert sorted({r[3] - r[2] for r in boxes}) == [70, 88, 110]
+    assert sorted({r[1] - r[0] for r in boxes}) == [44, 56, 68, 88]
+
+
+def test_the_search_follows_the_clock_onto_a_broadcast_it_was_not_fitted_to():
+    """On the 1080p encode the clock is 28 px tall and the score digits are 52.
+
+    Every fixed box size here was too short for them. The ratios give boxes up
+    to 56 px tall, which is the only reason the digits fit inside one."""
+    boxes = _band_candidates(HOUSTON_1080P, 1920)
+    assert max(r[1] - r[0] for r in boxes) >= 52
+    assert sorted({r[3] - r[2] for r in boxes}) == [45, 56, 70]
+
+
+def test_the_reach_is_not_a_number_fitted_to_the_layouts_already_here():
+    """`locate_scores` ships 260 px and misses the far team by 64 px on a 720p
+    Finals broadcast. 460 was measured to fix that and misses the far team by
+    67 px on Houston, whose far score sits 527 px from the clock. The reach was
+    never doing the work -- behaviour over a whole game picks the regions -- so
+    it searches to the frame edge."""
+    for roi, width in ((FINALS_720P, 1280), (HOUSTON_1080P, 1920)):
+        boxes = _band_candidates(roi, width)
+        assert min(r[2] for r in boxes) == 0, "the search stops short of the edge"
+        # ...and in particular it reaches past both fitted constants.
+        assert min(r[2] for r in boxes) < roi[2] - 460
+
+
+def test_every_candidate_sits_left_of_the_clock_and_inside_the_frame():
+    for roi, width in ((FINALS_720P, 1280), (HOUSTON_1080P, 1920)):
+        for top, bottom, left, right in _band_candidates(roi, width):
+            assert 0 <= left < right <= roi[2], "a candidate overlaps the clock"
+            assert 0 <= top < bottom

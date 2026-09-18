@@ -217,6 +217,15 @@ def run(stage: Stage, force: bool, dry: bool) -> dict:
                      else "FAILED")
     row["sizes"] = {str(p): p.stat().st_size for p in stage.produces
                     if p.exists()}
+    if row["status"] == "FAILED":
+        # A stage that failed after writing SOMETHING leaves an output the next
+        # run would treat as finished. Nothing here writes atomically, so the
+        # only safe thing is to take the half-written file away and let the
+        # stage run again.
+        for path in stage.produces:
+            if path.exists() and not stage.done():
+                path.unlink()
+                row.setdefault("removed", []).append(str(path))
     mark = "ok" if row["status"] == "ok" else "FAILED"
     print(f"  [{mark:4}] {stage.name:16} {row['seconds']}s"
           + (f"  missing {missing}" if missing else ""))

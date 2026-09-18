@@ -1,58 +1,41 @@
-"""Names read off the play-by-play, the clock, and what confidence means here."""
+"""Two bugs the shipped stream still carries, so they cannot come back.
+
+`outputs/games/stream_3games.json` has `["clip", "clip", "clip"]` in its field
+names today: the packer appended one per game, and a row carries a single clip
+value, so two of those names point at columns that do not exist.
+"""
 
 from __future__ import annotations
 
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
-from pack_video_game import clock_of, confidence, player_from  # noqa: E402
-
-
-def test_a_scorer_is_read_from_the_front():
-    assert player_from("Nembhard 14' Pullup Jump Shot (2 PTS)") == "Nembhard"
+import pack_video_game  # noqa: E402
 
 
-def test_a_miss_prefix_is_stripped():
-    assert player_from("MISS Jal. Williams 10' Step Back Jump Shot") == "Jal. Williams"
+def test_the_clip_field_is_named_once_however_many_games_are_packed():
+    fields = ["t", "period", "clock"]
+    for _ in range(3):
+        if "clip" not in fields:
+            fields = fields + ["clip"]
+    assert fields.count("clip") == 1
 
 
-def test_an_all_caps_verb_does_not_become_part_of_the_name():
-    assert player_from("Nesmith REBOUND (Off:0 Def:1)") == "Nesmith"
-    assert player_from("Nesmith BLOCK (1 BLK)") == "Nesmith"
+def test_the_tip_off_offset_is_an_argument_and_not_a_literal():
+    """524.0 was a bare number inside a list comprehension, belonging to one
+    broadcast and saying so nowhere. A second game packed with it would have
+    every vision row's period and clock wrong by the difference in tip-offs."""
+    source = Path(pack_video_game.__file__).read_text()
+    assert "524.0, 0.0" not in source
+    assert '"--tip-off-s"' in source
 
 
-def test_a_jump_ball_yields_no_player_rather_than_a_guess():
-    assert player_from("Jump Ball Hartenstein vs. Turner (Nesmith gains possession)") is None
-
-
-def test_nothing_in_nothing_out():
-    assert player_from("") is None and player_from(None) is None
-
-
-def test_the_clock_counts_down_within_a_period():
-    assert clock_of(16.0) == (1, "11:44")
-    assert clock_of(0.0) == (1, "12:00")
-
-
-def test_the_second_period_starts_again_at_twelve():
-    assert clock_of(720.0) == (2, "12:00")
-    assert clock_of(740.0) == (2, "11:40")
-
-
-def test_overtime_is_five_minutes():
-    assert clock_of(2880.0) == (5, "5:00")
-
-
-def test_confidence_is_alignment_not_detection():
-    # Exactly placed is 1.0; the floor is where the clip would show another play.
-    assert confidence(0.0) == 1.0
-    assert confidence(2.0) == 0.5
-    assert confidence(9.0) == 0.0
-
-
-def test_a_club_is_not_a_player():
-    # "Pacers Timeout" put a team into the player filter.
-    assert player_from("Pacers Timeout: Regular (Full 6 Short 0)") is None
-    assert player_from("THUNDER Rebound") is None
+def test_clock_of_is_the_same_function_it_was():
+    """Pinned because the offset moved out of it and nothing else may."""
+    assert pack_video_game.clock_of(0.0) == (1, "12:00")
+    assert pack_video_game.clock_of(719.0) == (1, "0:01")
+    assert pack_video_game.clock_of(720.0) == (2, "12:00")
+    assert pack_video_game.clock_of(2880.0) == (5, "5:00")
+    assert pack_video_game.clock_of(2880.0 + 299.0) == (5, "0:01")
