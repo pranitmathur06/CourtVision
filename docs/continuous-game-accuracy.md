@@ -8044,3 +8044,58 @@ labelling the plan specifies, and that is still ~980 human judgements away.
 **The clearest demonstration available that counts are not accuracy**, which is
 what the plan said this change would be, and it is now demonstrated rather than
 asserted.
+
+## Round 110: wrists do not beat box edges, and the box edge beats the box centre
+
+The plan's V6 argued that the handler ceiling is a feature problem: every
+possession rule scores a player by the distance from the ball to his BOX, and
+the recorded failure is that "on a dribble a defender's hands are often nearer
+the ball than the holder's". A box centre is the middle of a torso; a ball is
+held in hands; `yolo11s-pose.pt` has been in this repository the whole time and
+nothing had asked it.
+
+On the 131 frames where a person labelled **both** the ball and the player
+holding it, with all three rules handed the TRUE ball position so each is an
+oracle:
+
+    rule          uniform                  hard
+    box centre    43/61 = 0.705     36/45 = 0.800
+    box edge      48/61 = 0.787     40/45 = 0.889
+    wrist         47/61 = 0.770     38/45 = 0.844
+
+    paired against the box centre, uniform half, exact McNemar
+      edge     7 frames only it gets, 2 only the centre   p = 0.1797
+      wrist    6 frames only it gets, 2 only the centre   p = 0.2891
+
+**Wrists do not beat box edges.** They beat the box CENTRE by 6.5 points and lose
+to the box EDGE by 1.7, on the same frames, and neither difference is
+significant at n=61. V6's hypothesis -- that hands separate what torsos cannot --
+is not supported: what separates them is measuring to the box's EDGE rather than
+its middle, which needs no pose model and is four lines of arithmetic.
+
+### What this is NOT evidence for
+
+These numbers are **not comparable to the recorded 58.7% proximity ceiling** and
+must not be read as beating it. Three things differ:
+
+  the boxes come from `yolo11s-pose.pt`, a generic person detector, not from
+  this project's four-class detector;
+
+  25 of the 131 frames are dropped because the pose model found no person
+  overlapping the labelled handler, which removes exactly the hardest cases;
+
+  the denominator is frames where BOTH ball and handler are labelled, where the
+  58.7% was measured over a set that includes frames with no handler box at all.
+
+The comparison that IS valid is the paired one above, because all three rules
+answer the same frames with the same boxes. **Only the ranking is evidence; the
+level is not.**
+
+### The lead this leaves
+
+The box EDGE rule beating the box CENTRE by 8 points on the uniform half is
+free, already implemented in `eval_wrist_handler.to_box`, and has never been
+tried in the possession kernels -- which score candidates by centre distance.
+p = 0.18 at n = 61 settles nothing, but it is a one-line change to test against
+the 157-frame handler set where the 49.7% and 59.2% numbers live, and that set
+is three times larger.
