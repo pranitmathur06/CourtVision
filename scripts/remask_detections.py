@@ -38,8 +38,12 @@ from courtvision.games import get  # noqa: E402
 from courtvision.kits import KitModel, sample_clip, torso_lab  # noqa: E402
 
 #: The floor moves slowly, so the region is re-found every this many rows and
-#: reused between -- the same cadence `clip_detect_raw.py` uses.
-COURT_EVERY = 5
+#: REUSED between. This said it was "the same cadence clip_detect_raw.py uses"
+#: and was 5 where that file uses 3, so every before-and-after run through here
+#: handicapped the new mask against the old one by two extra frames of
+#: staleness -- and the staleness is not free, because the camera pans between
+#: the frame the floor was found on and the frames its mask is applied to.
+COURT_EVERY = 3
 
 
 def fit_kits(broadcast, cache, names, source) -> KitModel | None:
@@ -55,7 +59,8 @@ def fit_kits(broadcast, cache, names, source) -> KitModel | None:
 
 
 def remask(key: str, erode_share: float, out_path: Path, *,
-           limit: int | None = None, kit_max_lab: float | None = None) -> dict:
+           limit: int | None = None, kit_max_lab: float | None = None,
+           court_every: int = COURT_EVERY, fill_holes: bool = True) -> dict:
     broadcast = get(key)
     cache = json.loads((ROOT / broadcast.clip_detections).read_text())
     source = cache.get("source_size") or [1280, 720]
@@ -87,7 +92,7 @@ def remask(key: str, erode_share: float, out_path: Path, *,
         # reasoned change rather than a measured speedup -- the OUTPUT is
         # identical either way, which is what the tests check.
         wanted = {int(row["f"]): position for position, row in enumerate(rows)
-                  if position % COURT_EVERY == 0}
+                  if position % court_every == 0}
         at = 0
         last = max(wanted) if wanted else -1
         frames_by_index: dict[int, object] = {}
@@ -101,12 +106,13 @@ def remask(key: str, erode_share: float, out_path: Path, *,
         try:
             for position, row in enumerate(rows):
                 people = [b for b in row["d"] if b[0] in ("p", "h")]
-                if position % COURT_EVERY == 0 or region is None:
+                if position % court_every == 0 or region is None:
                     frame_image = frames_by_index.get(int(row["f"]))
                     if frame_image is not None:
                         image = frame_image
                         region = court_region(image, erode_px=None,
-                                              erode_share=erode_share)
+                                              erode_share=erode_share,
+                                              fill_holes=fill_holes)
                 if not people:
                     row["on"] = []
                     continue
@@ -141,6 +147,8 @@ def remask(key: str, erode_share: float, out_path: Path, *,
             print(f"  {index + 1}/{len(names)} clips", flush=True)
     cache["mask_erode_share"] = erode_share
     cache["mask_kit_max_lab"] = kit_max_lab
+    cache["mask_court_every"] = court_every
+    cache["mask_fill_holes"] = fill_holes
     cache["mask_rebuilt_from"] = str(broadcast.clip_detections)
     out_path.write_text(json.dumps(cache))
     return {"frames": frames, "changed": changed, "clips_missing": missing}
@@ -155,6 +163,13 @@ def main() -> int:
                         help="drop a kept box whose torso is further than this "
                              "in CIELAB from both kits AND the officials -- a "
                              "spectator. Defaults to the fitted value.")
+    parser.add_argument("--fill", type=int, default=None,
+                        help="1 to take what the wood encloses, 0 not to. "
+                             "Defaults to this broadcast's fitted value.")
+    parser.add_argument("--court-every", type=int, default=COURT_EVERY,
+                        help="re-find the floor every N detection rows and "
+                             "reuse it between. 1 costs the most and is the "
+                             "only setting with no staleness in it.")
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--out", required=True,
                         help="a NEW file. Writing over the input would make "
@@ -162,6 +177,7 @@ def main() -> int:
     args = parser.parse_args()
 
     share, gate = args.erode_share, args.kit_max_lab
+    fill = None if args.fill is None else bool(args.fill)
     fitted = ROOT / COURT_ERODE_FILE
     if fitted.exists():
         picked = json.loads(fitted.read_text()).get(args.game) or {}
@@ -170,8 +186,12 @@ def main() -> int:
                 share = picked.get("erode_share")
             if gate is None:
                 gate = picked.get("kit_max_lab")
+            if fill is None:
+                fill = picked.get("fill_holes")
         elif share is None:
             share = picked
+    if fill is None:
+        fill = True
     if share is None:
         share = COURT_ERODE_SHARE
         print(f"  no fitted erosion for {args.game}; using the shipped "
@@ -185,8 +205,10 @@ def main() -> int:
         return 2
     if gate is not None:
         print(f"  kit gate {float(gate):.0f} CIELAB")
+    print(f"  hole filling {'on' if fill else 'off'}")
     got = remask(args.game, float(share), out, limit=args.limit,
-                 kit_max_lab=None if gate is None else float(gate))
+                 kit_max_lab=None if gate is None else float(gate),
+                 court_every=args.court_every, fill_holes=bool(fill))
     print(f"  {got['frames']} frames remasked, {got['changed']} changed, "
           f"{got['clips_missing']} clips not on disk")
     print(f"  -> {out}")

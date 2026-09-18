@@ -50,10 +50,9 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from courtvision.candidates import (  # noqa: E402
     COURT_ERODE_FILE,
-    HOLD_GATE,
+    carrier_of,
     court_region,
     stands_on_court,
-    to_box,
 )
 from courtvision.games import get, registry  # noqa: E402
 from courtvision.kits import KitModel, sample_clip, torso_lab  # noqa: E402
@@ -67,14 +66,27 @@ SHARES = [0.0, 0.015, 0.03, 0.045, 0.0625]
 #: `candidates.MAX_KIT_DISTANCE_LAB` is 26.0 and is where the middle value
 #: comes from.
 KIT_DISTANCES = [None, 40.0, 26.0, 18.0]
+#: Whether to take what the wood encloses. A red key needs it; a blue one is
+#: already read by the colour rule, and filling is a larger mask that admits
+#: more of the front row. Swept rather than assumed.
+FILL_HOLES = [True, False]
 #: The over-keeping rate a mask must hold. Below this it is admitting the crowd.
 OVER_FLOOR = 0.95
 #: More than this many people on a court is impossible.
 IMPOSSIBLE_ABOVE = 13
 #: Two boxes overlapping this much are one person seen by two detectors.
 SAME_PERSON_IOU = 0.5
-#: One detection row in this many is sampled.
+#: One detection row in this many starts a sampled group.
 ROW_STRIDE = 30
+#: How many consecutive rows each sampled floor is scored against -- the same
+#: cadence `clip_detect_raw.py` applies, because the pipeline finds the floor
+#: once and REUSES it while the camera pans. Scoring only the frame the floor
+#: was found on measures a mask nothing ever applies, and it does so unevenly:
+#: a tighter mask has less margin, so the same pan pushes more feet outside it
+#: and the settings the fit likes most are the ones staleness damages most.
+#: Measured on Finals G7, the same setting reads 0.852 scored fresh every frame
+#: and 0.819 scored the way the pipeline uses it.
+COURT_EVERY = 3
 
 
 def distinct(boxes) -> int:
@@ -110,19 +122,44 @@ def fit_kits(broadcast, cache, names, source) -> KitModel | None:
     return KitModel.fit(colours)
 
 
+def _score_row(row, image, regions, model, scale, carrier, over):
+    """Score one detection row against an ALREADY-FOUND floor, per setting."""
+    people = [[b[2] * scale[0], b[3] * scale[1],
+               b[4] * scale[0], b[5] * scale[1]]
+              for b in row["d"] if b[0] in ("p", "h")]
+    if not people:
+        return False
+    held = carrier_of(row, [[b[2], b[3], b[4], b[5]]
+                            for b in row["d"] if b[0] in ("p", "h")])
+    boxes = np.array(people, dtype=float)
+    colours = ([torso_lab(image, box) for box in people]
+               if model is not None else [None] * len(people))
+    for (share, fill), region in regions.items():
+        on_floor = (stands_on_court(region, boxes) if region is not None
+                    else np.zeros(len(people), dtype=bool))
+        for max_lab in KIT_DISTANCES:
+            keep = list(on_floor)
+            if max_lab is not None and model is not None:
+                keep = [k and model.belongs_on_court(colours[i], max_lab)
+                        for i, k in enumerate(keep)]
+            count = distinct([people[i] for i in range(len(people)) if keep[i]])
+            setting = (share, max_lab, fill)
+            over[setting][0 if count <= IMPOSSIBLE_ABOVE else 1] += 1
+            if held is not None:
+                carrier[setting][0 if keep[held] else 1] += 1
+    return True
+
+
 def measure(key: str, *, frames_wanted: int) -> dict:
     broadcast = get(key)
     cache = json.loads((ROOT / broadcast.clip_detections).read_text())
     source = cache.get("source_size") or [1280, 720]
     model = fit_kits(broadcast, cache, sorted(cache["clips"]), source)
     # Split by CLIP, not by frame: frames within a clip are the same camera on
-    # the same possession, so an even/odd frame split would put near-duplicates
-    # on both sides and the report half would confirm whatever the fit half
-    # chose. This is the split discipline every other arm in this project uses,
-    # and its absence here is what let a 250-frame fit propose a setting that
-    # cost twelve points over the whole broadcast.
-    carrier = {"fit": defaultdict(lambda: [0, 0]), "report": defaultdict(lambda: [0, 0])}
-    over = {"fit": defaultdict(lambda: [0, 0]), "report": defaultdict(lambda: [0, 0])}
+    # the same possession, so a frame split would put near-duplicates on both
+    # sides and the report half would confirm whatever the fit half chose.
+    carrier = {half: defaultdict(lambda: [0, 0]) for half in ("fit", "report")}
+    over = {half: defaultdict(lambda: [0, 0]) for half in ("fit", "report")}
     seen = 0
     for index, name in enumerate(sorted(cache["clips"])):
         half = "fit" if index % 2 == 0 else "report"
@@ -134,70 +171,51 @@ def measure(key: str, *, frames_wanted: int) -> dict:
         capture = cv2.VideoCapture(str(path))
         if not capture.isOpened():
             continue
-        scale_x = capture.get(cv2.CAP_PROP_FRAME_WIDTH) / source[0]
-        scale_y = capture.get(cv2.CAP_PROP_FRAME_HEIGHT) / source[1]
+        scale = (capture.get(cv2.CAP_PROP_FRAME_WIDTH) / source[0],
+                 capture.get(cv2.CAP_PROP_FRAME_HEIGHT) / source[1])
+        rows = cache["clips"][name]
         try:
-            for row in cache["clips"][name][::ROW_STRIDE]:
+            for start in range(0, len(rows), ROW_STRIDE):
                 if seen >= frames_wanted:
                     break
-                capture.set(cv2.CAP_PROP_POS_FRAMES, int(row["f"]))
+                capture.set(cv2.CAP_PROP_POS_FRAMES, int(rows[start]["f"]))
                 ok, image = capture.read()
                 if not ok:
                     continue
-                people = [[b[2] * scale_x, b[3] * scale_y,
-                           b[4] * scale_x, b[5] * scale_y]
-                          for b in row["d"] if b[0] in ("p", "h")]
-                if not people:
-                    continue
-                held = None
-                balls = [b for b in row["d"] if b[0] == "b"]
-                if balls:
-                    ball = max(balls, key=lambda b: b[1])
-                    centre = ((ball[2] + ball[4]) / 2.0 * scale_x,
-                              (ball[3] + ball[5]) / 2.0 * scale_y)
-                    nearest = min(range(len(people)),
-                                  key=lambda i: to_box(centre, people[i]))
-                    height = people[nearest][3] - people[nearest][1]
-                    if height > 0 and to_box(centre, people[nearest]) <= HOLD_GATE * height:
-                        held = nearest
-                seen += 1
-                boxes = np.array(people, dtype=float)
-                colours = ([torso_lab(image, box) for box in people]
-                           if model is not None else [None] * len(people))
-                for share in SHARES:
-                    region = court_region(image, erode_px=None, erode_share=share)
-                    on_floor = (stands_on_court(region, boxes)
-                                if region is not None
-                                else np.zeros(len(people), dtype=bool))
-                    for max_lab in KIT_DISTANCES:
-                        keep = list(on_floor)
-                        if max_lab is not None and model is not None:
-                            keep = [k and model.belongs_on_court(colours[i], max_lab)
-                                    for i, k in enumerate(keep)]
-                        count = distinct([people[i] for i in range(len(people))
-                                          if keep[i]])
-                        setting = (share, max_lab)
-                        over[half][setting][0 if count <= IMPOSSIBLE_ABOVE else 1] += 1
-                        if held is not None:
-                            carrier[half][setting][0 if keep[held] else 1] += 1
+                # ONE floor, scored against this row and the next few -- which
+                # is what the pipeline does with it. Scoring only the frame the
+                # floor was found on measures a mask nothing ever applies.
+                regions = {(share, fill):
+                           court_region(image, erode_px=None,
+                                        erode_share=share, fill_holes=fill)
+                           for share in SHARES for fill in FILL_HOLES}
+                for row in rows[start:start + COURT_EVERY]:
+                    if seen >= frames_wanted:
+                        break
+                    if _score_row(row, image, regions, model, scale,
+                                  carrier[half], over[half]):
+                        seen += 1
         finally:
             capture.release()
-    rows = {"fit": {}, "report": {}}
+
+    rows_out = {"fit": {}, "report": {}}
     for half in ("fit", "report"):
         for share in SHARES:
             for max_lab in KIT_DISTANCES:
-                setting = (share, max_lab)
+              for fill in FILL_HOLES:
+                setting = (share, max_lab, fill)
                 kept, dropped = carrier[half][setting]
                 fine, bad = over[half][setting]
-                rows[half][setting] = {
+                rows_out[half][setting] = {
                     "carrier_kept": (kept / (kept + dropped)
                                      if kept + dropped else math.nan),
                     "carrier_n": kept + dropped,
                     "over_ok": fine / (fine + bad) if fine + bad else math.nan,
                     "over_n": fine + bad,
                 }
-    return {"game": key, "label": broadcast.label, "frames": seen, "shares": rows,
-            "kits_fitted": model is not None}
+    return {"game": key, "label": broadcast.label, "frames": seen,
+            "shares": rows_out, "kits_fitted": model is not None,
+            "court_every": COURT_EVERY}
 
 
 def choose(rows: dict) -> float | None:
@@ -209,7 +227,7 @@ def choose(rows: dict) -> float | None:
     # Ties go to the larger erosion and then to the tighter kit gate: both
     # exclusions cost more downstream when they are too loose than here.
     return max(allowed, key=lambda s: (rows[s]["carrier_kept"], s[0],
-                                       -(s[1] or 1e9)))
+                                       -(s[1] or 1e9), not s[2]))
 
 
 def main() -> int:
@@ -225,17 +243,22 @@ def main() -> int:
                         help="erosion to try, repeatable. Narrows the grid so "
                              "more FRAMES can be afforded, which is the axis "
                              "that was short.")
+    parser.add_argument("--fill", type=int, action="append", default=None,
+                        help="1 to take what the wood encloses, 0 not to. "
+                             "Repeatable; both by default.")
     parser.add_argument("--gate", type=float, action="append", default=None,
                         help="kit gate to try, repeatable. Pass a negative "
                              "number for 'no gate'.")
     parser.add_argument("--out", default=str(COURT_ERODE_FILE))
     args = parser.parse_args()
 
-    global SHARES, KIT_DISTANCES
+    global SHARES, KIT_DISTANCES, FILL_HOLES
     if args.share:
         SHARES = sorted(args.share)
     if args.gate:
         KIT_DISTANCES = [None if g < 0 else g for g in args.gate]
+    if args.fill:
+        FILL_HOLES = [bool(f) for f in args.fill]
     keys = args.game or list(registry())
     chosen = {}
     print()
@@ -246,19 +269,21 @@ def main() -> int:
         got = measure(key, frames_wanted=args.frames)
         pick = choose(got["shares"]["fit"])
         chosen[key] = (None if pick is None
-                       else {"erode_share": pick[0], "kit_max_lab": pick[1]})
+                       else {"erode_share": pick[0], "kit_max_lab": pick[1],
+                             "fill_holes": pick[2]})
         print()
         print(f"  {got['label']}  ({key}, {got['frames']} frames)")
-        print(f"    {'erode/height':<13} {'kit gate':>9} "
+        print(f"    {'erode/height':<13} {'kit gate':>9} {'fill':>5} "
               f"{'carrier (fit)':>13} {'<=13 (fit)':>11} "
               f"{'carrier (rep)':>13} {'<=13 (rep)':>11}")
         for setting in got["shares"]["fit"]:
             fit_row = got["shares"]["fit"][setting]
             rep_row = got["shares"]["report"][setting]
             mark = "  <- chosen" if setting == pick else ""
-            share, max_lab = setting
+            share, max_lab, fill = setting
             gate = "off" if max_lab is None else f"{max_lab:.0f}"
-            print(f"    {share:<13.4f} {gate:>9} {fit_row['carrier_kept']:>13.3f} "
+            print(f"    {share:<13.4f} {gate:>9} {str(fill):>5} "
+                  f"{fit_row['carrier_kept']:>13.3f} "
                   f"{fit_row['over_ok']:>11.3f} {rep_row['carrier_kept']:>13.3f} "
                   f"{rep_row['over_ok']:>11.3f}{mark}")
         if pick is not None:

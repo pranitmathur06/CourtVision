@@ -9055,3 +9055,81 @@ over three erosions and two gates on 1500 frames instead of twenty settings on
 until the re-fit lands.** The other three are measured gains on the full
 broadcast, which is the only measurement that counts here, and they stand on
 that rather than on the fit that proposed them.
+
+## Round 119: the fit measures a fresh mask and the pipeline applies a stale one
+
+Round 118 blamed the 250-frame sample. More frames did not fix it: re-fitting
+Finals G7 over six settings on 1055 frames still estimated **0.850** for the
+setting the whole broadcast delivers at **0.744**. A ten-point error that
+survives quadrupling the sample is not sampling.
+
+### Two bugs, and the second is the interesting one
+
+**`remask_detections.py` refreshed the floor every 5 rows and said in its own
+docstring that this was "the same cadence `clip_detect_raw.py` uses". That file
+uses 3.** So every before-and-after measured through it handicapped the new
+mask against the old one by two extra frames of staleness.
+
+And staleness is not free, which is the finding. The floor is found on one
+frame and its mask applied to the next few, and the camera pans in between. On
+the same 60 clips of Finals G7:
+
+    setting                     carrier kept   <=13 kept
+    the shipped mask                   0.872       0.973
+    the fitted one, floor every 1      0.852       0.983
+    the fitted one, floor every 3      0.819       0.988
+    the fitted one, floor every 5      0.744        ~
+                     (the full-broadcast run of Round 118)
+
+**Three points from every-1 to every-3, and about ten by every-5.** The
+fitter's 1055-frame estimate for this setting was 0.850 and the every-1
+measurement is 0.852 -- so the fitter is accurate, it is simply measuring a
+mask that is recomputed on every frame, and the pipeline does not do that.
+
+### Why this biases the CHOICE and not just the number
+
+If staleness cost every setting the same, it would shift the whole table down
+and the ranking would hold. It does not. A tighter mask has less margin, so the
+same camera pan pushes more feet outside it: the settings the fit likes most
+are the ones most damaged by being reused for three frames. **The fit is
+systematically optimistic about exactly the settings it prefers.**
+
+That is a bias in the ranking, which is what a fitter produces, and it cannot
+be fixed by more frames. The fit has to evaluate a mask the way the pipeline
+applies one: find the floor on a frame, then score the next `COURT_EVERY` rows
+against it.
+
+### What it means for the three that gained
+
+Houston, Finals G1 and ECF were all measured at every-5 as well, so their
+reported gains -- +9.9, +9.0 and +3.2 points of kept carrier -- are measured
+against a handicap the pipeline does not impose. **Those three are
+UNDER-stated, and Finals G7's loss is over-stated:** at the pipeline's own
+cadence its fitted setting reads 0.819 against the shipped 0.872, a five-point
+loss rather than twelve.
+
+It is still a loss, and G7's entry still should not be adopted.
+
+### And hole-filling is a choice, not a fact about courts
+
+With staleness modelled, the G7 fit gets close to the truth -- 0.815 against
+the 0.819 the rebuilt cache delivers at the same cadence -- and then says
+something clearer: **every setting it can reach is worse than the shipped mask
+on the carrier.** 0.815 at best against 0.872.
+
+The reason is that the shipped setting is not in the grid. Filling what the
+wood encloses was made unconditional in Round 116, and the grid can only
+choose how much to erode and how hard to gate on top of it. On Houston's red
+key the filling is what makes the mask work at all -- the blue colour rule
+accepts 0.4% of it. On Finals G7, whose key the blue rule already reads, the
+filling only makes the mask bigger, and a bigger mask admits the front row,
+and admitting the front row is what then forces a kit gate, and the kit gate
+is what costs the carriers.
+
+So `court_region` takes `fill_holes` and the fitter sweeps it, alongside the
+erosion and the kit gate, against the same two bounds. Which way a broadcast
+goes is now measured rather than decided by a belief about what courts look
+like -- which is what this round's first two findings were both about.
+
+Three parameters, twelve settings, split by clip, scored the way the pipeline
+applies a mask, on 900 frames a broadcast.

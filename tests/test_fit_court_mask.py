@@ -17,23 +17,23 @@ fit = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(fit)
 
 
-def _rows(pairs, gate=None):
-    """{(erode share, kit gate): {carrier_kept, over_ok}}, denominators fine."""
-    return {(share, gate): {"carrier_kept": carrier, "carrier_n": 100,
-                            "over_ok": over, "over_n": 100}
+def _rows(pairs, gate=None, fill=True):
+    """{(erode, gate, fill): {carrier_kept, over_ok}}, denominators fine."""
+    return {(share, gate, fill): {"carrier_kept": carrier, "carrier_n": 100,
+                                  "over_ok": over, "over_n": 100}
             for share, (carrier, over) in pairs.items()}
 
 
 def test_it_takes_the_most_carriers_among_masks_that_obey_the_rule():
     rows = _rows({0.0: (0.98, 0.80), 0.03: (0.90, 0.96), 0.0625: (0.85, 0.99)})
-    assert fit.choose(rows) == (0.03, None)
+    assert fit.choose(rows) == (0.03, None, True)
 
 
 def test_a_mask_that_admits_the_crowd_is_refused_however_many_carriers_it_keeps():
     """Keeping everybody never drops the carrier. One bound alone is
     degenerate, which is why there are two."""
     rows = _rows({0.0: (1.00, 0.10), 0.0625: (0.60, 0.99)})
-    assert fit.choose(rows) == (0.0625, None)
+    assert fit.choose(rows) == (0.0625, None, True)
 
 
 def test_nothing_clearing_the_floor_answers_none_rather_than_guessing():
@@ -44,12 +44,12 @@ def test_nothing_clearing_the_floor_answers_none_rather_than_guessing():
 def test_a_tie_on_carriers_goes_to_the_larger_erosion():
     """Admitting the front row costs more downstream than it costs here."""
     rows = _rows({0.0: (0.90, 0.99), 0.03: (0.90, 0.99)})
-    assert fit.choose(rows) == (0.03, None)
+    assert fit.choose(rows) == (0.03, None, True)
 
 
 def test_an_empty_denominator_is_not_treated_as_a_pass():
-    rows = {(0.0, None): {"carrier_kept": 1.0, "carrier_n": 0,
-                          "over_ok": 1.0, "over_n": 0}}
+    rows = {(0.0, None, True): {"carrier_kept": 1.0, "carrier_n": 0,
+                                "over_ok": 1.0, "over_n": 0}}
     assert fit.choose(rows) is None
 
 
@@ -60,14 +60,31 @@ def test_the_kit_gate_is_the_second_way_to_exclude_the_front_row():
     rows = {}
     rows.update(_rows({0.0: (0.90, 0.96)}, gate=None))
     rows.update(_rows({0.0: (0.90, 0.99)}, gate=26.0))
-    assert fit.choose(rows) == (0.0, 26.0)
+    assert fit.choose(rows) == (0.0, 26.0, True)
 
 
 def test_a_kit_gate_that_deletes_players_is_refused_like_any_other_mask():
     rows = {}
     rows.update(_rows({0.0: (0.95, 0.96)}, gate=None))
     rows.update(_rows({0.0: (0.40, 1.00)}, gate=18.0))
-    assert fit.choose(rows) == (0.0, None)
+    assert fit.choose(rows) == (0.0, None, True)
+
+
+def test_not_filling_the_floor_is_preferred_when_it_ties():
+    """A filled mask is a larger mask and admits more of the front row, so on
+    a tie the smaller claim wins -- and whether a broadcast needs filling is
+    decided by these two bounds, not by a belief about courts."""
+    rows = {}
+    rows.update(_rows({0.0: (0.90, 0.99)}, fill=True))
+    rows.update(_rows({0.0: (0.90, 0.99)}, fill=False))
+    assert fit.choose(rows) == (0.0, None, False)
+
+
+def test_filling_wins_when_it_actually_keeps_more_carriers():
+    rows = {}
+    rows.update(_rows({0.0: (0.95, 0.99)}, fill=True))
+    rows.update(_rows({0.0: (0.80, 0.99)}, fill=False))
+    assert fit.choose(rows) == (0.0, None, True)
 
 
 def test_the_floor_and_the_impossible_count_are_the_declared_ones():
@@ -81,9 +98,23 @@ def test_two_detectors_on_one_player_count_once_here_too():
     assert fit.distinct(same + [[600.0, 100.0, 700.0, 400.0]]) == 2
 
 
-def test_distance_to_a_box_is_zero_inside_it():
-    assert fit.to_box((50.0, 50.0), [0.0, 0.0, 100.0, 100.0]) == 0.0
-    assert fit.to_box((0.0, 50.0), [10.0, 0.0, 100.0, 100.0]) == pytest.approx(10.0)
+def test_the_floor_is_scored_against_the_rows_it_is_reused_for():
+    """The pipeline finds the floor once and applies it while the camera pans.
+    Scoring only the frame it was found on measures a mask nothing ever
+    applies -- and does so unevenly, since a tighter mask has less margin and
+    the same pan pushes more feet outside it."""
+    import inspect
+
+    source = inspect.getsource(fit.measure)
+    assert "rows[start:start + COURT_EVERY]" in source
+    assert fit.COURT_EVERY == 3
+
+
+def test_the_carrier_is_found_by_the_one_shared_definition():
+    """Five copies of this loop is how `wilson` ended up with four."""
+    import inspect
+
+    assert "carrier_of" in inspect.getsource(fit._score_row)
 
 
 def test_choose_reads_the_fit_half_only():

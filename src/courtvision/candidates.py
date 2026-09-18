@@ -96,7 +96,7 @@ def carrier_of(row, people, *, hold_gate: float = HOLD_GATE) -> int | None:
 
 
 def court_region(image: np.ndarray, erode_px: int | None = COURT_ERODE_PX,
-                 erode_share: float | None = None):
+                 erode_share: float | None = None, fill_holes: bool = True):
     """The largest connected run of floor: wood and painted court together.
 
     Colour cannot separate players from spectators in this arena -- the crowd
@@ -110,12 +110,18 @@ def court_region(image: np.ndarray, erode_px: int | None = COURT_ERODE_PX,
     deleting a player, and both sides of it are measurable without labels --
     see `scripts/fit_court_mask.py`.
 
-    THE PAINTED KEY IS FOUND BY SHAPE, NOT BY COLOUR. The `paint` rule below
-    accepts hue 95-130, which is blue, and accepts 0.4% of Houston's red key.
-    Anything the wood encloses -- a key, a centre logo, a sponsor decal -- is a
-    HOLE in the wood mask, and filling holes captures it whatever colour it is.
-    Worth 3.6 points of kept ball-carrier on the red-key broadcast on its own,
-    and it cannot be wrong about a colour it never looks at.
+    THE PAINTED KEY IS FOUND BY SHAPE, NOT BY COLOUR, when `fill_holes` is on.
+    The `paint` rule below accepts hue 95-130, which is blue, and accepts 0.4%
+    of Houston's red key. Anything the wood encloses -- a key, a centre logo, a
+    sponsor decal -- is a HOLE in the wood mask, and filling holes captures it
+    whatever colour it is. Worth 3.6 points of kept ball-carrier on the red-key
+    broadcast, and it cannot be wrong about a colour it never looks at.
+
+    IT IS NOT FREE AND IS THEREFORE AN OPTION. A filled mask is a larger mask,
+    so it also admits more of the front row, and on Finals G7 -- whose key the
+    blue rule already reads -- it costs more in over-keeping than it buys in
+    carriers. Which way a broadcast goes is decided by `fit_court_mask.py`
+    against the same two bounds as the erosion, not by a belief about courts.
     """
     import cv2
 
@@ -138,12 +144,14 @@ def court_region(image: np.ndarray, erode_px: int | None = COURT_ERODE_PX,
     biggest = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
     region = (labels == biggest).astype(np.uint8)
 
-    # Fill what the floor encloses. Flooding the complement in from a corner
-    # reaches everything OUTSIDE the region; whatever it cannot reach is a hole.
-    outside = (1 - region).astype(np.uint8)
-    cv2.floodFill(outside, np.zeros((region.shape[0] + 2, region.shape[1] + 2),
-                                    np.uint8), (0, 0), 2)
-    region = ((region == 1) | (outside == 1)).astype(np.uint8)
+    if fill_holes:
+        # Flooding the complement in from a corner reaches everything OUTSIDE
+        # the region; whatever it cannot reach is enclosed by the floor.
+        outside = (1 - region).astype(np.uint8)
+        cv2.floodFill(outside, np.zeros((region.shape[0] + 2,
+                                         region.shape[1] + 2), np.uint8),
+                      (0, 0), 2)
+        region = ((region == 1) | (outside == 1)).astype(np.uint8)
 
     if erode_share is not None:
         erode_px = int(round(erode_share * CANONICAL_MASK_HEIGHT))
