@@ -171,3 +171,31 @@ def test_every_banked_question_has_a_predicate_over_fields_only():
         names = {w for w in item["where"].replace("(", " ").replace(")", " ")
                  .split() if w.isalpha()}
         assert names <= allowed, (item["where"], names - allowed)
+
+
+# -- the tracking metric -----------------------------------------------------
+
+def test_a_cut_is_a_frame_where_almost_nothing_matches():
+    """The cut signal comes from the boxes, not from pixels -- the same thing
+    the tracker already computes to estimate camera motion."""
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+    from eval_tracking import cuts_from_boxes
+    steady = [[[0, 0, 10, 20], [30, 0, 40, 20]] for _ in range(6)]
+    assert cuts_from_boxes(steady) == []
+    moved = steady[:3] + [[[500, 300, 510, 320], [600, 300, 610, 320]]] + steady[3:]
+    assert 3 in cuts_from_boxes(moved)
+
+
+def test_the_tracking_metric_counts_what_the_constraint_forbids():
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+    from eval_tracking import IMPOSSIBLE_ABOVE, measure
+    assert IMPOSSIBLE_ABOVE == 13, "ten players and at most three referees"
+    # Twenty boxes on the floor at once is impossible however the frame looks.
+    crowded = [[[i * 30, 0, i * 30 + 20, 40] for i in range(20)]
+               for _ in range(4)]
+    got = measure(crowded, 15.0, use_cuts=False)
+    assert all(a > IMPOSSIBLE_ABOVE for a in got["alive"])

@@ -7984,3 +7984,63 @@ filters carry it (0.896 against 0.707).
 **That is the argument for the architecture, and it is now measured rather than
 asserted**: structured filters answer what can be looked up, embeddings answer
 what cannot, and each is useless on the other's half.
+
+## Round 109: tracking gets its first accuracy metric, and cut-awareness gets tested
+
+Every tracking number in this repository has been a COUNT -- "463 identities for
+ten players over five minutes" -- which says something is wrong, cannot say how
+wrong, cannot compare two trackers, and is won outright by a tracker that merges
+all ten players into one identity. The plan's answer was ~980 hand judgements
+nobody has made.
+
+**The ten-player constraint supplies three metrics for nothing**, from the cached
+detections, with no video and no labels:
+
+    game   alive p50   OVER 13 alive   two tracks on one man   identities   median life
+    G7          9         0.010              0.428               1,469         1.18 s
+    G1          9         0.011              0.402               1,358         1.23 s
+    ECF         9         0.010              0.429               1,206         1.52 s
+    HOU         8         0.005              0.366               1,352         1.17 s
+
+**The tracker is not inventing people.** More than thirteen identities alive at
+once happens on 0.5% to 1.1% of frames, which for a component nobody had ever
+measured is a better result than the identity counts suggested.
+
+**It is carrying eight or nine where ten are on the floor**, and Houston -- the
+broadcast whose floor mask discards half the detected people -- is the one at
+eight. The two measurements agree from opposite directions.
+
+**And on 37% to 43% of frames two live tracks overlap by more than the project's
+own duplicate threshold.** `motion_tracking.deduplicate` exists to draw only one
+of them, so nothing visible is wrong; what it means is that the boxes going IN
+are duplicated that often, which is a detector property this metric can see and
+the overlay cannot. It is stated as an upper bound: two players in a screen or a
+rebound scrum genuinely can overlap that much, and separating those cases needs a
+judgement this does not make.
+
+### Cut-aware termination: the counts get worse and nothing else moves
+
+`MotionTracker.end_segment` has existed since the tracker was promoted and
+nothing has ever called it with real cuts. The cuts are free too -- a camera cut
+is a frame where almost nothing matches the frame before, which is the same
+signal the tracker already computes for camera motion, so no pixels are needed.
+
+    game    identities            median life         OVER 13        doubles
+    G7      1,469 -> 1,478      1.18 -> 1.15 s      unchanged      unchanged
+    G1      1,358 -> 1,414      1.23 -> 1.13 s      unchanged      unchanged
+    ECF     1,206 -> 1,264      1.52 -> 1.52 s      unchanged      unchanged
+    HOU     1,352 -> 1,443      1.17 -> 1.10 s      unchanged      unchanged
+
+**Exactly what the plan predicted: "it will make the counts worse and the
+accuracy better".** The counts do get worse -- more identities, shorter lives,
+because a track that used to run through a cut now ends at it. Whether the
+accuracy gets better is a claim **these metrics cannot settle**: over-tracking
+and duplication are unchanged to three decimal places on all four broadcasts.
+
+So cut-awareness is left unwired, with a number rather than an intuition behind
+that decision. What would settle it is the across-cut stratum of the identity
+labelling the plan specifies, and that is still ~980 human judgements away.
+
+**The clearest demonstration available that counts are not accuracy**, which is
+what the plan said this change would be, and it is now demonstrated rather than
+asserted.
