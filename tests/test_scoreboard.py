@@ -354,3 +354,46 @@ def test_a_sub_ten_second_reading_may_never_start_a_run():
     values = [round(v, 1) for _, v in resolve(rows)]
     assert 7.2 not in values and 6.7 not in values, values
     assert values == [630.0, 629.0, 628.0, 627.0, 626.0, 625.0, 624.0, 623.0]
+
+
+def test_one_misread_during_a_stoppage_cannot_flip_a_quarter_into_tenths():
+    """"5:43" is 343 seconds or 54.3, and the tenths reading of a HELD clock is
+    self-consistent frame after frame.
+
+    Measured on Finals Game 7 at video 6071.0 s: the clock is held at 5:43
+    through a timeout, one frame reads "5:48", neither of its readings continues
+    from 343, and the confirm-against-the-next-frame rule then CONFIRMS 54.8 --
+    because the next frame's "5:43" offers 54.3, which continues from 54.8
+    perfectly. Every later reading in the quarter followed it down, the last
+    five minutes of the fourth resolved to tenths, and `assign_periods` filed
+    them as an overtime the game never played.
+
+    The clock only DISPLAYS tenths under a minute, so a reading below 60 while
+    the clock is above 65 is not a misread to be weighed against another -- it
+    is impossible."""
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+    from read_game_clock import resolve
+    held = [(6060.0 + 0.5 * i, [343.0, 54.3]) for i in range(10)]
+    stray = [(6071.0, [348.0, 54.8])]
+    after = [(6071.5 + 0.5 * i, [343.0, 54.3]) for i in range(10)]
+    values = [v for _, v in resolve(held + stray + after)]
+    assert max(values) >= 343.0, values
+    assert all(v >= 60.0 for v in values), (
+        f"the quarter slipped into tenths: {sorted(set(values))}")
+
+
+def test_a_period_still_begins_after_one_ends_near_zero():
+    """The guard drops sub-minute readings while the clock is HIGH, so a clock
+    that has legitimately run down to 0.4 and then resets to 12:00 has to
+    survive it -- the running value is low there, and the rule does not apply."""
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+    from read_game_clock import resolve
+    ending = [(100.0 + i, [10.0 - i]) for i in range(10)]
+    restart = [(120.0 + i, [720.0 - i]) for i in range(5)]
+    values = [v for _, v in resolve(ending + restart)]
+    assert 720.0 in values, values
+    assert 0.0 in values or 1.0 in values, values

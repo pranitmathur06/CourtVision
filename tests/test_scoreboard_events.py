@@ -146,11 +146,14 @@ def test_the_box_sizes_land_within_two_pixels_of_the_fitted_ones():
     ECF clock region is 36 px tall, not 44, so a fixed 70-90-110 was already
     describing a graphic that broadcast does not have."""
     boxes = _band_candidates(FINALS_720P, 1280)
-    assert sorted({r[3] - r[2] for r in boxes}) == [70, 88, 110]
-    assert sorted({r[1] - r[0] for r in boxes}) == [44, 56, 68, 88]
+    # A SUPERSET: the three fitted widths are all here, with larger ones above
+    # them, because the Houston score panels need a window bigger than anything
+    # the fitted sizes could build.
+    assert {70, 88, 110} <= set(r[3] - r[2] for r in boxes)
+    assert {44, 56, 68} <= set(r[1] - r[0] for r in boxes)
     # The 36-px ECF clock, which the old constants did not fit.
     ecf = _band_candidates((595, 631, 1046, 1186), 1280)
-    assert sorted({r[3] - r[2] for r in ecf}) == [58, 72, 90]
+    assert sorted({r[3] - r[2] for r in ecf}) == [58, 72, 90, 126, 162]
 
 
 def test_the_search_follows_the_clock_onto_a_broadcast_it_was_not_fitted_to():
@@ -162,7 +165,13 @@ def test_the_search_follows_the_clock_onto_a_broadcast_it_was_not_fitted_to():
     instead, giving heights up to 56 and widths from 45."""
     boxes = _band_candidates(HOUSTON_1080P, 1920)
     assert max(r[1] - r[0] for r in boxes) >= 38
-    assert sorted({r[3] - r[2] for r in boxes}) == [45, 56, 70]
+    assert sorted({r[3] - r[2] for r in boxes}) == [45, 56, 70, 98, 126]
+    # And a window that actually contains the OKC score panel exists: the
+    # digits sit at roughly x 215-335, y 982-1038 on the frame at t=2000 s, and
+    # a hand-cut crop of exactly those pixels reads 18. With the fitted sizes
+    # alone the search returned ZERO score-like regions on this broadcast.
+    assert any(r[0] <= 982 and r[1] >= 1038 and r[2] <= 215 and r[3] >= 335
+               for r in boxes), "no candidate can contain the score panel"
 
 
 def test_the_reach_is_not_a_number_fitted_to_the_layouts_already_here():

@@ -49,6 +49,17 @@ PERIOD_S = 720.0
 OT_S = 300.0
 #: A reading may miss the running clock by this much and still continue it.
 CONTINUE_TOL_S = 3.0
+#: The clock only DISPLAYS tenths under a minute, so a reading below 60 is
+#: impossible while the clock is above this. It is the physical fact that kills
+#: a whole class of misread: "5:43" is 343 seconds or 54.3, and the tenths
+#: reading of a HELD clock is self-consistent frame after frame, so one bad
+#: frame reading "5:48" during a timeout at 5:43 flips every later reading in
+#: the quarter into tenths. The existing confirm-against-the-next-frame rule
+#: cannot see it -- the misread's tenths reading IS confirmed by the next
+#: frame's tenths reading. Measured on Finals Game 7 at 6071.0 s, where exactly
+#: that happened and cost the last five minutes of the fourth quarter, which
+#: `assign_periods` then filed as an overtime the game never played.
+TENTHS_ONLY_BELOW_S = 65.0
 #: An upward jump this large ends a run of readings.
 RESET_JUMP_S = 30.0
 #: A run this short is a replay or a misread, not a period.
@@ -110,6 +121,11 @@ def resolve(candidates):
         if running is None:
             seconds = max(options)
         else:
+            # A sub-minute reading is impossible while the clock is above a
+            # minute; see TENTHS_ONLY_BELOW_S. Dropped before continuity is
+            # considered, because the failure is that it continues perfectly.
+            if running > TENTHS_ONLY_BELOW_S:
+                options = [v for v in options if v >= 60.0] or options
             fits = [v for v in options if _continues(running, running_t, v, t)]
             if fits:
                 seconds = max(fits)

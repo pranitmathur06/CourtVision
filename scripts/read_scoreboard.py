@@ -261,16 +261,25 @@ def band_candidates(clock_roi, width, reach_px=SEARCH_PX):
     top, bottom, left, _ = clock_roi
     height = max(bottom - top, 1)
     out = []
-    # 0, 0.14, 0.27 and 0.5 of the clock's height. The first three are the old
-    # (0, 6, 12) on a 44-pixel clock; the fourth is new, because a score digit
-    # can be half again as tall as a clock digit and nothing here knew that.
+    # A SUPERSET OF THE OLD BOXES, AND MUCH LARGER ONES. 0, 0.14, 0.27 and 0.5
+    # of the clock's height reproduce the old (0, 6, 12) on a 44-pixel clock and
+    # were fitted on two Finals broadcasts where the score and the clock are
+    # rendered at similar sizes. On the Houston broadcast they are not: the
+    # clock region is 28 px tall and each team's score sits in a coloured panel
+    # whose digits need a 60 x 120 window -- larger than anything this could
+    # build -- so the search returned ZERO score-like regions on a frame where
+    # a hand-cut crop of the same pixels reads 18 and 15 correctly.
+    #
+    # The old sizes are kept rather than replaced, so the Finals result the
+    # reader already produces cannot move; the new ones are added above them.
     for grow in sorted({0, round(height * 0.14), round(height * 0.27),
-                        round(height * 0.5)}):
+                        round(height * 0.5), round(height * 0.75),
+                        round(height * 1.0)}):
         y0, y1 = max(top - grow, 0), bottom + grow
-        # 1.6, 2.0 and 2.5 clock-heights wide: the old 70, 90, 110 on a
-        # 44-pixel clock. Two score digits and their padding.
+        # 1.6 to 4.5 clock-heights wide. The first three are the old 70, 90 and
+        # 110 on a 44-pixel clock; the last two are what a score panel needs.
         for box_width in sorted({max(round(height * r), 12)
-                                 for r in (1.6, 2.0, 2.5)}):
+                                 for r in (1.6, 2.0, 2.5, 3.5, 4.5)}):
             x = 0 if reach_px is None else max(left - reach_px, 0)
             step = max(round(height * 0.23), 4)          # the old 10 at h=44
             while x + box_width < left - 10:
