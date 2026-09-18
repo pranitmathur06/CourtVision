@@ -7147,3 +7147,67 @@ forty minutes on the 1080p60 file -- to find out whether it helped, and a frame
 whose text parsed to nothing was not recorded at all, so `--from-raw` could
 never show what a better parser would recover. This round paid that cost twice
 and it should not be paid again.
+
+### Round 99: where the ball's missing thirteen points actually are
+
+The lead recorded above said the ball ledger's thirteen rejected ideas were
+tested with an instrument that could not see a ten-point effect. Before trying
+any of them again, this asks a cheaper question: **on the uniform frames, where
+is the right ball when the pipeline does not report it?**
+
+No detector runs. The candidates come out of the clip detection caches -- the
+boxes the labelling pages actually showed -- so this is selection measured on
+exactly the evidence a person was judging.
+
+    130 uniform located-ball frames, pooled over the three labelled broadcasts
+
+        rank of the true ball        frames     share
+        0  (reported today)             100     76.9%
+        1  (second by confidence)        13     10.0%
+        2                                 4      3.1%
+        3                                 1      0.8%
+        never proposed                   12      9.2%
+
+        top-1                          0.769
+        top-2 ceiling                  0.869    a perfect two-way discriminator
+        any-rank ceiling               0.908    every selector ever built here
+
+**Thirteen and a half points are available to selection and ten of them --
+three quarters -- are a binary decision between two boxes.** Another 9.2% is not
+a selection problem at all: the ball is not in the candidate list and no
+re-ranking can find it. That is the split the pooled 0.53 figure this project
+was quoting could not show, and it is the number that should decide where the
+next round of effort goes.
+
+### And the anchoring already in the pipeline does not close it
+
+`clip_boxes.anchor_penalty` scores a ball candidate by confidence less what its
+distance from the nearest person costs, and rejects one that is nowhere near
+anybody. It ships -- it is what stopped the overlay path settling on a
+stationary orange thing in the crowd -- and it had never been scored against the
+ball truth. `scripts/eval_ball_anchor.py` does that, with its two constants
+fitted on the HARD half and reported on the UNIFORM half:
+
+    rule          pooled     n      G7      G1     ECF
+    confidence     0.769   130   0.829   0.647   0.800
+    penalty        0.777   130   0.829   0.647   0.818
+    handler        0.777   130   0.854   0.676   0.782
+    reject         0.777   130   0.829   0.818   0.818
+
+    paired, exact McNemar against plain confidence:
+      penalty   2 frames only it gets, 1 only confidence   p = 1.0000
+      handler   4 frames only it gets, 3 only confidence   p = 1.0000
+      reject    2 frames only it gets, 1 only confidence   p = 1.0000
+
+**A fourteenth negative, and a useful one.** Geometry is not what separates the
+ball from the box that outranks it: the decoys are already near people. Two
+thirds of the losing margins are wide -- 0.71 against 0.08, 0.51 against 0.32 --
+so the detector is not narrowly confused, it is confidently wrong about a
+specific kind of object. That points at appearance, and it says something the
+ledger's entry 11 ("orange colour prior: true balls are LESS orange than the
+false") already hinted at and nobody followed: the decoys are a *population*,
+not noise.
+
+The honest consequence for the roadmap is that the remaining ball work is a
+two-class problem on about 18 frames per 130, which is exactly the regime where
+the old ten-to-thirteen-frame evaluations could see nothing at all.
