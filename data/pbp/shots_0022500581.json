@@ -1,0 +1,1160 @@
+[
+ {
+  "period": 1,
+  "clock_s": 712.0,
+  "made": false,
+  "description": "MISS Okogie 1' Driving Dunk"
+ },
+ {
+  "period": 1,
+  "clock_s": 697.0,
+  "made": true,
+  "description": "Dort 13' Pullup Jump Shot (2 PTS) (Jal. Williams 1 AST)"
+ },
+ {
+  "period": 1,
+  "clock_s": 676.0,
+  "made": true,
+  "description": "Okogie 24' 3PT Jump Shot (3 PTS) (Thompson 1 AST)"
+ },
+ {
+  "period": 1,
+  "clock_s": 652.0,
+  "made": true,
+  "description": "Holmgren 25' 3PT Step Back Jump Shot (3 PTS) (Jal. Williams 2 AST)"
+ },
+ {
+  "period": 1,
+  "clock_s": 625.0,
+  "made": false,
+  "description": "MISS Sengun 11' Turnaround Hook Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 614.0,
+  "made": false,
+  "description": "MISS Wiggins 3' Driving Finger Roll Layup"
+ },
+ {
+  "period": 1,
+  "clock_s": 605.0,
+  "made": false,
+  "description": "MISS Durant 24' 3PT Running Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 572.0,
+  "made": true,
+  "description": "Smith Jr. 13' Pullup Jump Shot (2 PTS)"
+ },
+ {
+  "period": 1,
+  "clock_s": 560.0,
+  "made": false,
+  "description": "MISS Jal. Williams 11' Driving Floating Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 555.0,
+  "made": true,
+  "description": "Holmgren Tip Dunk Shot (5 PTS)"
+ },
+ {
+  "period": 1,
+  "clock_s": 552.0,
+  "made": false,
+  "description": "MISS Thompson 9' Driving Layup"
+ },
+ {
+  "period": 1,
+  "clock_s": 547.0,
+  "made": true,
+  "description": "Holmgren 2' Running Dunk (7 PTS) (Jal. Williams 3 AST)"
+ },
+ {
+  "period": 1,
+  "clock_s": 530.0,
+  "made": true,
+  "description": "Smith Jr. 26' 3PT Jump Shot (5 PTS) (Okogie 1 AST)"
+ },
+ {
+  "period": 1,
+  "clock_s": 520.0,
+  "made": false,
+  "description": "MISS Gilgeous-Alexander 25' 3PT Step Back Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 508.0,
+  "made": true,
+  "description": "Sengun 3' Cutting Layup Shot (2 PTS) (Durant 1 AST)"
+ },
+ {
+  "period": 1,
+  "clock_s": 490.0,
+  "made": false,
+  "description": "MISS Durant 14' Pullup Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 471.0,
+  "made": false,
+  "description": "MISS Jal. Williams 14' Turnaround Fadeaway Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 462.0,
+  "made": false,
+  "description": "MISS Durant 8' Running Pull-Up Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 460.0,
+  "made": false,
+  "description": "MISS Thompson Tip Layup Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 454.0,
+  "made": true,
+  "description": "Holmgren 1' Running Dunk (10 PTS) (Jal. Williams 4 AST)"
+ },
+ {
+  "period": 1,
+  "clock_s": 427.0,
+  "made": false,
+  "description": "MISS Smith Jr. 14' Turnaround Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 409.0,
+  "made": false,
+  "description": "MISS Wiggins 25' 3PT Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 387.0,
+  "made": false,
+  "description": "MISS Smith Jr. 14' Turnaround Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 374.0,
+  "made": false,
+  "description": "MISS Jal. Williams 24' 3PT Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 361.0,
+  "made": false,
+  "description": "MISS Okogie 24' 3PT Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 353.0,
+  "made": true,
+  "description": "Wiggins 1' Running Dunk (2 PTS) (Gilgeous-Alexander 1 AST)"
+ },
+ {
+  "period": 1,
+  "clock_s": 336.0,
+  "made": false,
+  "description": "MISS Smith Jr. 7' Driving Finger Roll Layup"
+ },
+ {
+  "period": 1,
+  "clock_s": 332.0,
+  "made": false,
+  "description": "MISS Durant 20' Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 322.0,
+  "made": false,
+  "description": "MISS Durant 13' Pullup Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 311.0,
+  "made": true,
+  "description": "Durant 12' Turnaround Fadeaway (2 PTS)"
+ },
+ {
+  "period": 1,
+  "clock_s": 261.0,
+  "made": false,
+  "description": "MISS Davison 13' Running Pull-Up Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 247.0,
+  "made": false,
+  "description": "MISS Smith Jr. 24' 3PT Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 240.0,
+  "made": true,
+  "description": "Caruso 24' 3PT Jump Shot (3 PTS) (Wallace 1 AST)"
+ },
+ {
+  "period": 1,
+  "clock_s": 206.0,
+  "made": false,
+  "description": "MISS Smith Jr. 3PT Running Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 196.0,
+  "made": false,
+  "description": "MISS Gilgeous-Alexander 22' Step Back Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 183.0,
+  "made": false,
+  "description": "MISS Durant 18' Turnaround Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 164.0,
+  "made": true,
+  "description": "Thompson 2' Running Dunk (3 PTS) (Sengun 1 AST)"
+ },
+ {
+  "period": 1,
+  "clock_s": 150.0,
+  "made": false,
+  "description": "MISS Caruso 3PT Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 146.0,
+  "made": false,
+  "description": "MISS Caruso 1' Driving Layup"
+ },
+ {
+  "period": 1,
+  "clock_s": 137.0,
+  "made": false,
+  "description": "MISS Sheppard 18' Pullup Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 124.0,
+  "made": true,
+  "description": "Thompson 2' Running Dunk (5 PTS) (Sheppard 1 AST)"
+ },
+ {
+  "period": 1,
+  "clock_s": 115.0,
+  "made": false,
+  "description": "MISS Jay. Williams 26' 3PT Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 94.0,
+  "made": false,
+  "description": "MISS Wallace 26' 3PT Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 72.0,
+  "made": true,
+  "description": "Adams 2' Cutting Finger Roll Layup Shot (2 PTS) (Sheppard 2 AST)"
+ },
+ {
+  "period": 1,
+  "clock_s": 49.1,
+  "made": true,
+  "description": "Mitchell 25' 3PT Step Back Jump Shot (3 PTS) (Caruso 1 AST)"
+ },
+ {
+  "period": 1,
+  "clock_s": 29.4,
+  "made": false,
+  "description": "MISS Sheppard 26' 3PT Jump Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 15.0,
+  "made": false,
+  "description": "MISS Thompson 11' Turnaround Fadeaway Shot"
+ },
+ {
+  "period": 1,
+  "clock_s": 1.0,
+  "made": false,
+  "description": "MISS Caruso 25' 3PT Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 704.0,
+  "made": true,
+  "description": "Holmgren 26' 3PT Jump Shot (14 PTS) (Mitchell 1 AST)"
+ },
+ {
+  "period": 2,
+  "clock_s": 681.0,
+  "made": true,
+  "description": "Thompson 11' Driving Floating Jump Shot (7 PTS) (Sheppard 3 AST)"
+ },
+ {
+  "period": 2,
+  "clock_s": 669.0,
+  "made": true,
+  "description": "Mitchell 12' Pullup Jump Shot (5 PTS) (Jal. Williams 5 AST)"
+ },
+ {
+  "period": 2,
+  "clock_s": 631.0,
+  "made": false,
+  "description": "MISS K. Williams 3PT Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 613.0,
+  "made": false,
+  "description": "MISS Sengun 2' Driving Layup"
+ },
+ {
+  "period": 2,
+  "clock_s": 610.0,
+  "made": true,
+  "description": "Adams 1' Putback Layup (4 PTS)"
+ },
+ {
+  "period": 2,
+  "clock_s": 597.0,
+  "made": true,
+  "description": "Wallace Cutting Dunk Shot (2 PTS) (Mitchell 2 AST)"
+ },
+ {
+  "period": 2,
+  "clock_s": 572.0,
+  "made": false,
+  "description": "MISS Jal. Williams 13' Fadeaway Jumper"
+ },
+ {
+  "period": 2,
+  "clock_s": 560.0,
+  "made": false,
+  "description": "MISS Sheppard 11' Pullup Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 549.0,
+  "made": false,
+  "description": "MISS Adams 2' Layup"
+ },
+ {
+  "period": 2,
+  "clock_s": 547.0,
+  "made": false,
+  "description": "MISS Smith Jr. 7' Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 537.0,
+  "made": true,
+  "description": "Mitchell 1' Driving Layup (7 PTS)"
+ },
+ {
+  "period": 2,
+  "clock_s": 522.0,
+  "made": true,
+  "description": "Sheppard 11' Driving Floating Jump Shot (2 PTS)"
+ },
+ {
+  "period": 2,
+  "clock_s": 511.0,
+  "made": true,
+  "description": "Mitchell 13' Pullup Jump Shot (9 PTS)"
+ },
+ {
+  "period": 2,
+  "clock_s": 493.0,
+  "made": true,
+  "description": "Durant 22' Jump Shot (4 PTS) (Thompson 2 AST)"
+ },
+ {
+  "period": 2,
+  "clock_s": 483.0,
+  "made": false,
+  "description": "MISS Mitchell 10' Pullup Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 469.0,
+  "made": false,
+  "description": "MISS Durant 12' Turnaround Fadeaway Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 461.0,
+  "made": false,
+  "description": "MISS Wallace 2' Running Layup"
+ },
+ {
+  "period": 2,
+  "clock_s": 453.0,
+  "made": false,
+  "description": "MISS Thompson 2' Running Layup"
+ },
+ {
+  "period": 2,
+  "clock_s": 443.0,
+  "made": false,
+  "description": "MISS Jal. Williams 1' Running Layup"
+ },
+ {
+  "period": 2,
+  "clock_s": 443.0,
+  "made": true,
+  "description": "Holmgren Tip Dunk Shot (16 PTS)"
+ },
+ {
+  "period": 2,
+  "clock_s": 437.0,
+  "made": true,
+  "description": "Jal. Williams 2' Driving Layup (2 PTS)"
+ },
+ {
+  "period": 2,
+  "clock_s": 426.0,
+  "made": false,
+  "description": "MISS Sheppard 16' Driving Floating Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 415.0,
+  "made": true,
+  "description": "Smith Jr. 18' Pullup Jump Shot (7 PTS)"
+ },
+ {
+  "period": 2,
+  "clock_s": 404.0,
+  "made": false,
+  "description": "MISS Holmgren 26' 3PT Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 387.0,
+  "made": false,
+  "description": "MISS Durant 13' Turnaround Fadeaway Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 369.0,
+  "made": false,
+  "description": "MISS Jal. Williams 11' Driving Layup"
+ },
+ {
+  "period": 2,
+  "clock_s": 364.0,
+  "made": false,
+  "description": "MISS Wallace 4' Driving Layup"
+ },
+ {
+  "period": 2,
+  "clock_s": 355.0,
+  "made": false,
+  "description": "MISS Durant 26' 3PT Running Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 353.0,
+  "made": true,
+  "description": "Sengun 1' Putback Layup (4 PTS)"
+ },
+ {
+  "period": 2,
+  "clock_s": 328.0,
+  "made": false,
+  "description": "MISS Joe 25' 3PT Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 319.0,
+  "made": true,
+  "description": "Joe 31' 3PT Jump Shot (3 PTS) (Holmgren 1 AST)"
+ },
+ {
+  "period": 2,
+  "clock_s": 303.0,
+  "made": true,
+  "description": "Sengun 3' Dunk (6 PTS) (Davison 1 AST)"
+ },
+ {
+  "period": 2,
+  "clock_s": 292.0,
+  "made": true,
+  "description": "Gilgeous-Alexander 3' Driving Layup (2 PTS)"
+ },
+ {
+  "period": 2,
+  "clock_s": 281.0,
+  "made": false,
+  "description": "MISS Sengun 3' Turnaround Hook Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 270.0,
+  "made": true,
+  "description": "Gilgeous-Alexander 7' Driving Finger Roll Layup (5 PTS)"
+ },
+ {
+  "period": 2,
+  "clock_s": 256.0,
+  "made": false,
+  "description": "MISS Thompson 3' Driving Layup"
+ },
+ {
+  "period": 2,
+  "clock_s": 251.0,
+  "made": false,
+  "description": "MISS Joe 2' Running Layup"
+ },
+ {
+  "period": 2,
+  "clock_s": 238.0,
+  "made": false,
+  "description": "MISS Sengun 17' Fadeaway Jumper"
+ },
+ {
+  "period": 2,
+  "clock_s": 223.0,
+  "made": true,
+  "description": "Dort 26' 3PT Jump Shot (5 PTS) (Gilgeous-Alexander 2 AST)"
+ },
+ {
+  "period": 2,
+  "clock_s": 203.0,
+  "made": true,
+  "description": "Durant 17' Turnaround Jump Shot (8 PTS) (Sengun 2 AST)"
+ },
+ {
+  "period": 2,
+  "clock_s": 182.0,
+  "made": false,
+  "description": "MISS Dort 11' Fadeaway Jumper"
+ },
+ {
+  "period": 2,
+  "clock_s": 163.0,
+  "made": false,
+  "description": "MISS Durant 16' Turnaround Fadeaway Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 162.0,
+  "made": false,
+  "description": "MISS Okogie Tip Dunk Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 135.0,
+  "made": true,
+  "description": "Dort 27' 3PT Jump Shot (8 PTS) (Gilgeous-Alexander 3 AST)"
+ },
+ {
+  "period": 2,
+  "clock_s": 110.0,
+  "made": false,
+  "description": "MISS Wiggins 3PT Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 103.0,
+  "made": true,
+  "description": "Thompson 2' Running Dunk (12 PTS)"
+ },
+ {
+  "period": 2,
+  "clock_s": 96.0,
+  "made": true,
+  "description": "Gilgeous-Alexander 5' Driving Finger Roll Layup (7 PTS)"
+ },
+ {
+  "period": 2,
+  "clock_s": 61.0,
+  "made": false,
+  "description": "MISS Wiggins 3PT Jump Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 37.6,
+  "made": false,
+  "description": "MISS Sengun 11' Turnaround Hook Shot"
+ },
+ {
+  "period": 2,
+  "clock_s": 19.4,
+  "made": false,
+  "description": "MISS Sengun 10' Driving Layup"
+ },
+ {
+  "period": 2,
+  "clock_s": 19.4,
+  "made": true,
+  "description": "Adams 8' Tip Layup Shot (6 PTS)"
+ },
+ {
+  "period": 2,
+  "clock_s": 1.1,
+  "made": true,
+  "description": "Gilgeous-Alexander 25' 3PT Step Back Jump Shot (10 PTS)"
+ },
+ {
+  "period": 3,
+  "clock_s": 705.0,
+  "made": false,
+  "description": "MISS Dort 24' 3PT Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 681.0,
+  "made": true,
+  "description": "Durant 19' Pullup Jump Shot (12 PTS)"
+ },
+ {
+  "period": 3,
+  "clock_s": 670.0,
+  "made": false,
+  "description": "MISS Wiggins 3' Driving Reverse Layup"
+ },
+ {
+  "period": 3,
+  "clock_s": 646.0,
+  "made": false,
+  "description": "MISS Okogie 24' 3PT Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 641.0,
+  "made": true,
+  "description": "Smith Jr. 24' 3PT Jump Shot (12 PTS) (Sengun 3 AST)"
+ },
+ {
+  "period": 3,
+  "clock_s": 617.0,
+  "made": false,
+  "description": "MISS Holmgren 12' Turnaround Fadeaway Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 608.0,
+  "made": false,
+  "description": "MISS Thompson 6' Turnaround Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 596.0,
+  "made": false,
+  "description": "MISS Durant 28' 3PT Pullup Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 581.0,
+  "made": true,
+  "description": "Gilgeous-Alexander 22' Step Back Jump Shot (12 PTS)"
+ },
+ {
+  "period": 3,
+  "clock_s": 563.0,
+  "made": true,
+  "description": "Smith Jr. 25' 3PT Jump Shot (15 PTS) (Sengun 4 AST)"
+ },
+ {
+  "period": 3,
+  "clock_s": 533.0,
+  "made": true,
+  "description": "Okogie 1' Cutting Dunk Shot (5 PTS) (Sengun 5 AST)"
+ },
+ {
+  "period": 3,
+  "clock_s": 519.0,
+  "made": true,
+  "description": "Dort 15' Pullup Jump Shot (10 PTS) (Jal. Williams 6 AST)"
+ },
+ {
+  "period": 3,
+  "clock_s": 502.0,
+  "made": false,
+  "description": "MISS Smith Jr. 24' 3PT Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 497.0,
+  "made": true,
+  "description": "Sengun 6' Turnaround Hook Shot (8 PTS) (Thompson 3 AST)"
+ },
+ {
+  "period": 3,
+  "clock_s": 484.0,
+  "made": true,
+  "description": "Dort 25' 3PT Jump Shot (13 PTS) (Jal. Williams 7 AST)"
+ },
+ {
+  "period": 3,
+  "clock_s": 467.0,
+  "made": false,
+  "description": "MISS Durant 12' Pullup Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 453.0,
+  "made": false,
+  "description": "MISS Dort 24' 3PT Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 451.0,
+  "made": false,
+  "description": "MISS Wiggins Tip Layup Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 425.0,
+  "made": false,
+  "description": "MISS Smith Jr. 13' Turnaround Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 375.0,
+  "made": true,
+  "description": "Durant 2' Driving Dunk (14 PTS)"
+ },
+ {
+  "period": 3,
+  "clock_s": 357.0,
+  "made": true,
+  "description": "Wiggins 27' 3PT Jump Shot (5 PTS) (Dort 1 AST)"
+ },
+ {
+  "period": 3,
+  "clock_s": 339.0,
+  "made": false,
+  "description": "MISS Adams 7' Cutting Layup Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 328.0,
+  "made": false,
+  "description": "MISS Gilgeous-Alexander 12' Driving Floating Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 311.0,
+  "made": false,
+  "description": "MISS Durant 13' Pullup Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 303.0,
+  "made": true,
+  "description": "Jal. Williams 9' Pullup Jump Shot (6 PTS)"
+ },
+ {
+  "period": 3,
+  "clock_s": 281.0,
+  "made": false,
+  "description": "MISS Jal. Williams 4' Driving Layup"
+ },
+ {
+  "period": 3,
+  "clock_s": 240.0,
+  "made": true,
+  "description": "Caruso 2' Driving Reverse Layup (5 PTS)"
+ },
+ {
+  "period": 3,
+  "clock_s": 226.0,
+  "made": true,
+  "description": "Durant 10' Turnaround Fadeaway (17 PTS)"
+ },
+ {
+  "period": 3,
+  "clock_s": 212.0,
+  "made": false,
+  "description": "MISS Jay. Williams 26' 3PT Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 207.0,
+  "made": false,
+  "description": "MISS Caruso 26' 3PT Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 193.0,
+  "made": false,
+  "description": "MISS Wallace 25' 3PT Step Back Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 181.0,
+  "made": false,
+  "description": "MISS Davison 25' 3PT Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 180.0,
+  "made": false,
+  "description": "MISS Davison 26' 3PT Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 167.0,
+  "made": false,
+  "description": "MISS Mitchell 5' Driving Layup"
+ },
+ {
+  "period": 3,
+  "clock_s": 158.0,
+  "made": true,
+  "description": "Davison 25' 3PT Running Pull-Up Jump Shot (3 PTS) (Smith Jr. 1 AST)"
+ },
+ {
+  "period": 3,
+  "clock_s": 133.0,
+  "made": true,
+  "description": "Gilgeous-Alexander 7' Driving Layup (16 PTS)"
+ },
+ {
+  "period": 3,
+  "clock_s": 125.0,
+  "made": false,
+  "description": "MISS Thompson 11' Driving Floating Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 116.0,
+  "made": true,
+  "description": "Davison 14' Pullup Jump Shot (5 PTS)"
+ },
+ {
+  "period": 3,
+  "clock_s": 96.0,
+  "made": true,
+  "description": "Jay. Williams 13' Floating Jump Shot (2 PTS) (Caruso 2 AST)"
+ },
+ {
+  "period": 3,
+  "clock_s": 66.0,
+  "made": false,
+  "description": "MISS Caruso 3PT Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 33.9,
+  "made": false,
+  "description": "MISS Gilgeous-Alexander 27' 3PT Step Back Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 19.8,
+  "made": true,
+  "description": "Sengun 11' Turnaround Hook Shot (10 PTS)"
+ },
+ {
+  "period": 3,
+  "clock_s": 2.6,
+  "made": false,
+  "description": "MISS Davison 25' 3PT Jump Shot"
+ },
+ {
+  "period": 3,
+  "clock_s": 1.0,
+  "made": false,
+  "description": "MISS Thompson 8' Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 698.0,
+  "made": false,
+  "description": "MISS Sheppard 26' 3PT Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 688.0,
+  "made": true,
+  "description": "Holmgren 2' Driving Layup (18 PTS) (Mitchell 3 AST)"
+ },
+ {
+  "period": 4,
+  "clock_s": 663.0,
+  "made": true,
+  "description": "Sheppard 2' Driving Layup (4 PTS) (Durant 2 AST)"
+ },
+ {
+  "period": 4,
+  "clock_s": 653.0,
+  "made": true,
+  "description": "Mitchell 26' 3PT Step Back Jump Shot (12 PTS)"
+ },
+ {
+  "period": 4,
+  "clock_s": 626.0,
+  "made": false,
+  "description": "MISS Smith Jr. 11' Fadeaway Jumper"
+ },
+ {
+  "period": 4,
+  "clock_s": 617.0,
+  "made": true,
+  "description": "Wallace 25' 3PT Jump Shot (5 PTS) (Jal. Williams 8 AST)"
+ },
+ {
+  "period": 4,
+  "clock_s": 593.0,
+  "made": true,
+  "description": "Sengun 2' Cutting Layup Shot (12 PTS) (Durant 3 AST)"
+ },
+ {
+  "period": 4,
+  "clock_s": 581.0,
+  "made": true,
+  "description": "Wallace 26' 3PT Jump Shot (8 PTS) (Jal. Williams 9 AST)"
+ },
+ {
+  "period": 4,
+  "clock_s": 560.0,
+  "made": false,
+  "description": "MISS Thompson 10' Pullup Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 559.0,
+  "made": false,
+  "description": "MISS Sengun Tip Layup Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 544.0,
+  "made": true,
+  "description": "K. Williams 15' Pullup Jump Shot (2 PTS) (Jal. Williams 10 AST)"
+ },
+ {
+  "period": 4,
+  "clock_s": 527.0,
+  "made": false,
+  "description": "MISS Durant 20' Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 526.0,
+  "made": false,
+  "description": "MISS Smith Jr. Tip Layup Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 517.0,
+  "made": false,
+  "description": "MISS Jal. Williams 4' Driving Layup"
+ },
+ {
+  "period": 4,
+  "clock_s": 500.0,
+  "made": false,
+  "description": "MISS K. Williams 29' 3PT Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 475.0,
+  "made": true,
+  "description": "Sengun 1' Driving Reverse Layup (14 PTS)"
+ },
+ {
+  "period": 4,
+  "clock_s": 458.0,
+  "made": true,
+  "description": "Mitchell 2' Driving Reverse Layup (14 PTS)"
+ },
+ {
+  "period": 4,
+  "clock_s": 439.0,
+  "made": false,
+  "description": "MISS Durant 25' 3PT Pullup Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 424.0,
+  "made": true,
+  "description": "Durant 16' Pullup Jump Shot (19 PTS)"
+ },
+ {
+  "period": 4,
+  "clock_s": 407.0,
+  "made": false,
+  "description": "MISS K. Williams 25' 3PT Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 382.0,
+  "made": false,
+  "description": "MISS Jal. Williams 3' Running Finger Roll Layup"
+ },
+ {
+  "period": 4,
+  "clock_s": 371.0,
+  "made": false,
+  "description": "MISS Thompson 7' Fadeaway Jumper"
+ },
+ {
+  "period": 4,
+  "clock_s": 350.0,
+  "made": false,
+  "description": "MISS K. Williams 27' 3PT Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 338.0,
+  "made": true,
+  "description": "Mitchell 24' 3PT Jump Shot (17 PTS) (Wallace 2 AST)"
+ },
+ {
+  "period": 4,
+  "clock_s": 326.0,
+  "made": false,
+  "description": "MISS Durant 27' 3PT Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 315.0,
+  "made": false,
+  "description": "MISS Adams 9' Cutting Layup Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 311.0,
+  "made": false,
+  "description": "MISS Sengun 26' 3PT Turnaround Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 289.0,
+  "made": false,
+  "description": "MISS Thompson 11' Driving Floating Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 288.0,
+  "made": false,
+  "description": "MISS Thompson Tip Layup Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 276.0,
+  "made": false,
+  "description": "MISS Mitchell 26' 3PT Step Back Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 254.0,
+  "made": true,
+  "description": "Jay. Williams 2' Driving Dunk (6 PTS) (Gilgeous-Alexander 4 AST)"
+ },
+ {
+  "period": 4,
+  "clock_s": 237.0,
+  "made": false,
+  "description": "MISS Davison 3PT Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 225.0,
+  "made": false,
+  "description": "MISS Gilgeous-Alexander 16' Pullup Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 219.0,
+  "made": false,
+  "description": "MISS Sheppard 3' Driving Layup"
+ },
+ {
+  "period": 4,
+  "clock_s": 196.0,
+  "made": false,
+  "description": "MISS Davison 14' Pullup Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 169.0,
+  "made": false,
+  "description": "MISS Sheppard 13' Pullup Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 155.0,
+  "made": false,
+  "description": "MISS Joe 25' 3PT Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 145.0,
+  "made": false,
+  "description": "MISS Tate 11' Fadeaway Jumper"
+ },
+ {
+  "period": 4,
+  "clock_s": 136.0,
+  "made": false,
+  "description": "MISS Dieng 20' Running Pull-Up Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 129.0,
+  "made": false,
+  "description": "MISS Green 2' Running Layup"
+ },
+ {
+  "period": 4,
+  "clock_s": 122.0,
+  "made": true,
+  "description": "K. Williams 24' 3PT Running Jump Shot (5 PTS) (Dieng 1 AST)"
+ },
+ {
+  "period": 4,
+  "clock_s": 109.0,
+  "made": true,
+  "description": "Sheppard 26' 3PT Pullup Jump Shot (7 PTS)"
+ },
+ {
+  "period": 4,
+  "clock_s": 87.0,
+  "made": true,
+  "description": "Joe 26' 3PT Jump Shot (6 PTS) (Dieng 2 AST)"
+ },
+ {
+  "period": 4,
+  "clock_s": 70.0,
+  "made": false,
+  "description": "MISS Davison 7' Driving Floating Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 62.0,
+  "made": true,
+  "description": "K. Williams 18' Pullup Jump Shot (7 PTS)"
+ },
+ {
+  "period": 4,
+  "clock_s": 49.8,
+  "made": true,
+  "description": "Tate 13' Turnaround Fadeaway Bank Jump Shot (2 PTS)"
+ },
+ {
+  "period": 4,
+  "clock_s": 39.9,
+  "made": false,
+  "description": "MISS Dieng 27' 3PT Step Back Jump Shot"
+ },
+ {
+  "period": 4,
+  "clock_s": 26.0,
+  "made": true,
+  "description": "Green 26' 3PT Jump Shot (3 PTS)"
+ }
+]
