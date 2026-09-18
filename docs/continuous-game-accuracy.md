@@ -8830,14 +8830,18 @@ actually declares: the carrier side must win and the count side must stay above
 0.95. It does -- 0.980 -- so the change stands, and the exchange rate is **9.9
 points of ball carrier for 1.6 points of over-keeping**, about six to one.
 
-Finals G1, the same way:
+Every broadcast, rebuilt and compared the same way:
 
-    arm             before   after    paired
-    carrier kept     0.684   0.774    after won 2868, lost 1684,  p = 8e-69
-    <=13 kept        0.999   0.971    after won   17, lost  596,  p = 3e-152
+    game   carrier kept        <=13 kept         carrier won/lost
+    hou    0.454 -> 0.553      0.996 -> 0.980      1935 / 186
+    g1     0.684 -> 0.774      0.999 -> 0.971      2868 / 1684
+    ecf    0.853 -> 0.885      0.983 -> 0.966      1175 / 733
 
-Nine points of carrier for 2.8 of over-keeping, and 0.971 still clears the
-floor. Two broadcasts, two different fitted settings, the same shape of result.
+Every one gains on the carrier, every one stays above the 0.95 floor, and the
+three fitted settings are all different -- Houston takes no erosion and no kit
+gate, Finals G1 heavy erosion plus a 40 CIELAB gate, ECF heavy erosion and no
+gate. The same rule on three broadcasts produces three answers and one shape of
+result, which is what fitting per broadcast was supposed to buy.
 
 One number did not replicate. The fit predicted 0.628 for Houston from 250
 sampled frames and the whole broadcast delivers 0.553. A 250-frame sample of a
@@ -8951,3 +8955,32 @@ figures came from one mask and half from another, with nothing saying which.
 
 So the improvement is measured, reproducible and one `cp` away, and taking it
 is a separate step that should re-run the per-game report afterwards.
+
+### A seventh refutation, and the reason all seven were going to fail
+
+A basketball is 9.5 inches and a rim is 18, so the ball should be 0.53 rim
+widths across -- a hard physical constraint, in the one unit this project can
+measure without registration. On the 82 uniform windows carrying a labelled
+ball, a proposal and a rim:
+
+    the ball   p10 0.44   median 0.59   p90 0.86   (n=157)
+    a decoy    p10 0.42   median 0.57   p90 0.82   (n=852)
+
+Identical. Every band tried keeps balls and decoys at the same rate -- 0.917
+against 0.927 at the widest, 0.535 against 0.574 at the tightest.
+
+**And that is the reason, stated once so the eighth idea is not attempted.**
+The candidates are a ball detector's output. It was trained to find things that
+look like a basketball, so its false positives are ball-shaped, ball-sized and
+ball-coloured by construction: they are heads, hands and shoes, which is why
+proximity to a player does not separate them either -- the decoys are ON the
+players.
+
+No property of a single candidate can separate them, because the detector has
+already filtered on exactly those properties. Only CONTEXT can -- how the
+candidate moves relative to the court, which is the one idea that produced a
+measurable gain (+7.6 to +10 points of physically-possible steps) -- or a
+better appearance model, which is a retrain.
+
+Seven attempts, one partial success, and the partial success is the only one
+that used information the detector did not already have.
