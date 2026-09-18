@@ -80,3 +80,38 @@ def test_a_missing_mask_entry_is_treated_as_kept(tmp_path):
     blob = _cache([])
     carrier, _ = compare.judge(_write(tmp_path, "g.json", blob))
     assert carrier[("a.mp4", 0)] is True
+
+
+def test_a_cache_that_records_no_mask_is_the_shipped_one(tmp_path):
+    path = _write(tmp_path, "plain.json", _cache([True, True]))
+    got = compare.provenance(path)
+    assert got["erode_share"] is None
+    assert got["court_every"] == compare.PIPELINE_COURT_EVERY
+    assert "shipped constant" in compare.describe(got)
+
+
+def test_the_settings_a_rebuilt_cache_records_are_printed(tmp_path):
+    blob = _cache([True, True])
+    blob.update({"mask_erode_share": 0.03, "mask_kit_max_lab": 26.0,
+                 "mask_fill_holes": False, "mask_court_every": 1})
+    said = compare.describe(compare.provenance(_write(tmp_path, "r.json", blob)))
+    assert "erode 0.0300" in said and "kit gate 26" in said
+    assert "filling off" in said and "floor every 1" in said
+
+
+def test_a_cadence_mismatch_is_shouted_about(tmp_path, monkeypatch, capsys):
+    """Comparing a mask refreshed every frame against one refreshed every five
+    is not a comparison of masks. It cost ten points of kept carrier on one
+    broadcast and was read as the new mask being worse."""
+    import sys as _sys
+
+    slow = _cache([True, True])
+    slow.update({"mask_erode_share": 0.0, "mask_court_every": 5})
+    fast = _cache([True, True])
+    fast.update({"mask_erode_share": 0.0, "mask_court_every": 1})
+    monkeypatch.setattr(_sys, "argv",
+                        ["compare_masks.py",
+                         "--before", str(_write(tmp_path, "slow.json", slow)),
+                         "--after", str(_write(tmp_path, "fast.json", fast))])
+    compare.main()
+    assert "DIFFERENT FLOOR CADENCES" in capsys.readouterr().out
