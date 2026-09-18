@@ -129,9 +129,11 @@ PROBE_FRAMES = 24
 READ_FLOOR = 0.15
 #: How strongly a region's readings must rise with time to be a score.
 MIN_RANK_CORRELATION = 0.85
-#: ...or how much of what it read lies on one non-decreasing path. See
-#: `monotone_share`. Chosen on the Finals broadcasts, never on the held-out one.
-MIN_MONOTONE_SHARE = 0.70
+#: Reported beside `rho`, never used as a gate. See `monotone_share`: it was
+#: briefly a second gate at 0.70, and measured on Finals G1 that admitted 79
+#: regions where rank correlation admits 8, because a region reading a CONSTANT
+#: is trivially non-decreasing and scores 1.000.
+REPORT_MONOTONE_SHARE = True
 
 
 def digits_of(image, reader, min_score: float = READ_FLOOR):
@@ -291,22 +293,51 @@ def band_candidates(clock_roi, width, reach_px=SEARCH_PX):
     return out
 
 
+def digits_never_shrink(values):
+    """Readings kept, once a reading with FEWER digits than one already seen is
+    discarded. A score goes from one digit to two to three and never back.
+
+    THIS IS WHAT WAS ACTUALLY WRONG. On the Houston broadcast both team panels
+    read the correct final scores -- 111 and 91, against an official 111-91 --
+    and both were thrown away, at rank correlations of 0.752 and 0.457 against a
+    0.85 gate. The sequences rise cleanly apart from a handful of frames that
+    segment as a single "1": the score digits fail to separate and some other
+    glyph on the panel wins the same-height vote.
+
+    A single digit arriving after a two-digit reading is not a low score, it is
+    a failed segmentation, and saying so costs no threshold and no fitting:
+
+        OKC panel   rho 0.752 -> 0.999    22 readings -> 15
+        HOU panel   rho 0.457 -> 0.996    22 readings -> 16
+
+    The first attempt at this was a second gate on `monotone_share` below, and
+    it was wrong for a reason worth keeping: a region reading a CONSTANT is
+    trivially non-decreasing and scores 1.000, so on Finals G1 a 0.70 gate
+    admitted 79 regions where rank correlation admits 8.
+    """
+    out, widest = [], 0
+    for value in values:
+        if value is None:
+            out.append(None)
+            continue
+        width = len(str(int(value)))
+        if width < widest:
+            out.append(None)
+            continue
+        widest = max(widest, width)
+        out.append(value)
+    return out
+
+
 def monotone_share(values) -> float:
     """Fraction of readings that lie on one non-decreasing path through time.
 
-    THE PHYSICAL FACT, STATED DIRECTLY. A basketball score never falls, and
-    `rank_correlation` was a proxy for that -- a good one, and it is kept, but
-    it is dragged down by isolated misreads in a way the underlying constraint
-    is not. On the Houston broadcast the two team panels read the correct final
-    scores, 111 and 91, with sequences that rise cleanly apart from a handful of
-    frames that segment as a single "1"; their rank correlations are 0.752 and
-    0.457 against a 0.85 gate, so both were thrown away.
-
-    The longest non-decreasing subsequence asks how much of what was read is
-    consistent with a score, rather than how well all of it correlates with
-    time. Measured on the same sequences: 0.882 and 0.682 for the two real
-    panels, against 0.444 for a shot clock -- which resets to 24 and so cannot
-    hold a long non-decreasing run -- and 0.333 for random digits.
+    Reported beside the rank correlation because it says something different --
+    how much of what was read is consistent with a score, rather than how well
+    all of it correlates with time. NOT a gate: a constant region scores 1.000.
+    Measured on the Houston panels before the digit filter: 0.882 and 0.682,
+    against 0.444 for a shot clock -- which resets to 24 and so cannot hold a
+    long non-decreasing run -- and 0.333 for random digits.
     """
     if not values:
         return 0.0
@@ -336,6 +367,8 @@ def pick_scores(candidates, clock_roi, probe, reader):
         top, bottom, left, right = roi
         raw = [digits_of(frame[top:bottom, left:right], reader)
                for frame in frames]
+        # A score never loses a digit. See `digits_never_shrink`.
+        raw = digits_never_shrink(raw)
         legible = sum(1 for v in raw if v is not None)
         if legible < len(frames) * 0.5:
             continue
@@ -355,12 +388,7 @@ def pick_scores(candidates, clock_roi, probe, reader):
         order = [t for t, v in zip(times, raw) if v is not None]
         rho = rank_correlation(order, seen)
         share = monotone_share(seen)
-        # Either test may pass. They are two readings of one constraint -- a
-        # score rises with time -- and each fails on a case the other survives:
-        # rank correlation is dragged down by isolated misreads, and the
-        # monotone share is survivable by a region that happens to drift upward
-        # without being a score, which the rank test catches.
-        if rho < MIN_RANK_CORRELATION and share < MIN_MONOTONE_SHARE:
+        if rho < MIN_RANK_CORRELATION:
             continue
         if not FINAL_RANGE[0] <= seen[-1] <= FINAL_RANGE[1]:
             continue

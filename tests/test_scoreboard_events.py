@@ -192,3 +192,66 @@ def test_every_candidate_sits_left_of_the_clock_and_inside_the_frame():
         for top, bottom, left, right in _band_candidates(roi, width):
             assert 0 <= left < right <= roi[2], "a candidate overlaps the clock"
             assert 0 <= top < bottom
+
+
+# -- a score never loses a digit ---------------------------------------------
+
+def _sb():
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+    import read_scoreboard
+    return read_scoreboard
+
+
+def test_a_single_digit_after_a_double_is_a_failed_segmentation():
+    """Both Houston panels read the correct final scores -- 111 and 91 against
+    an official 111-91 -- and both were thrown away, at rank correlations of
+    0.752 and 0.457 against a 0.85 gate. The sequences rise cleanly apart from
+    frames that segment as a single "1", where the score digits fail to separate
+    and another glyph on the panel wins the same-height vote."""
+    sb = _sb()
+    okc = [0, 10, 17, 18, 26, 36, 36, 50, 1, 59, 66, 73, 77, 4, 92, 101, 111]
+    hou = [0, 9, 1, 13, 15, 22, 30, 34, 1, 43, 1, 2, 58, 62, 67, 72, 1, 1, 83,
+           1, 83, 91]
+    for values, before, after in ((okc, 0.752, 0.999), (hou, 0.457, 0.996)):
+        kept = sb.digits_never_shrink(values)
+        seen = [v for v in kept if v is not None]
+        order = [i for i, v in enumerate(kept) if v is not None]
+        assert abs(sb.rank_correlation(list(range(len(values))), values)
+                   - before) < 0.01
+        assert abs(sb.rank_correlation(order, seen) - after) < 0.01
+        assert sb.rank_correlation(order, seen) >= sb.MIN_RANK_CORRELATION
+
+
+def test_a_one_digit_score_early_in_the_game_is_kept():
+    """A score really is one digit until somebody reaches ten, so the rule is
+    "never FEWER than already seen", not "always two"."""
+    sb = _sb()
+    assert sb.digits_never_shrink([0, 2, 5, 9, 11, 13]) == [0, 2, 5, 9, 11, 13]
+
+
+def test_the_filter_does_not_rescue_a_shot_clock():
+    """It resets to 24, so no amount of dropping readings makes it rise."""
+    sb = _sb()
+    clock = [24, 18, 7, 24, 14, 24, 9, 21, 24, 3, 24, 16, 24, 11, 24, 24, 8, 19]
+    kept = sb.digits_never_shrink(clock)
+    seen = [v for v in kept if v is not None]
+    order = [i for i, v in enumerate(kept) if v is not None]
+    assert sb.rank_correlation(order, seen) < sb.MIN_RANK_CORRELATION
+
+
+def test_monotone_share_is_reported_and_never_gates():
+    """A region reading a CONSTANT is trivially non-decreasing and scores 1.000.
+    Measured on Finals G1, a 0.70 gate on it admitted 79 regions with a
+    plausible final score where rank correlation admits 8."""
+    sb = _sb()
+    assert sb.monotone_share([10] * 20) == 1.0
+    assert not hasattr(sb, "MIN_MONOTONE_SHARE"), (
+        "monotone_share is a diagnostic, not a threshold")
+    source = (Path(__file__).resolve().parent.parent
+              / "scripts" / "read_scoreboard.py").read_text()
+    assert "if rho < MIN_RANK_CORRELATION:" in source
+
+
+from pathlib import Path  # noqa: E402
