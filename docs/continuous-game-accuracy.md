@@ -7585,3 +7585,59 @@ The restored read reproduces the validated final exactly and is better than it:
 like a fix and destroyed the two broadcasts that already worked.** That is the
 whole argument for choosing thresholds on a game you are allowed to tune on and
 then reporting on one you are not.
+
+## Round 104: the scoreboard rung on the fourth broadcast, and what it is worth
+
+After the three ratchet fixes and snapping candidates onto their own digits, the
+Houston scoreboard reads **112-86 against an official 111-91** -- one point out
+on the left team and five on the right, where before the fixes it read 117-116
+and before those it found no score regions at all.
+
+**That fails the script's own validation and it is reported as failing.** The
+docstring says "check the final score against the box score before trusting any
+event derived from this. It is one number and it validates the whole sweep", and
+one of the two numbers is five out. The right-hand region's last change is
+83 to 86 at video 8250 s and the game's final five points, in the last eighty
+seconds, never arrive -- the panel is not legible through them, and `monotonic`
+correctly refuses a five-point jump over a short gap because a real score cannot
+move that fast between consecutive legible frames.
+
+### What the rung is worth, on both broadcasts
+
+    mode                     captured   emitted   said and true   architectural cap
+    Finals G1
+      vision + scoreboard      0.169       71        0.662             0.499
+    Houston (unseen)
+      vision                   0.275      307        0.502             0.446
+      vision + clock           0.303      254        0.587             0.450
+      vision + scoreboard      0.178       81        0.654             0.498
+      feed-assisted            1.000      433        tautological      1.000
+
+**0.178 and 0.654 on the unseen broadcast against 0.169 and 0.662 on the tuned
+one.** The rung transfers almost exactly, and it remains what Round 97 found it
+to be: the most PRECISE vision mode -- 0.654 against 0.587 for gated vision --
+on the fewest calls, asserting an outcome on every one of them where vision
+asserts one on none.
+
+An earlier draft of this round quoted 0.750 for this rung. That number was
+computed against the pre-fix score stream, the one whose final reads 117-116,
+and it is withdrawn. The stream was wrong and the precision computed from it
+was not measuring what its label said.
+
+### The ledger for the fourth broadcast, complete
+
+    label-free, needs nothing but the video and the feed
+      alignment: overall             0.995     PASS      563 of 566
+      clips: still match alignment   0.986     PASS
+      clock: game seconds seen       0.8997    FAIL      three seconds short
+      registration: agreement        0.905     PASS (point)   NOT a hold-out
+
+    end to end
+      feed-assisted, captured        1.000     PASS
+      vision+clock, captured         0.303     CAPPED 67% of 0.45
+      vision+clock, said and true    0.587     FAIL
+      vision+scoreboard, said true   0.654     FAIL
+      vision, said and true          0.502     FAIL
+
+    needs labels this broadcast does not have
+      handler, ball                    --      NO DATA, printed as 0.00-1.00
