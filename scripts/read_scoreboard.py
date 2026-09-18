@@ -22,6 +22,26 @@ holds 449 events from a run whose input is gone. So the project's best result wa
 unreproducible, and `score_game_end_to_end.py` reports that rung as BLOCKED. This
 is the missing driver.
 
+TWO THINGS ABOUT THE PANEL THAT COST A WHOLE RUN. On this broadcast the band
+reads `IND 23 | OKC 31 | 2ND 10:39 | 18`, and:
+
+  THE FAR TEAM'S SCORE IS 324 px FROM THE CLOCK. `locate_scores` defaults to
+  searching `within_px=260` of the clock, so the near team's score is found and
+  the far team's never is. The first full-game run selected the shot clock and a
+  clock fragment instead and reported a final score of 4-17 against a true
+  110-111.
+
+  THE SCORE DIGITS ARE 1.6x THE CLOCK'S. That turns out not to matter -- the
+  matcher resizes each glyph to the template before comparing -- but the two
+  scores sit on DIFFERENT backgrounds (one gold, one white) and only
+  `normalise_polarity` makes that survivable.
+
+REGIONS ARE CHOSEN ON THE WHOLE GAME, not on the learning window. Ninety seconds
+of one quarter cannot tell a score from any other number on the panel: a score
+rises once or twice in that time and so does the shot clock's tens digit. Across
+a whole game a score is the only region that is NON-DECREASING throughout and
+ends somewhere a basketball score can end.
+
 HOW IT WORKS, and why it is not a second bootstrap problem.
 
 `read_game_clock.py` learns digit templates unsupervised by exploiting the one
@@ -82,39 +102,43 @@ RESET_RISE = 5.0
 #: per second against the clock's 0.35, which is the whole basis for telling
 #: them apart.
 STEP_S = 1.0
+#: How far from the clock to look for the scores. The default 260 in
+#: `locate_scores` misses the far team by 64 px on this broadcast's layout.
+SEARCH_PX = 460
+#: A basketball game ends somewhere in here. Used only to reject a region that
+#: is plainly not a score, never to correct one.
+FINAL_RANGE = (55, 190)
+#: Frames spread across the game to choose regions on.
+PROBE_FRAMES = 24
+#: Confidence floor for one frame's read. Low on purpose -- see `digits_of`.
+READ_FLOOR = 0.15
+#: How strongly a region's readings must rise with time to be a score.
+MIN_RANK_CORRELATION = 0.85
 
 
-def digits_of(image, templates, min_score: float = 0.5):
-    """An integer from a region of digits, or None when any glyph is unsure.
+def digits_of(image, reader, min_score: float = READ_FLOOR):
+    """An integer from a region of digits, or None when nothing segments.
 
-    Unlike the clock there is no colon and no fixed width: a score is one, two
-    or three glyphs. A single unsure glyph makes the whole reading None rather
-    than a guess, because a wrong tens digit is a nine-point basket.
+    THE PER-FRAME READ IS DELIBERATELY WEAK AND THE SEQUENCE IS STRONG. The
+    clock's own templates cannot read this font -- the score digits are 26x21
+    against the clock's 19x17 with a heavier stroke, and "23" comes back as
+    "11". The SVHN reader does read it, but its confidence is calibrated on
+    jersey crops and does not transfer: correct reads of 59, 79 and 92 come back
+    at 0.27 to 0.33, well under the 0.5 floor that makes sense for a jersey.
+
+    So the floor here is low on purpose. What makes the result trustworthy is
+    not any single frame but `steady` and `monotonic` over a whole game at one
+    reading a second: a value has to repeat before it is believed, it can never
+    fall, and it can never rise by more than one possession. A reader that is
+    right most of the time and wrong differently each time is recovered
+    completely by those three constraints; a confident reader that is wrong the
+    same way twice would not be.
     """
-    from courtvision.scoreboard import (_match, clock_glyphs,
-                                        normalise_polarity)
-
-    glyphs = clock_glyphs(normalise_polarity(image))
-    # A region that clips an adjacent digit leaves a sliver at one edge -- a
-    # 17x8 fragment where the real digits are 17x19. It is not a digit and it
-    # matched nothing above 0.23, which was rejecting the WHOLE reading and
-    # made every one of 121 candidate regions read as illegible.
-    if glyphs:
-        widths = sorted(g.image.shape[1] for g in glyphs)
-        typical = widths[len(widths) // 2]
-        glyphs = [g for g in glyphs if g.image.shape[1] >= 0.55 * typical]
-    if not 1 <= len(glyphs) <= 3:
+    got = reader.read_scoreboard(image)
+    if got is None:
         return None
-    text = []
-    for glyph in glyphs:
-        digit, score = _match(glyph.image, templates)
-        if digit == "?" or score < min_score:
-            return None
-        text.append(digit)
-    try:
-        return int("".join(text))
-    except ValueError:
-        return None
+    value, confidence = got
+    return value if confidence >= min_score else None
 
 
 def steady(values, hold: int = HOLD_SAMPLES):
@@ -139,57 +163,139 @@ def steady(values, hold: int = HOLD_SAMPLES):
     return out
 
 
-def monotonic(values, max_jump: int = 3):
-    """A score never falls and never rises by more than one possession.
+def monotonic(values, times=None, max_points_per_minute: float = 12.0):
+    """A score never falls, and cannot outrun the game's own scoring rate.
 
-    Both are properties of basketball rather than thresholds, which is why
-    neither is tuned. A fall is a misread; a jump of nine is a misread of the
-    tens digit.
+    THE JUMP BOUND IS PER UNIT OF TIME, NOT PER READING, and getting that wrong
+    cost a whole run. "It cannot rise by more than three in one possession" is
+    true of consecutive POSSESSIONS and false of consecutive READINGS: a replay,
+    a graphic or a camera behind the basket hides the panel for half a minute,
+    and the next legible frame is legitimately eight points later. Rejecting
+    that as a misread pinned one team's score at 8 for an entire game while its
+    own region had been seen reading 110.
+
+    So a rise is accepted when it is plausible for the time that passed --
+    twelve points a minute is roughly four times a real NBA pace, which makes
+    this a guard against a misread tens digit rather than a model of scoring.
+    Falls are still rejected outright: a score never goes down.
     """
-    out, best = [], None
-    for value in values:
+    out, best, best_at = [], None, None
+    for index, value in enumerate(values):
+        when = times[index] if times is not None else index
         if value is None:
             out.append(best)
             continue
         if best is None:
-            best = value
-        elif value < best or value - best > max_jump:
-            pass                      # keep the running maximum
-        else:
-            best = value
+            best, best_at = value, when
+        elif value >= best:
+            gap = max(when - best_at, 1e-6) if times is not None else 1.0
+            allowed = max(3.0, max_points_per_minute * gap / 60.0)
+            if value - best <= allowed:
+                best, best_at = value, when
         out.append(best)
     return out
 
 
-def pick_scores(candidates, clock_roi, readings_by_index, frames, templates):
-    """The two score regions, chosen by how well they behave like scores.
+def rank_correlation(xs, ys) -> float:
+    """Spearman's rho, written out so this needs no scipy."""
+    n = len(xs)
+    if n < 3:
+        return 0.0
 
-    A region scores well when its readings are legible often, never fall, and
-    rise a plausible number of times. Text that happens to read as digits fails
-    the second test immediately.
+    def ranks(values):
+        order = sorted(range(n), key=lambda i: values[i])
+        out = [0.0] * n
+        i = 0
+        while i < n:
+            j = i
+            while j + 1 < n and values[order[j + 1]] == values[order[i]]:
+                j += 1
+            share = (i + j) / 2.0 + 1.0
+            for k in range(i, j + 1):
+                out[order[k]] = share
+            i = j + 1
+        return out
+
+    rx, ry = ranks(list(xs)), ranks(list(ys))
+    mx, my = sum(rx) / n, sum(ry) / n
+    top = sum((a - mx) * (b - my) for a, b in zip(rx, ry))
+    left = sum((a - mx) ** 2 for a in rx) ** 0.5
+    right = sum((b - my) ** 2 for b in ry) ** 0.5
+    return top / (left * right) if left and right else 0.0
+
+
+def band_candidates(clock_roi, width, reach_px=SEARCH_PX):
+    """Boxes along the clock's own row, to the left of it.
+
+    `locate_scores` is built to find regions that READ AS DIGITS AND CHANGE
+    RARELY anywhere on the lower third, and on this layout its candidates did
+    not line up with the team scores at all. The scoreboard is one horizontal
+    strip: the scores sit on the clock's row, to its left, at roughly the
+    clock's height. Sliding boxes along that row and judging them by behaviour
+    is both simpler and less broadcast-specific than a general locator.
     """
+    top, bottom, left, _ = clock_roi
+    height = bottom - top
+    out = []
+    for grow in (0, 6, 12):
+        y0, y1 = max(top - grow, 0), bottom + grow
+        for box_width in (70, 90, 110):
+            x = max(left - reach_px, 0)
+            while x + box_width < left - 10:
+                out.append((y0, y1, x, x + box_width))
+                x += 10
+    return out
+
+
+def pick_scores(candidates, clock_roi, probe, reader):
+    """The two score regions, chosen on frames spread across the WHOLE game.
+
+    `probe` is [(seconds, frame)] sampled over the broadcast. A score is the
+    only region on the panel that is non-decreasing from tip to final buzzer and
+    ends where a basketball score ends -- over ninety seconds nothing
+    distinguishes it from the shot clock's tens digit, which is how the first
+    run of this script chose the shot clock and called the game 4-17.
+    """
+    frames = [f for _, f in probe]
+    times = [t for t, _ in probe]
     scored = []
     for roi in candidates:
         if tuple(roi) == tuple(clock_roi):
             continue
         top, bottom, left, right = roi
-        raw = [digits_of(frame[top:bottom, left:right], templates)
+        raw = [digits_of(frame[top:bottom, left:right], reader)
                for frame in frames]
         legible = sum(1 for v in raw if v is not None)
-        if legible < len(frames) * 0.3:
+        if legible < len(frames) * 0.5:
             continue
-        held = steady(raw)
-        seen = [v for v in held if v is not None]
-        if len(seen) < 10:
+        seen = [v for v in raw if v is not None]
+        if len(seen) < 6:
             continue
         falls = sum(1 for a, b in zip(seen, seen[1:]) if b < a)
         rises = sum(1 for a, b in zip(seen, seen[1:]) if b > a)
         if not rises:
             continue
+        # A score RISES WITH TIME. Demanding zero falls looked right and
+        # rejected 308 of 324 regions including the real ones: the per-frame
+        # read is right about two thirds of the time by design, so the true
+        # score region shows falls too. What separates it is that its readings
+        # are ordered by time and a misreading region's are not. Rank
+        # correlation is the test that survives a noisy reader.
+        order = [t for t, v in zip(times, raw) if v is not None]
+        rho = rank_correlation(order, seen)
+        if rho < MIN_RANK_CORRELATION:
+            continue
+        if not FINAL_RANGE[0] <= seen[-1] <= FINAL_RANGE[1]:
+            continue
+        # A box offset by thirty pixels clips a digit and still rises with
+        # time, so rank correlation alone chose two clipped boxes and the game
+        # finished 77-8 against a true 111-110. A clipped box UNDER-READS, so
+        # the widest span of values is the box that sees the whole number.
+        span = seen[-1] - min(seen)
         scored.append(({"roi": list(roi), "legible": legible / len(frames),
-                        "falls": falls, "rises": rises,
-                        "final": seen[-1]},
-                       (falls / max(rises, 1), -legible)))
+                        "falls": falls, "rises": rises, "rho": round(rho, 3),
+                        "span": span, "final": seen[-1]},
+                       (-span, -rho, -legible)))
     scored.sort(key=lambda e: e[1])
     # The candidate generator emits many overlapping variants of one region, so
     # the top two by score are usually the SAME score twice. Take the best, then
@@ -217,14 +323,14 @@ def overlaps(a, b, threshold: float = 0.2) -> bool:
     return inter / min(area_a, area_b) > threshold
 
 
-def find_shot_clock(candidates, clock_roi, frames, templates):
+def find_shot_clock(candidates, clock_roi, frames, reader):
     """The ticking region that RESETS, which the game clock never does."""
     best, best_resets = None, 0
     for roi in candidates:
         if tuple(roi) == tuple(clock_roi):
             continue
         top, bottom, left, right = roi
-        raw = [digits_of(frame[top:bottom, left:right], templates)
+        raw = [digits_of(frame[top:bottom, left:right], reader)
                for frame in frames]
         seen = [v for v in raw if v is not None]
         if len(seen) < len(frames) * 0.2:
@@ -250,6 +356,10 @@ def main() -> int:
     parser.add_argument("--start", type=float, default=None)
     parser.add_argument("--end", type=float, default=None)
     parser.add_argument("--step", type=float, default=STEP_S)
+    parser.add_argument("--search-px", type=int, default=SEARCH_PX,
+                        help="how far from the clock to look for the scores; "
+                             "locate_scores' own default of 260 misses the far "
+                             "team on a standard NBA lower third")
     parser.add_argument("--out", default=None)
     args = parser.parse_args()
 
@@ -279,23 +389,24 @@ def main() -> int:
         print(f"FAIL - could not read frames at {learn_start:.0f}s")
         return 1
     top, bottom, left, right = clock_roi
-    templates = bootstrap_templates([f for f in learn], clock_roi)
-    if len(templates) < 8:
-        print(f"FAIL - learned only {len(templates)} digits from the clock at "
-              f"{learn_start:.0f}s; try --learn-start elsewhere")
-        return 1
-    print(f"  learned {len(templates)} digit templates from the clock at "
-          f"{learn_start:.0f}s")
+    from courtvision.digit_net import DigitReader
+    reader = DigitReader(floor=0.0)
+    print(f"  reading digits with the SVHN net; per-frame floor {READ_FLOOR}")
+
+    # ---- probe the whole game, so a score can be told from a shot clock ----
+    probe = []
+    reach = [float(r["t"]) for r in readings]
+    for when in np.linspace(min(reach), max(reach), PROBE_FRAMES):
+        got = list(stream(args.video, float(when), 1.0, 1.0))
+        if got:
+            probe.append((float(when), got[0]))
+    print(f"  probing {len(probe)} frames across the game to choose regions")
 
     # ---- locate the score regions on the same panel --------------------------
-    found = locate_scores(learn, near=clock_roi)
-    rois = [tuple(c.roi) if hasattr(c, "roi") else tuple(c) for c in found]
-    if not rois:
-        rois = [tuple(r) for r in candidate_rois(learn[0].shape[0],
-                                                 learn[0].shape[1])]
-        print(f"  locate_scores found nothing; falling back to "
-              f"{len(rois)} candidate regions")
-    ranked = pick_scores(rois, clock_roi, by_time, learn, templates)
+    found = band_candidates(clock_roi, learn[0].shape[1], args.search_px)
+    rois = [tuple(c) for c in found]
+    print(f"  {len(rois)} candidate regions along the clock's row")
+    ranked = pick_scores(rois, clock_roi, probe, reader)
     if len(ranked) < 2:
         print(f"FAIL - found {len(ranked)} score-like regions, need two. "
               f"The scoreboard graphic may be laid out differently on this "
@@ -303,10 +414,13 @@ def main() -> int:
         return 1
     home, away = ranked[0], ranked[1]
     print(f"  home score at {home['roi']} (legible {home['legible']:.0%}, "
-          f"{home['rises']} rises)")
+          f"rho {home['rho']}, span {home['span']}, final {home['final']})")
     print(f"  away score at {away['roi']} (legible {away['legible']:.0%}, "
-          f"{away['rises']} rises)")
-    shot = find_shot_clock(rois, clock_roi, learn, templates)
+          f"rho {away['rho']}, span {away['span']}, final {away['final']})")
+    shot = find_shot_clock(rois, clock_roi, learn, reader)
+    # the near team is the one whose score sits left of the other
+    if home["roi"][2] > away["roi"][2]:
+        home, away = away, home
     print(f"  shot clock at {shot[0]}" if shot else
           "  no shot clock found; possession changes will be unavailable")
 
@@ -321,12 +435,12 @@ def main() -> int:
         times.append(when)
         for name, (rtop, rbottom, rleft, rright) in regions.items():
             raw[name].append(digits_of(frame[rtop:rbottom, rleft:rright],
-                                       templates))
+                                       reader))
         if n and n % 500 == 0:
             print(f"    {when:.0f}s of {end:.0f}s", flush=True)
 
-    home_values = monotonic(steady(raw["home"]))
-    away_values = monotonic(steady(raw["away"]))
+    home_values = monotonic(steady(raw["home"]), times)
+    away_values = monotonic(steady(raw["away"]), times)
     shot_values = steady(raw.get("shot", []), hold=1) if shot else []
 
     score_rows, shot_rows = [], []

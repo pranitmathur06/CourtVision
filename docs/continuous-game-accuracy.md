@@ -6728,3 +6728,95 @@ at 0.001 the model finds no court at all on 44-55% of tight shots, against 0-4%
 that find a court and too few landmarks. Scale and crop augmentation is the
 lever, and it is untried. A threshold is not the fix -- which is the one thing
 Round 41 got right and Round 92 talked itself out of.
+
+## Round 97: the scoreboard reader exists, and the rung it unblocks is worse than advertised
+
+`scoreboard_events.py` carried the best numbers in this project -- any make F1
+0.918, free throws 0.864 -- and nothing in the repository produced its input.
+`scripts/read_scoreboard.py` now does. Four things had to be wrong first, each
+found by checking the output against the box score rather than by reading code.
+
+### Four bugs, in the order they surfaced
+
+**The far team's score is 324 px from the clock** and `locate_scores` searches
+within 260. The near team was found and the far team never was, so the first
+full-game run selected the shot clock and a clock fragment and reported a final
+score of **4-17 against a true 110-111**.
+
+**The clock's digit templates cannot read the score.** The premise of the script
+was that a score is "the same font on the same panel", so the templates the
+clock already learned would read it. They do not: score digits are 26x21 against
+the clock's 19x17 with a heavier stroke, and matched against clock templates
+"23" reads as "11". The SVHN reader in `digit_net.py` does read this font -- but
+its confidence is calibrated on jersey crops and does not transfer, so correct
+reads of 59, 79 and 92 come back at 0.27 to 0.33, under any sensible jersey
+floor. The per-frame read is therefore deliberately weak and the SEQUENCE is
+strong: a value must repeat before it is believed, can never fall, and cannot
+outrun the game's own scoring rate.
+
+**`clock_glyphs` keeps the TALLEST cluster**, and on a score region a 36 px blob
+from the panel divider outranks the 21 px digits -- so "59" came back as a
+single glyph reading "1". The digits are the largest group of SAME-HEIGHT
+characters, which is what a number is.
+
+**The jump bound was per READING and had to be per unit of TIME.** "A score
+cannot rise by more than three in one possession" is true of consecutive
+possessions and false of consecutive readings: a replay hides the panel for half
+a minute and the next legible frame is legitimately eight points later.
+Rejecting that pinned one team at 8 for a whole game while its own region had
+been observed reading 110.
+
+Region selection also had to move from a 90 s window to frames spread across the
+whole game -- over ninety seconds nothing distinguishes a score from the shot
+clock's tens digit -- and to rank by **rank correlation with time** rather than
+by "never falls", because a reader that is right two thirds of the time makes
+the true region fall too. A final tie-break on the SPAN of values seen is what
+separates a correctly placed box from one offset thirty pixels that clips a
+digit and still rises.
+
+### Where it lands
+
+    Finals G1, full game     read 107-110     official 111-110
+
+One side exact, the other four points short, and 83 score changes against ~85
+scoring plays. Good enough to be useful; not good enough to be trusted
+unchecked, which is why the script prints the final score and tells the reader
+to compare it with the box score before believing anything derived from it.
+
+### And it found a bug in the module it feeds
+
+Given real readings for the first time, `scoreboard_events.score_events` emitted
+**zero events from 4,330 of them**. When a jump is too big to be one possession
+it declined to emit -- correctly -- but did not move its baseline, so one early
+hidden stretch pinned the comparison at a score the game had left behind and
+4,254 later readings were discarded as implausible. The baseline now advances
+without emitting. Two tests pin it.
+
+### The rung, measured
+
+    Finals G1          (a) plays captured     (b) what it says is true
+    vision              0.244 (0.222-0.266)    122/255 = 0.478
+    vision + clock      0.279 (0.257-0.296)    121/200 = 0.605
+    vision + scoreboard 0.169 (at its own 5 s) 47/71  = 0.662
+    feed-assisted       1.000                  tautological
+
+**The scoreboard rung is no longer blocked and it does not beat the clock-gated
+vision rung.** Two honest reasons before anyone reads that as a refutation of
+`scoreboard_events`:
+
+  IT IS SCORED AT ITS OWN TOLERANCE, and that matters more than any other
+  parameter here. A human updates the panel after the basket, so field-goal
+  precision reads 0.283 at 3 s and 0.761 at 5 s on the same calls.
+  `run_broadcast.TOLERANCE_S` has been 5.0 for exactly this reason; streams now
+  declare their own.
+
+  ITS RECALL IS CAPPED BY CONSTRUCTION. The scoreboard can only see MAKES, and
+  the `field_goal` class counts attempts -- 173 of them against 72 emitted
+  events. Recall of 0.202 against attempts is not comparable to the docstring's
+  0.918, which was an F1 against makes.
+
+So the comparison to make is precision on what each says: **0.605 for gated
+vision against 0.662 for the scoreboard**, with the scoreboard asserting an
+outcome on 100% of its calls and vision on none of them. That is the first
+apples-to-apples number this architecture has ever had, and the scoreboard is
+ahead on it.

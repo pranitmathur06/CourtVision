@@ -89,3 +89,30 @@ def test_fouls_need_a_following_free_throw():
     assert fouls(stops, free_throws=[14.0]) == [10.0]
     # a free throw BEFORE the stoppage does not explain it
     assert fouls(stops, free_throws=[9.0]) == []
+
+
+def test_a_gap_moves_the_baseline_instead_of_killing_the_rest_of_the_game():
+    """A jump too big for one possession is SEVERAL, seen across a hidden panel.
+
+    Nothing can be attributed for it, so nothing is emitted -- but the baseline
+    has to move, or every later reading is measured against a score the game
+    left behind. The first time this module was given readings from a real
+    sweep it emitted ZERO events from 4,330 of them: one early gap pinned the
+    baseline and 4,254 readings were discarded as implausible jumps.
+    """
+    from courtvision.scoreboard_events import score_events
+
+    readings = [(0.0, 0, 0), (10.0, 2, 0),       # a normal basket
+                (20.0, 12, 0),                    # a hidden stretch, +10
+                (30.0, 14, 0), (40.0, 17, 0)]     # and play resumes
+    events = score_events(readings)
+    assert [e.points for e in events] == [2, 2, 3]
+    assert events[-1].elapsed_s == 40.0
+
+
+def test_both_sides_rising_at_once_also_moves_the_baseline():
+    from courtvision.scoreboard_events import score_events
+
+    readings = [(0.0, 0, 0), (10.0, 3, 2), (20.0, 5, 2)]
+    events = score_events(readings)
+    assert [e.points for e in events] == [2]

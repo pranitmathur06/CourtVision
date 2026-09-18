@@ -154,6 +154,59 @@ def digit_patches(crop: np.ndarray) -> list[np.ndarray]:
     return [patch for patch, _ in best]
 
 
+def glyph_patches(crop: np.ndarray) -> list[np.ndarray]:
+    """Digit patches from a SCOREBOARD region, segmented the scoreboard's way.
+
+    `digit_patches` above is tuned for a torso: it wants blobs between 0.18 and
+    0.75 of the crop's height, centred in the middle 70%, and it splits a wide
+    blob in half because touching jersey digits binarise as one component. On a
+    tight score crop those rules misfire -- the split turns "23" into two copies
+    of the 2, which is what "23 -> 22, 59 -> 55, 79 -> 77" looked like.
+
+    `scoreboard.segment_glyphs` finds this panel's characters correctly. What it
+    must NOT be paired with is `clock_glyphs`, which keeps the TALLEST cluster:
+    on a score region a 36 px blob from the panel divider outranks the 21 px
+    digits, so "59" came back as one glyph reading "1". The digits are instead
+    the largest group of SAME-HEIGHT characters, which is what a number is.
+
+    The classifier is the SVHN net rather than the clock's own templates,
+    because the score digits are 26x21 against the clock's 19x17 with a heavier
+    stroke, and matched against clock templates "23" reads as "11".
+    """
+    import cv2
+
+    from courtvision.scoreboard import normalise_polarity, segment_glyphs
+
+    if crop is None or crop.size == 0:
+        return []
+    glyphs = segment_glyphs(normalise_polarity(crop))
+    if not glyphs:
+        return []
+    # Keep the biggest run of characters that are the same height as each other.
+    heights = [g.height for g in glyphs]
+    best_group, best_size = None, 0
+    for reference in heights:
+        group = [g for g in glyphs if abs(g.height - reference) <= 0.2 * reference]
+        if len(group) > best_size:
+            best_group, best_size = group, len(group)
+    glyphs = sorted(best_group or [], key=lambda g: g.x)
+    gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY) if crop.ndim == 3 else crop
+    widths = sorted(g.width for g in glyphs)
+    typical = widths[len(widths) // 2] if widths else 1
+    out = []
+    for glyph in glyphs:
+        if glyph.width < 0.55 * typical:
+            continue                 # a sliver clipped at the region's edge
+        # The glyph's coordinates are into the normalised crop, which is the
+        # same size as the grayscale one, so the patch comes from the GREY
+        # pixels rather than from the binary mask -- SVHN never saw a binary
+        # digit and reads one as noise.
+        patch = _square_patch(gray, glyph.x, glyph.y, glyph.width, glyph.height)
+        if patch is not None:
+            out.append(patch)
+    return out
+
+
 class DigitReader:
     """Reads a jersey number from a torso crop, or declines to."""
 
@@ -168,6 +221,28 @@ class DigitReader:
         self.net = build_net().to(device)
         self.net.load_state_dict(torch.load(str(weights), map_location=device))
         self.net.eval()
+
+    def read_scoreboard(self, crop: np.ndarray, digits=(1, 2, 3)
+                        ) -> tuple[int, float] | None:
+        """An integer from a scoreboard region, or None when unsure.
+
+        Same network, scoreboard segmentation, and no jersey rules -- "07" is
+        not a number anyone wears but a score passes through it every game.
+        """
+        import torch
+        import torch.nn.functional as F
+
+        patches = glyph_patches(crop)
+        if not patches or len(patches) not in digits:
+            return None
+        batch = torch.from_numpy(np.stack(patches)[:, None].astype(np.float32))
+        with torch.no_grad():
+            probs = F.softmax(self.net(batch.to(self.device)), dim=1).cpu()
+        confidence, predicted = probs.max(1)
+        weakest = float(confidence.min())
+        if weakest < self.floor:
+            return None
+        return int("".join(str(int(p)) for p in predicted)), weakest
 
     def read(self, crop: np.ndarray) -> tuple[str, float] | None:
         """(number, confidence) when confident, otherwise None.

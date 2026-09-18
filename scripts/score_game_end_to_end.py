@@ -137,6 +137,12 @@ class Stream:
     calls: tuple[Call, ...]
     runnable: bool = True
     blocked_because: str = ""
+    #: Some sensors are late by construction. The scoreboard is updated by a
+    #: human operator after the basket, so scoring it at the vision tolerance
+    #: measures their reaction time: field-goal precision reads 0.283 at 3 s
+    #: and 0.761 at 5 s on the same calls. `run_broadcast.TOLERANCE_S` is 5.0
+    #: for this reason and this carries the same number.
+    native_tolerance_s: float | None = None
 
 
 @dataclass
@@ -359,6 +365,7 @@ def score_mode(stream: Stream, plays: Sequence[Play], *, label: str,
     if not stream.runnable:
         return result
 
+    tolerance_s = stream.native_tolerance_s or tolerance_s
     pairing = match(calls, kept_plays, tolerance_s)
     counts: dict[str, dict] = {}
     for play in kept_plays:
@@ -521,16 +528,29 @@ def scoreboard_stream(readings: str | None, clock: str | None) -> Stream:
                 "unmeasured here."))
     from courtvision.scoreboard_events import score_events
     blob = json.load(open(readings))
+    rows = blob.get("score", [])
+    # score_events works in ELAPSED time; the scorer matches on VIDEO time, so
+    # the mapping is carried back from the same rows that produced the events.
+    when_of = {}
+    for row in rows:
+        if row.get("elapsed") is not None:
+            when_of.setdefault(round(float(row["elapsed"]), 3),
+                               float(row["video_s"]))
+    events = score_events([(r["elapsed"], r.get("home"), r.get("away"))
+                           for r in rows if r.get("elapsed") is not None])
     calls = []
-    for event in score_events(blob.get("readings", [])):
-        calls.append(Call(video_s=float(event.get("video_s", event.get("t", 0.0))),
-                          kind="field_goal" if event.get("points", 2) > 1
-                          else "free_throw",
+    for event in events:
+        video_s = when_of.get(round(float(event.elapsed_s), 3))
+        if video_s is None:
+            continue
+        calls.append(Call(video_s=video_s,
+                          kind="free_throw" if event.points == 1 else "field_goal",
                           asserts=frozenset({"kind", "made", "points"}),
-                          made=True, points=int(event.get("points", 2))))
+                          made=True, points=int(event.points)))
     return Stream(source="events the scoreboard STATES, scoreboard_events.py",
                   vision_derived=("score digits", "shot clock", "game clock"),
-                  feed_derived=(), calls=tuple(calls))
+                  feed_derived=(), calls=tuple(calls),
+                  native_tolerance_s=5.0)
 
 
 def clock_spans(path: str | None, readable_gap_s: float = 3.0):
@@ -612,6 +632,11 @@ def report(summary: dict) -> None:
             continue
         print(f"    vision-derived: {', '.join(mode['vision_derived']) or 'nothing'}"
               f"  |  feed-derived: {', '.join(mode['feed_derived']) or 'nothing'}")
+        if mode.get("native_tolerance_s"):
+            print(f"    scored at its own {mode['native_tolerance_s']:.0f}s "
+                  f"tolerance: a human updates this panel AFTER the basket, so "
+                  f"the\n    vision tolerance would be measuring their reaction "
+                  f"time (0.283 -> 0.761 precision)")
         print(f"\n    {'class':<13}{'weight':>8}{'emitted':>9}{'official':>10}"
               f"{'P':>7}{'R':>7}{'F1':>7}")
         for kind, v in sorted(mode["per_class"].items(),
@@ -785,7 +810,9 @@ def main() -> int:
                    "architectural_coverage": s.architectural_coverage,
                    "captured_coverage": s.captured_coverage,
                    "assertion_budget": s.assertion_budget,
-                   "false_calls": s.false_calls} for s in scored],
+                   "false_calls": s.false_calls,
+                   "native_tolerance_s": s.stream.native_tolerance_s}
+                  for s in scored],
         "paired": paired,
         "reference_points": {
             "tracking_ceiling_event_weighted_f1": 0.751,

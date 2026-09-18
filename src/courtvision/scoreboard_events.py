@@ -80,9 +80,23 @@ def score_events(readings: Iterable[tuple[float, int | None, int | None]],
         gained_home = home - best_home
         gained_away = away - best_away
         if gained_home > MAX_POINTS_PER_SCORE or gained_away > MAX_POINTS_PER_SCORE:
-            continue                      # too big to be one possession
+            # Too big to be one possession -- so it is SEVERAL, seen across a
+            # stretch where the panel was hidden by a replay or a graphic. We
+            # cannot attribute those baskets, so nothing is emitted; but the
+            # baseline must move, or every later reading is measured against a
+            # score the game left behind and the rest of the game emits nothing.
+            #
+            # That is not hypothetical. The first time this module was given
+            # readings from a real sweep it emitted ZERO events from 4,330 of
+            # them: one early gap pinned the baseline and 4,254 readings were
+            # then discarded as implausible jumps.
+            best_home, best_away = home, away
+            continue
         if gained_home and gained_away:
-            continue                      # both cannot score at once
+            # Both sides up since the last baseline: also a hidden stretch, and
+            # the same reasoning applies.
+            best_home, best_away = home, away
+            continue
         if gained_home:
             events.append(ScoreEvent(elapsed, gained_home, teams[0]))
         elif gained_away:
