@@ -30,7 +30,7 @@ python -m scripts.run_pipeline clip.mp4 --out outputs/run
 | | |
 |---|---|
 | **Stack** | PyTorch · YOLO11 · VideoMAE · OpenCV · scikit-learn · LangGraph · CUDA C++ |
-| **Scale** | ~4,500 lines of library code, 1,207 tests, 11 validation gates, 472 commits |
+| **Scale** | ~4,500 lines of library code, 1,225 tests, 11 validation gates, 494 commits |
 | **Throughput** | 84 minutes of video in 47.7 minutes — **1.76× real time** on one RTX 4090 |
 | **Action recognition** | **0.816** across 7 classes on 735 held-out clips (chance 0.143) |
 | **Possession** | **59.2%** on 157 held-out frames a person labelled (CI 51–67%) |
@@ -65,7 +65,7 @@ the scoreboard and aligning it — and draw boxes over the footage. So:
 
 | | |
 |---|---|
-| Timestamping a known event onto the video | **99.1 / 97.3 / 96.6 / 88.8%** over four full games |
+| Timestamping a known event onto the video | **99.5 / 97.3 / 96.6 / 92.2%** over four full games |
 | Published clips landing within 1 s of the event | **93–99%** over 1,195 clips |
 | Deciding *what happened* from pixels alone | shots F1 **0.65** inside the 27–48% of video where the clock reads, **0.45–0.50** without that filter |
 | Deciding *who* has the ball from pixels alone | **50–66%** per game on uniformly sampled frames |
@@ -74,10 +74,16 @@ the scoreboard and aligning it — and draw boxes over the footage. So:
 
 The first of those four games is one **nothing in this repository was tuned on**:
 a 2026 regular-season broadcast in a third arena, at 1080p60, with a scorebug
-neither Finals encode has. The clock reader located it, learned its digits and
-read all four periods with nothing configured, and the alignment is the best of
-the four. That is the claim "a new broadcast fits right in", measured rather
-than asserted.
+neither Finals encode has. `scripts/add_broadcast.py --game hou` took it from a
+video file and an official game id to a scored, timestamped, clipped broadcast
+with **no edited constant** -- the clock reader located a scorebug it had never
+seen, learned its digits and read all four periods with nothing configured --
+and its alignment is the best of the four. That is the claim "a new broadcast
+fits right in", measured rather than asserted.
+
+The fourth number moved this week too: Game 7 went from 88.8% to 92.2% when the
+clock reader stopped being blind to the last ten seconds of every period, which
+is where 39% of all four games' unaligned events turned out to be.
 
 The demo reads well because the first two rows are strong. The rest are the
 honest state of vision-only understanding, and the project does not claim
