@@ -7682,3 +7682,82 @@ mask directly against the frames a person has already labelled: the 71 committed
 `handler_at` miss-clicks are exactly frames where a person saw a player and the
 pipeline did not, and nobody has checked how many of those the detector DID find
 and the floor mask then discarded.
+
+## Round 106: ten players on the court, and what that one fact is worth
+
+A reader pointed out the obvious thing nobody here had used: **from tip-off to
+the final buzzer there are exactly ten players on the court**, plus at most three
+referees. It holds on every broadcast ever made, it needs no labelling, and it
+turns out to settle two questions this project had been guessing at.
+
+### One. The floor mask is wrong on every broadcast, in both directions
+
+`candidates.stands_on_court` decides whether a detected person's feet are on the
+floor. Everything downstream depends on it -- a player it rejects cannot be the
+handler, cannot be tracked, cannot anchor a ball candidate -- and nothing had
+ever measured it, because measuring it looked like it needed labels.
+
+    broadcast   frames   detected p50   kept p50   kept MORE THAN 13   worst frame
+    G7          31,680        15            13         0.411               38
+    G1          20,880        15            10         0.155               28
+    ECF         21,780        15            13         0.426               36
+    HOU         21,420        14             7         0.060               27
+
+**More than thirteen people kept is impossible whatever the frame shows**, and it
+happens on 41%, 16%, 43% and 6% of frames. One frame keeps **38**.
+
+This also corrects what an earlier round said. The share of detected people the
+mask keeps reads 0.479 / 0.630 / 0.822, and that round presented 0.822 as the
+good end of the range and Houston's 0.479 as the degradation. **Wrong.** The
+0.822 broadcast is the one keeping thirteen-plus people on 43% of its frames;
+it is failing in the other direction. Houston under-keeps -- five or fewer on
+39% of frames, where ten are on the floor -- and G1 is merely the least bad.
+A share cannot tell those apart. Ten players can.
+
+### Two. The "71 miss-clicks" are not a detector problem
+
+Every `missing` row in the two label files carries a `handler_at` click: a
+person saying "he is on screen and you drew no box for him". The plan has
+carried an item to train the player detector on those 71 clicks, on the reading
+that they are frames the detector failed. Splitting them by which stage actually
+lost the player, with the click required to land INSIDE a box:
+
+    of 71 hand-clicked misses across three broadcasts
+      no box at any confidence                4
+      a box, but below 0.35 confidence        9
+      a confident box the FLOOR MASK dropped  42
+      a confident box that was kept anyway   16
+
+**The detector found 67 of 71. The floor mask threw away 42 of them.** The
+conclusion does not depend on the click tolerance -- at 0, 10 and 20 px the mask
+count is 42, 38 and 34 and the no-box count is 4, 2 and 0.
+
+So the standing plan item is aimed at the wrong component, and the arm this
+project calls `handler: detector drew him` -- which reads 0.812 / 0.938 / 0.909
+-- is misnamed. It is mostly not the detector.
+
+### Three. The scoreboard reader fails completely on the ECF broadcast
+
+The regression that was outstanding. ECF G1 finds **zero** score-like regions out
+of 3,522 candidates, and the reason is geometry rather than any threshold:
+
+    Finals G1, Houston      a horizontal strip along the bottom of the frame,
+                            both scores on the clock's own row, to its left
+    ECF G1                  a stacked box in the TOP-RIGHT corner -- IND 51 on
+                            one row, NYK 58 on the row below it, the clock to
+                            their right
+
+`band_candidates` slides boxes **along the clock's row, to the left of it**,
+which is the whole search. On a layout where one score sits a row below the
+other, a box tall enough to reach the second one contains both, and the
+same-height glyph group is then all four digits.
+
+    scoreboard reader, by broadcast
+      Finals G1    107-110 against an official 111-110    works
+      Houston      112-86  against an official 111-91     one out, then five
+      ECF G1       no regions found                       fails
+      Game 7       never attempted
+
+**It works on two of the four broadcasts in this repository, and the third fails
+for a structural reason a threshold cannot reach.** That is the honest state of
+the rung whose architecture is the only one this project has measured above 85%.
