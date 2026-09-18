@@ -84,12 +84,35 @@ def main() -> int:
                         help="override --rate with a literal frame step. Only "
                              "for reproducing a cache written before --rate "
                              "existed.")
-    parser.add_argument("--court-erode", type=int, default=COURT_ERODE_PX,
-                        help="how far the floor mask is pulled in before a "
-                             "player's feet are tested against it")
+    parser.add_argument("--court-erode", type=int, default=None,
+                        help="how far the floor mask is pulled in, in PIXELS. "
+                             "Overrides --court-erode-share. Only for "
+                             "reproducing a cache written before the share "
+                             "existed.")
+    parser.add_argument("--court-erode-share", type=float, default=None,
+                        help="how far the floor mask is pulled in, as a share "
+                             "of frame height. Defaults to this broadcast's "
+                             "entry in outputs/games/court_erode.json, which "
+                             "fit_court_mask.py chooses against two label-free "
+                             "bounds, and to the shipped 45/720 if there is "
+                             "none. A share rather than pixels because 45 px "
+                             "is 6.25% of a 720p frame and 4.2% of a 1080p "
+                             "one, and the constant otherwise means two "
+                             "different things on two broadcasts.")
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--out", required=True)
     args = parser.parse_args()
+    erode_share = args.court_erode_share
+    if erode_share is None and args.court_erode is None:
+        fitted = ROOT / "outputs" / "games" / "court_erode.json"
+        if fitted.exists():
+            picked = json.loads(fitted.read_text()).get(args.game)
+            if picked is not None:
+                erode_share = float(picked)
+                print(f"  court erosion {erode_share:.4f} of frame height, "
+                      f"fitted for {args.game} by fit_court_mask.py")
+    if erode_share is None and args.court_erode is None:
+        erode_share = COURT_ERODE_SHARE
 
     import cv2
     import numpy as np
@@ -176,7 +199,9 @@ def main() -> int:
                 # reused between -- but whether a box stands on it depends on
                 # that frame's boxes and is answered for every one of them.
                 if i % COURT_EVERY == 0 or region is None:
-                    region = court_region(chunk[offset], erode_px=args.court_erode)
+                    region = court_region(chunk[offset],
+                                          erode_px=args.court_erode,
+                                          erode_share=erode_share)
                     if region is not None:
                         ys, xs = np.nonzero(region)
                         court = ([int(xs.min()), int(ys.min()),

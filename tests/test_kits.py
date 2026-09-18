@@ -102,3 +102,28 @@ def test_rows_spread_covers_the_clip_and_never_over_runs_it():
     assert picked[0]["f"] == 0
     assert all(row in rows for row in picked)
     assert rows_spread(rows[:3], 5) == rows[:3]
+
+
+def test_a_spectator_wears_neither_kit_nor_stripes():
+    """The front row is what eroding the court's edge exists to remove, and
+    erosion removes the baseline corner with it. Colour is the same exclusion
+    without the collateral."""
+    model = KitModel.fit(_samples())
+    assert model.belongs_on_court([185, 128, 128], 26.0)      # a white kit
+    assert model.belongs_on_court([70, 150, 110], 26.0)       # a dark kit
+    assert model.belongs_on_court([125, 128, 128], 26.0)      # an official
+    assert not model.belongs_on_court([120, 60, 200], 26.0)   # somebody else
+
+
+def test_a_torso_too_small_to_read_is_not_evidence_of_a_spectator():
+    """Declining to exclude is the safe direction for a filter whose failure
+    deletes players."""
+    model = KitModel.fit(_samples())
+    assert model.belongs_on_court(None, 26.0)
+
+
+def test_a_looser_gate_never_excludes_more():
+    model = KitModel.fit(_samples())
+    colour = [120, 60, 200]
+    assert model.belongs_on_court(colour, 200.0)
+    assert not model.belongs_on_court(colour, 5.0)

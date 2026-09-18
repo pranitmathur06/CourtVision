@@ -35,18 +35,52 @@ MIN_BOX_HEIGHT_PX = 90
 # average 6.6 a frame, which is what a broadcast camera shows of ten players,
 # while 0 px keeps 8.1 and admits the front row.
 COURT_ERODE_PX = 45
+#: The same erosion as a share of FRAME HEIGHT. 45 px was swept on a 720p
+#: broadcast, where it is 6.25% of the height; on a 1080p one the same 45 px is
+#: 4.2%, so the constant silently means two different things on two files. A
+#: share means the same thing on both, and it is what `fit_court_mask.py`
+#: chooses per broadcast.
+COURT_ERODE_SHARE = 45 / 720
+#: The mask is computed at this frame height whatever the input's, then scaled
+#: back. Without it the 25x25 closing and the erosion are different physical
+#: distances on a 720p and a 1080p broadcast, so a constant swept on one is
+#: meaningless on the other and nothing measured on a downscaled clip transfers
+#: to the pipeline's full-resolution frame. Everything here is a shape
+#: operation, so the mask loses nothing by being found small and scaled up.
+CANONICAL_MASK_HEIGHT = 720
 FEET_ON_COURT_SHARE = 0.45
 
 
-def court_region(image: np.ndarray, erode_px: int = COURT_ERODE_PX):
+def court_region(image: np.ndarray, erode_px: int | None = COURT_ERODE_PX,
+                 erode_share: float | None = None):
     """The largest connected run of floor: wood and painted court together.
 
     Colour cannot separate players from spectators in this arena -- the crowd
     wears the home kit's colour, so a fan in a blue shirt clusters with a
     player in a blue jersey. Position can: a player stands on the floor and a
     spectator stands beyond its edge.
+
+    `erode_share` overrides `erode_px` and is measured against the frame's own
+    height, so one number means the same thing on a 720p and a 1080p
+    broadcast. How much to erode is a trade between admitting the front row and
+    deleting a player, and both sides of it are measurable without labels --
+    see `scripts/fit_court_mask.py`.
+
+    THE PAINTED KEY IS FOUND BY SHAPE, NOT BY COLOUR. The `paint` rule below
+    accepts hue 95-130, which is blue, and accepts 0.4% of Houston's red key.
+    Anything the wood encloses -- a key, a centre logo, a sponsor decal -- is a
+    HOLE in the wood mask, and filling holes captures it whatever colour it is.
+    Worth 3.6 points of kept ball-carrier on the red-key broadcast on its own,
+    and it cannot be wrong about a colour it never looks at.
     """
     import cv2
+
+    full_height, full_width = image.shape[:2]
+    if full_height != CANONICAL_MASK_HEIGHT and full_height > 0:
+        scale = CANONICAL_MASK_HEIGHT / full_height
+        image = cv2.resize(image, (max(1, int(round(full_width * scale))),
+                                   CANONICAL_MASK_HEIGHT),
+                           interpolation=cv2.INTER_AREA)
 
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     hue, sat, val = hsv[:, :, 0], hsv[:, :, 1], hsv[:, :, 2]
@@ -59,8 +93,21 @@ def court_region(image: np.ndarray, erode_px: int = COURT_ERODE_PX):
         return None
     biggest = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
     region = (labels == biggest).astype(np.uint8)
+
+    # Fill what the floor encloses. Flooding the complement in from a corner
+    # reaches everything OUTSIDE the region; whatever it cannot reach is a hole.
+    outside = (1 - region).astype(np.uint8)
+    cv2.floodFill(outside, np.zeros((region.shape[0] + 2, region.shape[1] + 2),
+                                    np.uint8), (0, 0), 2)
+    region = ((region == 1) | (outside == 1)).astype(np.uint8)
+
+    if erode_share is not None:
+        erode_px = int(round(erode_share * CANONICAL_MASK_HEIGHT))
     if erode_px:
         region = cv2.erode(region, np.ones((erode_px, erode_px), np.uint8))
+    if region.shape[0] != full_height or region.shape[1] != full_width:
+        region = cv2.resize(region, (full_width, full_height),
+                            interpolation=cv2.INTER_NEAREST)
     return region
 
 

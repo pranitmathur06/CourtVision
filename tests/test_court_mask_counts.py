@@ -48,3 +48,53 @@ def test_the_bigger_box_is_the_one_kept():
 def test_thirteen_people_is_possible_and_fourteen_is_not():
     """Ten players and three officials. The rule the whole metric rests on."""
     assert mask.IMPOSSIBLE_ABOVE == 13
+
+
+def _floor(height: int, key_colour=(40, 40, 190)):
+    """A wooden floor with a painted key inside it, at a given resolution."""
+    import cv2
+    import numpy as np
+
+    width = int(height * 16 / 9)
+    image = np.zeros((height, width, 3), dtype=np.uint8)
+    image[:, :] = (30, 30, 30)
+    cv2.rectangle(image, (int(width * 0.1), int(height * 0.4)),
+                  (int(width * 0.9), int(height * 0.95)), (60, 140, 190), -1)
+    cv2.rectangle(image, (int(width * 0.4), int(height * 0.55)),
+                  (int(width * 0.6), int(height * 0.8)), key_colour, -1)
+    return image
+
+
+def test_the_mask_is_the_same_shape_at_every_resolution():
+    """The closing and the erosion are different physical distances on a 720p
+    and a 1080p frame unless the mask is found at a canonical height. Without
+    this, a constant swept on one broadcast is meaningless on the other and
+    nothing measured on a downscaled clip transfers to the pipeline."""
+    from courtvision.candidates import court_region
+
+    shares = []
+    for height in (480, 720, 1080):
+        region = court_region(_floor(height), erode_px=None, erode_share=0.03)
+        assert region.shape[:2] == (height, int(height * 16 / 9))
+        shares.append(float(region.mean()))
+    assert max(shares) - min(shares) < 0.01
+
+
+def test_a_red_key_is_kept_because_the_wood_encloses_it():
+    """The paint rule accepts hue 95-130, which is blue, and 0.4% of Houston's
+    red key. Holes in the wood are filled by shape, so the colour never
+    matters."""
+    from courtvision.candidates import court_region
+
+    red = court_region(_floor(720, key_colour=(40, 40, 190)), erode_px=0)
+    blue = court_region(_floor(720, key_colour=(190, 60, 40)), erode_px=0)
+    assert abs(float(red.mean()) - float(blue.mean())) < 0.01
+
+
+def test_eroding_more_keeps_less():
+    from courtvision.candidates import court_region
+
+    image = _floor(720)
+    loose = court_region(image, erode_px=None, erode_share=0.0)
+    tight = court_region(image, erode_px=None, erode_share=0.0625)
+    assert float(tight.mean()) < float(loose.mean())

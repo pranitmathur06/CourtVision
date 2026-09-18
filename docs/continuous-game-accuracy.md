@@ -8443,6 +8443,32 @@ the shooting team essentially always. The ball spends the rebound near the rim,
 in the air or being tipped, with the offence crashing, and the nearest box to it
 is on the shooting team whoever ends up with it.
 
+### All four broadcasts, both arms, broken out by class
+
+    game  arm                  acc   base    n   cover   by class
+    g7    rebound            0.483  0.724   29   0.397   def 0.476  off 0.500
+    g7    rebound (anchored)    --     --    0   0.000   no anchor could be built
+    g7    assist             0.556  0.600   45   0.818   no 0.611   yes 0.519
+    g1    rebound            0.510  0.735   49   0.533   def 0.472  off 0.615
+    g1    rebound (anchored) 0.507  0.681   69   0.750   def 0.574  off 0.364
+    g1    assist             0.464  0.536   69   0.908   no 0.568   yes 0.344
+    ecf   rebound            0.421  0.737   57   0.679   def 0.452  off 0.333
+    ecf   rebound (anchored) 0.483  0.717   60   0.714   def 0.488  off 0.471
+    ecf   assist             0.539  0.539   89   0.957   no 0.634   yes 0.458
+    hou   rebound            0.391  0.728   92   0.893   def 0.358  off 0.480
+    hou   rebound (anchored) 0.383  0.723   94   0.913   def 0.294  off 0.615
+    hou   assist             0.440  0.560   75   0.987   no 0.424   yes 0.452
+
+The anchor raises coverage everywhere it can be built -- one attribution needs
+one clip moment rather than two -- and moves accuracy by at most six points.
+
+**Finals G7 gets no anchor at all**, and that is the guard working rather than
+a failure to report. Both kits voted for the same team, so there is no map, and
+the arm declines instead of inventing one. G7's kit centres are 91 CIELAB
+apart against Houston's 114, and its shooter attribution is not consistent
+enough to break the tie. An arm that would rather answer nothing than answer
+from a coin is the correct behaviour and it is worth more than the six points.
+
 ### Two fixes, both refuted, and the second one is the clean demonstration
 
 **Wait for the ball to settle.** Attribute only on frames where the ball's
@@ -8671,3 +8697,95 @@ where a person could see the handler, and on the three broadcasts with handler
 labels the mask keeps the carrier on 0.87 / 0.68 / 0.85. Some unknown part of
 the attribution failure is the mask having already deleted the right answer
 before any kernel is asked.
+
+## Round 116: the floor mask can tune itself on a broadcast nobody has touched
+
+Round 115 found the mask's real error -- it drops the man holding the ball on
+13% / 32% / 15% / **55%** of frames -- and the cause is one constant that was
+swept once, on one broadcast, against the wrong side of the trade.
+
+### One constant, two errors, and only one of them was ever measured
+
+Erode the court too little and the front row stands on it; erode too much and a
+player is deleted before any kernel is asked about him. `COURT_ERODE_PX` was
+chosen against the first error alone, with the note that *"at 45 px the
+survivors average 6.6 a frame... while 0 px keeps 8.1 and admits the front
+row."* Survivor counts see over-keeping and cannot see under-keeping at all.
+
+Both sides are now bounded without labels -- more than thirteen kept is
+impossible, and the carrier must be kept -- so the constant is fittable on a
+broadcast nobody has touched. `scripts/fit_court_mask.py` declares the rule
+before the numbers: **take the erosion that keeps the ball carrier most often,
+among those whose over-keeping stays at or above 0.95.** Either bound alone
+picks a degenerate mask; together they have an interior answer.
+
+### Three things were wrong with the mask before it could be fitted
+
+**The paint was found by colour.** `court_region` accepts hue 95-130 as painted
+court, which is blue, and accepts 0.4% of Houston's red key. But a key, a
+centre logo and a sponsor decal are all *surrounded by wood*, so they are HOLES
+in the wood mask. Filling holes captures them whatever colour they are, and
+cannot be wrong about a colour it never looks at. Worth 3.6 points of kept
+carrier on the red-key broadcast on its own.
+
+**The erosion was in pixels.** 45 px is 6.25% of a 720p frame and 4.2% of a
+1080p one, so the constant silently means two different things on two
+broadcasts in this registry. It is a share of frame height now.
+
+**The whole mask was resolution-dependent.** The 25x25 closing is a different
+physical distance at every input size, so a constant swept on one broadcast is
+meaningless on another AND nothing measured on a downscaled clip transfers to
+the pipeline's full-resolution frame -- which would have invalidated the fit
+before it ran. The mask is now found at a canonical 720-line height and scaled
+back. Measured on a synthetic floor at 480p, 720p and 1080p, the region area
+agrees to within 0.0005; it did not before.
+
+### The trade, measured -- and the rule declines on half the broadcasts
+
+Kept carrier against over-keeping, 250 frames a broadcast, with the hole-filled
+resolution-invariant mask:
+
+    erode/height      g7            g1            ecf           hou
+                 carrier <=13  carrier <=13  carrier <=13  carrier <=13
+    0.0000         0.987 0.864   0.949 0.904   0.987 0.920   0.628 0.972
+    0.0150         0.987 0.872   0.949 0.904   0.975 0.924   0.594 0.976
+    0.0300         0.987 0.888   0.927 0.916   0.955 0.928   0.565 0.988
+    0.0450         0.975 0.896   0.920 0.920   0.943 0.944   0.512 0.992
+    0.0625         0.955 0.904   0.920 0.924   0.930 0.968   0.464 0.996
+
+    chosen:        none          none          0.0625        0.0000
+
+**The carrier side is transformed.** Finals G7 keeps the ball carrier on 0.987
+of frames against the 0.867 its shipped cache manages, and ECF G1 on 0.987
+against 0.853. Filling the floor's holes and making the mask
+resolution-invariant did that, before any constant was chosen.
+
+**And it costs the other side.** A mask that fills what the wood encloses is a
+larger mask, and on G7 and Finals G1 the over-keeping bound is violated at
+*every* erosion -- 0.864 to 0.924 against a floor of 0.95. The declared rule
+therefore picks nothing on those two broadcasts, and writes `null`.
+
+That is the rule working, not the rule failing. The floor was declared before
+the numbers and moving it now to make two broadcasts pass is exactly the
+ratchet this log has recorded three times. The honest conclusion is narrower
+and more useful: **erosion alone cannot satisfy both bounds on every
+broadcast.** Pulling the court's edge in is a blunt instrument -- it removes
+the front row and the baseline corner together -- and the front row needs its
+own mechanism.
+
+There is one already written and unused. `candidates.kit_members` drops a
+person whose torso matches neither kit, at `MAX_KIT_DISTANCE_LAB = 26.0`, and
+Round 112's kit model gives it centres fitted per broadcast and scored at
+0.94-0.98. A spectator is not wearing either kit. That is the next thing to
+measure against these two bounds, and it is the first time there has been a way
+to tell whether it helps.
+
+### The mask can be rebuilt without a GPU, which is why it never was
+
+A detection cache holds two things: what the detector saw, which costs a pass
+over the whole broadcast, and which boxes stood on the floor, which is a few
+morphology operations on frames already on disk. Changing the mask has meant
+rebuilding both, so it has effectively never been changed.
+`scripts/remask_detections.py` rewrites only `on`, refuses to overwrite its own
+input so the before-and-after stays measurable, and records which erosion built
+the file it writes.

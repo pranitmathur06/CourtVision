@@ -144,6 +144,26 @@ class KitModel:
             return None, margin
         return near, margin
 
+    def belongs_on_court(self, colour: Sequence[float] | None,
+                         max_lab: float) -> bool:
+        """Is this torso one of the two kits or the officials' stripes?
+
+        A spectator in the front row wears neither, and the front row is the
+        thing eroding the court's edge exists to remove -- bluntly, since it
+        removes the baseline corner with it. This is the same exclusion by
+        colour instead of by position, and it can be measured against the same
+        two label-free bounds the erosion is measured against.
+
+        A missing colour answers True: a box too small or too clipped to read
+        is not evidence of a spectator, and declining to exclude is the safe
+        direction for a filter whose failure deletes players.
+        """
+        if colour is None:
+            return True
+        point = np.asarray(colour, dtype=np.float64)
+        kit_distances, official_distance = self._distances(point)
+        return min(float(kit_distances.min()), official_distance) <= max_lab
+
     def separation(self) -> float:
         """Distance between the two kit centres, in CIELAB units.
 
