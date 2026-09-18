@@ -7641,3 +7641,44 @@ was not measuring what its label said.
 
     needs labels this broadcast does not have
       handler, ball                    --      NO DATA, printed as 0.00-1.00
+
+### Round 105: the acceptance run found a degradation nobody was measuring
+
+The last stage of the fourth broadcast's run -- clip detection and overlays --
+produced the first number that is clearly WORSE on the unseen arena, and it is
+not in any model.
+
+    broadcast   people detected   kept on court    share   drawn/frame p50
+    HOU             311,146         148,963        0.479          7
+    Finals G1       329,339         207,636        0.630         10
+    ECF G1          342,918         281,758        0.822         13
+
+**The detector finds essentially the same number of people on all three -- 311k,
+329k, 343k over comparable frame counts -- and the floor mask throws away 52% of
+them on Houston against 37% and 18% on the two Finals broadcasts.** A court box
+is found on 100% of frames in all three, so this is not a failure to locate the
+court; it is `stands_on_court` deciding a player's feet are not on it.
+
+The resulting overlays show it directly:
+
+    ball drawn on             81.1%   48.8%   56.8%
+      ...more than 250 px from anything   2.5%    0.8%    0.1%
+    rim drawn on              77.7%   87.1%   86.2%
+    players per frame p50         4       7       9
+
+**And the mask was never stable even across the two tuned broadcasts** -- 0.630
+against 0.822 is a 19-point spread between two games in the same series, which
+nothing had looked at. Houston extends the range rather than breaking new ground.
+
+This gates every downstream consumer of player boxes: a player the mask rejects
+cannot be the handler, cannot be tracked, and cannot anchor a ball candidate.
+Houston has no handler labels, so the cost is not measurable there -- the report
+prints NO DATA and does not guess -- but on the labelled broadcasts the arm
+called `handler: detector drew him` reads 0.812 / 0.938 / 0.909, and this is a
+plausible part of why.
+
+**It is recorded as a lead, not a fix.** What would settle it is measuring the
+mask directly against the frames a person has already labelled: the 71 committed
+`handler_at` miss-clicks are exactly frames where a person saw a player and the
+pipeline did not, and nobody has checked how many of those the detector DID find
+and the floor mask then discarded.
