@@ -97,6 +97,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--stream", required=True, help="the packed stream to extend")
     parser.add_argument("--clips", required=True, help="cut_event_clips.py index.json")
+    parser.add_argument("--game", default=None,
+                        help="registry key or official game id; fills --game-id "
+                             "and --date from it. The two defaults below name "
+                             "one broadcast and are kept only so the command "
+                             "recorded in the accuracy log still reproduces.")
     parser.add_argument("--game-id", default="0042400407")
     parser.add_argument("--date", default="2025 Finals G7")
     parser.add_argument("--roster", default=None,
@@ -117,6 +122,13 @@ def main() -> int:
                              "clock wrong by however far its tip-off differs.")
     parser.add_argument("--out", required=True)
     args = parser.parse_args()
+    if args.game:
+        import sys
+        from pathlib import Path as _Path
+        sys.path.insert(0, str(_Path(__file__).resolve().parent.parent / "src"))
+        from courtvision.games import get
+        chosen = get(args.game)
+        args.game_id, args.date = chosen.game_id, chosen.label
 
     stream = json.load(open(args.stream))
     clips = json.load(open(args.clips))

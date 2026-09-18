@@ -178,6 +178,16 @@ def score(predicted, truth, tolerance=TOLERANCE_S):
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
+    # THREE DEFAULTS THAT NAMED ONE BROADCAST. `--shots` in particular carried
+    # a specific game's number in its filename, so running this on any other
+    # game without noticing scored its detector against the 2025 Finals Game 7:
+    # every agrees-with-official label, and the first/second-half split the
+    # PASS/FAIL line is computed from. `--game` fills all three from the
+    # registry, and the defaults are kept only so the commands recorded in the
+    # accuracy log still reproduce.
+    parser.add_argument("--game", default=None,
+                        help="registry key or official game id; fills "
+                             "--detections, --clock and --shots from it")
     parser.add_argument("--detections", default="outputs/detections/fullgame.json")
     parser.add_argument("--shots", default="outputs/shots_on_video_0042400407.json")
     parser.add_argument("--max-gap-s", type=float, default=2.0,
@@ -191,6 +201,16 @@ def main() -> int:
                              "false alarm you can watch is the only honest way to "
                              "show what a 0.52 precision actually looks like.")
     args = parser.parse_args()
+    if args.game:
+        import sys
+        from pathlib import Path as _Path
+        sys.path.insert(0, str(_Path(__file__).resolve().parent.parent / "src"))
+        from courtvision.games import get
+        game = get(args.game)
+        args.detections = str(game.detections)
+        args.clock = str(game.clock)
+        args.shots = f"outputs/shots_on_video_{game.game_id}.json"
+        print(f"{game.label}: {args.detections}, {args.clock}, {args.shots}")
 
     detections = json.load(open(args.detections))
     frames = detections["frames"]

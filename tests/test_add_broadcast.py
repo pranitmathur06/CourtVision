@@ -138,3 +138,29 @@ def test_every_registered_game_produces_a_runnable_plan(key):
     for stage in plan:
         for need in stage.needs:
             assert need in names, f"{stage.name} needs {need}, which is not a stage"
+
+
+def test_the_two_scripts_that_still_carry_a_games_number_can_take_a_registry_key():
+    """`detect_shots.py --shots` names one broadcast in its own filename, and
+    `pack_video_game.py --game-id` names another. Both defaults are kept so the
+    commands in the accuracy log still reproduce, but neither is now the only
+    way to run the script on a game."""
+    import re
+    for name in ("detect_shots.py", "pack_video_game.py"):
+        source = (Path(__file__).resolve().parent.parent / "scripts" / name).read_text()
+        assert 'add_argument("--game"' in source, f"{name} takes no registry key"
+        pinned = re.findall(r'default="([^"]*\d{10}[^"]*)"', source)
+        assert pinned, f"{name} no longer has the default this test describes"
+        # ...and every one of them is reachable from the registry instead.
+        assert "courtvision.games import get" in source
+
+
+def test_detect_shots_resolves_all_three_paths_from_one_key():
+    """The bug was that --shots was left at its default while --detections and
+    --clock were passed, so two of three inputs were the new game and the third
+    was Finals G7. One flag has to set all three or the failure comes back."""
+    source = (Path(__file__).resolve().parent.parent
+              / "scripts" / "detect_shots.py").read_text()
+    block = source[source.index("if args.game:"):source.index("detections = json.load")]
+    for flag in ("args.detections", "args.clock", "args.shots"):
+        assert flag in block, f"--game does not set {flag}"
