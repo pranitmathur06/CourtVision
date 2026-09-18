@@ -8872,18 +8872,39 @@ newest broadcast, and no labelled metric in this repository was looking at it.
 
 ## Where 85% stands after Rounds 112-116, and what each remaining arm needs
 
+One run of `eval_by_game.py --no-registration --bar 0.85` over all four, with
+every arm this round added, and the numbers as they stand today rather than as
+this log reported them in pieces:
+
     arm                                  g7      g1     ecf     hou   needs
     alignment: event onto video       0.922   0.973   0.966   0.995   nothing
-    clips within 1 s                  0.93    0.99    0.93    0.977   nothing
+    clips within 1 s                  0.971   0.993   0.932   0.977   nothing
     kits: never six a side            0.955   0.939   0.977   0.962   nothing
-    boxes: never more than 13 kept    0.963   0.999   0.983   0.996   nothing
-    clock: game seconds seen           --      --     0.804   0.900   the ECF scorebug
-    boxes: keeps the ball carrier     0.866   0.883   0.930   0.628   a cache rebuild
+    floor mask: at most 13 kept       0.963   0.999   0.983   0.996   nothing
+    clock: game seconds seen          0.728   0.930   0.804   0.900   two scorebugs
+    floor mask: keeps the carrier     0.867   0.684   0.853    0.454  the rebuilt cache
     ball: physically possible steps   0.758   0.756   0.768   0.825   a detector
-    ball: top-1 selection              --      --     0.800    --     a detector
-    handler attribution                --      --     0.657    --     the ball
+    ball: top-1 selection             0.829   0.647   0.800     --    a detector
+    ball: proposed at any rank        0.902   0.824   0.964     --    THE CEILING
+    handler: winnable frames          0.500   0.564   0.657     --    the ball
     rebound off/def                   0.483   0.510   0.421   0.391   tracking
     assist yes/no                     0.556   0.464   0.539   0.440   tracking
+
+Two corrections this table makes to figures quoted earlier in this log. The
+clock arm fails on TWO broadcasts, not one -- Finals G7 reads 0.728 and had
+never been printed beside the others. And the carrier row here is the CACHED
+mask; the rebuilt one reads 0.553 / 0.774 / 0.885 on the three measured so far,
+and the cached column is what the page draws until the caches are swapped.
+
+And one thing the table should not be read as saying. **The clock row is
+coverage, not reader accuracy.** Round 100 took one broadcast's 659 unseen
+seconds apart: 86% of them are runs of four seconds or more where the scorebug
+is not on screen at all -- a timeout graphic, a replay, the between-quarters
+break. A better reader cannot recover a second the broadcast never displayed.
+The arm's note now says so; what it still cannot say is how much of Finals G7's
+27% is recoverable, because that decomposition has been done on one game and
+"two scorebugs" in the needs column is a guess until it is done on the other
+three.
 
 Four arms clear 85% on every broadcast and three of those four are scored with
 **no labels at all** -- they are facts about basketball, so a broadcast nobody

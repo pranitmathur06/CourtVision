@@ -193,7 +193,14 @@ def clock_arm(game: Broadcast) -> list[Arm]:
     return [
         Arm("clock: game seconds seen", len(elapsed), game_seconds,
             note=f"periods {periods} against the feed's {official}; "
-                 f"{span / 60:.0f} min of video span"
+                 f"{span / 60:.0f} min of video span. COVERAGE, not reader "
+                 f"accuracy: Round 100 took the 659 unseen seconds of one "
+                 f"broadcast apart and 86% of them are runs of four seconds or "
+                 f"more where the scorebug is not on screen at all -- a "
+                 f"timeout graphic, a replay, the between-quarters break. A "
+                 f"better reader cannot recover a second the broadcast never "
+                 f"displayed, and the share that is recoverable has only been "
+                 f"measured on that one game"
                  + (f"  <-- READER SAW PERIODS THE GAME DID NOT HAVE: "
                     f"{unexpected}" if unexpected else "")),
         Arm("clock: running share", running, len(times), descriptive=True,
