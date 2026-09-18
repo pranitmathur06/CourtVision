@@ -7212,3 +7212,87 @@ not noise.
 The honest consequence for the roadmap is that the remaining ball work is a
 two-class problem on about 18 frames per 130, which is exactly the regime where
 the old ten-to-thirteen-frame evaluations could see nothing at all.
+
+## Round 100: the registered prediction was wrong, and the ablation that showed it found a worse bug
+
+The prediction registered two rounds ago: sampling the clock at `--step 0.5`
+should put coverage **above 0.95 on every broadcast**, because coverage tracked
+`0.90 x readings-per-game-second` across four games and the reader was sampling a
+one-second clock once a second. It was written down before the run, with the
+falsifying outcome named.
+
+**It is falsified.** Game 7, re-read at 0.5 s with the tenths fix, reaches
+**0.772**. Not 0.95, and not close.
+
+### The four-way ablation, run offline for nothing
+
+The reader now saves its raw OCR text, so one 20-minute decode answered four
+questions instead of one. Each row below is the same 7,325 saved readings
+re-resolved with a different parser and a different subsample:
+
+    step   tenths   periods        game-seconds seen    coverage
+    1.0    no       [1, 2, 3, 4]          2058            0.715
+    1.0    yes      [1, 2, 3, 4]          2096            0.728
+    0.5    no       [1, 2, 3, 4]          2184            0.758
+    0.5    yes      [1, 2, 3, 4]          2222            0.772
+
+    lowest clock reached per period, without tenths:  10.7  10.8  10.1  10.7
+                                        with tenths:   0.0   0.0   0.0   0.0
+
+**The tenths fix does exactly what it was built to do** -- every period now runs
+to zero, where before the reader lost the clock at ten seconds in all four -- and
+it is worth **1.3 to 1.4 points** of coverage. Halving the step is worth **4.3**.
+Together they take Game 7 from 0.715 to 0.772, against a prediction of 0.95.
+
+### Why the prediction was wrong
+
+The unseen seconds are not scattered:
+
+    659 game-seconds unseen, in 83 runs
+      38 singletons        a denser sampler could catch these
+      56 in runs of 2-3
+     565 in runs of 4+     the longest 124 s, then 95, 56, 50, 43, 37, 30
+                           -- the scorebug is simply not on screen
+
+**86% of what is missing is in stretches where the clock is not being shown at
+all**: timeouts with a full-screen graphic, replays, the between-quarters break.
+Sampling faster cannot recover a second the broadcast never displayed. The
+correlation across four games was real and I read it as a mechanism; it is two
+consequences of one cause, because a broadcast that shows the bug more has both
+more readings and more coverage. Going to `--step 0.25` would be worth at most
+the 38 singletons, about 1.3 more points, for another doubling of decode.
+
+The ceiling on this arm is therefore a property of broadcast production, not of
+the reader, and it sits somewhere near **0.80 on Game 7**. Whether the other
+broadcasts have a higher one is now a question with a cheap answer, because the
+raw text is saved.
+
+### And the ablation found a worse bug than the one it was testing
+
+The first re-read resolved Game 7 to **six periods**. Game 7 had four.
+
+`"5:43"` is 343 seconds or 54.3, and the tenths reading of a HELD clock is
+self-consistent frame after frame. At video 6071.0 s the clock is held at 5:43
+through a stoppage; one frame reads `"5:48"`; neither of its readings continues
+from 343, so the resolver falls through to its confirm-against-the-next-frame
+rule -- and **confirms 54.8**, because the next frame's `"5:43"` offers 54.3,
+which continues from 54.8 perfectly. Every later reading in the quarter followed
+it down. The last five minutes of the fourth resolved to tenths and
+`assign_periods` filed them as an overtime the game never played.
+
+This is the failure the `resolve` docstring says was fixed for Finals G1 in an
+earlier round. **It was not fixed, it was made rarer** -- and a 0.5 s step, by
+sampling twice as many frames, made it likelier again.
+
+The fix is a physical fact rather than another tie-break: the clock only
+DISPLAYS tenths under a minute, so a reading below 60 while the clock is above
+65 is not a misread to be weighed against another, it is impossible. Dropping
+those before continuity is considered closes the class. Verified against the
+saved text four ways, with no video pass: every configuration above now resolves
+to four periods.
+
+**Two lessons worth keeping.** A prediction written down in advance cost one
+decode and bought a correct model of the arm's ceiling; without it the 0.772
+would have read as progress. And the guard added *before* the experiment -- "a
+sub-ten-second reading may never start a run" -- caught one spurious period but
+not this one, because this misread does not start a run, it hijacks one.
