@@ -102,9 +102,24 @@ RESET_RISE = 5.0
 #: per second against the clock's 0.35, which is the whole basis for telling
 #: them apart.
 STEP_S = 1.0
-#: How far from the clock to look for the scores. The default 260 in
-#: `locate_scores` misses the far team by 64 px on this broadcast's layout.
-SEARCH_PX = 460
+#: How far from the clock to look for the scores. `None` means "everything to
+#: the left of the clock, to the frame edge".
+#:
+#: IT USED TO BE A NUMBER AND THE NUMBER WAS WRONG TWICE. `locate_scores` ships
+#: 260 and misses the far team by 64 px on a 720p Finals broadcast; 460 was
+#: measured to fix that, and then misses the far team by 67 px on a 1080p
+#: regular-season broadcast whose scorebug is laid out differently. A constant
+#: fitted to the layouts already in the repository is not a constant, it is a
+#: memory of them -- and the whole claim being tested is that a broadcast
+#: nobody has seen fits right in.
+#:
+#: The reach was never doing the work anyway. What actually picks the score
+#: regions is behaviour over a whole game -- non-decreasing, a rank correlation
+#: with time of at least 0.85, and a final value inside FINAL_RANGE -- and the
+#: reach is only a compute budget on how many boxes get that test. Spending
+#: more of it is cheap and is the only setting that is not a guess about a
+#: layout.
+SEARCH_PX = None
 #: A basketball game ends somewhere in here. Used only to reject a region that
 #: is plainly not a score, never to correct one.
 FINAL_RANGE = (55, 190)
@@ -233,17 +248,34 @@ def band_candidates(clock_roi, width, reach_px=SEARCH_PX):
     strip: the scores sit on the clock's row, to its left, at roughly the
     clock's height. Sliding boxes along that row and judging them by behaviour
     is both simpler and less broadcast-specific than a general locator.
+
+    EVERY SIZE HERE IS A MULTIPLE OF THE CLOCK'S OWN HEIGHT, which is measured
+    on the broadcast being read. The previous version used 70, 90 and 110 pixel
+    boxes grown by 0, 6 and 12 -- numbers that describe a 44-pixel-tall clock on
+    a 720p encode and describe nothing at all about a 28-pixel-tall one on a
+    1080p encode, where the score digits are taller than the clock's and every
+    candidate box would have cut them off. Expressed as ratios they reproduce
+    the old boxes exactly on the footage they were fitted to, and they follow
+    the graphic on footage they were not.
     """
     top, bottom, left, _ = clock_roi
-    height = bottom - top
+    height = max(bottom - top, 1)
     out = []
-    for grow in (0, 6, 12):
+    # 0, 0.14, 0.27 and 0.5 of the clock's height. The first three are the old
+    # (0, 6, 12) on a 44-pixel clock; the fourth is new, because a score digit
+    # can be half again as tall as a clock digit and nothing here knew that.
+    for grow in sorted({0, round(height * 0.14), round(height * 0.27),
+                        round(height * 0.5)}):
         y0, y1 = max(top - grow, 0), bottom + grow
-        for box_width in (70, 90, 110):
-            x = max(left - reach_px, 0)
+        # 1.6, 2.0 and 2.5 clock-heights wide: the old 70, 90, 110 on a
+        # 44-pixel clock. Two score digits and their padding.
+        for box_width in sorted({max(round(height * r), 12)
+                                 for r in (1.6, 2.0, 2.5)}):
+            x = 0 if reach_px is None else max(left - reach_px, 0)
+            step = max(round(height * 0.23), 4)          # the old 10 at h=44
             while x + box_width < left - 10:
                 out.append((y0, y1, x, x + box_width))
-                x += 10
+                x += step
     return out
 
 
@@ -357,9 +389,10 @@ def main() -> int:
     parser.add_argument("--end", type=float, default=None)
     parser.add_argument("--step", type=float, default=STEP_S)
     parser.add_argument("--search-px", type=int, default=SEARCH_PX,
-                        help="how far from the clock to look for the scores; "
-                             "locate_scores' own default of 260 misses the far "
-                             "team on a standard NBA lower third")
+                        help="cap on how far left of the clock to look. The "
+                             "default is no cap: two different fitted values "
+                             "have each missed the far team on a layout they "
+                             "were not fitted to. See SEARCH_PX.")
     parser.add_argument("--out", default=None)
     args = parser.parse_args()
 

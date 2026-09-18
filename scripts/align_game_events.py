@@ -67,7 +67,8 @@ def main() -> int:
     parser.add_argument("--out", default="outputs/aligned_events.json")
     args = parser.parse_args()
 
-    from nba_api.stats.endpoints import playbyplayv3
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from cache_pbp import load as load_pbp
 
     readings = json.loads(Path(args.clock).read_text())
     # read_game_clock.py writes the readings inside a file that also carries the
@@ -75,8 +76,7 @@ def main() -> int:
     # shape and still works.
     if isinstance(readings, dict):
         readings = readings["readings"]
-    actions = playbyplayv3.PlayByPlayV3(
-        game_id=args.game_id, timeout=60).get_dict()["game"]["actions"]
+    actions = load_pbp(args.game_id)
 
     readable = [r["elapsed"] for r in readings if r.get("elapsed") is not None]
     if not readable:

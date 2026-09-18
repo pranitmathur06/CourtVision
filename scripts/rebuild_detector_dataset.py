@@ -45,7 +45,10 @@ import math
 import random
 import shutil
 from collections import defaultdict
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 PLAYER, BALL, RIM, HANDLER = 0, 1, 2, 3
 SOURCE = Path("data/labeled/detector")
@@ -61,12 +64,17 @@ STANDS_ABOVE_PX = 30.0
 STANDS_FROM_PLAYER_PX = 200.0
 NEGATIVE_CROP = 256
 #: Which broadcast each cache came from, and the index that dates its clips.
-VIDEO_FOR = {"clip_detections_g7": "data/raw_clips/fullgame.mp4",
-             "clip_detections_g1": "data/games/iVhcru3Gli0.mp4",
-             "clip_detections_ecf": "data/games/T1d3VxVnDUo.mp4"}
-INDEX_FOR = {"clip_detections_g7": "docs/clips/index.json",
-             "clip_detections_g1": "docs/clips/index_finals_g1.json",
-             "clip_detections_ecf": "docs/clips/index_ecf_g1.json"}
+#: Which broadcast each cache came from, and the index that dates its clips.
+#: Both derived from `data/games.json` -- they were two more copies of the same
+#: five facts that made a fourth broadcast an eighteen-file edit.
+def _from_registry():
+    from courtvision.games import registry
+    games = list(registry().values())
+    return ({g.clip_detections.stem: str(g.video) for g in games},
+            {g.clip_detections.stem: str(g.clip_index) for g in games})
+
+
+VIDEO_FOR, INDEX_FOR = _from_registry()
 
 
 def read_labels(path: Path):

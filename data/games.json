@@ -1,0 +1,84 @@
+{
+  "g7": {
+    "game_id": "0042400407",
+    "label": "2025 Finals G7",
+    "video": "data/raw_clips/fullgame.mp4",
+    "prefix": "e",
+    "fps": 30.0,
+    "final_score": {
+      "IND": 91,
+      "OKC": 103
+    },
+    "published": {
+      "aligned": "outputs/aligned_events.json",
+      "clip_index": "docs/clips/index.json",
+      "overlays": "docs/clips/overlays.json",
+      "clip_dir": "docs/clips"
+    },
+    "held_out": {},
+    "held_out_note": "Tuned on. No arm here is a hold-out."
+  },
+  "g1": {
+    "game_id": "0042400401",
+    "label": "2025 Finals G1",
+    "video": "data/games/iVhcru3Gli0.mp4",
+    "prefix": "f",
+    "fps": 29.97,
+    "final_score": {
+      "IND": 111,
+      "OKC": 110
+    },
+    "published": {
+      "aligned": "outputs/games/aligned_finals_g1.json",
+      "clip_index": "docs/clips/index_finals_g1.json",
+      "overlays": "docs/clips/overlays_f.json",
+      "clip_dir": "docs/clips"
+    },
+    "held_out": {},
+    "held_out_note": "Tuned on. No arm here is a hold-out."
+  },
+  "ecf": {
+    "game_id": "0042400301",
+    "label": "2025 ECF G1",
+    "video": "data/games/T1d3VxVnDUo.mp4",
+    "prefix": "g",
+    "fps": 29.97,
+    "final_score": {
+      "IND": 138,
+      "NYK": 135
+    },
+    "published": {
+      "aligned": "outputs/games/aligned_ecf_g1.json",
+      "clip_index": "docs/clips/index_ecf_g1.json",
+      "overlays": "docs/clips/overlays_g.json",
+      "clip_dir": "docs/clips"
+    },
+    "held_out": {},
+    "held_out_note": "Tuned on. No arm here is a hold-out."
+  },
+  "hou": {
+    "game_id": "0022500581",
+    "label": "2026-01-15 OKC at HOU",
+    "video": "data/games/FZAUuuuREg0_1080p.mp4",
+    "prefix": "h",
+    "fps": 59.94,
+    "final_score": {
+      "OKC": 111,
+      "HOU": 91
+    },
+    "held_out": {
+      "clock": true,
+      "alignment": true,
+      "clips": true,
+      "detector": true,
+      "handler": true,
+      "ball": true,
+      "possession": true,
+      "scoreboard": true,
+      "end_to_end": true,
+      "registration": false,
+      "court_camera": false
+    },
+    "held_out_note": "Never touched by the event pipeline: no clock read, no alignment, no clip, no possession/handler/ball label, no detector training frame. NOT held out for court registration -- docs/continuous-game-accuracy.md records that Toyota Center was diagnosed on, four label directories sit on this file, and court_register.SEARCH_MIN_SAMPLES, court_camera.FLOOR_LANE_LAB and court_refine.PAINT_POLARITY were set with its values in view."
+  }
+}

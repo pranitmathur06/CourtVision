@@ -35,20 +35,29 @@ import argparse
 import json
 import random
 from collections import defaultdict
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 #: A frame whose best ball candidate is under this is one the model is failing.
 HARD_CONF = 0.35
 #: Player boxes offered for the handler choice must be at least this confident.
 PLAYER_CONF = 0.35
-GAMES = {
-    "clip_detections_g7": ("data/raw_clips/fullgame.mp4", "docs/clips/index.json",
-                           "2025 Finals G7"),
-    "clip_detections_g1": ("data/games/iVhcru3Gli0.mp4",
-                           "docs/clips/index_finals_g1.json", "2025 Finals G1"),
-    "clip_detections_ecf": ("data/games/T1d3VxVnDUo.mp4",
-                            "docs/clips/index_ecf_g1.json", "2025 ECF G1"),
-}
+#: Which broadcasts have labelling artefacts, from `data/games.json`.
+#:
+#: This was a hardcoded dict of (video, clip index, label) in THREE scripts, and
+#: `rebuild_detector_dataset.py` kept two more keyed the same way. Five copies of
+#: the same five facts, and a fourth broadcast meant editing all of them and
+#: getting every one to agree -- which is another way of saying a fourth
+#: broadcast could not be added. See `courtvision.games`.
+def _games():
+    from courtvision.games import registry
+    return {g.clip_detections.stem: (str(g.video), str(g.clip_index), g.label)
+            for g in registry().values()}
+
+
+GAMES = _games()
 
 PAGE = """<meta charset="utf-8"><title>Ball + handler labeller</title>
 <style>

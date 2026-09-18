@@ -12,7 +12,7 @@ import math
 import pytest
 
 from courtvision.stats import (block_bootstrap, chi_square_tail,
-                               cluster_bootstrap, cochran_q, iou, mcnemar,
+                               cluster_bootstrap, homogeneity, iou, mcnemar,
                                wilson)
 
 
@@ -76,13 +76,13 @@ def test_the_chi_square_tail_matches_a_known_table():
     assert chi_square_tail(0.0, 4) == 1.0
 
 
-def test_cochran_q_is_quiet_when_every_game_behaves_the_same():
+def test_homogeneity_is_quiet_when_every_game_behaves_the_same():
     same = [[True] * 6 + [False] * 4] * 3
-    statistic, df, p = cochran_q(same)
+    statistic, df, p = homogeneity(same)
     assert df == 2 and statistic == pytest.approx(0.0) and p == 1.0
 
 
-def test_cochran_q_fires_when_one_game_is_different():
+def test_homogeneity_fires_when_one_game_is_different():
     """The per-game regression alarm.
 
     Three games of 150 frames cannot each carry an interval tight enough to see
@@ -92,7 +92,7 @@ def test_cochran_q_fires_when_one_game_is_different():
     """
     spread = [[True] * 9 + [False], [True] * 5 + [False] * 5,
               [True] * 1 + [False] * 9]
-    statistic, df, p = cochran_q(spread)
+    statistic, df, p = homogeneity(spread)
     assert df == 2 and statistic > 5.0 and p < 0.05
 
 

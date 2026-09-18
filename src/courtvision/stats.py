@@ -72,18 +72,27 @@ def mcnemar(a: Sequence[bool], b: Sequence[bool]) -> tuple[int, int, float]:
     return only_a, only_b, min(1.0, 2.0 * tail)
 
 
-def cochran_q(vectors: Sequence[Sequence[bool]]) -> tuple[float, int, float]:
-    """Is the effect the same across groups? Returns (Q, df, p).
+def homogeneity(vectors: Sequence[Sequence[bool]]) -> tuple[float, int, float]:
+    """Do these groups share one rate? Returns (statistic, df, p).
 
     The per-game regression alarm. Three broadcasts of 150 frames each cannot
     each carry an interval tight enough to see a five-point move, but asking
-    whether one game's effect DIFFERS from the others is a far more powerful
+    whether one game's rate DIFFERS from the others is a far more powerful
     question on the same data -- and it is the question "did this game regress"
     actually is.
 
-    Each vector is one group's per-item agreement (True where the two methods
-    being compared agree). p is from a chi-square survival function computed
-    without scipy, so this module stays importable anywhere.
+    IT IS NOT COCHRAN'S Q AND IT WAS CALLED THAT. Cochran's Q compares k
+    treatments measured on the SAME subjects -- matched binary outcomes, the
+    k-sample generalisation of McNemar. What is being compared here is k
+    independent groups: different games, different frames, no pairing. The
+    right test is the chi-square test for homogeneity of proportions, which is
+    what the arithmetic below has always been. The statistic was correct and the
+    name was borrowed from the wrong test, which in a file whose whole argument
+    is that paired and unpaired comparisons are different things was not a
+    harmless label.
+
+    Each vector is one group's per-item outcome. p is from a chi-square survival
+    function computed without scipy, so this module stays importable anywhere.
     """
     groups = [list(v) for v in vectors if len(v)]
     if len(groups) < 2:
@@ -96,6 +105,11 @@ def cochran_q(vectors: Sequence[Sequence[bool]]) -> tuple[float, int, float]:
     statistic /= pooled * (1 - pooled)
     df = len(groups) - 1
     return statistic, df, chi_square_tail(statistic, df)
+
+
+#: The old name. It was wrong -- see `homogeneity` -- and it is kept only so an
+#: older script does not break silently on import.
+cochran_q = homogeneity
 
 
 def chi_square_tail(statistic: float, df: int) -> float:

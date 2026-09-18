@@ -34,7 +34,10 @@ import argparse
 import json
 import math
 from collections import defaultdict
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 import numpy as np
 
@@ -51,15 +54,15 @@ PATCH_MARGIN = 0.20
 PLAYER_CONF = 0.35
 EPS = 1e-6
 
-GAMES = {
-    "2025 Finals G7": ("data/raw_clips/fullgame.mp4", "docs/clips/index.json",
-                       "outputs/clip_detections_g7.json"),
-    "2025 Finals G1": ("data/games/iVhcru3Gli0.mp4",
-                       "docs/clips/index_finals_g1.json",
-                       "outputs/clip_detections_g1.json"),
-    "2025 ECF G1": ("data/games/T1d3VxVnDUo.mp4", "docs/clips/index_ecf_g1.json",
-                    "outputs/clip_detections_ecf.json"),
-}
+#: Which broadcast each labelled game is, from `data/games.json`. Was a
+#: hardcoded dict here and in two labelling pages; see `courtvision.games`.
+def _games():
+    from courtvision.games import registry
+    return {g.label: (str(g.video), str(g.clip_index), str(g.clip_detections))
+            for g in registry().values()}
+
+
+GAMES = _games()
 ROUNDS = (("data/labels/possession_labels.json", "data/labeling/possession"),
           ("data/labels/handler_labels.json", "data/labeling/handler"))
 

@@ -6820,3 +6820,184 @@ vision against 0.662 for the scoreboard**, with the scoreboard asserting an
 outcome on 100% of its calls and vision on none of them. That is the first
 apples-to-apples number this architecture has ever had, and the scoreboard is
 ahead on it.
+
+---
+
+## Round 98: a fourth broadcast, a registry, and four numbers that were measuring the wrong thing
+
+The question this round exists to answer is "does a new broadcast fit right in",
+and the honest first finding is that nothing in the repository could tell you,
+because **adding one meant editing eighteen files.** Three scripts carried a
+hardcoded `GAMES` dict and about fifteen more carried
+`default="data/raw_clips/fullgame.mp4"`. That, and not compute or storage, was
+the blocker.
+
+### The registry, and why paths are derived rather than listed
+
+`data/games.json` holds only what cannot be computed -- the video, the official
+game id, a label, a one-letter clip prefix -- and `courtvision.games` derives
+every artefact path from the key. A registry that stored
+`"detections": "outputs/clip_detections_g1.json"` would be the same eighteen
+strings in one file, and one of them would eventually point at another game's
+cache with nothing to say so. Three paths ARE listed, per game, under
+`published`: `docs/clips/index.json` is fetched by the live page and its name is
+part of a URL, so renaming it to tidy a registry would be a registry breaking the
+site. A NEW broadcast is not allowed any, and a test enforces that.
+
+Loading the registry now refuses: two games sharing a clip prefix (clip
+filenames would collide), two sharing a video stem (`data/raw_clips/fullgame.mp4`
+and `data/games/fullgame.mp4` are different files and the SAME clock, detection
+and scoreboard artefacts), two claiming one official game id, and a `published`
+key that is not a path name -- a typo there used to fall through to the derived
+path without a word.
+
+### The fourth broadcast was already on disk
+
+`data/games/FZAUuuuREg0_1080p.mp4`: 9,004 seconds, 1920x1080 at 59.94, 4.9 GB,
+referenced by four files and by no pipeline. Reading its scorebug at t=2000
+gives OKC 18, HOU 15, 1ST 2:24 at Toyota Center; the only game in three seasons
+of OKC-at-Houston whose play-by-play stands at 15-18 with 2:24 left in the first
+is **0022500581, 2026-01-15, final OKC 111 HOU 91.** Regular season, different
+arena, different teams, 60 fps, a scorebug laid out unlike either Finals
+broadcast.
+
+### "Unseen" was a boolean for about an hour, and it was wrong
+
+The obvious field is `unseen: true`, and an adversarial check found the claim
+false in this repository's own words. `docs/continuous-game-accuracy.md` already
+said **"Toyota Center is no longer a clean unseen arena -- it was diagnosed
+on"**; four directories of hand-placed court labels sit on this exact file; and
+`court_register.SEARCH_MIN_SAMPLES`, `court_camera.FLOOR_LANE_LAB` and
+`court_refine.PAINT_POLARITY` were each set, in as many words, "with those
+values in view".
+
+A boolean would have published an acceptance-test result over a registration
+number the broadcast helped choose. So the field is now per arm:
+
+    held_out   clock, alignment, clips, detector, handler, ball, possession,
+               scoreboard, end_to_end          -- never touched by any of them
+    NOT        registration, court_camera      -- diagnosed on; see above
+
+`held_out_for(arm)` answers False for an arm it has never heard of. Guilty until
+the registry says otherwise, because the failure being guarded against is
+publishing a contaminated number as a hold-out.
+
+### `scripts/add_broadcast.py`, and the two wiring bugs a dry run could not see
+
+A stage graph: each stage declares what it produces, a stage whose outputs exist
+is skipped, and nothing takes a path from the caller. Every flag it passes was
+checked against the target script's own `add_argument` calls by a test, and every
+flag was valid -- which is exactly why the two real bugs survived to be found by
+reading what the receiving code does with the file.
+
+  **The vision arm was fed the wrong file and reported zero without an error.**
+  `score_game_end_to_end.vision_shot_stream` reads `blob["frames"]` and re-runs
+  `detect_shots`' own rim tracking over them: it wants the WHOLE-GAME DETECTION
+  CACHE. It was handed `detect_shots`' report, which has no `frames` key, so it
+  built zero calls and would have printed a vision arm of 0.000.
+
+  **A new broadcast's shot detector was scored against the 2025 Finals Game 7.**
+  `detect_shots.py --shots` defaults to `outputs/shots_on_video_0042400407.json`
+  -- one game's official shot times, with that game's number in the filename --
+  and the driver did not override it. Every `agrees_with_official` label and the
+  first/second-half split would have come from the wrong game. Worse, *nothing in
+  the repository produced that file for any game*; both existing ones were made
+  by hand. `scripts/official_shots.py` derives it from the cached play-by-play,
+  and for Finals G1 its output is **content-identical to the hand-made file, 180
+  attempts, 78 made** -- so removing the hand step costs nothing.
+
+A test now fails if any stage leaves a default that carries a ten-digit game id,
+and another fails if any stage's command mentions another registered game's id.
+
+Two smaller ones from the same check. `_outputs_of` kept a second mapping of
+stage name to outputs parallel to the stage list, and `all([])` is True, so any
+name it did not know read as satisfied; it now asks the stage. And `done()` now
+parses a JSON output rather than only stat-ing it: no stage writes atomically, so
+a kill inside `json.dump` leaves a truncated file that `exists()` calls finished,
+and the driver would skip it forever while the next stage died on it.
+
+### `scripts/eval_by_game.py`, and four numbers it was getting wrong
+
+The per-game report: clock coverage, alignment, clips and two-path registration
+need no labels and a new broadcast gets them on arrival; handler and ball need
+labels and print `0.00-1.00 NO DATA` without them, because `stats.wilson` answers
+an empty denominator with the whole width and this is the caller that made that
+matter.
+
+An adversarial check found six defects, four of which moved printed numbers.
+
+**1. The labelled arms pooled the training split into the headline.** Half the
+possession round's frames were drawn BECAUSE the ball model had no confident
+candidate there, and two thirds of the handler round because two methods
+disagreed. Pooling them with the uniform frames moves every labelled number by
+15 to 25 points and describes no population at all:
+
+    Finals G1                  pooled    uniform    hard
+    handler, winnable frames    0.351      0.564    0.172
+    ball, proposed at any rank  0.532      0.824    0.357
+
+The line labelled "THE CEILING of every selector built on this detector" was a
+ceiling on a hard-case set. **The real ceiling is 0.824 / 0.902 / 0.964** across
+the three broadcasts, against a top-1 of 0.647 / 0.829 / 0.800 -- so there are 14
+to 18 points available to selection, where the pooled figure implied two. That
+one correction re-ranks the roadmap, which is what the arm was put there to do.
+
+**2. The detector-miss rate counted frames with nobody to miss.** Frames answered
+"nobody has it" -- ball in flight, loose, dead -- are about 40% of the labelled
+set, and there is no handler in them to draw. On the uniform split with the right
+denominator the miss rate is **18.8% / 6.3% / 9.1%**, which is exactly the
+three-fold spread the module docstring cites and could not previously produce.
+
+**3. A third of every labelled frame was scored against a neighbouring frame's
+boxes.** Clips overlap and the caches sample every second frame at 30 Hz, so 52%
+to 60% of rounded times hold two to six different cache rows, and keying on time
+alone took whichever was written last. The labelling pages record the boxes they
+drew; those boxes are a fingerprint. Matching on them ties **100% of labelled
+frames, on all three broadcasts, to the exact row the labeller saw** -- and the
+first attempt matched every handler frame and no possession frame at all, because
+one page sorts its boxes by x and the other keeps detection order.
+
+**4. "clips within 1.0 s" was the alignment arm again.** `error_s` in the clip
+index is copied from the aligner, where it is the gap to the nearest clock
+READING -- so on two of three broadcasts the arm is exactly
+`P(error <= 1 | located)`, a conditional slice of the row above it printed as
+independent evidence. It is now marked descriptive, and replaced as evidence by a
+question the report could not previously ask: **do the clips still match the
+alignment on disk?** On Finals G7 they do not. 67.0% of indexed rows exist in the
+current `aligned_events.json`; the clock resolver was fixed after those clips
+were cut, and two rows of one report were being computed against two different
+truths.
+
+Also fixed: an event-weighted F1 was given a fabricated `hits=round(rate*1000),
+total=1000` so it could live in the same class as a proportion, and that fake
+denominator printed as `n=1000` and was written into the report JSON. It carries
+its rate directly now and prints no n, because it has none.
+
+### `stats.cochran_q` was not Cochran's Q
+
+Cochran's Q compares k treatments on the SAME subjects -- the k-sample
+generalisation of McNemar. What is compared here is k independent groups:
+different games, different frames, no pairing. The right test is the chi-square
+test for homogeneity of proportions, which is what the arithmetic always was. In
+a module whose entire argument is that paired and unpaired comparisons are
+different things, borrowing the name of the paired test was not a harmless label.
+It is `homogeneity` now, with the old name kept as an alias.
+
+Run across the three labelled broadcasts it immediately fires on Finals G7 --
+Missed Shot 0.809 against 0.961 and 0.968, p = 0.0001; Made Shot (3PT) 0.762,
+p = 0.025; Foul 0.889, p = 0.029 -- which is the same stale alignment finding
+arriving from a second direction.
+
+### The scoreboard reader's reach was a hand-fitted constant, twice
+
+`locate_scores` ships 260 px and misses the far team by 64 px on a 720p Finals
+broadcast. 460 was measured to fix that, and **misses the far team by 67 px on
+the Houston broadcast**, whose far score sits 527 px from the clock. A constant
+fitted to the layouts already in the repository is not a constant, it is a memory
+of them. The reach was never doing the work anyway: what picks the score regions
+is behaviour over a whole game -- non-decreasing, rank correlation with time at
+least 0.85, a final value inside FINAL_RANGE -- and the reach is only a compute
+budget on how many boxes get that test. It now searches to the frame edge, and
+every candidate box size is a multiple of the clock's own measured height, which
+reproduces the old boxes exactly on 720p and follows the graphic on 1080p, where
+the clock is 28 px tall and the score digits are 52.

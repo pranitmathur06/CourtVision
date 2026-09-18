@@ -35,3 +35,8 @@ datasets/
 # allowed in; they move to object storage and out of git.
 # docs/clips/
 
+
+# A new broadcast cuts its clips here. docs/clips/ is tracked and already
+# 12% of a clone; a fourth game must not add another few hundred megabytes
+# of binaries to git. See courtvision.games.Broadcast.clip_dir.
+data/clips/
