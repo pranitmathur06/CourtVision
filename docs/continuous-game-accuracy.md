@@ -6827,10 +6827,14 @@ ahead on it.
 
 The question this round exists to answer is "does a new broadcast fit right in",
 and the honest first finding is that nothing in the repository could tell you,
-because **adding one meant editing eighteen files.** Three scripts carried a
-hardcoded `GAMES` dict and about fifteen more carried
-`default="data/raw_clips/fullgame.mp4"`. That, and not compute or storage, was
-the blocker.
+because adding one meant editing **four** files that genuinely had to change --
+three carrying a hardcoded `GAMES` dict and `rebuild_detector_dataset.py`
+carrying two more maps keyed the same way. (An earlier draft of this round said
+"eighteen", counting twelve scripts whose `--video` default is
+`data/raw_clips/fullgame.mp4`. Those are overridable on the command line and
+never needed editing to add a game; the count was rhetoric and the honest
+number is four. Two game-pinned defaults that are NOT overridable in practice
+do remain: `detect_shots.py` and `pack_video_game.py --game-id`.)
 
 ### The registry, and why paths are derived rather than listed
 
@@ -6840,9 +6844,14 @@ every artefact path from the key. A registry that stored
 `"detections": "outputs/clip_detections_g1.json"` would be the same eighteen
 strings in one file, and one of them would eventually point at another game's
 cache with nothing to say so. Three paths ARE listed, per game, under
-`published`: `docs/clips/index.json` is fetched by the live page and its name is
-part of a URL, so renaming it to tidy a registry would be a registry breaking the
-site. A NEW broadcast is not allowed any, and a test enforces that.
+`published`. That is **four** keys, not three: `clip_dir`, `clip_index`,
+`overlays` and `aligned`. The first three name files that are tracked and served
+-- the page fetches `clips/overlays*.json` and the clip mp4s by name, so renaming
+them to tidy a registry would be a registry breaking the site. `aligned` is a
+weaker case and should be said plainly: those files are gitignored and no URL
+points at them; they are listed only because they already exist under names the
+derivation would not produce, and re-deriving them is a rename nobody has done
+yet. A NEW broadcast is allowed none, and a test enforces that.
 
 Loading the registry now refuses: two games sharing a clip prefix (clip
 filenames would collide), two sharing a video stem (`data/raw_clips/fullgame.mp4`
@@ -6866,7 +6875,8 @@ broadcast.
 The obvious field is `unseen: true`, and an adversarial check found the claim
 false in this repository's own words. `docs/continuous-game-accuracy.md` already
 said **"Toyota Center is no longer a clean unseen arena -- it was diagnosed
-on"**; four directories of hand-placed court labels sit on this exact file; and
+on"**; four directories of hand-placed court labels sit on this broadcast, three
+of them on this exact encode and one on its 720p twin; and
 `court_register.SEARCH_MIN_SAMPLES`, `court_camera.FLOOR_LANE_LAB` and
 `court_refine.PAINT_POLARITY` were each set, in as many words, "with those
 values in view".
@@ -6932,28 +6942,43 @@ candidate there, and two thirds of the handler round because two methods
 disagreed. Pooling them with the uniform frames moves every labelled number by
 15 to 25 points and describes no population at all:
 
-    Finals G1                  pooled    uniform    hard
-    handler, winnable frames    0.351      0.564    0.172
-    ball, proposed at any rank  0.532      0.824    0.357
+                            pooled   uniform     hard
+    handler, winnable   G7       0.368     0.500    0.263
+                        G1       0.330     0.564    0.172
+                        ECF      0.419     0.657    0.233
+    ball, any rank      G7       0.600     0.902    0.318
+                        G1       0.613     0.824    0.357
+                        ECF      0.812     0.964    0.480
+
+(An earlier draft of this round printed the pooled column as 0.351 and 0.532.
+Those were pooled AND scored by the old time-keyed frame matching that defect 3
+below describes, so the table compared two things at once and was not the
+like-for-like comparison it presented. Every number above uses the fixed
+matching. The gap it closes is 13 to 30 points, not 15 to 25.)
 
 The line labelled "THE CEILING of every selector built on this detector" was a
 ceiling on a hard-case set. **The real ceiling is 0.824 / 0.902 / 0.964** across
-the three broadcasts, against a top-1 of 0.647 / 0.829 / 0.800 -- so there are 14
-to 18 points available to selection, where the pooled figure implied two. That
-one correction re-ranks the roadmap, which is what the arm was put there to do.
+the three broadcasts, against a top-1 of 0.647 / 0.829 / 0.800 -- so there are
+**7 to 18** points available to selection (17.7 on G1, 16.4 on ECF, and only 7.3
+on G7, which an earlier draft rounded away), where the pooled figure implied two.
+That one correction re-ranks the roadmap, which is what the arm was put there to
+do.
 
 **2. The detector-miss rate counted frames with nobody to miss.** Frames answered
-"nobody has it" -- ball in flight, loose, dead -- are about 40% of the labelled
-set, and there is no handler in them to draw. On the uniform split with the right
+"nobody has it" -- ball in flight, loose, dead -- are 30.5% of all labelled rows
+and 33.9% of the box/missing/nobody ones, and there is no handler in them to draw. On the uniform split with the right
 denominator the miss rate is **18.8% / 6.3% / 9.1%**, which is exactly the
 three-fold spread the module docstring cites and could not previously produce.
 
 **3. A third of every labelled frame was scored against a neighbouring frame's
 boxes.** Clips overlap and the caches sample every second frame at 30 Hz, so 52%
 to 60% of rounded times hold two to six different cache rows, and keying on time
-alone took whichever was written last. The labelling pages record the boxes they
-drew; those boxes are a fingerprint. Matching on them ties **100% of labelled
-frames, on all three broadcasts, to the exact row the labeller saw** -- and the
+alone took whichever was written last -- and on 30.7% / 30.7% / 32.6% of frames
+that was not the labeller's row. (Counting only times whose rows hold DIFFERENT
+detections the figure is about 50%, with at most four distinct rows rather than
+six; the six-row times are duplicates of one another.) The labelling pages record
+the boxes they drew; those boxes are a fingerprint. Matching on them ties **100%
+of labelled frames, on all three broadcasts, to the exact row the labeller saw** -- and the
 first attempt matched every handler frame and no possession frame at all, because
 one page sorts its boxes by x and the other keeps detection order.
 
@@ -6984,9 +7009,11 @@ different things, borrowing the name of the paired test was not a harmless label
 It is `homogeneity` now, with the old name kept as an alias.
 
 Run across the three labelled broadcasts it immediately fires on Finals G7 --
-Missed Shot 0.809 against 0.961 and 0.968, p = 0.0001; Made Shot (3PT) 0.762,
-p = 0.025; Foul 0.889, p = 0.029 -- which is the same stale alignment finding
-arriving from a second direction.
+Rebound 0.840 against 0.964 and 0.965, p = 0.0004; Missed Shot 0.809 against
+0.961 and 0.968, p = 0.0001; Made Shot (3PT) 0.762, p = 0.025; Foul 0.889,
+p = 0.029 -- which is the same stale alignment finding arriving from a second
+direction. (An earlier draft of this round omitted Rebound, which is the second
+strongest of the four.)
 
 ### The scoreboard reader's reach was a hand-fitted constant, twice
 
@@ -6998,9 +7025,19 @@ of them. The reach was never doing the work anyway: what picks the score regions
 is behaviour over a whole game -- non-decreasing, rank correlation with time at
 least 0.85, a final value inside FINAL_RANGE -- and the reach is only a compute
 budget on how many boxes get that test. It now searches to the frame edge, and
-every candidate box size is a multiple of the clock's own measured height, which
-reproduces the old boxes exactly on 720p and follows the graphic on 1080p, where
-the clock is 28 px tall and the score digits are 52.
+every candidate box size is a multiple of the clock's own measured height.
+
+Two corrections to an earlier draft of this paragraph, both found by checking it
+rather than by reading it. It does **not** reproduce the old boxes "exactly" on
+720p: the ratios give widths 70, 88 and 110 where the constants were 70, 90 and
+110, they add a fourth grow, and the x-grid starts at the frame edge rather than
+460 px from the clock. And the premise "a 44-pixel clock on a 720p encode" holds
+for only two of the three 720p broadcasts -- the ECF clock region is 36 px tall,
+so the old fixed widths were already wrong for it and nobody had noticed. On the
+Houston broadcast the locator's clock region is 28 px tall and the score digits
+are **38** px, not the 52 an earlier draft claimed; 38 still does not fit inside
+any box the old constants could build from a 28-pixel clock, which is the point,
+but the measurement is 38.
 
 ### A lead this round created rather than closed: the ball ledger's denominators
 

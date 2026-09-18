@@ -490,13 +490,24 @@ UNIFORM = ("random",)
 def _split(rows: list[dict]) -> tuple[list[dict], list[dict]]:
     """(uniform, hard). Never blended, and the uniform half is the headline.
 
-    POOLING THEM MOVES EVERY LABELLED NUMBER BY 15 TO 25 POINTS, in the
+    POOLING THEM MOVES EVERY LABELLED NUMBER BY 13 TO 30 POINTS, in the
     direction that flatters nothing and misleads everything: the hard half is a
     set of frames selected for the detector having failed on them, so a ceiling
     computed over the pool is a ceiling on a hard-case set wearing an in-game
-    label. On Finals G1 the ball's proposed-at-any-rank reads 0.532 pooled,
-    0.706 on the uniform half and 0.321 on the hard half. The first of those
-    three numbers describes no population at all.
+    label. Measured with the frame matching this file now uses, on every
+    labelled broadcast:
+
+                                    pooled   uniform     hard
+        handler, winnable   G7       0.368     0.500    0.263
+                            G1       0.330     0.564    0.172
+                            ECF      0.419     0.657    0.233
+        ball, any rank      G7       0.600     0.902    0.318
+                            G1       0.613     0.824    0.357
+                            ECF      0.812     0.964    0.480
+
+    The pooled column describes no population at all: it is an average over two
+    sets in a ratio nobody chose, which changes the moment another labelling
+    round is run with a different hard share.
     """
     return ([r for r in rows if r.get("pick") in UNIFORM],
             [r for r in rows if r.get("pick") not in UNIFORM])

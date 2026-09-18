@@ -134,24 +134,34 @@ FINALS_720P = (627, 671, 806, 916)          # 110 wide, 44 tall
 HOUSTON_1080P = (996, 1024, 777, 887)       # 110 wide, 28 tall
 
 
-def test_the_box_sizes_reproduce_the_fitted_ones_on_the_footage_they_were_fitted_to():
+def test_the_box_sizes_land_within_two_pixels_of_the_fitted_ones():
     """1.6, 2.0 and 2.5 clock-heights are 70, 88 and 110 on a 44-pixel clock.
 
-    The constants they replace were 70, 90 and 110. Expressed as ratios they
-    have to land back on the same boxes for the broadcast they were measured on,
-    or the change is not a generalisation but a different search."""
+    The constants they replace were 70, 90 and 110, so this is NOT exact -- the
+    middle box is 2 px narrower -- and a first draft of the round that made this
+    change claimed it was. What it has to be is close enough that the broadcast
+    the constants were measured on still gets boxes around the same digits.
+
+    And the constants were never right for all three 720p broadcasts anyway: the
+    ECF clock region is 36 px tall, not 44, so a fixed 70-90-110 was already
+    describing a graphic that broadcast does not have."""
     boxes = _band_candidates(FINALS_720P, 1280)
     assert sorted({r[3] - r[2] for r in boxes}) == [70, 88, 110]
     assert sorted({r[1] - r[0] for r in boxes}) == [44, 56, 68, 88]
+    # The 36-px ECF clock, which the old constants did not fit.
+    ecf = _band_candidates((595, 631, 1046, 1186), 1280)
+    assert sorted({r[3] - r[2] for r in ecf}) == [58, 72, 90]
 
 
 def test_the_search_follows_the_clock_onto_a_broadcast_it_was_not_fitted_to():
-    """On the 1080p encode the clock is 28 px tall and the score digits are 52.
+    """On the 1080p encode the locator's clock region is 28 px and the score
+    digits are 38, measured off the frame at t=2000.
 
-    Every fixed box size here was too short for them. The ratios give boxes up
-    to 56 px tall, which is the only reason the digits fit inside one."""
+    From a 28-pixel clock the old grows of 0, 6 and 12 build boxes at most 52 px
+    tall but only 45 to 110 wide at fixed widths; the ratios follow the clock
+    instead, giving heights up to 56 and widths from 45."""
     boxes = _band_candidates(HOUSTON_1080P, 1920)
-    assert max(r[1] - r[0] for r in boxes) >= 52
+    assert max(r[1] - r[0] for r in boxes) >= 38
     assert sorted({r[3] - r[2] for r in boxes}) == [45, 56, 70]
 
 
