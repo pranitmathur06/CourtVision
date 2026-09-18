@@ -300,6 +300,13 @@ def main() -> int:
             print(f"  skipping {label}: no cache or video")
             continue
         cached = json.load(open(cache_path))
+        # THE CACHE'S OWN RATE, NOT 30. This was the literal 30.0, which is
+        # right for the three 29.97 fps broadcasts and puts every frame of a
+        # 60 fps one at twice its real time -- so a labelled instant would name
+        # a moment in the middle of the next play, and every label placed on a
+        # fourth broadcast would be attached to the wrong picture. The caches
+        # record the rate they were sampled from; the pages read it.
+        rate = float(cached.get("fps") or 30.0)
         starts = {c["clip"]: float(c.get("start_s", float(c["video_s"]) - 3.0))
                   for c in json.load(open(index))["clips"] if c.get("clip")}
         for clip, rows in cached["clips"].items():
@@ -313,7 +320,7 @@ def main() -> int:
                          if b[1] >= PLAYER_CONF and (n >= len(on) or on[n])]
                 if len(boxes) < 4:
                     continue          # a replay or a close-up, not a possession
-                item = (video, label, starts[clip] + row["f"] / 30.0, boxes)
+                item = (video, label, starts[clip] + row["f"] / rate, boxes)
                 (hard if (not balls or max(balls) < HARD_CONF) else easy).append(item)
 
     want_hard = int(args.frames * args.hard_share)

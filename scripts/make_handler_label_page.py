@@ -239,6 +239,13 @@ def main() -> int:
         if not cache.exists() or not Path(video).exists() or not Path(index).exists():
             continue
         cached = json.load(open(cache))
+        # THE CACHE'S OWN RATE, NOT 30. This was the literal 30.0, which is
+        # right for the three 29.97 fps broadcasts and puts every frame of a
+        # 60 fps one at twice its real time -- so a labelled instant would name
+        # a moment in the middle of the next play, and every label placed on a
+        # fourth broadcast would be attached to the wrong picture. The caches
+        # record the rate they were sampled from; the pages read it.
+        rate = float(cached.get("fps") or 30.0)
         starts = {c["clip"]: float(c.get("start_s", float(c["video_s"]) - 3.0))
                   for c in json.load(open(index))["clips"] if c.get("clip")}
         for clip, rows in cached["clips"].items():
@@ -255,7 +262,7 @@ def main() -> int:
                 handlers = [b for b in people if b[0] == "h" and b[1] >= PLAYER_CONF]
                 if not balls and not handlers:
                     continue                      # a dead ball; teaches nothing
-                when = round(starts[clip] + row["f"] / 30.0, 1)
+                when = round(starts[clip] + row["f"] / rate, 1)
                 if (label, when) in already:
                     continue
                 item = (video, label, when, boxes)

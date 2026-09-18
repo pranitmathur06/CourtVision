@@ -130,3 +130,32 @@ def test_the_report_writes_a_json_whose_arms_carry_their_denominators(broadcast,
     for arm in payload["arms"]:
         if arm["total"]:
             assert arm["hits"] <= arm["total"], arm["name"]
+
+
+def test_a_sixty_hertz_broadcast_is_sampled_at_the_same_rate_as_a_thirty():
+    """`clip_detect_raw.STEP = 2` is in FRAMES: 15 Hz at 30 fps and 30 Hz at 60.
+
+    A fourth broadcast would have got twice the temporal resolution of the
+    other three, at twice the cost, and a cache that is not comparable with
+    theirs -- the same mistake `TrackerConfig` exists to stop making with
+    `TRACK_MAX_AGE = 15`.
+    """
+    import clip_detect_raw
+    for fps, expected in ((29.97, 2), (30.0, 2), (59.94, 4), (60.0, 4)):
+        step = max(1, int(round(fps / clip_detect_raw.RATE)))
+        assert step == expected, f"{fps} fps -> step {step}"
+        assert abs(fps / step - 15.0) < 0.1
+
+
+def test_the_labelling_pages_place_a_frame_at_its_real_time():
+    """Both pages computed `start_s + f / 30.0` with the literal 30.
+
+    On a 60 fps broadcast that puts every frame at twice its real time, so a
+    labelled instant would name a moment in the middle of the next play and
+    every label placed on a fourth broadcast would be attached to the wrong
+    picture."""
+    for name in ("make_handler_label_page.py", "make_possession_label_page.py"):
+        source = (ROOT / "scripts" / name).read_text()
+        assert 'row["f"] / 30.0' not in source, f"{name} still divides by 30"
+        assert 'row["f"] / rate' in source
+        assert 'cached.get("fps")' in source

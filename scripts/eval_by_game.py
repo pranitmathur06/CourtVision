@@ -389,8 +389,11 @@ def _disagreement(a, b, shift, shape) -> float:
 # -- labelled arms ----------------------------------------------------------
 
 #: The labelling pages computed a frame's time as `start_s + f / 30.0` -- the
-#: literal 30.0, not the encode's true 29.97. Reproducing their arithmetic is
-#: the only way a label finds its own row.
+#: literal 30.0, not the encode's true 29.97. They use the cache's own rate now,
+#: because 30.0 puts every frame of a 60 fps broadcast at twice its real time,
+#: but the labels already collected were placed with the literal. Both
+#: conventions are tried and the BOXES decide which row is right, so this file
+#: does not have to know which page wrote which label.
 PAGE_FPS = 30.0
 #: Player boxes the pages offered for the handler choice.
 PLAYER_CONF = 0.35
@@ -455,15 +458,18 @@ def _cached_frames(game: Broadcast) -> tuple[dict[float, list], int]:
     data = json.loads(game.clip_detections.read_text())
     index = {c["clip"]: c for c in
              json.loads(game.clip_index.read_text())["clips"] if c.get("clip")}
+    rates = {PAGE_FPS, float(data.get("fps") or PAGE_FPS)}
     found: dict[float, list] = {}
     for clip, frames in data.get("clips", {}).items():
         start = index.get(clip, {}).get("start_s")
         if start is None:
             continue
         for frame in frames:
-            when = round(float(start) + frame["f"] / PAGE_FPS, 1)
-            if when not in wanted:
+            times = {round(float(start) + frame["f"] / rate, 1) for rate in rates}
+            times = [t for t in times if t in wanted]
+            if not times:
                 continue
+            when = times[0]
             on = frame.get("on") or []
             people = [b for b in frame["d"] if b[0] in ("p", "h")]
             boxes = sorted([b[2:] for n, b in enumerate(people)

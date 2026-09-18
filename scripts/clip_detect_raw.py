@@ -31,8 +31,16 @@ from pathlib import Path
 
 #: Everything at or above this is written down; the chooser decides from there.
 CONF_FLOOR = 0.08
-#: Detect every Nth frame of the clip.
+#: Detect every Nth frame of the clip. IN FRAMES, WHICH IS THE PROBLEM: 2 is
+#: 15 Hz on the 30 fps broadcasts this was written for and 30 Hz on a 60 fps
+#: one, so a fourth broadcast would silently get twice the temporal resolution
+#: of the other three, at twice the cost, and its cached detections would not be
+#: comparable with theirs. `RATE` is the quantity that was meant -- the same
+#: mistake `TrackerConfig` was built to stop making with `TRACK_MAX_AGE = 15`.
 STEP = 2
+#: Detected frames per second of clip. 15 Hz is exactly `STEP = 2` at 30 fps,
+#: so the three broadcasts already cached are unchanged.
+RATE = 15.0
 #: Recompute the floor mask this often, in detected frames. It moves slowly.
 COURT_EVERY = 3
 #: Frames handed to the detector at once.
@@ -67,7 +75,15 @@ def main() -> int:
                              "hard negatives cut from the crowd, and offers 2.6.")
     parser.add_argument("--duration", type=float, default=6.0)
     parser.add_argument("--imgsz", type=int, default=1280)
-    parser.add_argument("--step", type=int, default=STEP)
+    parser.add_argument("--rate", type=float, default=RATE,
+                        help="detected frames per second of clip. Converted to "
+                             "a frame step against the video's own rate, so a "
+                             "60 fps broadcast is sampled at the same instants "
+                             "as a 30 fps one instead of twice as often.")
+    parser.add_argument("--step", type=int, default=None,
+                        help="override --rate with a literal frame step. Only "
+                             "for reproducing a cache written before --rate "
+                             "existed.")
     parser.add_argument("--court-erode", type=int, default=COURT_ERODE_PX,
                         help="how far the floor mask is pulled in before a "
                              "player's feet are tested against it")
@@ -107,7 +123,10 @@ def main() -> int:
           f"{'  fp16' if precision else '  fp32'}", flush=True)
     capture = cv2.VideoCapture(args.video)
     fps = capture.get(cv2.CAP_PROP_FPS) or 30.0
+    step = args.step if args.step else max(1, int(round(fps / args.rate)))
     count = int(round(args.duration * fps))
+    print(f"  {fps:.2f} fps source, step {step} -> {fps / step:.1f} detected "
+          f"frames a second", flush=True)
     width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
@@ -120,7 +139,7 @@ def main() -> int:
             ok, frame = capture.read()
             if not ok:
                 break
-            if f % args.step == 0:
+            if f % step == 0:
                 wanted.append(f)
                 frames.append(frame)
 
@@ -179,7 +198,8 @@ def main() -> int:
     target.parent.mkdir(parents=True, exist_ok=True)
     json.dump({"video": args.video, "detector": args.detector,
                "imgsz": args.imgsz, "conf_floor": CONF_FLOOR,
-               "step": args.step, "fps": fps, "frames_per_clip": count,
+               "step": step, "rate": fps / step, "fps": fps,
+               "frames_per_clip": count,
                "source_size": [width, height], "clips": out},
               open(target, "w"), separators=(",", ":"))
     print(f"{len(out)} clips -> {target} "
