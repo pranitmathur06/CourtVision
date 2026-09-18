@@ -41,6 +41,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
+from courtvision.candidates import to_box  # noqa: E402
 from courtvision.stats import mcnemar, wilson  # noqa: E402
 
 #: COCO pose keypoint indices. 9 and 10 are the wrists.
@@ -68,12 +69,6 @@ def rows():
 
 def centre(box):
     return ((box[0] + box[2]) / 2, (box[1] + box[3]) / 2)
-
-
-def to_box(point, box) -> float:
-    dx = max(box[0] - point[0], 0.0, point[0] - box[2])
-    dy = max(box[1] - point[1], 0.0, point[1] - box[3])
-    return math.hypot(dx, dy)
 
 
 def overlaps(a, b, threshold: float = 0.5) -> bool:

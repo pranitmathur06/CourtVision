@@ -8707,10 +8707,23 @@ swept once, on one broadcast, against the wrong side of the trade.
 ### One constant, two errors, and only one of them was ever measured
 
 Erode the court too little and the front row stands on it; erode too much and a
-player is deleted before any kernel is asked about him. `COURT_ERODE_PX` was
-chosen against the first error alone, with the note that *"at 45 px the
-survivors average 6.6 a frame... while 0 px keeps 8.1 and admits the front
-row."* Survivor counts see over-keeping and cannot see under-keeping at all.
+player is deleted before any kernel is asked about him.
+
+**There were two constants with the same name.** `candidates.COURT_ERODE_PX`
+is 45, chosen against the first error alone -- *"at 45 px the survivors average
+6.6 a frame... while 0 px keeps 8.1 and admits the front row"* -- and survivor
+counts see over-keeping and cannot see under-keeping at all. But
+`clip_detect_raw.py` defined its own `COURT_ERODE_PX = 15` that shadowed it, so
+the library documented one sweep and the pipeline ran a different number. Every
+cached mask in this repository was built with 15, not 45.
+
+The 15 was chosen for a real reason and against the right error: 45 px kept 4
+of the 10 players on Finals G1, because a player near a sideline has his feet
+at the very edge of a mask pulled 45 px inward, and 15 took that to 7. But it
+was **39 frames of each of two broadcasts, counted by hand, against no bound in
+either direction** -- and it is in pixels, so on the 1080p broadcast it is 1.4%
+of the frame height where on the others it is 2.1%. The shadowing constant is
+gone; the fallback is a share, and the fitted value is what the pipeline reads.
 
 Both sides are now bounded without labels -- more than thirteen kept is
 impossible, and the carrier must be kept -- so the constant is fittable on a
@@ -8773,12 +8786,64 @@ broadcast.** Pulling the court's edge in is a blunt instrument -- it removes
 the front row and the baseline corner together -- and the front row needs its
 own mechanism.
 
-There is one already written and unused. `candidates.kit_members` drops a
-person whose torso matches neither kit, at `MAX_KIT_DISTANCE_LAB = 26.0`, and
-Round 112's kit model gives it centres fitted per broadcast and scored at
-0.94-0.98. A spectator is not wearing either kit. That is the next thing to
-measure against these two bounds, and it is the first time there has been a way
-to tell whether it helps.
+### The front row gets its own mechanism, and then all four broadcasts fit
+
+A spectator is not wearing either kit. `KitModel.belongs_on_court` drops a box
+whose torso sits further than a given CIELAB distance from both kit centres
+AND from the officials' -- so the ten players and the three referees stay and
+the front row goes, without pulling the court's edge in at all. Swept alongside
+the erosion over the same 250 frames:
+
+    game   erode/height   kit gate   carrier kept   <=13 kept
+    g7           0.0300         26          0.866       0.972
+    g1           0.0625         40          0.883       0.952
+    ecf          0.0625        off          0.930       0.968
+    hou          0.0000        off          0.628       0.972
+
+**Every broadcast now has a setting that satisfies both bounds**, where erosion
+alone had none on two of them. The two that needed the kit gate are the two
+that failed: G7 at a 26 gate reaches 0.972 over-keeping where its best erosion
+managed 0.904, and Finals G1 at 40 reaches 0.952 against 0.924.
+
+And every broadcast picks a different pair, which is the argument for fitting
+rather than shipping a constant: G7 wants a light erosion and a tight kit gate,
+ECF wants a heavy erosion and no gate, Houston wants no erosion at all.
+
+Houston is still the worst at 0.628, and its gap is not the mask's shape --
+it is the only broadcast where no setting reaches 0.85. That one is not solved.
+
+### Delivered and measured on the whole broadcast, not a sample
+
+`remask_detections.py` rebuilt Houston's mask from the fitted setting -- 21,420
+frames, 16,073 of them changed, the detections untouched -- and
+`compare_masks.py` judged the two caches on the same frames:
+
+    arm             before   after    paired
+    carrier kept     0.454   0.553    after won 1935, lost  186,  p = 3e-315
+    <=13 kept        0.996   0.980    after won    1, lost  339,  p = 3e-100
+
+**That is a trade and not a win, and the printed sentence under it was wrong.**
+The tool said a change is an improvement only if one bound wins and the other
+does not lose; by that sentence this is not an improvement, because the count
+side loses significantly. The sentence has been replaced with the rule the fit
+actually declares: the carrier side must win and the count side must stay above
+0.95. It does -- 0.980 -- so the change stands, and the exchange rate is **9.9
+points of ball carrier for 1.6 points of over-keeping**, about six to one.
+
+Finals G1, the same way:
+
+    arm             before   after    paired
+    carrier kept     0.684   0.774    after won 2868, lost 1684,  p = 8e-69
+    <=13 kept        0.999   0.971    after won   17, lost  596,  p = 3e-152
+
+Nine points of carrier for 2.8 of over-keeping, and 0.971 still clears the
+floor. Two broadcasts, two different fitted settings, the same shape of result.
+
+One number did not replicate. The fit predicted 0.628 for Houston from 250
+sampled frames and the whole broadcast delivers 0.553. A 250-frame sample of a
+21,000-frame broadcast is a seven-point-optimistic estimate of its own chosen
+setting, which is worth knowing before the next constant is fitted on a
+sample.
 
 ### The mask can be rebuilt without a GPU, which is why it never was
 
@@ -8788,4 +8853,101 @@ morphology operations on frames already on disk. Changing the mask has meant
 rebuilding both, so it has effectively never been changed.
 `scripts/remask_detections.py` rewrites only `on`, refuses to overwrite its own
 input so the before-and-after stays measurable, and records which erosion built
-the file it writes.
+the file it writes. `scripts/compare_masks.py` then judges two caches on the
+same frames against both bounds, with exact McNemar, because the two move in
+opposite directions by construction and a change is only an improvement if one
+wins and the other does not lose.
+
+### This is not an internal metric: it is what the page draws
+
+`clip_boxes.py:418` filters the published overlay boxes by `on`. So on the
+Houston broadcast the shipped page **does not draw a box on the player holding
+the ball, on more than half the frames where he is holding it.** That is the
+most visible thing the product does, it is wrong more often than right on the
+newest broadcast, and no labelled metric in this repository was looking at it.
+
+## Where 85% stands after Rounds 112-116, and what each remaining arm needs
+
+    arm                                  g7      g1     ecf     hou   needs
+    alignment: event onto video       0.922   0.973   0.966   0.995   nothing
+    clips within 1 s                  0.93    0.99    0.93    0.977   nothing
+    kits: never six a side            0.955   0.939   0.977   0.962   nothing
+    boxes: never more than 13 kept    0.963   0.999   0.983   0.996   nothing
+    clock: game seconds seen           --      --     0.804   0.900   the ECF scorebug
+    boxes: keeps the ball carrier     0.866   0.883   0.930   0.628   a cache rebuild
+    ball: physically possible steps   0.758   0.756   0.768   0.825   a detector
+    ball: top-1 selection              --      --     0.800    --     a detector
+    handler attribution                --      --     0.657    --     the ball
+    rebound off/def                   0.483   0.510   0.421   0.391   tracking
+    assist yes/no                     0.556   0.464   0.539   0.440   tracking
+
+Four arms clear 85% on every broadcast and three of those four are scored with
+**no labels at all** -- they are facts about basketball, so a broadcast nobody
+has touched gets them on arrival. That is the part of the system that works on
+an arbitrary game, and it is the timestamping and indexing half.
+
+The rest is one chain. Rebounds and assists inherit handler attribution;
+handler attribution inherits ball selection; ball selection has an oracle of
+0.915-0.964 and six failed attempts to reach it, of which five are refuted in
+this log with the measurement that refuted them. **No work downstream of the
+ball can pay until the ball is selected better, and the evidence says the lever
+is a detector that emits fewer decoys rather than a cleverer chooser over the
+fourteen per frame it emits now.**
+
+The carrier row is the one thing on this table that is fixed and not yet
+delivered: the settings are chosen and committed, and the cached detections
+still carry the old mask until they are rebuilt, which is CPU and not GPU.
+
+## Round 117: two library faults the mask work walked into
+
+### Exact McNemar cannot count past a thousand
+
+`stats.mcnemar` computes the exact binomial tail as a sum of `math.comb`
+divided by `2.0 ** n`. `2.0 ** 4000` is not a float, so the first caller to
+hand it four thousand discordant pairs -- the mask before-and-after, which has
+21,420 paired frames -- got `OverflowError: Result too large` instead of a
+p-value.
+
+The exact test exists because the chi-square approximation is not trustworthy
+on the twenty-odd discordant pairs a 157-frame set produces, and that argument
+is right and unchanged. It simply does not extend to the other end. Above a
+thousand discordant pairs the continuity-corrected normal approximation is
+accurate to many decimal places, so the cap **widens the domain rather than
+lowering the standard** -- and there is a test asserting the two regimes agree
+across the boundary, because a statistic that steps when a threshold is crossed
+is worse than either branch.
+
+### Four copies of the hold gate, which is the bug this project already named
+
+`stats.py` opens by explaining that `wilson` had four copies which did not
+agree. In the course of this work `HOLD_GATE = 0.45` and `to_box` acquired
+five: `eval_play_events.py`, `eval_court_mask.py`, `fit_court_mask.py`,
+`compare_masks.py` and `eval_wrist_handler.py`. They all agreed today, which is
+exactly how the `wilson` copies started.
+
+One definition now, in `candidates.py` beside the other "which player, at which
+moment" constants, with the reason it is measured to a box EDGE in box heights
+rather than in pixels attached to it. `carrier_of` is there too, since three of
+the five had also written the same "who is holding the ball" loop.
+
+A constant that means the same thing in five files is one constant that has
+been copied five times, not five constants, and the difference only shows up
+on the day one of them is changed.
+
+### What is delivered, and what adopting it would mean
+
+The fitted settings are committed in `data/court_erode.json` and
+`clip_detect_raw.py` reads them, so **any broadcast processed from here uses
+the fitted mask**. The four already-cached broadcasts are rebuilt into
+`outputs/remask/` and measured, and they are deliberately NOT swapped over the
+caches in place.
+
+Swapping them is a real decision, not a tidy-up. Every labelled number measured
+against those caches -- handler, ball, the play-event arms, the tracking
+metric -- would move, and the published overlays would have to be rebuilt from
+`clip_boxes.py` for the page to show the difference. Doing that quietly in the
+same session that measured the old numbers would leave a log where half the
+figures came from one mask and half from another, with nothing saying which.
+
+So the improvement is measured, reproducible and one `cp` away, and taking it
+is a separate step that should re-run the per-game report afterwards.

@@ -34,7 +34,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
 import statistics
 import sys
 from collections import Counter
@@ -44,6 +43,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
 from courtvision.games import get, registry  # noqa: E402
+from courtvision.candidates import HOLD_GATE, to_box  # noqa: E402
 from courtvision.stats import iou, wilson  # noqa: E402
 
 #: The confidence the labelling pages offered a player box at.
@@ -105,11 +105,6 @@ def counts(game) -> tuple[list[int], list[int]]:
     return detected, kept
 
 
-#: A ball this far from a player's box edge, in that player's own box heights,
-#: is in his hands. The same gate `eval_play_events.py` uses.
-HOLD_GATE = 0.45
-
-
 def drops_the_ball_carrier(game) -> dict:
     """How often the mask throws away the man holding the ball.
 
@@ -144,7 +139,7 @@ def drops_the_ball_carrier(game) -> dict:
             centre = ((ball[2] + ball[4]) / 2.0, (ball[3] + ball[5]) / 2.0)
             best = None
             for index, box in enumerate(people):
-                edge = _to_box(centre, box[2:])
+                edge = to_box(centre, box[2:])
                 if best is None or edge < best[0]:
                     best = (edge, index, box)
             edge, index, box = best
@@ -158,12 +153,6 @@ def drops_the_ball_carrier(game) -> dict:
     return {"carrier_frames": frames, "carrier_dropped": dropped,
             "carrier_kept": (frames - dropped) / frames if frames else float("nan"),
             "carrier_ci": [low, high]}
-
-
-def _to_box(point, box) -> float:
-    dx = max(box[0] - point[0], 0.0, point[0] - box[2])
-    dy = max(box[1] - point[1], 0.0, point[1] - box[3])
-    return math.hypot(dx, dy)
 
 
 def report(key: str, detected: list[int], kept: list[int]) -> dict:
@@ -280,6 +269,18 @@ def main() -> int:
     for key in (args.game or list(registry())):
         game = get(key)
         out[key] = report(key, *counts(game))
+        # Which mask built this cache, if it says. A cache written before
+        # `remask_detections.py` existed says nothing, and that silence is
+        # itself the answer: it was built with the shipped constant.
+        if game.clip_detections.exists():
+            built = json.loads(game.clip_detections.read_text())
+            share = built.get("mask_erode_share")
+            gate = built.get("mask_kit_max_lab")
+            print("        built with: "
+                  + ("the shipped constant (the cache records no mask)"
+                     if share is None else
+                     f"erosion {share:.4f} of frame height, kit gate "
+                     f"{'off' if gate is None else f'{gate:.0f}'}"))
         carrier = drops_the_ball_carrier(game)
         if carrier.get("carrier_frames"):
             low, high = carrier["carrier_ci"]

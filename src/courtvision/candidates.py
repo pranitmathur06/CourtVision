@@ -48,7 +48,51 @@ COURT_ERODE_SHARE = 45 / 720
 #: to the pipeline's full-resolution frame. Everything here is a shape
 #: operation, so the mask loses nothing by being found small and scaled up.
 CANONICAL_MASK_HEIGHT = 720
+#: Where `fit_court_mask.py` leaves its per-broadcast choice. Under `data/`
+#: rather than `outputs/` because it is a DECISION the pipeline depends on, not
+#: a result: `outputs/` is ignored by git, so a fitted mask living there would
+#: silently not exist on any other machine and every broadcast would quietly
+#: fall back to the shipped constant.
+COURT_ERODE_FILE = "data/court_erode.json"
+#: A ball this far from a player's box EDGE, in units of that player's own box
+#: height, is in his hands. Scale-free on purpose: a player at the far sideline
+#: is a third the pixels of one under the basket, and a gate in pixels would
+#: hold the near player to a stricter standard than the far one.
+#:
+#: Box EDGE rather than box centre because that is what was measured: wrists
+#: from a pose model did not beat it and box centre lost to it outright
+#: (Round 110). One definition because three scripts had grown their own, which
+#: is how `wilson` ended up with four copies.
+HOLD_GATE = 0.45
 FEET_ON_COURT_SHARE = 0.45
+
+
+def to_box(point, box) -> float:
+    """Distance from a point to the nearest edge of a box; 0 inside it."""
+    import math
+
+    dx = max(box[0] - point[0], 0.0, point[0] - box[2])
+    dy = max(box[1] - point[1], 0.0, point[1] - box[3])
+    return math.hypot(dx, dy)
+
+
+def carrier_of(row, people, *, hold_gate: float = HOLD_GATE) -> int | None:
+    """Which of `people` is holding the most confident ball, or None.
+
+    `people` are boxes as [x1, y1, x2, y2] in the same coordinates as the row's
+    detections. Returns an index so the caller can look the box up in whatever
+    parallel list it keeps -- a mask, a colour, a track id.
+    """
+    balls = [b for b in row["d"] if b[0] == "b"]
+    if not balls or not people:
+        return None
+    ball = max(balls, key=lambda b: b[1])
+    centre = ((ball[2] + ball[4]) / 2.0, (ball[3] + ball[5]) / 2.0)
+    nearest = min(range(len(people)), key=lambda i: to_box(centre, people[i]))
+    height = people[nearest][3] - people[nearest][1]
+    if height <= 0 or to_box(centre, people[nearest]) > hold_gate * height:
+        return None
+    return nearest
 
 
 def court_region(image: np.ndarray, erode_px: int | None = COURT_ERODE_PX,

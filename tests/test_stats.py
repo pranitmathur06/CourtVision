@@ -126,3 +126,43 @@ def test_overlap_is_zero_for_disjoint_boxes_and_one_for_identical_ones():
     assert iou([0, 0, 10, 10], [0, 0, 10, 10]) == pytest.approx(1.0)
     assert iou([0, 0, 10, 10], [10, 10, 20, 20]) == 0.0
     assert iou([0, 0, 10, 10], [5, 0, 15, 10]) == pytest.approx(1 / 3)
+
+
+def test_mcnemar_survives_thousands_of_discordant_pairs():
+    """The exact tail divides by 2**n, which overflows a float around n=1000.
+    The first caller to hand it four thousand discordant pairs got an
+    OverflowError instead of a p-value."""
+    from courtvision.stats import mcnemar
+
+    a = [True] * 4000 + [False] * 4000
+    b = [False] * 4000 + [True] * 4000
+    only_a, only_b, p = mcnemar(a, b)
+    assert (only_a, only_b) == (4000, 4000)
+    assert p == 1.0
+
+
+def test_a_large_lopsided_split_is_significant():
+    from courtvision.stats import mcnemar
+
+    a = [True] * 3500 + [False] * 2500
+    b = [False] * 3500 + [True] * 2500
+    _, _, p = mcnemar(a, b)
+    assert p < 1e-6
+
+
+def test_the_two_regimes_agree_at_the_boundary():
+    """The approximation must not step when the cap is crossed."""
+    from courtvision.stats import EXACT_MAX_DISCORDANT, mcnemar
+
+    n = EXACT_MAX_DISCORDANT
+    wins = n // 2 + 30
+    a = [True] * wins + [False] * (n - wins)
+    b = [False] * wins + [True] * (n - wins)
+    _, _, exact = mcnemar(a, b)
+
+    bigger = n + 1
+    wins_b = round(wins * bigger / n)
+    a2 = [True] * wins_b + [False] * (bigger - wins_b)
+    b2 = [False] * wins_b + [True] * (bigger - wins_b)
+    _, _, approximate = mcnemar(a2, b2)
+    assert abs(exact - approximate) < 0.02

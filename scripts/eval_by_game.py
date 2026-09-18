@@ -723,6 +723,46 @@ def kits_arm(game: Broadcast) -> list[Arm]:
     ]
 
 
+#: Where `eval_court_mask.py` leaves its per-broadcast result.
+MASK_REPORT = "outputs/games/court_mask.json"
+
+
+def floor_mask_arm(game: Broadcast) -> list[Arm]:
+    """Does the floor mask keep the people who are playing, and only them?
+
+    Two arms because the rule the sport supplies is ONE-SIDED. Six of a kit on
+    the court is impossible, so over-keeping has a hard bound; under-keeping
+    had none until the ball supplied one -- whoever is holding it is playing,
+    so a mask that drops him is wrong with no appeal to how many people ought
+    to be in shot.
+
+    The second arm is what the published page draws: `clip_boxes.py` filters
+    the overlay boxes by this mask, so a broadcast scoring 0.45 here is one
+    whose page does not box the ball handler on half the frames he has it.
+    """
+    path = ROOT / MASK_REPORT
+    if not path.exists():
+        return [Arm("floor mask: at most 13 kept", 0, 0,
+                    note=f"{MASK_REPORT} has not been written; "
+                         "run eval_court_mask.py")]
+    row = json.loads(path.read_text()).get(game.key)
+    if not row:
+        return [Arm("floor mask: at most 13 kept", 0, 0,
+                    note="no mask report for this broadcast")]
+    arms = [Arm("floor mask: at most 13 kept",
+                int(row["frames"]) - int(row["impossible"]), int(row["frames"]),
+                note="ten players and at most three officials, so more than "
+                     "thirteen kept is impossible. No labels.")]
+    if row.get("carrier_frames"):
+        arms.append(Arm("floor mask: keeps the ball carrier",
+                        int(row["carrier_frames"]) - int(row["carrier_dropped"]),
+                        int(row["carrier_frames"]),
+                        note="whoever holds the ball is playing. This is what "
+                             "the published overlay draws. A LOWER bound: it "
+                             "inherits the ball selector's own error."))
+    return arms
+
+
 #: Where `eval_ball_physics.py` leaves its per-broadcast result.
 PHYSICS_REPORT = "outputs/games/ball_physics.json"
 
@@ -777,6 +817,7 @@ def evaluate(game: Broadcast, args) -> dict:
             arms.append(Arm("registration: agreement", 0, 0,
                             note=f"failed: {type(error).__name__}: {error}"))
     arms += kits_arm(game)
+    arms += floor_mask_arm(game)
     arms += ball_physics_arm(game)
     arms += handler_arm(game)
     arms += ball_arm(game)

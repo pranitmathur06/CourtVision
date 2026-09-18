@@ -1,0 +1,18 @@
+{
+  "g7": {
+    "erode_share": 0.03,
+    "kit_max_lab": 26.0
+  },
+  "g1": {
+    "erode_share": 0.0625,
+    "kit_max_lab": 40.0
+  },
+  "ecf": {
+    "erode_share": 0.0625,
+    "kit_max_lab": null
+  },
+  "hou": {
+    "erode_share": 0.0,
+    "kit_max_lab": null
+  }
+}

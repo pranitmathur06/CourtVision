@@ -3,9 +3,13 @@
 
 THE MASK HAS TWO ERRORS AND ONE CONSTANT TRADES THEM. Erode too little and the
 front row stands on the court; erode too much and a player is deleted before
-any kernel is asked about him. `COURT_ERODE_PX = 45` was swept once, on one
-broadcast, against the first error only -- and the second error is the larger
-one: Houston's mask drops the man holding the ball on 55% of frames.
+any kernel is asked about him. The library's `COURT_ERODE_PX = 45` was swept
+once, on one broadcast, against the first error only; `clip_detect_raw.py` then
+shadowed it with its own `COURT_ERODE_PX = 15`, chosen against the second error
+on 39 frames of each of two broadcasts counted by hand. So every cached mask
+was built by a number that was never the documented one, and neither number had
+a bound in either direction. The second error is the larger: Houston's mask
+drops the man holding the ball on 55% of frames.
 
 BOTH SIDES ARE MEASURABLE WITHOUT LABELS, which is what makes this fittable on
 a broadcast nobody has touched:
@@ -44,7 +48,13 @@ import numpy as np
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
-from courtvision.candidates import court_region, stands_on_court  # noqa: E402
+from courtvision.candidates import (  # noqa: E402
+    COURT_ERODE_FILE,
+    HOLD_GATE,
+    court_region,
+    stands_on_court,
+    to_box,
+)
 from courtvision.games import get, registry  # noqa: E402
 from courtvision.kits import KitModel, sample_clip, torso_lab  # noqa: E402
 from courtvision.stats import iou, wilson  # noqa: E402
@@ -63,16 +73,8 @@ OVER_FLOOR = 0.95
 IMPOSSIBLE_ABOVE = 13
 #: Two boxes overlapping this much are one person seen by two detectors.
 SAME_PERSON_IOU = 0.5
-#: A ball within this many of the holder's own box heights is in his hands.
-HOLD_GATE = 0.45
 #: One detection row in this many is sampled.
 ROW_STRIDE = 30
-
-
-def to_box(point, box) -> float:
-    dx = max(box[0] - point[0], 0.0, point[0] - box[2])
-    dy = max(box[1] - point[1], 0.0, point[1] - box[3])
-    return math.hypot(dx, dy)
 
 
 def distinct(boxes) -> int:
@@ -207,7 +209,7 @@ def main() -> int:
     parser.add_argument("--game", action="append", default=[])
     parser.add_argument("--frames", type=int, default=200,
                         help="frames sampled per broadcast")
-    parser.add_argument("--out", default="outputs/games/court_erode.json")
+    parser.add_argument("--out", default=str(COURT_ERODE_FILE))
     args = parser.parse_args()
 
     keys = args.game or list(registry())

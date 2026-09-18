@@ -49,6 +49,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
+from courtvision.candidates import HOLD_GATE, to_box  # noqa: E402
 from courtvision.games import get, registry  # noqa: E402
 from courtvision.kits import (  # noqa: E402
     KitModel,
@@ -60,11 +61,6 @@ from courtvision.stats import iou, wilson  # noqa: E402
 
 REBOUND = re.compile(r"^(.*?)\s+REBOUND \(Off:(\d+) Def:(\d+)\)")
 
-#: A ball this far from a player's box EDGE, in units of that player's own box
-#: height, is not in his hands. Scale-free on purpose: a player at the far
-#: sideline is a third the pixels of one under the basket, and a gate in pixels
-#: would hold the near player to a stricter standard than the far one.
-HOLD_GATE = 0.45
 #: How far either side of the logged rebound to look for the securing player. A
 #: rebound is logged when the ball is SECURED, and `check_rebounds.py` measured
 #: on one game that the credited player has it a second or more BEFORE the
@@ -93,13 +89,6 @@ PBP_CACHE = "data/pbp_cache"
 #: A shooter vote this one-sided is worth putting into the kit-to-team anchor.
 #: Below it the window is a scramble and the vote is noise.
 ANCHOR_MIN_SHARE = 0.75
-
-
-def to_box(point, box) -> float:
-    """Distance from a point to the nearest edge of a box; 0 inside it."""
-    dx = max(box[0] - point[0], 0.0, point[0] - box[2])
-    dy = max(box[1] - point[1], 0.0, point[1] - box[3])
-    return math.hypot(dx, dy)
 
 
 def rebound_truth(events) -> list[tuple[dict, str]]:

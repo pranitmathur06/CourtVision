@@ -74,6 +74,8 @@ the scoreboard and aligning it — and draw boxes over the footage. So:
 | Deciding whether a rebound was offensive or defensive | **39–51%**, against a 72% majority class — worse than saying "defensive" every time |
 | Deciding whether a basket was assisted | **44–56%**, against a 54–60% majority class |
 | Never keeping more than thirteen people on the court | **96–100%** per game |
+| Keeping the man who is holding the ball on the court | **45–87%** per game |
+| A ball track whose every step a basketball could have made | **67–73%** as shipped, **76–83%** with the court-motion selector |
 | Naming a player from his jersey | **45%** |
 
 The three-line block in the middle of that table is new and is the honest
@@ -85,6 +87,14 @@ stable all game. They measure the event logic on perfect inputs. Measured on
 pixels, both are at or below their own majority class, and the cause is
 upstream: rebounds and assists inherit ball-handler attribution (66%), which
 inherits ball selection (80% against a 96% ceiling).
+
+**The last four rows need no labels at all.** Ten players and at most three
+officials are on a live court; five wear each kit; a rim is 18 inches across so
+the ball's speed is measurable in feet; and whoever is holding the ball is
+playing. Those four facts about basketball are the ground truth, which means a
+broadcast nobody has ever labelled gets those numbers on arrival — and that is
+the difference between a demo and something that can be pointed at an arbitrary
+game.
 
 The first of those four games is one **nothing in this repository was tuned on**:
 a 2026 regular-season broadcast in a third arena, at 1080p60, with a scorebug

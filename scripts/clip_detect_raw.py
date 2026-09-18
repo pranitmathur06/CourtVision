@@ -45,16 +45,22 @@ RATE = 15.0
 COURT_EVERY = 3
 #: Frames handed to the detector at once.
 BATCH = 8
-#: How far the floor mask is eroded before feet are tested against it. The
-#: library's own default is 45 px, which is tuned for a different question and
-#: costs real players here: on the Finals G1 broadcast it kept 4 of the 10
-#: players on the floor, because a player standing near a sideline has his feet
-#: at the very edge of a mask that has just been pulled 45 px inward. Measured
-#: over 39 frames of each of two broadcasts, at 15 px the count goes 4 -> 7 on
-#: that game and 7 -> 8 on G7 while still dropping about two boxes a frame --
-#: the bench and the front row, which is what the test is for. A convex hull
+#: How far the floor mask is eroded before feet are tested against it, as a
+#: share of frame height. 15 px on the 720p broadcasts this was written for.
+#:
+#: This used to be `COURT_ERODE_PX = 15`, a SECOND constant with the same name
+#: as `candidates.COURT_ERODE_PX = 45` and shadowing it, so the library
+#: documented one sweep and the pipeline ran another number. It was chosen for
+#: a real reason -- 45 px kept 4 of the 10 players on Finals G1, because a
+#: player near a sideline has his feet at the very edge of a mask pulled 45 px
+#: inward, and 15 px took that to 7 -- but that was 39 frames of each of two
+#: broadcasts, counted by hand, against no bound in either direction.
+#:
+#: `fit_court_mask.py` now chooses per broadcast against two bounds that need
+#: no labels, over some 14,000 frames, and writes `data/court_erode.json`. This
+#: is only the fallback for a broadcast that has not been fitted. A convex hull
 #: over the floor recovers everything and filters nothing, so it is not used.
-COURT_ERODE_PX = 15
+COURT_ERODE_SHARE_FALLBACK = 15 / 720
 
 CODE = {"player": "p", "handler": "h", "ball": "b", "rim": "r"}
 
@@ -96,7 +102,7 @@ def main() -> int:
                              "fit_court_mask.py chooses against two label-free "
                              "bounds, and to the shipped 45/720 if there is "
                              "none. A share rather than pixels because 45 px "
-                             "is 6.25% of a 720p frame and 4.2% of a 1080p "
+                             "is 6.25%% of a 720p frame and 4.2%% of a 1080p "
                              "one, and the constant otherwise means two "
                              "different things on two broadcasts.")
     parser.add_argument("--limit", type=int, default=None)
@@ -104,15 +110,20 @@ def main() -> int:
     args = parser.parse_args()
     erode_share = args.court_erode_share
     if erode_share is None and args.court_erode is None:
-        fitted = ROOT / "outputs" / "games" / "court_erode.json"
+        fitted = (Path(__file__).resolve().parent.parent
+                  / COURT_ERODE_FILE)
         if fitted.exists():
             picked = json.loads(fitted.read_text()).get(args.game)
+            # fit_court_mask.py writes {erode_share, kit_max_lab} per game; an
+            # older file holds the share alone.
+            if isinstance(picked, dict):
+                picked = picked.get("erode_share")
             if picked is not None:
                 erode_share = float(picked)
                 print(f"  court erosion {erode_share:.4f} of frame height, "
                       f"fitted for {args.game} by fit_court_mask.py")
     if erode_share is None and args.court_erode is None:
-        erode_share = COURT_ERODE_SHARE
+        erode_share = COURT_ERODE_SHARE_FALLBACK
 
     import cv2
     import numpy as np

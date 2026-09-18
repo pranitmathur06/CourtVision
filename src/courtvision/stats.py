@@ -54,13 +54,25 @@ def wilson(hits: int, total: int, z: float = 1.96) -> tuple[float, float]:
     return max(0.0, centre - half), min(1.0, centre + half)
 
 
+#: Above this many discordant pairs the exact tail's 2**n overflows a float,
+#: and the normal approximation is accurate to many decimal places. See
+#: `mcnemar`.
+EXACT_MAX_DISCORDANT = 1000
+
+
 def mcnemar(a: Sequence[bool], b: Sequence[bool]) -> tuple[int, int, float]:
     """Exact two-sided McNemar on paired right/wrong vectors.
 
     Returns (only a right, only b right, p). Only the disagreements carry
     information: under the null each is a fair coin, so the p-value is a
     binomial tail. Exact rather than chi-square because with twenty-odd
-    discordant pairs the approximation is not trustworthy.
+    discordant pairs the approximation is not trustworthy -- which is the
+    regime nearly every arm in this project lives in.
+
+    Above `EXACT_MAX_DISCORDANT` the exact tail cannot be computed in floating
+    point at all and the continuity-corrected normal approximation is used
+    instead. That is the regime where the approximation is excellent, so the
+    cap widens the domain rather than lowering the standard.
     """
     only_a = sum(1 for x, y in zip(a, b) if x and not y)
     only_b = sum(1 for x, y in zip(a, b) if y and not x)
@@ -68,8 +80,20 @@ def mcnemar(a: Sequence[bool], b: Sequence[bool]) -> tuple[int, int, float]:
     if n == 0:
         return only_a, only_b, 1.0
     smaller = min(only_a, only_b)
-    tail = sum(math.comb(n, k) for k in range(smaller + 1)) / (2.0 ** n)
-    return only_a, only_b, min(1.0, 2.0 * tail)
+    if n <= EXACT_MAX_DISCORDANT:
+        tail = sum(math.comb(n, k) for k in range(smaller + 1)) / (2.0 ** n)
+        return only_a, only_b, min(1.0, 2.0 * tail)
+    # The exact tail divides by 2**n, which overflows a float at n around a
+    # thousand -- and the first caller to hand this four thousand discordant
+    # pairs got an OverflowError rather than a p-value. Above the cap the
+    # normal approximation is accurate to many decimal places anyway, which is
+    # the opposite of the small-n regime the exact test exists for, so this is
+    # a widening of the domain and not a loosening of the standard.
+    statistic = (abs(only_a - only_b) - 1.0) / math.sqrt(n)
+    if statistic <= 0.0:
+        return only_a, only_b, 1.0
+    p = math.erfc(statistic / math.sqrt(2.0))
+    return only_a, only_b, min(1.0, p)
 
 
 def homogeneity(vectors: Sequence[Sequence[bool]]) -> tuple[float, int, float]:

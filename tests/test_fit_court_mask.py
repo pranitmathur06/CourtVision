@@ -17,23 +17,23 @@ fit = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(fit)
 
 
-def _rows(pairs):
-    """{share: {carrier_kept, over_ok}} with denominators that pass."""
-    return {share: {"carrier_kept": carrier, "carrier_n": 100,
-                    "over_ok": over, "over_n": 100}
+def _rows(pairs, gate=None):
+    """{(erode share, kit gate): {carrier_kept, over_ok}}, denominators fine."""
+    return {(share, gate): {"carrier_kept": carrier, "carrier_n": 100,
+                            "over_ok": over, "over_n": 100}
             for share, (carrier, over) in pairs.items()}
 
 
 def test_it_takes_the_most_carriers_among_masks_that_obey_the_rule():
     rows = _rows({0.0: (0.98, 0.80), 0.03: (0.90, 0.96), 0.0625: (0.85, 0.99)})
-    assert fit.choose(rows) == 0.03
+    assert fit.choose(rows) == (0.03, None)
 
 
 def test_a_mask_that_admits_the_crowd_is_refused_however_many_carriers_it_keeps():
     """Keeping everybody never drops the carrier. One bound alone is
     degenerate, which is why there are two."""
     rows = _rows({0.0: (1.00, 0.10), 0.0625: (0.60, 0.99)})
-    assert fit.choose(rows) == 0.0625
+    assert fit.choose(rows) == (0.0625, None)
 
 
 def test_nothing_clearing_the_floor_answers_none_rather_than_guessing():
@@ -44,13 +44,30 @@ def test_nothing_clearing_the_floor_answers_none_rather_than_guessing():
 def test_a_tie_on_carriers_goes_to_the_larger_erosion():
     """Admitting the front row costs more downstream than it costs here."""
     rows = _rows({0.0: (0.90, 0.99), 0.03: (0.90, 0.99)})
-    assert fit.choose(rows) == 0.03
+    assert fit.choose(rows) == (0.03, None)
 
 
 def test_an_empty_denominator_is_not_treated_as_a_pass():
-    rows = {0.0: {"carrier_kept": 1.0, "carrier_n": 0,
-                  "over_ok": 1.0, "over_n": 0}}
+    rows = {(0.0, None): {"carrier_kept": 1.0, "carrier_n": 0,
+                          "over_ok": 1.0, "over_n": 0}}
     assert fit.choose(rows) is None
+
+
+def test_the_kit_gate_is_the_second_way_to_exclude_the_front_row():
+    """Erosion removes the front row and the baseline corner together. The kit
+    gate removes only people wearing neither kit, so where both clear the
+    over-keeping floor the tighter gate is preferred to the blunt one."""
+    rows = {}
+    rows.update(_rows({0.0: (0.90, 0.96)}, gate=None))
+    rows.update(_rows({0.0: (0.90, 0.99)}, gate=26.0))
+    assert fit.choose(rows) == (0.0, 26.0)
+
+
+def test_a_kit_gate_that_deletes_players_is_refused_like_any_other_mask():
+    rows = {}
+    rows.update(_rows({0.0: (0.95, 0.96)}, gate=None))
+    rows.update(_rows({0.0: (0.40, 1.00)}, gate=18.0))
+    assert fit.choose(rows) == (0.0, None)
 
 
 def test_the_floor_and_the_impossible_count_are_the_declared_ones():
