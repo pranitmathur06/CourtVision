@@ -72,6 +72,12 @@ def readings_from(text: str | None):
     digits = left + right
     if len(digits) == 3:                        # "359" is 3:59 or 35.9
         out.append(int(digits[:2]) + int(digits[2]) / 10.0)
+    if len(digits) == 2:                        # "72" can only be 7.2
+        # Under ten seconds the clock shows one digit and a tenth, which is two
+        # glyphs and nothing else. There is no MM:SS reading of two digits, so
+        # this offers exactly one candidate, in [0.0, 9.9], and `resolve` still
+        # makes it prove itself against the next frame before believing it.
+        out.append(int(digits[0]) + int(digits[1]) / 10.0)
     return out
 
 
@@ -135,6 +141,8 @@ def parse(text: str | None):
     digits = left + right                       # e.g. "1:82" was "18.2"
     if len(digits) == 3:
         return int(digits[:2]) + int(digits[2]) / 10.0
+    if len(digits) == 2:                        # "7:2" was "7.2"
+        return int(digits[0]) + int(digits[1]) / 10.0
     return None
 
 
@@ -235,10 +243,18 @@ def main() -> int:
 
     if args.from_raw:
         saved = json.load(open(args.from_raw))
-        candidates = [(r["t"], r["options"]) for r in saved["raw"]]
-        sampled = len(candidates)
+        texts = [(r["t"], r["s"]) for r in saved.get("text", [])]
+        # Re-parse from the TEXT when it is there, so a parser change can be
+        # measured without touching the video; fall back to the saved options
+        # for files written before the text was kept.
+        if texts:
+            candidates = [(t, readings_from(s)) for t, s in texts]
+            candidates = [(t, o) for t, o in candidates if o]
+        else:
+            candidates = [(r["t"], r["options"]) for r in saved["raw"]]
+        sampled = saved.get("sampled", len(candidates))
         location_roi, step = saved.get("roi"), saved.get("step", args.step)
-        return _write(args, candidates, sampled, location_roi, step)
+        return _write(args, candidates, sampled, location_roi, step, texts)
 
     import cv2
 
@@ -274,24 +290,35 @@ def main() -> int:
     # five-hour pass on a two-hour broadcast, because every seek decodes from
     # the keyframe before it; one sequential pass over the same video is
     # minutes. Same frames, same readings.
-    candidates, sampled = [], 0
+    # THE TEXT IS SAVED ALONGSIDE THE PARSED OPTIONS. It was not, and that made
+    # every change to the parser cost a full sequential decode of the video --
+    # forty minutes on a 1080p60 broadcast -- to find out whether it helped. A
+    # frame whose text parsed to nothing was not even recorded, so `--from-raw`
+    # could never see the readings a better parser would recover. With the text
+    # on disk a parser change is re-resolved for free, and the frames the old
+    # parser threw away are still there to be re-read.
+    candidates, sampled, texts = [], 0, []
     for i, crop in enumerate(stream(args.video, 0.0, duration, args.step,
                                     crop=(top, bottom, left, right))):
         sampled += 1
-        text, _ = read_clock(crop, templates)
+        text, _ = read_clock(crop, templates, allow_tenths=True)
+        if text:
+            texts.append((i * args.step, text))
         options = readings_from(text)
         if options:
             candidates.append((i * args.step, options))
-    return _write(args, candidates, sampled, list(location.roi), args.step)
+    return _write(args, candidates, sampled, list(location.roi), args.step, texts)
 
 
-def _write(args, candidates, sampled, roi, step):
+def _write(args, candidates, sampled, roi, step, texts=()):
     """Resolve the candidates, split them into periods, save and report."""
     raw = resolve(candidates)
     rows, misreads = assign_periods(raw)
     out = Path(args.out or f"outputs/clock/{Path(args.video).stem}.json")
     out.parent.mkdir(parents=True, exist_ok=True)
     json.dump({"video": args.video, "roi": roi, "step": step,
+               "sampled": sampled,
+               "text": [{"t": t, "s": text} for t, text in texts],
                "raw": [{"t": t, "options": options} for t, options in candidates],
                "readings": [{"t": t, "period": p, "seconds": s, "elapsed": elapsed(p, s)}
                             for t, p, s in rows]}, open(out, "w"), indent=0)

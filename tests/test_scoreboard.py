@@ -7,6 +7,7 @@ cv2 = pytest.importorskip("cv2")
 
 from courtvision.scoreboard import (
     build_templates,
+    build_templates_from_many,
     clock_glyphs,
     clock_to_seconds,
     read_clock,
@@ -261,3 +262,75 @@ def test_each_broadcast_names_the_video_its_anchors_were_read_from():
     for name, profile in BROADCASTS.items():
         assert profile.get("anchor_video"), (
             f"{name}: anchors must name the video they were read from")
+
+
+# -- the last ten seconds of a period, which the reader could not see ---------
+
+def test_two_glyphs_are_not_read_unless_tenths_are_asked_for():
+    """Three other callers assume MM:SS, so the default must not change.
+
+    A clock half-covered by a graphic can present two glyphs, and reading those
+    as a time would be a confident wrong answer where the old behaviour was an
+    honest None."""
+    templates = build_templates_from_many(
+        [(render_bar("7:2"), "72"), (render_bar("10:59"), "1059")])
+    assert read_clock(render_bar("7:2"), templates)[0] is None
+
+
+def test_the_blind_spot_is_exactly_under_ten_seconds():
+    """Under a minute the clock shows tenths. At 18.2 that is three glyphs,
+    which this has always read as "1:82" and the caller turns back into 18.2.
+    At 7.2 it is two, and two failed the length gate -- so across the four
+    registered broadcasts there are 79/34/342/25 readings between 10 and 20
+    seconds and 0/0/0/9 under 10."""
+    templates = build_templates_from_many(
+        [(render_bar("7:2"), "72"), (render_bar("10:59"), "1059")])
+    text, _ = read_clock(render_bar("7:2"), templates, allow_tenths=True)
+    assert text == "7:2"
+    # ...and a four-glyph clock still reads exactly as before, with or without.
+    assert read_clock(render_bar("10:59"), templates)[0] == "10:59"
+    assert read_clock(render_bar("10:59"), templates,
+                      allow_tenths=True)[0] == "10:59"
+
+
+def test_two_digits_have_exactly_one_reading_and_it_is_under_ten_seconds():
+    """There is no MM:SS reading of two digits, so this adds one candidate in
+    [0.0, 9.9] and never competes with a minutes reading."""
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+    from read_game_clock import parse, readings_from
+    assert readings_from("7:2") == [7.2]
+    assert parse("7:2") == 7.2
+    assert readings_from("0:9") == [0.9]
+    # ...and it leaves every longer reading exactly as it was.
+    assert readings_from("1:82") == [18.2]
+    assert readings_from("3:59") == [239.0, 35.9]
+    assert readings_from("10:34") == [634.0]
+
+
+def test_a_two_digit_misread_cannot_capture_the_clock():
+    """`resolve` makes a reading that continues nothing prove itself against the
+    NEXT frame. A stray 7.2 in the middle of a period is not confirmed and is
+    dropped, which is the same guard that stopped one bad 6:07 from turning 738
+    seconds of Finals G1 into tenths."""
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+    from read_game_clock import resolve
+    good = [(float(i), [600.0 - i]) for i in range(6)]
+    stray = good[:3] + [(3.0, [7.2])] + [(float(i), [600.0 - i]) for i in range(4, 7)]
+    assert [round(v, 1) for _, v in resolve(stray)] == [600.0, 599.0, 598.0,
+                                                        596.0, 595.0, 594.0]
+
+
+def test_a_real_run_of_tenths_at_a_period_end_is_believed():
+    """The whole point: a genuine countdown through the blind spot survives."""
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+    from read_game_clock import resolve
+    rows = [(0.0, [12.4]), (1.0, [11.4]), (2.0, [10.4]), (3.0, [9.4]),
+            (4.0, [8.4]), (5.0, [7.4])]
+    assert [round(v, 1) for _, v in resolve(rows)] == [12.4, 11.4, 10.4,
+                                                       9.4, 8.4, 7.4]

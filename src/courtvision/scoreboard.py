@@ -153,15 +153,41 @@ def _match(image: np.ndarray, templates: dict[str, np.ndarray]) -> tuple[str, fl
 
 
 def read_clock(
-    roi: np.ndarray, templates: dict[str, np.ndarray], min_score: float = 0.5
+    roi: np.ndarray, templates: dict[str, np.ndarray], min_score: float = 0.5,
+    allow_tenths: bool = False,
 ) -> tuple[str | None, float]:
     """Read the clock as MM:SS (or M:SS), with the weakest digit's score.
 
     Returns (None, score) when a digit cannot be matched confidently. An
     unreadable clock is normal — replays, timeouts, graphics over the bar — and
     a wrong time silently mis-joins every play that follows it.
+
+    `allow_tenths` ALSO READS THE LAST TEN SECONDS OF A PERIOD, which this
+    function has never been able to see. Under a minute the NBA clock shows
+    tenths, and at "18.2" that is three glyphs — which this reads as "1:82" and
+    the caller's parser already turns back into 18.2 seconds. At "7.2" it is
+    TWO, and two glyphs failed the length gate here and returned None. Measured
+    across the four broadcasts in `data/games.json`: readings with the clock
+    between 10 and 20 seconds, 79 / 34 / 342 / 25; readings under 10 seconds,
+    0 / 0 / 0 / 9. The reader is blind to the end of every period, and 39% of
+    every unaligned official event in all four games sits in that blind spot.
+
+    Off by default because three other callers assume MM:SS, and a two-glyph
+    read of a clock half-covered by a graphic is a plausible misread rather than
+    a plausible time — it is safe here only because `read_game_clock.resolve`
+    makes an unconfirmed reading prove itself against the next frame.
     """
     glyphs = clock_glyphs(normalise_polarity(roi))
+    if allow_tenths and len(glyphs) == 2:
+        digits, scores = [], []
+        for glyph in glyphs:
+            digit, score = _match(glyph.image, templates)
+            digits.append(digit)
+            scores.append(score)
+        weakest = min(scores)
+        if weakest < min_score or "?" in digits:
+            return None, weakest
+        return f"{digits[0]}:{digits[1]}", weakest
     if not 3 <= len(glyphs) <= 4:
         return None, 0.0
     digits, scores = [], []
