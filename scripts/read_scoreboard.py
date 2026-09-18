@@ -329,6 +329,60 @@ def digits_never_shrink(values):
     return out
 
 
+def snap_to_glyphs(frame, roi, grow: float = 0.35):
+    """Tighten a region onto the digits actually inside it, one frame at a time.
+
+    A CANDIDATE BOX ONLY HAS TO BE APPROXIMATELY RIGHT. The search slides fixed
+    rectangles along the clock's row, so the winner is whichever offset happened
+    to score best, and on the Houston broadcast that was a box 42 px left of the
+    away team's digits. It clipped them and picked up part of the neighbouring
+    graphic, and because it OVER-read -- 116 against a true 91 -- it also beat
+    the correct box on the span tie-break, which assumes a clipped box
+    under-reads. That assumption held on two Finals broadcasts and does not hold
+    here.
+
+    Rather than a better tie-break, remove the dependence: grow the box, segment
+    it, keep the largest group of same-height characters -- which is what a
+    number is -- and read exactly their bounding box. Measured on the region the
+    search actually chose:
+
+        video 6754 s    raw  4   snapped 75
+        video 8330 s    raw 97   snapped 91   (the official final is 91)
+
+    Returns None when nothing segments, which is a miss rather than a wrong
+    answer and is what the caller already handles.
+    """
+    from courtvision.scoreboard import normalise_polarity, segment_glyphs
+
+    top, bottom, left, right = roi
+    dy = int((bottom - top) * grow)
+    dx = int((right - left) * grow)
+    y0, y1 = max(0, top - dy), min(frame.shape[0], bottom + dy)
+    x0, x1 = max(0, left - dx), min(frame.shape[1], right + dx)
+    glyphs = segment_glyphs(normalise_polarity(frame[y0:y1, x0:x1]))
+    if not glyphs:
+        return None
+    best, size = None, 0
+    for reference in (g.height for g in glyphs):
+        group = [g for g in glyphs if abs(g.height - reference) <= 0.2 * reference]
+        if len(group) > size:
+            best, size = group, len(group)
+    if not best:
+        return None
+    margin = 4
+    return (max(0, y0 + min(g.y for g in best) - margin),
+            y0 + max(g.y + g.height for g in best) + margin,
+            max(0, x0 + min(g.x for g in best) - margin),
+            x0 + max(g.x + g.width for g in best) + margin)
+
+
+def read_region(frame, roi, reader):
+    """The number in a region, after snapping the region onto its own digits."""
+    snapped = snap_to_glyphs(frame, roi) or roi
+    top, bottom, left, right = snapped
+    return digits_of(frame[top:bottom, left:right], reader)
+
+
 def monotone_share(values) -> float:
     """Fraction of readings that lie on one non-decreasing path through time.
 
@@ -539,9 +593,8 @@ def main() -> int:
     for n, frame in enumerate(stream(args.video, start, end - start, args.step)):
         when = start + n * args.step
         times.append(when)
-        for name, (rtop, rbottom, rleft, rright) in regions.items():
-            raw[name].append(digits_of(frame[rtop:rbottom, rleft:rright],
-                                       reader))
+        for name, roi in regions.items():
+            raw[name].append(read_region(frame, roi, reader))
         if n and n % 500 == 0:
             print(f"    {when:.0f}s of {end:.0f}s", flush=True)
 
