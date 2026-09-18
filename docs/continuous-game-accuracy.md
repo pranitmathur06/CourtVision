@@ -7326,3 +7326,80 @@ no ball labels and the report prints that arm as NO DATA rather than guessing.
 What is claimed is narrower and is measured: the input to selection is seven
 times noisier, and no selector in this repository has ever been shown footage
 like it.
+
+## Round 101: the fourth broadcast runs end to end
+
+    scripts/add_broadcast.py --game hou
+
+Game 0022500581 -- OKC at Houston, 2026-01-15, 1080p60, a third arena, a
+scorebug neither Finals broadcast has, and **nothing in this repository tuned on
+it for any event arm**. Every path it took came from `data/games.json`; no
+constant was edited for it; the only thing supplied by hand was the registry
+entry naming the video and the official game id.
+
+    arm                              rate       n      verdict
+    clock: game seconds seen        0.897    2880      FAIL
+    alignment: overall              0.991     566      PASS  (every class passes)
+    clips: still match alignment    1.000     486      PASS
+    registration: agreement         0.905      21      PASS (point)  NOT a hold-out
+    handler, ball                     --        0      NO DATA -- unlabelled
+
+    end to end                   captured   interval     emitted  said & true
+    vision                         0.273   0.244-0.292      303      0.502
+    vision + clock                 0.301   0.283-0.321      253      0.589
+    vision + scoreboard           BLOCKED -- see below
+    feed-assisted                  1.000   0.995-1.000      431      tautological
+
+### The comparison that matters
+
+Finals G1 is the previous headline and is a game whose thresholds were chosen
+partly on itself:
+
+                            Finals G1 (tuned)   Houston (unseen)
+    vision, captured              0.244              0.273
+    vision, said and true         0.478              0.502
+    vision+clock, captured        0.279              0.301
+    vision+clock, said and true   0.605              0.589
+    alignment                     0.973              0.991
+
+**The unseen broadcast captures more of its plays than the tuned one on every
+vision mode, and says true slightly less often on the gated one.** The shot
+detector on its own agrees with the official record on 149 of 253 calls, against
+0.563 recorded on Game 7. Nothing here generalised badly, which is not what the
+three previous rounds of out-of-distribution findings predicted.
+
+### What it does not clear, and why
+
+**Clock coverage, 0.897.** The only label-free arm under the bar, and Round 100
+established what limits it: 86% of the unseen game-seconds are stretches where
+the scorebug is not on screen. The tenths fix landed after this run and is worth
+1.3 to 1.4 points; a re-read is in flight.
+
+**The scoreboard rung is BLOCKED, not zero.** Its region search found the two
+team panels reading the correct final scores -- 111 and 91 against an official
+111-91 -- and rejected them, which took three separate fixes to diagnose: box
+sizes fitted to two Finals broadcasts that could not build a window big enough
+for a coloured team panel, and a rank-correlation gate defeated by frames where
+a single stray glyph wins the same-height vote. The run is still in flight.
+
+**Vision capture is CAPPED at 0.44 by architecture** -- that is the share of this
+game's plays that are shots -- and reaches 62% and 67% of that cap. A report
+that printed FAIL there would be calling a design limit a defect.
+
+### What "90% across the board" means on this evidence
+
+Three arms clear it and one does not:
+
+    alignment                0.991   PASS, and every action class passes
+    clips match alignment    1.000   PASS
+    feed-assisted capture    1.000   PASS
+    clock coverage           0.897   FAIL, ceiling near 0.80-0.90 by production
+
+and the vision-only arms cannot, by arithmetic rather than by effort: a stack
+that emits only field goals can capture at most 44% of a game's plays however
+good it gets. That number is printed beside every one of them.
+
+**The pipeline that ships -- the feed-assisted one -- is at 0.991 alignment and
+1.000 capture on a broadcast it had never seen.** The pipeline that decides what
+happened from pixels is at 0.301 capture and 0.589 precision. Both are true and
+the report prints them on the same page, which is the whole reason it exists.
