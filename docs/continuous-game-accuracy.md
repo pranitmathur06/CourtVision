@@ -7436,3 +7436,45 @@ some particular lighting or camera state. Timing of the calls that agree: p50
 **The `--tune` flag was not used**, here or anywhere in `add_broadcast.py`. The
 approach, far and merge constants are the ones fitted on Game 7's first half in
 Round 40-something, applied unchanged.
+
+### Round 102: the tenths fix is worth +3.4 points of alignment, and it cost one re-resolve
+
+Round 99 predicted an upper bound for the period-end blind spot: if every one of
+the 41 unaligned events in the last ten seconds of a period became alignable,
+Game 7 would go 0.888 to 0.918. Measured:
+
+    Game 7 alignment          located / rows      rate
+    original clock file          498 / 561       0.888
+    step 1.0, every fix          520 / 564       0.922     <- +3.4 points
+    step 0.5, every fix          524 / 564       0.929     <- +0.7 more
+
+**Above the bound**, because the bound only counted events in the blind spot and
+the tenths-capture guard also repaired the five minutes of the fourth quarter
+that had resolved to tenths and been filed as a nonexistent overtime.
+
+**And halving the sampling step is worth 0.7 points against the fixes' 3.4.**
+Every broadcast stays at `--step 1.0`; doubling the decode of every game for
+seven tenths of a point is not a trade worth making, and now there is a number
+for it rather than an intuition.
+
+The whole measurement cost **one re-resolve from saved text and no video pass**,
+which is the first return on saving it.
+
+### Every broadcast's alignment, after
+
+    G7    0.922   n=564    (was 0.888)
+    G1    0.973   n=552
+    ECF   0.966   n=624
+    HOU   0.991   n=566
+
+    chi-square homogeneity, per action, four games:
+      Rebound       p 0.0015   g7 0.887 against 0.964, 0.965, 0.992   HETEROGENEOUS
+      Missed Shot   p 0.0040   g7 0.889 against 0.961, 0.968, 0.991   HETEROGENEOUS
+      ...and twelve other action types no longer differ across the four games.
+
+Before the repair, **four** action types were heterogeneous and every one of them
+was Game 7 dragging the others down: Rebound 0.840, Missed Shot 0.809, Foul
+0.889, Made Shot (3PT) 0.762. Foul and the three-pointers are now within the
+spread. The two that remain are still Game 7, and its clock coverage is still the
+worst of the four at 0.728 against 0.897 to 0.930 -- the broadcast simply shows
+its scorebug less, and Round 100 measured that as the binding constraint.
