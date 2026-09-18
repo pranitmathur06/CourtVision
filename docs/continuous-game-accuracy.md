@@ -7108,3 +7108,42 @@ scored 0.897, applied only to Houston, would be the other thing.
 
 The cost is one more sequential decode per broadcast, which on the 1080p60 file
 is about forty minutes.
+
+### The alignment misses are not scattered: 39% of them are the same bug
+
+The fourth broadcast aligned 561 of 566 rows. Five failed, and four of the five
+are in the last eight seconds of a period. That is not a coincidence, and it is
+not specific to this broadcast:
+
+    game   unaligned   of      under 10 s left   share
+    G7          63     561           17          27.0%
+    G1          15     552            8          53.3%
+    ECF         21     624           12          57.1%
+    HOU          5     566            4          80.0%
+
+**41 of 104 unaligned events across four broadcasts, in three arenas, sit in the
+last ten seconds of a period.** The cause is one length gate. Under a minute the
+NBA clock shows tenths; at `18.2` that is three glyphs, which `read_clock` turns
+into `"1:82"` and the caller's parser turns back into 18.2 seconds. At `7.2` it
+is TWO glyphs, and `if not 3 <= len(glyphs) <= 4: return None, 0.0` threw it
+away.
+
+The clock files say so exactly. Readings with the clock between 10 and 20
+seconds: **79 / 34 / 342 / 25**. Readings under 10 seconds: **0 / 0 / 0 / 9**.
+The reader has never seen the end of a period on any broadcast in this
+repository, and nothing noticed because a missing reading is indistinguishable
+from a replay.
+
+**Upper bound on the fix, stated before it is measured:** if every one of those
+41 events becomes alignable, G7 goes 0.888 to 0.918, G1 0.973 to 0.987, ECF
+0.966 to 0.986 and Houston 0.991 to 0.998. It will be less than that -- some of
+those frames are genuinely covered by a graphic -- and the point of writing the
+bound down first is that the measured number has to be read against it rather
+than against nothing.
+
+**And the reader now saves its raw TEXT, not only the parsed values.** Without
+that, every change to the parser cost a full sequential decode of the video --
+forty minutes on the 1080p60 file -- to find out whether it helped, and a frame
+whose text parsed to nothing was not recorded at all, so `--from-raw` could
+never show what a better parser would recover. This round paid that cost twice
+and it should not be paid again.
