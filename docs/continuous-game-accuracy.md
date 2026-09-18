@@ -7507,3 +7507,23 @@ prints 0.513 on every future report until it is done.**
 
 The fourth broadcast's clips are at 1.000 against its own alignment, because
 they were cut from it.
+
+### The fourth broadcast, after the clock repair
+
+    arm                          before    after
+    clock: game seconds seen      0.897    0.8997     2591 of 2880
+    alignment: overall            0.991    0.995      563 of 566
+    clips: still match            1.000    0.986      7 rows moved
+
+**0.995 alignment on a broadcast nothing was tuned on**, and three of its four
+periods now read down to 0.0 s where the reader previously lost the clock at
+12.7, 19.4 and 19.8 seconds. The fourth ends at 1.7 s because the game ended
+with the clock running.
+
+The clock arm reads **0.8997 against a 0.90 bar -- three game-seconds short of
+it**, on an interval of 0.888 to 0.910 that straddles the bar in both
+directions. It prints FAIL, and that is the right thing for it to print: the
+point estimate does not clear the bar and the interval cannot settle it either
+way. What would settle it is not a better reader. Round 100 measured the
+remaining gap and 86% of it is stretches where the scorebug is not on screen at
+all.
