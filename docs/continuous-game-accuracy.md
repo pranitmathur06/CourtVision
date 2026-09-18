@@ -7527,3 +7527,61 @@ point estimate does not clear the bar and the interval cannot settle it either
 way. What would settle it is not a better reader. Round 100 measured the
 remaining gap and 86% of it is stretches where the scorebug is not on screen at
 all.
+
+## Round 103: three ratchets in one day, and the regression that caught the third
+
+Every one of these is the same mistake: **a constraint adopted from a single
+observation and never released.** They were found in three different files,
+hours apart, and only the third made the pattern obvious.
+
+**One. The clock's tenths capture.** `"5:43"` is 343 seconds or 54.3. At a
+stoppage the held clock reads the same value frame after frame, so the tenths
+interpretation is self-consistent; one frame misreading `"5:48"` was confirmed
+by the next frame's 54.3 and the rest of the quarter followed it down. Fixed by
+a physical fact: the clock only displays tenths under a minute.
+
+**Two. The score's monotonic maximum.** `monotonic` adopts a new maximum from
+three identical readings, and a systematically misaligned box produces the same
+wrong number over and over. On Houston the ratchet locked at 116 from video
+6754 s and every later correct reading was rejected as a fall -- the stream
+contains ZERO readings of 91 or 111, the two correct finals, on frames where a
+hand-cut crop reads exactly those. Fixed by removing the misalignment: snap the
+region onto its own digits every frame, so the box only has to be close.
+
+**Three. My own `digits_never_shrink`, within an hour of writing it.** It was
+the fix for problem two's cousin -- a single glyph winning the same-height vote
+and reading as "1" -- and it ratcheted the other way: one spurious three-digit
+read discarded every two-digit reading after it.
+
+### The regression that caught it
+
+Finals G1 is a game this project may tune on, which is exactly why the
+scoreboard changes were checked against it rather than against the held-out
+broadcast:
+
+    read                              regions chosen          changes    final
+    before any of today's changes     home 466-556            83         107-110
+    with the widened boxes            home 270-424            18         445-235
+    with the full fix stack           home 460-530            91         107-110
+
+    the official final is 111-110
+
+**445-235.** Widening the candidate sizes so a coloured team panel could fit let
+a 154x110 box win -- one spanning several numbers, somewhere else on the bar --
+and it beat the correct region on the span tie-break *precisely because it
+over-reads*, since that tie-break assumes a clipped box under-reads. Then
+`digits_never_shrink` ratcheted on it and threw away every two-digit reading for
+the rest of the game.
+
+Judging candidates on their SNAPPED region removes the incentive: a fat box and
+a tight one around the same digits become the same region, and the ranking is
+over digit groups rather than over arbitrary rectangles. Requiring a wider
+reading to be seen twice removes the ratchet.
+
+The restored read reproduces the validated final exactly and is better than it:
+**legibility 97% to 100%, and 91 score changes against 83.**
+
+**Had this only been checked on Houston, the widened boxes would have looked
+like a fix and destroyed the two broadcasts that already worked.** That is the
+whole argument for choosing thresholds on a game you are allowed to tune on and
+then reporting on one you are not.
