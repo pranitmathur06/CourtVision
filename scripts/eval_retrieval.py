@@ -69,6 +69,40 @@ CATEGORIES = ("counting", "player_action", "paraphrase_named",
               "paraphrase_unnamed", "sequence", "temporal", "cross_game")
 
 
+#: Hand-written questions that name no player and reuse no card vocabulary.
+#: Their truth is a PREDICATE over card fields, so the wording and the answer
+#: come from different places -- the only second author available here.
+BANK = ROOT / "data" / "retrieval" / "questions_unnamed.json"
+
+
+def hand_written(cards) -> list[dict]:
+    """The bank, with each question's truth computed from the card fields.
+
+    The predicate is evaluated against a namespace of the card's own fields and
+    nothing else -- no card TEXT is in scope -- so a question cannot accidentally
+    be graded against the words it happens to share with an answer.
+    """
+    if not BANK.exists():
+        return []
+    out = []
+    for item in json.loads(BANK.read_text())["questions"]:
+        truth = set()
+        for c in cards:
+            scope = {"points": c.points, "actions": set(c.actions),
+                     "players": c.players, "period": c.period,
+                     "team": c.team, "rows": c.rows}
+            try:
+                if eval(item["where"], {"__builtins__": {"len": len, "set": set}},
+                        scope):
+                    truth.add(c.card_id)
+            except Exception:
+                continue
+        if truth:
+            out.append({"q": item["q"], "truth": truth,
+                        "cat": "paraphrase_unnamed"})
+    return out
+
+
 def build_questions(cards, seed: int = 0) -> list[dict]:
     """(question, the card ids that genuinely answer it, category)."""
     rng = random.Random(seed)
@@ -169,8 +203,10 @@ def main() -> int:
     known_players = {p for c in cards for p in c.players}
     known_games = {c.game_id for c in cards}
 
-    questions = build_questions(cards)
-    print(f"  {len(questions)} questions over {len(CATEGORIES)} categories\n")
+    questions = build_questions(cards) + hand_written(cards)
+    banked = sum(1 for q in questions if q["cat"] == "paraphrase_unnamed")
+    print(f"  {len(questions)} questions over {len(CATEGORIES)} categories; "
+          f"{banked} of them name no player\n")
 
     arms = {"regex": [], "vector": [], "hybrid": []}
     per_cat = {a: defaultdict(list) for a in arms}

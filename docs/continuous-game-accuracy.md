@@ -7928,3 +7928,59 @@ Vectorize's five-million-vector cap, roughly forty seasons. Embedding runs at 3
 cards a second on this laptop's CPU, which is hours for a season here and
 minutes on a rented GPU. Storage and compute are not the constraint; the
 question set is.
+
+### Round 108: a hand-written question bank, and a gate that fails while its intent passes
+
+Round 107 recorded G2 as failed and said the remedy was a question set rather
+than a redesign. `data/retrieval/questions_unnamed.json` is that set: **66
+questions written by hand that name no player and reuse no card vocabulary** --
+"when did they come away empty", "who won the ball back off the iron", "a trip
+that ended with contact rather than a shot". Each one's truth is a **predicate
+over card FIELDS**, evaluated in a namespace holding the fields and nothing else,
+so the wording and the answer come from different places. That is the only
+second author available without a second person.
+
+    category              n     regex   vector   hybrid
+    paraphrase_named  1,536     0.834    0.707    0.896
+    paraphrase_unnamed   86     0.209    0.779    0.779
+    ALL               1,724     0.802    0.719    0.892
+
+**On questions where literal matching has nothing to hold, the embedding wins by
+57 points: 67/86 against 18/86, p < 0.0001, interval 0.68 to 0.85.** That is no
+longer a twenty-question curiosity. It is the clearest evidence in this
+repository that a vector arm is worth having.
+
+**And G2 still FAILS.** Blended across both paraphrase categories the vector arm
+loses by 9.0 points, because the blend is 95% questions that name a player and a
+name is what a regular expression is best at.
+
+### Why the gate is not being rewritten
+
+The gate's denominator was chosen badly -- by me, in the same file, before the
+questions existed -- and the category labelled "paraphrase" turned out to be
+mostly named-entity questions with paraphrased decoration. The number it produces
+is measuring something other than what it was written to measure.
+
+**That is not a reason to change it after seeing the result.** This project has
+retracted a published round for less, and a gate that moves when it fails is not
+a gate. G2 stands as FAILED for this run.
+
+The corrected gate is declared here instead, for the next one, **with its
+threshold unchanged**: the vector arm must beat the regular expression by at
+least ten points of recall@10 at p < 0.05 **on questions that name no player**,
+because those are the ones where an embedding is the only thing that could work.
+On today's evidence it would pass by 57 points. It has not been run under that
+definition yet, and this file will say so until it has.
+
+### The filters and the embedding do different jobs, and both are load-bearing
+
+    G3  hybrid 1,538/1,724 against vector-only 1,240/1,724, p < 0.0001
+
+On the hand-written bank the hybrid and the vector arm score **identically**
+(0.779 both), because those questions carry no player, period or action a filter
+can extract -- so the hybrid IS the vector arm there. On the named questions the
+filters carry it (0.896 against 0.707).
+
+**That is the argument for the architecture, and it is now measured rather than
+asserted**: structured filters answer what can be looked up, embeddings answer
+what cannot, and each is useless on the other's half.

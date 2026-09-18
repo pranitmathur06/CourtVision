@@ -138,3 +138,36 @@ def test_regex_search_is_the_baseline_and_actually_works():
     texts = {"a": "Haliburton hit a three", "b": "Turner grabbed a rebound"}
     assert [h.card_id for h in regex_search("Haliburton three", texts)] == ["a"]
     assert regex_search("who what the", texts) == [], "stopwords alone match nothing"
+
+
+# -- the hand-written question bank ------------------------------------------
+
+def test_the_question_bank_names_no_player():
+    """Its whole purpose is to be the half of the evaluation where a regular
+    expression has nothing literal to hold. One capitalised token undoes that."""
+    import json
+    import re
+    from pathlib import Path
+    bank = (Path(__file__).resolve().parent.parent
+            / "data" / "retrieval" / "questions_unnamed.json")
+    questions = json.loads(bank.read_text())["questions"]
+    assert len(questions) >= 60
+    for item in questions:
+        assert not re.search(r"\b[A-Z][a-z]+\b", item["q"]), item["q"]
+
+
+def test_every_banked_question_has_a_predicate_over_fields_only():
+    """The truth is computed from the card's FIELDS, never its text, so a
+    question cannot be graded against the words it happens to share with an
+    answer."""
+    import json
+    from pathlib import Path
+    bank = (Path(__file__).resolve().parent.parent
+            / "data" / "retrieval" / "questions_unnamed.json")
+    allowed = {"points", "actions", "players", "period", "team", "rows",
+               "len", "set", "and", "or", "not", "in"}
+    for item in json.loads(bank.read_text())["questions"]:
+        assert "text" not in item["where"], item
+        names = {w for w in item["where"].replace("(", " ").replace(")", " ")
+                 .split() if w.isalpha()}
+        assert names <= allowed, (item["where"], names - allowed)
