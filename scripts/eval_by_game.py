@@ -688,6 +688,41 @@ def end_to_end_arms(game: Broadcast) -> list[Arm]:
 
 # -- the report -------------------------------------------------------------
 
+#: Where `eval_kits.py` leaves its per-broadcast result.
+KITS_REPORT = "outputs/games/kits.json"
+
+
+def kits_arm(game: Broadcast) -> list[Arm]:
+    """The kit model, scored by a rule of the sport and no labels at all.
+
+    Label-free, so a broadcast nobody has touched gets this in full on arrival
+    -- the same property that makes the registration and clock arms worth
+    having. It is READ from `eval_kits.py`'s output rather than recomputed,
+    because the measurement decodes every clip and this report must stay fast.
+    """
+    path = ROOT / KITS_REPORT
+    if not path.exists():
+        return [Arm("kits: never six a side", 0, 0,
+                    note=f"{KITS_REPORT} has not been written; run eval_kits.py")]
+    rows = {row["game"]: row for row in json.loads(path.read_text())}
+    row = rows.get(game.key)
+    if row is None or not row.get("fitted"):
+        return [Arm("kits: never six a side", 0, 0,
+                    note="no kit model for this broadcast")]
+    total = int(row["rule_n"])
+    hits = round(row["obeys_five_a_side"] * total)
+    return [
+        Arm("kits: never six a side", hits, total,
+            note=f"frames where neither kit was given six players; "
+                 f"CIELAB separation {row['separation_lab']:.0f}"),
+        Arm("kits: called officials", round(row["rejected_share"] * 1000), 1000,
+            descriptive=True,
+            note="share of boxes; three officials among thirteen people is "
+                 "0.231, and far above it means the rule was bought by "
+                 "abstaining rather than earned"),
+    ]
+
+
 def evaluate(game: Broadcast, args) -> dict:
     arms: list[Arm] = []
     arms += clock_arm(game)
@@ -701,6 +736,7 @@ def evaluate(game: Broadcast, args) -> dict:
         except Exception as error:                        # pragma: no cover
             arms.append(Arm("registration: agreement", 0, 0,
                             note=f"failed: {type(error).__name__}: {error}"))
+    arms += kits_arm(game)
     arms += handler_arm(game)
     arms += ball_arm(game)
     arms += end_to_end_arms(game)

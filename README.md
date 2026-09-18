@@ -70,7 +70,21 @@ the scoreboard and aligning it — and draw boxes over the footage. So:
 | Deciding *what happened* from pixels alone | shots F1 **0.65** inside the 27–48% of video where the clock reads, **0.45–0.50** without that filter |
 | Deciding *who* has the ball from pixels alone | **50–66%** per game on uniformly sampled frames |
 | Finding the ball: reported / proposed at any rank | **65–83% / 82–96%** per game |
+| Deciding which of the two kits a player wears | **94–98%** over four games, scored with no labels at all |
+| Deciding whether a rebound was offensive or defensive | **39–51%**, against a 72% majority class — worse than saying "defensive" every time |
+| Deciding whether a basket was assisted | **44–56%**, against a 54–60% majority class |
+| Never drawing more than thirteen people on the court | **57–94%** per game |
 | Naming a player from his jersey | **45%** |
+
+The three-line block in the middle of that table is new and is the honest
+answer to "can vision read the game". Assists and rebounds had a published
+number before this — 91% for assists — and **it was never measured on a
+broadcast**: `check_assists.py` and `check_rebounds.py` read SportVU tracking
+coordinates, where every player is located to the inch and identities are
+stable all game. They measure the event logic on perfect inputs. Measured on
+pixels, both are at or below their own majority class, and the cause is
+upstream: rebounds and assists inherit ball-handler attribution (66%), which
+inherits ball selection (80% against a 96% ceiling).
 
 The first of those four games is one **nothing in this repository was tuned on**:
 a 2026 regular-season broadcast in a third arena, at 1080p60, with a scorebug

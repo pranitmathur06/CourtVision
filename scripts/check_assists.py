@@ -11,6 +11,14 @@ before the shot, and see whether it came from the player the league credits.
 
 The detector sees only positions and who holds the ball. It never sees the
 credited name.
+
+THIS DOES NOT READ A BROADCAST. `load_game` below opens SportVU tracking: every
+player located to the inch at 25 Hz, the ball's height known, identities stable
+for the whole game. The number this prints is the event LOGIC's accuracy on
+perfect inputs, and it is not evidence that the same question can be answered
+from pixels. `scripts/eval_play_events.py` asks that question and gets an
+answer at or below the majority class on all four broadcasts. Quote the two
+together or neither.
 """
 
 from __future__ import annotations

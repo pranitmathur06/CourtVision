@@ -8167,3 +8167,216 @@ card says so in its own text -- it tells the reader the carrier it names is
 right half to two thirds of the time. The next thing this needs is not more
 retrieval machinery; it is the per-fact precision of every claim a card makes,
 measured the way this table measures one of them.
+
+## Round 112: the kit is readable, the rebound is not, and the ball keeps its 13 points
+
+The ask was 85% across the board on an arbitrary broadcast — assists, rebounds,
+boxes, ball. Three things now exist that did not: a kit model with a label-free
+score, a first measurement of rebounds and assists **off the pixels**, and a
+third attempt at the ball's selection gap. One clears the bar and two do not,
+and the two that do not now have causes rather than guesses.
+
+### Assists and rebounds had never seen a broadcast
+
+`check_assists.py` reports 91% and `check_rebounds.py` sits beside it, and
+**neither has ever read a video frame**. Both load SportVU tracking: every
+player to the inch, the ball's height known, identities stable all game. They
+measure the event logic on perfect inputs. Nothing here had asked whether the
+events can be read off pixels, which is the question the product's claim rests
+on.
+
+Naming the rebounder needs identity, which is 45% and closed, so a named
+accuracy would report the identity failure twice. The questions asked instead
+are the unnamed ones film work actually uses, and both are **same-kit**
+questions, invariant to the fact that no kit model knows which team is which:
+
+    rebound   OFFENSIVE or DEFENSIVE — did the ball come back to the team that shot?
+    assist    ASSISTED or NOT — did a teammate's pass create this basket?
+
+Truth comes from the feed's own running counters (`Off:1 Def:2`), differenced
+per player. That is **roster-free**, which matters: two of the four broadcasts
+have no roster file on disk, and a truth needing one is a truth that cannot
+follow a new broadcast.
+
+### The kit model: 0.94–0.98, and not one label anywhere
+
+`team_assignment.py` clusters torso colour inside one clip and warns that which
+team gets which letter is arbitrary — enough to colour an overlay, not enough
+for any fact spanning two clips. `src/courtvision/kits.py` fits one model per
+broadcast, so kit 0 in the first quarter is kit 0 in the fourth.
+
+**The first scoring rule was wrong and is recorded as such.** Ten boxes ought
+to split five and five — except there are **thirteen** people on a live court,
+ten players and up to three officials, so a ten-box frame is usually ten of
+thirteen. Measured that way a good model scored 0.44 and no colour feature
+moved it, because the thing being measured was mostly the detector's choice of
+whom to draw.
+
+The test that survives is one-sided: **neither kit may ever have six players.**
+It holds on a frame with any number of boxes, and a model calling everybody one
+kit breaks it on every frame with six. A one-sided test can be passed by saying
+nothing, so the officials are a **class** (k=3, two largest are kits) rather
+than a rejection threshold — and that has an arithmetic prediction to answer to:
+
+    game   never six a side          n    called officials   CIELAB separation
+    g7                 0.955      1832              0.273                  91
+    g1                 0.939      1194              0.329                  45
+    ecf                0.977      1239              0.296                  44
+    hou                0.962      1192              0.250                 114
+
+Three officials among thirteen people is **0.231**. The rejected share lands at
+0.25–0.33 on four broadcasts. That is the evidence the third cluster is really
+the stripes and not an abstention hiding the hard boxes; neither number means
+anything without the other.
+
+Houston is the held-out broadcast and reads 0.962. The arm is wired into
+`eval_by_game.py`, so a new broadcast gets it on arrival with no labelling.
+
+### The rebound and the assist are at chance, and the cause is the handler
+
+Feed timing, vision attribution, bar 0.85:
+
+    game   arm        acc    95% CI      majority   n    coverage
+    g7     rebound  0.483  0.31–0.66       0.724   29       0.397
+    g7     assist   0.556  0.41–0.69       0.600   45       0.818
+    g1     rebound  0.510  0.37–0.64       0.735   49       0.533
+    g1     assist   0.464  0.35–0.58       0.536   69       0.908
+    ecf    rebound  0.421  0.30–0.55       0.737   57       0.679
+    ecf    assist   0.539  0.44–0.64       0.539   89       0.957
+    hou    rebound  0.391  0.30–0.49       0.728   92       0.893   (held out)
+    hou    assist   0.440  0.33–0.55       0.560   75       0.987   (held out)
+
+**Every arm fails to clear its own majority class.** About 71% of rebounds are
+defensive, so saying "defensive" and looking at nothing scores 0.72 and beats
+all of this. It is not an abstention problem either: on the held-out broadcast
+these arms answer **89% and 99%** of the feed's events. They answer; they are
+wrong.
+
+Houston's rebound arm reads 0.391, which is worse than a coin on a two-way
+question. A predictor that says "offensive" whenever the shooter and the
+rebounder resolve to the same box is measuring whether the BALL DETECTION
+MOVED, not whether the ball changed teams — a decoy stuck near the rim answers
+both windows with the same player. That is the failure in one sentence and it
+points at the ball, not at the rebound logic.
+
+The cause is not the kits, which are 94–98% per box. It is the two holder
+attributions the rebound answer composes: handler attribution is 0.657 on
+winnable frames, and **its errors are not random** — the nearest box to the
+ball on a contested shot is frequently the contesting defender, and on a
+rebound the boxing-out opponent. Errors that systematically land on the other
+team flip a same-kit answer, which is why two 0.66 attributions compose to
+something at or below a coin rather than the 0.71 independence would predict.
+
+The decomposition has one assumption worth naming: the kit model is scored on
+ALL boxes, and the boxes it is asked about here are holders in a rebound scrum,
+which are more occluded than average. If kit accuracy on that subset is much
+worse than 0.95, some of this is the kits after all. Separating the two needs
+either handler labels on a rebound frame or a confident-attribution split, and
+neither exists yet.
+
+A first version of this scored **1.000 on both arms**. The hit counter was
+`sum(1 for ok, _ in judged)`, which counts every row whether it hit or not.
+Perfect accuracy on a hard vision task is a bug report, and it was.
+
+#### The kit-free alternative was tried and does not generalise
+
+If the camera pans away after a defensive rebound, rim visibility should carry
+the answer without any kit at all. Ball-to-rim distance and rim-visibility in
+the 2.5 s after the rebound:
+
+    rule                      g7      g1     ecf   tuned avg     hou
+    always "defensive"     0.690   0.711   0.711       0.704   0.716
+    no-rim share > 0.05    0.803   0.737   0.329       0.623   0.632
+    mean rim distance > 6  0.648   0.737   0.566       0.650   0.642
+
+It works on Finals G7 and G1 and **collapses on ECF G1**, where the no-rim
+share is 0.05 for both classes — that broadcast's camera does not do the thing
+the rule reads. Nothing beats the majority class on average. Two independent
+attempts now say the same thing.
+
+### The ball: the smoothness prior had the sign wrong, and fixing it is not enough
+
+Round 93 found that `ball_track.choose` rewards holding still while the decoys
+are the things that hold still. The unexamined half of that finding is the
+**frame of reference**. Taking each candidate's nearest neighbour in the
+adjacent frame, on the 97 uniform windows where the ball is both labelled and
+proposed:
+
+    frame of reference          the ball moves    a decoy moves
+    raw pixels                        11.2 px           5.0 px
+    rim-relative (the court)          10.9 px           1.8 px
+
+The decoys are painted on or standing on the floor — a logo, a head, a shoe —
+so they move with the **camera**, not the game. Subtract the camera and they
+stop dead. Contrast goes from 2.2× to 6.1×, and the camera's motion is free:
+the rim is bolted to the building and is drawn on three frames in four.
+
+`choose_moving` does that. Constants fitted on one half of the windows,
+reported on the other half it never saw:
+
+    arm                       rate    95% CI
+    oracle (any candidate)   0.809  0.70–0.88
+    argmax (what ships)      0.544  0.43–0.66
+    viterbi, smoothness      0.353  0.25–0.47
+    viterbi, court motion    0.559  0.44–0.67
+
+    court motion vs smoothness   17 won, 3 lost, p = 0.0026
+    court motion vs argmax        4 won, 3 lost, p = 1.0000
+
+**The sign error is confirmed and corrected — and the per-frame argmax still
+holds.** These absolute rates are not the published 78.5%/91.5%: this reads all
+`b` boxes from the raw cache at a 0.05 floor over a ±4-row window, a wider
+candidate set than `eval_ball_selection.py`. The paired comparison is the
+result; the rates are context.
+
+A fourth idea is also recorded as refuted, in a test rather than prose:
+penalising **acceleration** cannot separate these either, because a stationary
+logo has zero acceleration exactly like a ball flying in a straight line.
+
+And a fifth: the candidate set is not the problem. The detector emits about
+fourteen ball boxes a frame, so handing the path twelve hopeless ones gives it
+twelve more ways to build a cheap wrong route. Trimming to the top 2, 3 or 5 by
+confidence was swept alongside the two constants; the fit chose 5 and the report
+did not move (4 won, 3 lost, p = 1.0000).
+
+#### Where the 16 points actually are, and what is NOT the discriminator
+
+On the 97 windows where the ball is proposed at all, it is the most confident
+candidate on **62** and inside the top two on **78**. Sixteen points sit between
+rank 0 and rank 1, and that is the whole prize.
+
+Shape is not how to find them. Ball boxes against decoy boxes, p10/p50/p90:
+
+    feature    the ball                 a decoy
+    width      17.98 / 21.70 / 27.94    17.60 / 23.30 / 34.83
+    height     18.22 / 21.60 / 31.60    17.70 / 23.00 / 33.20
+    aspect      0.89 /  0.99 /  1.10     0.85 /  1.00 /  1.21
+    confidence  0.17 /  0.56 /  0.82     0.09 /  0.15 /  0.36
+
+The decoys are the same size and the same roundness as the ball. Only
+confidence separates them, and confidence is what argmax already uses. A size
+or aspect filter is free and worth nothing, which is worth knowing before
+somebody writes one.
+
+### Where 85% actually stands, per arm the ask named
+
+    arm                                  g7      g1     ecf     hou   verdict
+    kits: never six a side            0.955   0.939   0.977   0.962   PASS, label-free
+    boxes: never more than 13 on court 0.589  0.845   0.574   0.939   FAIL on 2 of 4
+    boxes: drew the handler               --      --   0.909      --   PASS (point)
+    ball: proposed at any rank            --      --   0.964      --   PASS — the CEILING
+    ball: top-1 selection                 --      --   0.800      --   FAIL, three attempts
+    handler attribution (winnable)        --      --   0.657      --   FAIL
+    rebound off/def from pixels        0.483   0.510   0.421   0.391   below its own majority
+    assist yes/no from pixels          0.556   0.464   0.539   0.440   below its own majority
+
+The chain is the finding. Rebounds and assists inherit handler attribution,
+handler attribution inherits ball selection, and ball selection has a measured
+ceiling of 0.96 with three failed attempts to reach it. **No work on derived
+events can pay until the ball is selected better**, and after five attempts at
+choosing better over the candidates this detector emits -- smoothness,
+acceleration, court motion, a trimmed candidate set, a shape prior -- the only
+lever left is a detector that emits fewer decoys. That is a retrain, it needs a
+GPU, and the hold-out leak that would have spoiled it is already closed:
+`build_ball_tiles.truth_instants` reads every `ball_truth*.json` by glob rather
+than by name.

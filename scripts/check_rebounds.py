@@ -9,6 +9,14 @@ A rebound is logged when the ball is SECURED, so the question is who is holding
 it at that moment. The confidence gate is the same idea as the assist reader's:
 a player who "held" the ball for a tenth of a second did not secure a rebound,
 that is the tracker resolving a scramble badly, and declining beats guessing.
+
+THIS DOES NOT READ A BROADCAST. `load_game` below opens SportVU tracking: every
+player located to the inch at 25 Hz, the ball's height known, identities stable
+for the whole game. The number this prints is the event LOGIC's accuracy on
+perfect inputs, and it is not evidence that the same question can be answered
+from pixels. `scripts/eval_play_events.py` asks that question and gets an
+answer at or below the majority class on all four broadcasts. Quote the two
+together or neither.
 """
 
 from __future__ import annotations
