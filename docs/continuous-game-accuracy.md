@@ -7001,3 +7001,39 @@ budget on how many boxes get that test. It now searches to the frame edge, and
 every candidate box size is a multiple of the clock's own measured height, which
 reproduces the old boxes exactly on 720p and follows the graphic on 1080p, where
 the clock is 28 px tall and the score digits are 52.
+
+### A lead this round created rather than closed: the ball ledger's denominators
+
+Round 63 closes with a thirteen-item ledger of ball-selection ideas, every one
+recorded as a failure, and the ledger is the reason no further selection work has
+been attempted. Every entry in it was scored on **ten to thirteen frames**:
+"delivered 3/10", "recall 6->7 of 10", "4 of 13". That is not a criticism of the
+conclusions reached at the time -- it was the truth set that existed -- but it is
+worth writing down what those denominators can resolve:
+
+    3/10   = 0.300   95% interval 0.108-0.603   width 0.495
+    4/13   = 0.308                0.127-0.576   width 0.450
+    100/130 = 0.769               0.690-0.833   width 0.144
+
+**An idea worth ten points could not have been distinguished from one worth
+nothing on that set**, and a paired test on 130 frames resolves about three times
+finer before the pairing is even counted. W0.1 rewired the ball truth from 13
+frames to 135 this round, and the per-game report now reads the uniform half of
+them -- 34, 41 and 55 frames on the three broadcasts -- straight out of the
+detection cache with no detector pass.
+
+So the honest status of that ledger is **not "thirteen ideas are dead"; it is
+"thirteen ideas were tested with an instrument that could not see a ten-point
+effect."** Two of them showed a learned signal before delivering nothing:
+the 192 px context ranker (val AP 0.313 against 0.171, checkpoint still on disk
+at `checkpoints/ball_context_ranker.pt`) and tiled inference (recall 6 to 7 of
+10). Re-scoring those two on the uniform half, paired, is a GPU pass over 130
+frames and costs almost nothing.
+
+**This is a lead, not a result.** Nothing here says either one works; it says the
+measurement that rejected them could not have detected it if they did. The gap
+they would have to close is now known precisely: top-1 reads 0.647 / 0.829 /
+0.800 against a proposed-at-any-rank ceiling of 0.824 / 0.902 / 0.964, so
+selection has 14 to 18 points available on each broadcast. The pooled figure
+this round replaced put that gap at two points, which is very likely why nobody
+went back.
