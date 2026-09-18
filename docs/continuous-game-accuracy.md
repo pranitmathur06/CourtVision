@@ -7761,3 +7761,53 @@ same-height glyph group is then all four digits.
 **It works on two of the four broadcasts in this repository, and the third fails
 for a structural reason a threshold cannot reach.** That is the honest state of
 the rung whose architecture is the only one this project has measured above 85%.
+
+### Where the ball is when you cannot see it: four leads, each with a number attached
+
+The same reader who supplied the ten-player constraint raised the other half:
+you do not have to SEE the ball to know where it is. Players point at it, a
+dribbler keeps it, a shooter releases it, and once released it goes where physics
+says. Each of those is testable against something already measured here, so they
+are written down with the number that would settle them rather than as
+aspiration.
+
+**1. The 9.2% that no selector can ever reach.** On the uniform frames the ball
+is proposed somewhere in the candidate list 90.8% of the time and reported 76.9%
+of the time. Round 99 split the gap: ten of the thirteen missing points are a
+binary choice between two boxes, and **9.2% is a ball that was never proposed at
+all.** No re-ranking touches that 9.2%. Inference is the only thing that can, and
+it is the only part of the ball problem where inference is not competing with
+selection.
+
+**2. The handler already knows.** The pipeline names the right handler on 50 to
+66% of uniform frames, and `yolo11s-pose.pt` has been in this repository
+unused since before any of it. A ball held or dribbled is within a forearm of a
+wrist. The measurement that would settle it costs nothing new: on the frames
+where the ball is NOT proposed, how often is the labelled ball within a wrist's
+reach of the labelled handler's hands? That is an upper bound on this whole idea
+and it can be computed from the labels already collected.
+
+**3. Viterbi failed for a reason that argues FOR ballistics, not against it.**
+`ball_track.choose` was wired up and lost: the mechanism was measured and it is
+that **the decoys move 6.5 px between frames and the real ball moves 90.5**, so a
+SMOOTHNESS prior actively prefers a stationary orange thing in the crowd. A
+ballistic prior is the opposite object: it expects large, accelerating,
+downward-curving motion and would penalise exactly the candidate smoothness
+rewards. The recorded negative is evidence about smoothness priors and says
+nothing about physical ones, and the distinction was never drawn because the
+experiment that produced it was not designed to.
+
+**4. A shot is a pose before it is a trajectory.** `detect_shots` works from
+ball-to-rim geometry and reaches F1 0.674 on a broadcast it has never seen --
+but it needs the ball, and the ball is what goes missing. A shooting motion is
+visible in a body whether or not the ball is: the arms extend, the wrists flick,
+the feet leave the floor. The bound on this one is already in this file too, from
+the other direction: **a shots-only system captures at most 0.45 of a game's
+plays**, so a pose-based shot detector cannot lift the ceiling, only the fraction
+of it that is reached.
+
+**And the ten-player constraint has a second use nobody has taken.** It bounds
+the TRACKER as hard as it bounds the mask: no more than ten player identities
+can be alive on the court at once. The tracking work in this repository counts
+identities in the hundreds per game and has no accuracy metric at all, and this
+is one -- free, label-free, and violated every time the count goes above ten.
