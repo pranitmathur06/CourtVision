@@ -334,3 +334,23 @@ def test_a_real_run_of_tenths_at_a_period_end_is_believed():
             (4.0, [8.4]), (5.0, [7.4])]
     assert [round(v, 1) for _, v in resolve(rows)] == [12.4, 11.4, 10.4,
                                                        9.4, 8.4, 7.4]
+
+
+def test_a_sub_ten_second_reading_may_never_start_a_run():
+    """Two consecutive strays that agree would otherwise confirm each other.
+
+    `assign_periods` treats the jump back up to the real clock as a new run
+    starting near the top of its period, so a pair of stray two-glyph reads in
+    the middle of a quarter would turn one quarter into two -- a worse failure
+    than the blind spot the tenths reading fixes. A genuine countdown always
+    arrives by continuing from a reading above ten seconds."""
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+    from read_game_clock import resolve
+    rows = ([(float(i), [630.0 - i]) for i in range(4)]
+            + [(4.0, [7.2]), (5.0, [6.7])]
+            + [(float(i), [626.0 - (i - 6)]) for i in range(6, 10)])
+    values = [round(v, 1) for _, v in resolve(rows)]
+    assert 7.2 not in values and 6.7 not in values, values
+    assert values == [630.0, 629.0, 628.0, 627.0, 626.0, 625.0, 624.0, 623.0]

@@ -114,6 +114,19 @@ def resolve(candidates):
             if fits:
                 seconds = max(fits)
             else:
+                # A SUB-TEN-SECOND READING MAY NEVER START A RUN. Reading the
+                # last ten seconds of a period means a two-glyph text is now a
+                # valid time, and a graphic that briefly leaves two glyphs
+                # showing is a plausible source of one. A single stray is
+                # already dropped by the confirmation below, but two
+                # consecutive strays that happen to agree would confirm each
+                # other -- and because `assign_periods` treats the jump back up
+                # to the real clock as a new run starting near the top of its
+                # period, that would turn one quarter into two. A genuine
+                # countdown always arrives by continuing from a reading above
+                # ten, so this costs nothing real.
+                if all(v < 10.0 for v in options):
+                    continue
                 following = rows[i + 1] if i + 1 < len(rows) else None
                 confirmed = [
                     v for v in options
