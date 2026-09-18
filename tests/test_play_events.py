@@ -177,3 +177,56 @@ def test_a_pass_from_the_other_kit_is_not_an_assist():
     said, _ = epe.judge_assist(rows, _Frames(), _AlwaysKit({0.0: 1, 800.0: 0}),
                                at_frame=60, fps=30.0)
     assert said is False
+
+
+def test_a_vote_beats_the_first_frame_when_the_first_frame_is_wrong():
+    """`holders` returns one attribution per frame, each right about two times
+    in three. Taking the first inherits that rate; taking the majority does
+    not, and this is the cheapest variance reduction in the file."""
+    seen = [(0, 1, None, None), (4, 0, None, None), (8, 0, None, None),
+            (12, 0, None, None)]
+    assert seen[0][1] == 1
+    assert epe.vote(seen) == (0, pytest.approx(0.75))
+
+
+def test_a_vote_on_nothing_declines():
+    assert epe.vote([]) == (None, 0.0)
+
+
+def test_the_anchored_arm_declines_without_a_map():
+    rows = [_row(60, (110.0, 100.0), [[0.0, 0.0, 100.0, 300.0]])]
+    said, why = epe.judge_rebound_anchored(rows, _Frames(), _AlwaysKit({0.0: 1}),
+                                           at_frame=60, fps=30.0, shot_frame=0,
+                                           anchor={}, shooting_team="OKC")
+    assert said is None and why == "no anchor"
+
+
+def test_the_anchored_arm_needs_one_attribution_not_two():
+    """The old arm asked vision who shot AND who rebounded, so a 0.66
+    attribution entered the answer twice. Here the feed supplies the shooting
+    team and vision supplies only the rebounder."""
+    rows = [_row(60, (110.0, 100.0), [[0.0, 0.0, 100.0, 300.0]])]
+    model = _AlwaysKit({0.0: 1})
+    anchor = {1: "HOU", 0: "OKC"}
+    assert epe.judge_rebound_anchored(rows, _Frames(), model, 60, 30.0, 0,
+                                      anchor, "HOU")[0] == "off"
+    assert epe.judge_rebound_anchored(rows, _Frames(), model, 60, 30.0, 0,
+                                      anchor, "OKC")[0] == "def"
+
+
+def test_a_kit_missing_from_the_anchor_declines_rather_than_guessing():
+    rows = [_row(60, (110.0, 100.0), [[0.0, 0.0, 100.0, 300.0]])]
+    said, why = epe.judge_rebound_anchored(rows, _Frames(), _AlwaysKit({0.0: 1}),
+                                           60, 30.0, 0, {0: "OKC"}, "OKC")
+    assert said is None and why == "kit not in the anchor"
+
+
+def test_team_codes_joins_the_play_by_play_by_description():
+    """563 of 563 on the held-out broadcast, which is why the join is on the
+    description and not on a reconstructed clock."""
+    from courtvision.games import get
+
+    broadcast = get("hou")
+    codes = epe.team_codes(broadcast)
+    assert codes
+    assert set(codes.values()) == {"OKC", "HOU"}

@@ -8362,7 +8362,10 @@ somebody writes one.
 
     arm                                  g7      g1     ecf     hou   verdict
     kits: never six a side            0.955   0.939   0.977   0.962   PASS, label-free
-    boxes: never more than 13 on court 0.589  0.845   0.574   0.939   FAIL on 2 of 4
+    boxes: never more than 13 on court 0.963  0.999   0.983   0.996   PASS -- see Round 115;
+                                                                     the 0.589/0.845/0.574/0.939
+                                                                     first printed here counted
+                                                                     each player twice
     boxes: drew the handler               --      --   0.909      --   PASS (point)
     ball: proposed at any rank            --      --   0.964      --   PASS — the CEILING
     ball: top-1 selection                 --      --   0.800      --   FAIL, three attempts
@@ -8380,3 +8383,291 @@ lever left is a detector that emits fewer decoys. That is a retrain, it needs a
 GPU, and the hold-out leak that would have spoiled it is already closed:
 `build_ball_tiles.truth_instants` reads every `ball_truth*.json` by glob rather
 than by name.
+
+## Round 113: the rebound arm names the shooting team, and that is provable
+
+Round 112 left the rebound arm below its own majority class with a causal story
+that was a guess: "the handler is 0.657 and its errors are systematic." The
+guess was wrong in an interesting way, and the real answer is checkable in four
+steps.
+
+### One attribution instead of two
+
+The old arm asked vision who shot AND who rebounded and compared the kits, so a
+0.66 attribution entered the answer twice. The cached play-by-play carries
+`teamTricode` on every action and joins to the aligned events **563 of 563** by
+description, so the feed can supply the shooting team and vision need only
+supply the rebounder. The kit-to-team map is estimated once per broadcast over
+every made basket, so it survives a per-event attribution that is right two
+times in three.
+
+That is `judge_rebound_anchored`, and it moved the number by two points. The
+useful thing it produced was not a better score but a **contradiction**.
+
+### Three anchors, and two of them disagree
+
+The same broadcast, three event types, asking which kit is which:
+
+    from made shots, at release          kit0 -> OKC   31:17 and 15:7
+    from free throws, 2.5-1.0 s before   kit0 -> HOU   13:7  and 8:4
+    from rebounds                        kit0 -> HOU   about 62:38
+
+They cannot all be right. The jersey colours do not settle it — kit0 is dark
+(L=65) and kit1 is white (L=179), and an NBA home team picks either — so
+"the road team wears dark" is a convention that expired and is not evidence.
+
+What settles it is that the made-shot reading's consistency is **46/70 =
+0.657**, and the hand-labelled handler metric is about two in three on every
+broadcast measured. An attribution that is 66% right produces a 66% consistent
+anchor; one that is 66% WRONG would produce a 66% consistent anchor too, but
+pointing the other way, and then the labelled handler metric would have to be
+0.34. It is not. So the made-shot anchor stands and the other two readings are
+the broken ones.
+
+*(46/70 is also, by coincidence, exactly the ECF handler figure quoted in
+Round 112's table. Different broadcasts, different tasks, same fraction. It is
+a coincidence and not one number confirming another.)*
+
+### What the rebound window actually returns, and the prediction that proved it
+
+If the attribution in a rebound window returns the **shooting** team rather
+than the rebounding team, then offensive rebounds — where those are the same
+team — read correctly and defensive ones read wrong. That is a prediction with
+a number attached, since 73% of rebounds are defensive. Measured:
+
+    offensive rebounds   18/27 = 0.667
+    defensive rebounds   18/68 = 0.265
+
+**0.667 is the attribution rate and 0.265 is one minus it.** The window returns
+the shooting team essentially always. The ball spends the rebound near the rim,
+in the air or being tipped, with the offence crashing, and the nearest box to it
+is on the shooting team whoever ends up with it.
+
+### Two fixes, both refuted, and the second one is the clean demonstration
+
+**Wait for the ball to settle.** Attribute only on frames where the ball's
+court-relative speed is low, on the theory that a held ball is attributable and
+a flying one is not. It does not help and costs coverage:
+
+    speed gate (court px/frame)   none    40    25    15     8
+    names the rebounding team    0.379 0.329 0.324 0.327 0.306
+
+**Wait for the ball to leave the rim.** Attribute only once the ball is more
+than k rim widths from the basket, on the theory that by then the rebounder has
+taken it away:
+
+    gate (rim widths)      0       3       5       8      12
+    offensive          0.630   0.519   0.522   0.500   0.450
+    defensive          0.265   0.299   0.369   0.417   0.500
+    overall            0.368   0.362   0.409   0.439   0.486
+
+The two classes **trade places** and the total never reaches a coin. That is
+what an absent signal looks like as opposed to a mistuned one: moving the gate
+moves probability mass from one class to the other and creates none. A
+mistuned gate would show a peak.
+
+### The tool now prints per class, because the blend hid all of this
+
+Every number above is invisible in a blended accuracy. `eval_play_events.py`
+prints each arm broken down by truth class, with the reason beside it: an arm
+at 0.67 on one class and 0.27 on the other is not a weak answer, it is a
+**different question being answered**. That is now the first diagnostic in the
+report rather than something to be rediscovered.
+
+### What this changes about the 85% question
+
+Nothing about the verdict and a great deal about where to spend. Rebound
+attribution from a broadcast is not a tuning problem, a kit problem, or a
+window problem — three of each have now been measured and refuted. The ball is
+near the rim and the nearest player to it is not the one who will end up with
+it, so the information needed is **which player secures possession**, which is
+tracking across the scramble and not geometry at one instant. That is Team T's
+re-ID work, whose across-cut stratum is structurally 0.00 today, and it is a
+much larger piece of work than anything attempted here.
+
+## Round 114: a ball-tracking number that needs no labels, and what it says
+
+Every ball number in this repository needs hand-clicked truth: 135 uniform
+frames on Finals G7, 13 on another file, **none at all on the fourth
+broadcast**. A metric that needs labels cannot follow a new broadcast, and
+"does this work on an arbitrary game" is the entire question.
+
+### The rim is a ruler
+
+A rim is 18 inches across, and it is the one object on the court whose real
+size is known. The ball's displacement between two frames, divided by the rim's
+width in those frames, is a distance in feet however far the camera is and
+however much it has zoomed. The camera's own motion comes out because the rim
+moves with it -- the same trick `choose_moving` uses.
+
+The hardest NBA pass measured is about 60 mph and a jump shot leaves the hand
+near 25. **40 mph -- 39 rim widths a second -- is already generous.** Anything
+faster is not a ball, it is the selector jumping to a different object.
+
+    game   selector        possible    95% CI   median   p90     steps
+    g7     argmax             0.682  0.68-0.69     8.3  219.2    22131
+    g7     court motion       0.758  0.75-0.76     7.2  107.0    20884
+    g1     argmax             0.665  0.66-0.67     7.7  228.7    16005
+    g1     court motion       0.756  0.75-0.76     6.1  110.5    15122
+    ecf    argmax             0.699  0.69-0.71     7.6  184.3    16808
+    ecf    court motion       0.768  0.76-0.77     6.9   95.8    15974
+    hou    argmax             0.725  0.72-0.73     7.9  165.0    17560
+    hou    court motion       0.825  0.82-0.83     7.5   59.4    17487
+
+**A third of the shipped ball track's steps are physically impossible**, on
+every broadcast, and the 90th percentile is 165-229 rim widths a second --
+between 170 and 235 mph. That track is not a trajectory.
+
+### The court-motion selector does work, and the labelled test could not see it
+
+Round 112 scored `choose_moving` against the per-frame argmax at 4 won, 3 lost,
+p = 1.0000 on 68 labelled windows, and recorded it as null. On this metric it
+gains **+7.6 to +10.0 points on all four broadcasts**, over 15,000 to 22,000
+steps apiece, so the intervals are a point wide and the four replications are
+independent.
+
+Both results are true and they are not in tension. The court-motion prior
+removes impossible jumps without changing which frame is right: same median
+speed -- 7.5 against 7.9 on Houston -- and the p90 falls from 165 to 59. It
+fixes the tail, and a 68-window paired test on the centre frame has almost no
+power to see a tail.
+
+### The trap this metric sets, stated twice because it is easy to fall into
+
+**It is not accuracy.** A selector that locks onto one stationary logo for a
+whole clip scores a perfect 1.000. That is why the median speed is printed
+beside it: a frozen track reads 0.0 rim widths a second, and the court-motion
+selector reads 7.5 against argmax's 7.9, so it is not buying the bound by
+standing still. It is a NECESSARY condition, quoted beside the labelled top-1
+rate and never instead of it.
+
+### A four-times error found by the metric's own spread
+
+The first run had Houston at 0.892 against 0.67-0.70 for the others, and the
+tempting reading was ready-made: Houston is the only 1080p broadcast, so
+resolution is the lever. It was not. `f` in a detection row is a VIDEO frame
+index, and Houston's cache is the only one carrying a `rate` field (14.985 Hz,
+the sampling rate) alongside its `fps` (59.94). Converting the gap with `rate`
+divided Houston's speeds by four and made an impossible ball look legal.
+Corrected, Houston sits with the others at 0.725.
+
+Frames are not seconds. This is the fourth place in this repository that has
+had to learn it, and it is now a test.
+
+### It is wired into the per-game report
+
+`eval_by_game.py` prints both selectors' bounds for any broadcast, so a game
+with **no ball labels whatsoever** -- which is Houston's exact situation --
+now gets a real ball-tracking number on arrival:
+
+    ball: possible steps, as shipped      0.725  n=17560  0.72-0.73  FAIL
+    ball: possible steps, court motion    0.825  n=17487  0.82-0.83  FAIL
+
+Neither clears 85%, on any of the four.
+
+### Making the bound physical does not buy per-frame accuracy either
+
+`choose_moving` carried a flat 400-pixel speed ceiling. A fixed pixel number is
+the wrong shape: the same real bound is a different pixel count on a wide shot
+and a tight one, so a single number has to be loose enough for the tightest
+zoom and is useless at the widest. It now takes **one ceiling per frame**,
+converted from that frame's rim width, which is the 40 mph bound expressed
+correctly.
+
+On the labelled windows it changes nothing good: court motion goes from 0.559
+to **0.515**, four won and six lost against argmax, p = 0.7539.
+
+Worth recording is how that number was nearly reported the other way. The
+bound was first swept as a grid dimension alongside the two constants; the fit
+half chose it, and the report half then lost two points. A 67-window fit
+selecting a knob that does not replicate is a grid over-fitting, not a finding.
+The bound is now **fixed on and not fitted** -- a basketball cannot exceed 40
+mph whatever a fit half prefers -- and only the two real constants are chosen
+on the fit half.
+
+So the ledger on ball selection stands at six attempts: smoothness (wrong
+sign), acceleration (a logo has none), court motion (fixes the tail, not the
+frame), a trimmed candidate set (nothing), a shape prior (ball and decoy are
+the same size and roundness), and a physical speed bound (nothing). The oracle
+is 0.765-0.96 depending on the candidate set and the frame is still chosen at
+0.54-0.80. **The lever is the detector.**
+
+## Round 115: the floor mask was never the problem it was reported to be
+
+Round 106 put the floor mask's over-keeping at **41% / 16% / 43% / 6%** of
+frames holding more than thirteen people, and Round 112's table carried it
+forward as the bounding-box arm failing on two broadcasts of four. Both were
+wrong, and by a factor of ten.
+
+### Boxes are not people
+
+`eval_court_mask.counts` counted `b[0] in ("p", "h")`. Those are **two
+detectors run over the same frame**, and both draw the same players. The median
+Finals G7 frame carries 13 `p` boxes and 2 `h` boxes; counted as rows that is
+fifteen people, and fifteen people on a court is impossible by construction
+before any mask has had a chance to be wrong.
+
+Round 110 made exactly this error in the tracking metric, where it made the
+tracker look twice as *good* as it is. Here it made the mask look twice as
+*bad*. Same bug, opposite sign, and the second one took five rounds longer to
+find because a number that flatters nobody does not invite a second look.
+
+Deduplicating by overlap before counting, on the same caches:
+
+    game    detected p50   kept p50   more than 13 kept        obeys the rule
+    g7           11          10       1166/31680 = 0.037            0.963
+    g1           11           7          27/20880 = 0.001            0.999
+    ecf          11           9         375/21780 = 0.017            0.983
+    hou          11           5          86/21420 = 0.004            0.996
+
+**The mask obeys the ten-plus-three rule on 96-100% of frames on every
+broadcast.** The bounding-box arm clears 85% and always did.
+
+### What the correction exposes
+
+The interesting column is `kept p50`. Ten players are on the court and Houston's
+mask keeps a median of **five** of them; it keeps five or fewer on 54.9% of
+frames and exactly ten on 4.0%. Finals G1 keeps five or fewer on 19.3%.
+
+So the mask's error is not over-keeping, it is **under-keeping**, and that
+agrees with the one labelled thing there is: of the 71 hand-clicked players the
+pipeline missed, 42 were dropped by the floor mask and only 4 were missed by
+the detector. Two independent measurements, one label-free and one labelled,
+now say the same thing, and the label-free one was pointing the other way until
+today.
+
+The ten-player fact bounds only one direction. Six on the court is impossible;
+five kept is merely suspicious, because a close-up or a dead ball genuinely has
+five people in frame. Turning the suspicion into a bound needs the clock's
+running/stopped signal to restrict the denominator to live play, which exists
+and is not wired in. That is the next measurement, not a fix.
+
+### The other direction, bounded at last: the mask drops the ball carrier
+
+The ten-player rule bounds over-keeping and nothing else, which left the mask's
+real error unmeasurable. The **ball** supplies the missing bound: whoever is
+holding it is playing, so a mask that drops him is wrong with no appeal to how
+many people ought to be in shot. No labels, no clock, no registration.
+
+    game   the man holding the ball is KEPT
+    g7        17089/19718 = 0.867   (0.862-0.871)
+    g1         9047/13223 = 0.684   (0.676-0.692)
+    ecf       12071/14146 = 0.853   (0.847-0.859)
+    hou        8082/17786 = 0.454   (0.447-0.462)
+
+**Houston's floor mask throws away the man with the ball more often than it
+keeps him.** That is the same broadcast whose mask keeps a median of five
+people, and the two numbers are the same fact seen twice.
+
+It inherits the ball selector's error and is therefore a LOWER bound: when the
+argmax ball is a logo, the "carrier" is whoever stands near that logo, who may
+genuinely be off court and correctly dropped. The bound understates the mask.
+Even so, 0.454 against 0.867 on another broadcast of the same pipeline is not a
+selector artefact, and it is now the single largest measured defect in the
+stack that does not need a GPU to fix.
+
+This also re-reads the handler arm. Handler attribution is 0.657 on frames
+where a person could see the handler, and on the three broadcasts with handler
+labels the mask keeps the carrier on 0.87 / 0.68 / 0.85. Some unknown part of
+the attribution failure is the mask having already deleted the right answer
+before any kernel is asked.

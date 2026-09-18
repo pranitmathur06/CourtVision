@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import statistics
 import sys
 from collections import Counter
@@ -43,7 +44,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
 from courtvision.games import get, registry  # noqa: E402
-from courtvision.stats import wilson  # noqa: E402
+from courtvision.stats import iou, wilson  # noqa: E402
 
 #: The confidence the labelling pages offered a player box at.
 PLAYER_CONF = 0.35
@@ -56,6 +57,35 @@ REFEREES = 3
 IMPOSSIBLE_ABOVE = ON_COURT + REFEREES
 
 
+#: Two boxes overlapping this much are the same person seen by the two
+#: detectors, not two people.
+SAME_PERSON_IOU = 0.5
+
+
+def _people_of(frame) -> list:
+    """Person boxes of one frame, in the order the `on` mask indexes them."""
+    return [b for b in frame["d"] if b[0] in ("p", "h")]
+
+
+def distinct(boxes) -> int:
+    """How many PEOPLE these boxes are.
+
+    `p` and `h` are two different detectors run over the same frame, and both
+    draw the same players. Counting the rows is counting most players twice:
+    the median frame carries 13 `p` boxes and 2 `h` boxes on Finals G7, and
+    treating that as fifteen people made 71% of frames "impossible" before any
+    mask had a chance to be wrong. Round 110 made exactly this error in the
+    tracking metric and it made the tracker look twice as good as it is; here
+    it makes the mask look twice as bad.
+    """
+    kept: list = []
+    for box in sorted(boxes, key=lambda b: -(b[2] - b[0]) * (b[3] - b[1])):
+        if any(iou(box, other) >= SAME_PERSON_IOU for other in kept):
+            continue
+        kept.append(box)
+    return len(kept)
+
+
 def counts(game) -> tuple[list[int], list[int]]:
     """(detected people, kept people) per frame, from the clip detection cache."""
     if not game.clip_detections.exists():
@@ -64,12 +94,76 @@ def counts(game) -> tuple[list[int], list[int]]:
     detected, kept = [], []
     for frames in data.get("clips", {}).values():
         for frame in frames:
-            people = [b for b in frame["d"] if b[0] in ("p", "h")]
+            people = _people_of(frame)
             mask = frame.get("on") or []
-            detected.append(len(people))
-            kept.append(sum(1 for n, _ in enumerate(people)
-                            if n >= len(mask) or mask[n]))
+            detected.append(distinct([b[2:] for b in people]))
+            # The mask is indexed against the UNDEDUPLICATED order, so it is
+            # applied first and the survivors are deduplicated after.
+            survivors = [b[2:] for n, b in enumerate(people)
+                         if n >= len(mask) or mask[n]]
+            kept.append(distinct(survivors))
     return detected, kept
+
+
+#: A ball this far from a player's box edge, in that player's own box heights,
+#: is in his hands. The same gate `eval_play_events.py` uses.
+HOLD_GATE = 0.45
+
+
+def drops_the_ball_carrier(game) -> dict:
+    """How often the mask throws away the man holding the ball.
+
+    THE TEN-PLAYER RULE IS ONE-SIDED. Six of a kit on the court is impossible,
+    so over-keeping has a hard bound; five people kept is merely suspicious,
+    because a close-up or a dead ball genuinely has five people in frame. That
+    left the mask's real error -- under-keeping -- with no label-free bound at
+    all.
+
+    The ball supplies one. Whoever is holding the ball is playing, so a mask
+    that drops him is wrong with no appeal to how many people ought to be in
+    shot. It needs no labels, no clock and no registration, and it is available
+    on any broadcast the moment its detections are cached.
+
+    It inherits the ball selector's own error: on a frame where the argmax ball
+    is a logo, the "carrier" is whoever stands near that logo. So this is a
+    LOWER bound on the mask's under-keeping, and the ball's own numbers are
+    printed in the same report.
+    """
+    if not game.clip_detections.exists():
+        return {}
+    data = json.loads(game.clip_detections.read_text())
+    frames = dropped = 0
+    for clip in data.get("clips", {}).values():
+        for frame in clip:
+            mask = frame.get("on") or []
+            balls = [b for b in frame["d"] if b[0] == "b"]
+            people = _people_of(frame)
+            if not balls or not people:
+                continue
+            ball = max(balls, key=lambda b: b[1])
+            centre = ((ball[2] + ball[4]) / 2.0, (ball[3] + ball[5]) / 2.0)
+            best = None
+            for index, box in enumerate(people):
+                edge = _to_box(centre, box[2:])
+                if best is None or edge < best[0]:
+                    best = (edge, index, box)
+            edge, index, box = best
+            height = box[5] - box[3]
+            if height <= 0 or edge > HOLD_GATE * height:
+                continue
+            frames += 1
+            if index < len(mask) and not mask[index]:
+                dropped += 1
+    low, high = wilson(frames - dropped, frames)
+    return {"carrier_frames": frames, "carrier_dropped": dropped,
+            "carrier_kept": (frames - dropped) / frames if frames else float("nan"),
+            "carrier_ci": [low, high]}
+
+
+def _to_box(point, box) -> float:
+    dx = max(box[0] - point[0], 0.0, point[0] - box[2])
+    dy = max(box[1] - point[1], 0.0, point[1] - box[3])
+    return math.hypot(dx, dy)
 
 
 def report(key: str, detected: list[int], kept: list[int]) -> dict:
@@ -186,6 +280,14 @@ def main() -> int:
     for key in (args.game or list(registry())):
         game = get(key)
         out[key] = report(key, *counts(game))
+        carrier = drops_the_ball_carrier(game)
+        if carrier.get("carrier_frames"):
+            low, high = carrier["carrier_ci"]
+            print(f"        the man holding the ball is KEPT: "
+                  f"{carrier['carrier_frames'] - carrier['carrier_dropped']}"
+                  f"/{carrier['carrier_frames']} = {carrier['carrier_kept']:.3f}"
+                  f"  (95% CI {low:.3f}-{high:.3f})")
+        out[key].update(carrier)
         if args.misses and out[key]:
             found = misses(game)
             if found:

@@ -73,7 +73,7 @@ the scoreboard and aligning it — and draw boxes over the footage. So:
 | Deciding which of the two kits a player wears | **94–98%** over four games, scored with no labels at all |
 | Deciding whether a rebound was offensive or defensive | **39–51%**, against a 72% majority class — worse than saying "defensive" every time |
 | Deciding whether a basket was assisted | **44–56%**, against a 54–60% majority class |
-| Never drawing more than thirteen people on the court | **57–94%** per game |
+| Never keeping more than thirteen people on the court | **96–100%** per game |
 | Naming a player from his jersey | **45%** |
 
 The three-line block in the middle of that table is new and is the honest

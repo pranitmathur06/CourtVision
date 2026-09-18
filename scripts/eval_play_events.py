@@ -86,6 +86,13 @@ SAME_PLAYER_IOU = 0.3
 PASS_TRAVEL = 1.2
 #: Clips sampled to fit the kit centres.
 KIT_FIT_ROWS = 3
+#: Where the cached play-by-play lives. It carries `teamTricode` on every
+#: action, which is what lets one vision attribution be replaced by a
+#: game-level fact.
+PBP_CACHE = "data/pbp_cache"
+#: A shooter vote this one-sided is worth putting into the kit-to-team anchor.
+#: Below it the window is a scramble and the vote is noise.
+ANCHOR_MIN_SHARE = 0.75
 
 
 def to_box(point, box) -> float:
@@ -224,6 +231,62 @@ def holders(rows, frames: ClipFrames, model, frame_lo: float, frame_hi: float):
     return out
 
 
+def team_codes(broadcast) -> dict[str, str]:
+    """{event description: team tricode} from the cached play-by-play.
+
+    Joined on the description rather than the clock because the two agree
+    exactly -- 563 of 563 on the held-out broadcast -- and because a clock join
+    would have to reproduce the period arithmetic the aligner already did.
+    """
+    path = ROOT / PBP_CACHE / f"{broadcast.game_id}.json"
+    if not path.exists():
+        return {}
+    blob = json.loads(path.read_text())
+    actions = blob["game"]["actions"] if "game" in blob else blob
+    return {(a.get("description") or "").strip(): a.get("teamTricode")
+            for a in actions if a.get("teamTricode")}
+
+
+def vote(seen) -> tuple[int | None, float]:
+    """The kit most of a window's frames agree on, and how one-sided it was.
+
+    `holders` returns one attribution per frame and each is right about two
+    times in three. Taking the FIRST of them throws the other twenty away and
+    inherits the single-frame error rate; taking the majority does not. This is
+    the cheapest variance reduction available anywhere in this file.
+    """
+    if not seen:
+        return None, 0.0
+    counted = Counter(kit for _frame, kit, _box, _ball in seen)
+    kit, hits = counted.most_common(1)[0]
+    return kit, hits / len(seen)
+
+
+def judge_rebound_anchored(rows, frames, model, at_frame, fps, shot_frame,
+                           anchor, shooting_team):
+    """'off' | 'def' | None, using ONE vision attribution instead of two.
+
+    The old arm asked vision who shot AND who rebounded and compared the two
+    kits, so a 0.66 attribution entered the answer twice. The feed already
+    knows which team shot. All vision has to supply is the rebounder's kit,
+    and the kit-to-team map is estimated once per broadcast over every made
+    basket rather than per event.
+    """
+    if not anchor or shooting_team is None:
+        return None, "no anchor"
+    securing = holders(rows, frames, model,
+                       max(at_frame - REBOUND_BEFORE_S * fps,
+                           shot_frame + SHOT_CLEAR_S * fps),
+                       at_frame + REBOUND_AFTER_S * fps)
+    kit, _share = vote(securing)
+    if kit is None:
+        return None, "no securing player"
+    team = anchor.get(kit)
+    if team is None:
+        return None, "kit not in the anchor"
+    return ("off" if team == shooting_team else "def"), ""
+
+
 def fit_kits(broadcast, cache, names) -> KitModel | None:
     """Kit centres for this broadcast, from the even-numbered clips only."""
     colours = []
@@ -288,14 +351,16 @@ def evaluate(key: str, *, limit: int | None = None) -> dict:
     cache = json.loads((ROOT / broadcast.clip_detections).read_text())
     index = json.loads((ROOT / broadcast.clip_index).read_text())
     index_rows = index["clips"] if isinstance(index, dict) else index
-    span = float(index.get("lead_s", 3.0)) + float(index.get("tail_s", 3.0)) \
-        if isinstance(index, dict) else 6.0
+    span = (float(index.get("lead_s", 3.0)) + float(index.get("tail_s", 3.0))
+            if isinstance(index, dict) else 6.0)
     fps = float(cache.get("fps") or broadcast.fps)
     events = json.loads((ROOT / broadcast.aligned).read_text())["events"]
     names = sorted(cache["clips"])
     model = fit_kits(broadcast, cache, names)
     if model is None:
         return {"game": key, "label": broadcast.label, "fitted": False}
+    codes = team_codes(broadcast)
+    source = cache.get("source_size") or [1280, 720]
 
     misses = [e for e in events if e.get("action") == "Missed Shot"]
     reb_rows = rebound_truth(events)
@@ -303,64 +368,109 @@ def evaluate(key: str, *, limit: int | None = None) -> dict:
     if limit:
         reb_rows, ast_rows = reb_rows[:limit], ast_rows[:limit]
 
-    results = {"rebound": [], "assist": []}
-    declined = {"rebound": Counter(), "assist": Counter()}
+    results = {"rebound": [], "rebound (anchored)": [], "assist": []}
+    declined = {"rebound": Counter(), "rebound (anchored)": Counter(),
+                "assist": Counter()}
+    contingency: Counter = Counter()
 
-    for event, truth in reb_rows:
+    def open_clip(event, arm):
         found = _clip_rows(cache, index_rows, event, span, fps)
         if found is None:
-            declined["rebound"]["no clip covers it"] += 1
-            continue
+            declined[arm]["no clip covers it"] += 1
+            return None
         rows, name, at_frame = found
-        earlier = [m for m in misses
-                   if 0.0 <= float(event["video_s"]) - float(m["video_s"]) <= 5.0]
-        if not earlier:
-            declined["rebound"]["no logged miss before it"] += 1
-            continue
-        shot_frame = at_frame - (float(event["video_s"]) - float(earlier[-1]["video_s"])) * fps
         path = ROOT / broadcast.clip_dir / name
         if not path.exists():
-            declined["rebound"]["clip not on disk"] += 1
-            continue
-        frames = ClipFrames(path, cache.get("source_size") or [1280, 720])
-        try:
-            said, why = judge_rebound(rows, frames, model, at_frame, fps, shot_frame)
-        finally:
-            frames.close()
-        if said is None:
-            declined["rebound"][why] += 1
-            continue
-        results["rebound"].append((said == truth, truth))
+            declined[arm]["clip not on disk"] += 1
+            return None
+        return rows, at_frame, path
 
+    # Pass one: every made basket. Each opens its clip once and pays for two
+    # things -- the assist answer, and one vote towards the kit-to-team anchor.
     for event, truth in ast_rows:
-        found = _clip_rows(cache, index_rows, event, span, fps)
-        if found is None:
-            declined["assist"]["no clip covers it"] += 1
+        opened = open_clip(event, "assist")
+        if opened is None:
             continue
-        rows, name, at_frame = found
-        path = ROOT / broadcast.clip_dir / name
-        if not path.exists():
-            declined["assist"]["clip not on disk"] += 1
-            continue
-        frames = ClipFrames(path, cache.get("source_size") or [1280, 720])
+        rows, at_frame, path = opened
+        frames = ClipFrames(path, source)
         try:
             said, why = judge_assist(rows, frames, model, at_frame, fps)
+            shooting = holders(rows, frames, model,
+                               at_frame - 1.0 * fps, at_frame + 0.1 * fps)
         finally:
             frames.close()
+        kit, share = vote(shooting)
+        team = codes.get((event.get("description") or "").strip())
+        if kit is not None and team and share >= ANCHOR_MIN_SHARE:
+            contingency[(kit, team)] += 1
         if said is None:
             declined["assist"][why] += 1
+        else:
+            results["assist"].append((said == truth, truth))
+
+    # The anchor: for each kit, the team it voted for most often over the whole
+    # broadcast. Estimated over some seventy baskets, so it survives a
+    # per-event attribution that is right two times in three, which is the
+    # entire point of moving the question here.
+    anchor: dict[int, str] = {}
+    for kit in (0, 1):
+        options = {team: n for (k, team), n in contingency.items() if k == kit}
+        if options:
+            anchor[kit] = max(options, key=options.get)
+    if len(set(anchor.values())) < 2:
+        anchor = {}          # both kits voted for one team: no map at all
+
+    for event, truth in reb_rows:
+        prior = [m for m in misses
+                 if 0.0 <= float(event["video_s"]) - float(m["video_s"]) <= 5.0]
+        if not prior:
+            for arm in ("rebound", "rebound (anchored)"):
+                declined[arm]["no logged miss before it"] += 1
             continue
-        results["assist"].append((said == truth, truth))
+        opened = open_clip(event, "rebound")
+        if opened is None:
+            declined["rebound (anchored)"]["no clip covers it"] += 1
+            continue
+        rows, at_frame, path = opened
+        shot_frame = at_frame - (float(event["video_s"])
+                                 - float(prior[-1]["video_s"])) * fps
+        shooting_team = codes.get((prior[-1].get("description") or "").strip())
+        frames = ClipFrames(path, source)
+        try:
+            said, why = judge_rebound(rows, frames, model, at_frame, fps, shot_frame)
+            anchored, anchored_why = judge_rebound_anchored(
+                rows, frames, model, at_frame, fps, shot_frame,
+                anchor, shooting_team)
+        finally:
+            frames.close()
+        for arm, answer, reason in (("rebound", said, why),
+                                    ("rebound (anchored)", anchored, anchored_why)):
+            if answer is None:
+                declined[arm][reason] += 1
+            else:
+                results[arm].append((answer == truth, truth))
 
     out = {"game": key, "label": broadcast.label, "fitted": True,
-           "separation_lab": model.separation()}
-    for arm, asked in (("rebound", len(reb_rows)), ("assist", len(ast_rows))):
+           "separation_lab": model.separation(),
+           "anchor": {str(k): v for k, v in anchor.items()},
+           "anchor_votes": {f"{k}:{t}": n for (k, t), n in contingency.items()}}
+    asked_by_arm = {"rebound": len(reb_rows), "rebound (anchored)": len(reb_rows),
+                    "assist": len(ast_rows)}
+    for arm, asked in asked_by_arm.items():
         judged = results[arm]
         hits = sum(1 for ok, _ in judged if ok)
         truths = Counter(t for _, t in judged)
         majority = max(truths.values()) / len(judged) if judged else math.nan
         low, high = wilson(hits, len(judged))
+        per_class = {}
+        for label in truths:
+            rows = [ok for ok, t in judged if t == label]
+            per_class[str(label)] = {
+                "n": len(rows),
+                "accuracy": sum(rows) / len(rows) if rows else math.nan,
+            }
         out[arm] = {
+            "per_class": per_class,
             "asked": asked,
             "answered": len(judged),
             "coverage": len(judged) / max(1, asked),
@@ -388,16 +498,16 @@ def main() -> int:
     print("  the feed says WHEN; vision says WHICH KIT. Held to bar "
           f"{args.bar:.2f}.")
     print()
-    print(f"  {'game':<6} {'arm':<8} {'acc':>6} {'95% CI':>12} {'base':>6} "
+    print(f"  {'game':<6} {'arm':<18} {'acc':>6} {'95% CI':>12} {'base':>6} "
           f"{'n':>5} {'cover':>6}  verdict")
-    print("  " + "-" * 76)
+    print("  " + "-" * 86)
     for key in keys:
         row = evaluate(key, limit=args.limit)
         results.append(row)
         if not row.get("fitted"):
             print(f"  {key:<6} no kit model could be fitted")
             continue
-        for arm in ("rebound", "assist"):
+        for arm in ("rebound", "rebound (anchored)", "assist"):
             got = row[arm]
             low, high = got["ci"]
             if not got["answered"]:
@@ -410,10 +520,20 @@ def main() -> int:
                 verdict = "PASS (point)"
             else:
                 verdict = "FAIL"
-            print(f"  {key:<6} {arm:<8} {got['accuracy']:>6.3f} "
+            print(f"  {key:<6} {arm:<18} {got['accuracy']:>6.3f} "
                   f"{low:>5.2f}-{high:<5.2f} {got['majority_baseline']:>6.3f} "
                   f"{got['answered']:>5} {got['coverage']:>6.3f}  {verdict}")
+            classes = "  ".join(
+                f"{label} {stat['accuracy']:.3f} (n={stat['n']})"
+                for label, stat in sorted(got["per_class"].items()))
+            if classes:
+                print(f"  {'':<6} {'':<18} by class: {classes}")
     print()
+    print("  by class  THE diagnostic. An arm that reads one class well and the")
+    print("            other badly is not a weak answer, it is a different")
+    print("            question being answered: a rebound arm at 0.67 on")
+    print("            offensive and 0.27 on defensive is naming the SHOOTING")
+    print("            team every time, and the blend hides that completely.")
     print("  base    the majority class. An accuracy whose interval does not")
     print("          clear it has learned nothing from the pixels.")
     print("  cover   share of the feed's events this answered at all. Declining")
@@ -424,12 +544,12 @@ def main() -> int:
     for row in results:
         if not row.get("fitted"):
             continue
-        for arm in ("rebound", "assist"):
+        for arm in ("rebound", "rebound (anchored)", "assist"):
             declined = row[arm]["declined"]
             if declined:
                 pretty = ", ".join(f"{k}: {v}" for k, v in
                                    sorted(declined.items(), key=lambda kv: -kv[1]))
-                print(f"  {row['game']:<6} {arm:<8} declined -- {pretty}")
+                print(f"  {row['game']:<6} {arm:<18} declined -- {pretty}")
     print()
     if args.out:
         Path(args.out).write_text(json.dumps(results, indent=2))

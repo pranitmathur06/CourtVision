@@ -723,6 +723,46 @@ def kits_arm(game: Broadcast) -> list[Arm]:
     ]
 
 
+#: Where `eval_ball_physics.py` leaves its per-broadcast result.
+PHYSICS_REPORT = "outputs/games/ball_physics.json"
+
+
+def ball_physics_arm(game: Broadcast) -> list[Arm]:
+    """Could a basketball have moved the way the track says? No labels needed.
+
+    Every other ball number needs hand-clicked truth, which exists on one
+    broadcast in full and not at all on the fourth. This one needs a rim, which
+    is 18 inches across and is drawn on three frames in four, so it follows a
+    new broadcast on arrival.
+
+    It is NOT accuracy and the note says so: a selector frozen on one logo
+    scores a perfect 1.000. It is a necessary condition.
+    """
+    path = ROOT / PHYSICS_REPORT
+    if not path.exists():
+        return [Arm("ball: physically possible steps", 0, 0,
+                    note=f"{PHYSICS_REPORT} has not been written; "
+                         "run eval_ball_physics.py")]
+    rows = {row["game"]: row for row in json.loads(path.read_text())}
+    row = rows.get(game.key)
+    if row is None:
+        return [Arm("ball: physically possible steps", 0, 0,
+                    note="no physics report for this broadcast")]
+    arms = []
+    for picker, tag in (("argmax", "as shipped"), ("court motion", "court motion")):
+        got = row.get(picker)
+        if not got:
+            continue
+        total = int(got["steps"])
+        arms.append(Arm(f"ball: possible steps, {tag}",
+                        round(got["possible"] * total), total,
+                        note=f"under 40 mph measured in rim widths; median "
+                             f"{got['median_rw_per_s']:.1f} rim widths/s, "
+                             f"{got['scored_share']:.2f} of steps scored. NOT "
+                             f"accuracy -- a track frozen on one spot scores 1.000"))
+    return arms
+
+
 def evaluate(game: Broadcast, args) -> dict:
     arms: list[Arm] = []
     arms += clock_arm(game)
@@ -737,6 +777,7 @@ def evaluate(game: Broadcast, args) -> dict:
             arms.append(Arm("registration: agreement", 0, 0,
                             note=f"failed: {type(error).__name__}: {error}"))
     arms += kits_arm(game)
+    arms += ball_physics_arm(game)
     arms += handler_arm(game)
     arms += ball_arm(game)
     arms += end_to_end_arms(game)

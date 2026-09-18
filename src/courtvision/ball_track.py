@@ -230,13 +230,21 @@ def choose_moving(candidates: Sequence[Sequence[tuple[float, float, float]]],
                   still_px: float = STILL_PX,
                   still_weight: float = STILL_WEIGHT,
                   missing_cost: float = MISSING_COST,
-                  max_speed_px: float = MAX_SPEED_PX,
+                  max_speed_px: float | Sequence[float] = MAX_SPEED_PX,
                   ) -> list[tuple[float, float] | None]:
     """One ball per frame, preferring the candidate that MOVES on the court.
 
     `shifts[i]` is the camera's displacement from frame i-1 to frame i, or
     None where it is unknown -- in which case that step falls back to raw
     pixels, which still carries some of the signal (2.2x rather than 6.1x).
+
+    `max_speed_px` may be one number for the whole window or ONE PER FRAME.
+    Per frame is how a physical bound is expressed: a basketball cannot exceed
+    about 40 mph, a rim is 18 inches, so the bound in pixels is a fixed number
+    of RIM WIDTHS and the rim's width in the frame supplies the conversion.
+    The same real bound is a different pixel count on a wide shot and a tight
+    one, and a single pixel number has to be loose enough for the tightest
+    zoom, which makes it useless at the widest.
     """
     n = len(candidates)
     if n == 0:
@@ -255,6 +263,10 @@ def choose_moving(candidates: Sequence[Sequence[tuple[float, float, float]]],
             points.append((x, y))
             emission.append(-math.log(max(conf, 1e-6)))
         shift = shifts[index] if index < len(shifts) else None
+        ceiling = (max_speed_px[index] if isinstance(max_speed_px, (list, tuple))
+                   else max_speed_px)
+        if ceiling is None or ceiling <= 0:
+            ceiling = MAX_SPEED_PX
         costs = [math.inf] * len(points)
         choice = [0] * len(points)
         for state, point in enumerate(points):
@@ -264,7 +276,7 @@ def choose_moving(candidates: Sequence[Sequence[tuple[float, float, float]]],
                     expected = (prior_point[0] + (shift[0] if shift else 0.0),
                                 prior_point[1] + (shift[1] if shift else 0.0))
                     moved = math.hypot(point[0] - expected[0], point[1] - expected[1])
-                    if moved > max_speed_px:
+                    if moved > ceiling:
                         continue
                     step = still_weight * max(0.0, still_px - moved)
                 total = previous_costs[prior] + step + emission[state]

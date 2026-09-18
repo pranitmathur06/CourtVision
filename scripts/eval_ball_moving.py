@@ -71,6 +71,10 @@ def top_k(frames, k: int | None):
     return [sorted(frame, key=lambda c: -c[2])[:k] for frame in frames]
 
 
+#: A basketball cannot exceed about 40 mph. 58.7 ft/s over an 18-inch rim.
+MAX_RIM_WIDTHS_PER_S = 58.7 / 1.5
+
+
 def window_of(blob_window):
     """(candidates per row, camera shift per row, index of the labelled row)."""
     rows = blob_window["rows"]
@@ -85,15 +89,35 @@ def window_of(blob_window):
         one, two = rim_centre(before), rim_centre(after)
         shifts.append(None if one is None or two is None
                       else (two[0] - one[0], two[1] - one[1]))
-    return candidates, shifts, middle - lo
+    return candidates, shifts, middle - lo, slice_rows
 
 
-def score(windows, still_px, still_weight, k=None):
+def rim_width(row) -> float | None:
+    rims = [b for b in row["d"] if b[0] == "r"]
+    if not rims:
+        return None
+    best = max(rims, key=lambda b: b[1])
+    return max(1.0, best[4] - best[2])
+
+
+def speed_ceilings(slice_rows, fps: float, step: int) -> list[float | None]:
+    """The 40 mph bound in pixels, per frame, from the rim in that frame."""
+    seconds = step / fps
+    out = []
+    for row in slice_rows:
+        width = rim_width(row)
+        out.append(None if width is None
+                   else MAX_RIM_WIDTHS_PER_S * width * seconds)
+    return out
+
+
+def score(windows, still_px, still_weight, k=None, physical=False,
+          fps=30.0, step=2):
     """(argmax hits, smooth hits, moving hits, oracle hits) as bool lists."""
     argmax, smooth, moving, oracle = [], [], [], []
     for window in windows:
         truth = window["ball"]
-        candidates, shifts, at = window_of(window)
+        candidates, shifts, at, slice_rows = window_of(window)
         candidates = top_k(candidates, k)
         here = candidates[at]
         if not here:
@@ -109,8 +133,11 @@ def score(windows, still_px, still_weight, k=None):
         oracle.append(any(near((x, y)) for x, y, _ in here))
         picked = choose([list(frame) for frame in candidates])
         smooth.append(near(picked[at]) if picked else False)
+        ceilings = (speed_ceilings(slice_rows, fps, step) if physical
+                    else None)
         picked = choose_moving([list(frame) for frame in candidates], shifts,
-                               still_px=still_px, still_weight=still_weight)
+                               still_px=still_px, still_weight=still_weight,
+                               **({"max_speed_px": ceilings} if physical else {}))
         moving.append(near(picked[at]) if picked else False)
     return argmax, smooth, moving, oracle
 
@@ -131,22 +158,34 @@ def main() -> int:
     grid_px = [2.0, 4.0, 6.0, 8.0, 12.0]
     grid_weight = [0.05, 0.1, 0.2, 0.4, 0.8]
     grid_k = [2, 3, 5, None]
+    fps = float(blob.get("fps") or 30.0)
+    step = int(blob.get("step") or 2)
+    # The speed bound is a PRIOR, not a knob. A basketball cannot exceed 40
+    # mph, so a path that says it did is wrong whatever a 67-window fit half
+    # prefers -- and when the bound WAS swept, the fit chose it and the report
+    # half then lost two points, which is a grid over-fitting n=67 rather than
+    # a finding. It is fixed on and the two real constants are fitted under it.
+    physical = True
     best = None
     for still_px, still_weight, k in itertools.product(grid_px, grid_weight, grid_k):
-        _, _, moving, _ = score(fit_half, still_px, still_weight, k)
+        _, _, moving, _ = score(fit_half, still_px, still_weight, k, physical,
+                                fps, step)
         rate = sum(moving) / max(1, len(moving))
         if best is None or rate > best[0]:
             best = (rate, still_px, still_weight, k)
     _, still_px, still_weight, k = best
 
-    argmax, smooth, moving, oracle = score(report_half, still_px, still_weight, k)
+    argmax, smooth, moving, oracle = score(report_half, still_px, still_weight,
+                                           k, physical, fps, step)
     n = len(report_half)
     print()
     print("  eval_ball_moving.py -- the ball is the candidate that moves on the court")
     print()
     print(f"  fitted on {len(fit_half)} windows, reported on {n} it never saw")
     print(f"  chosen constants: still_px = {still_px}, still_weight = {still_weight}, "
-          f"candidates kept = {k or 'all'}   (fit-half rate {best[0]:.3f})")
+          f"candidates kept = {k or 'all'}, "
+          f"speed bound = 40 mph in rim widths (fixed, not fitted)"
+          f"   (fit-half rate {best[0]:.3f})")
     print()
     print(f"  {'arm':<26} {'rate':>6} {'95% CI':>12}")
     print("  " + "-" * 48)
@@ -172,6 +211,7 @@ def main() -> int:
         Path(args.out).write_text(json.dumps({
             "windows": args.windows, "fit_n": len(fit_half), "report_n": n,
             "still_px": still_px, "still_weight": still_weight, "top_k": k,
+            "physical_bound": physical,
             "oracle": sum(oracle) / max(1, n), "argmax": sum(argmax) / max(1, n),
             "smooth": sum(smooth) / max(1, n), "moving": sum(moving) / max(1, n),
         }, indent=2))
