@@ -145,6 +145,13 @@ def test_a_sixty_hertz_broadcast_is_sampled_at_the_same_rate_as_a_thirty():
         step = max(1, int(round(fps / clip_detect_raw.RATE)))
         assert step == expected, f"{fps} fps -> step {step}"
         assert abs(fps / step - 15.0) < 0.1
+    # And this is why it has to be 15: `clip_boxes.assemble` hands the detected
+    # sequence straight to `motion_tracking.track()`, which defaults to
+    # TUNED_FPS and converts every threshold from seconds at that rate. A 30 Hz
+    # detected sequence would make `max_age_s = 1.0` mean half a second and the
+    # tracker a different algorithm, with nothing announcing it.
+    from courtvision.motion_tracking import TUNED_FPS
+    assert clip_detect_raw.RATE == TUNED_FPS
 
 
 def test_the_labelling_pages_place_a_frame_at_its_real_time():
