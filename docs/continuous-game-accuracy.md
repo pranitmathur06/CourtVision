@@ -7074,3 +7074,37 @@ they would have to close is now known precisely: top-1 reads 0.647 / 0.829 /
 selection has 14 to 18 points available on each broadcast. The pooled figure
 this round replaced put that gap at two points, which is very likely why nobody
 went back.
+
+### A prediction registered before it is tested: the clock arm is sampling-limited
+
+On the fourth broadcast the clock arm reads **0.897** -- the only label-free arm
+under the 0.90 bar -- and the obvious reading is that three percent of the game
+is illegible. The four broadcasts say otherwise:
+
+    game   readings   running   per game-second   game-seconds seen   coverage
+    G7        3707      2356          0.818             2127           0.739
+    ECF       5113      2899          0.912             2558           0.804
+    HOU       4067      2861          0.993             2584           0.897
+    G1        4331      3045          1.057             2678           0.930
+
+Coverage is very nearly **0.90 x readings-per-game-second**, across four
+broadcasts, three arenas and two encodes. That is not a legibility curve, it is
+arithmetic: `read_game_clock.py` samples at `--step 1.0` and the clock ticks once
+a second, so a game second the sampler lands beside is a game second that cannot
+be counted however clearly it was displayed. The reader is at 0.99 samples per
+tick on Houston and it recovers 0.897 of the ticks.
+
+**The prediction, written down before the run:** sampling at `--step 0.5`
+roughly doubles samples per tick and should put coverage above **0.95 on every
+one of the four broadcasts**, including the two currently at 0.74 and 0.80. If
+it does not -- if Game 7 stays near 0.74 -- then the missing seconds really are
+illegible and this explanation is wrong.
+
+**Why this is not tuning on the hold-out.** The relationship was measured on the
+three broadcasts the project has always had, the mechanism is sampling
+arithmetic rather than anything about a scoreboard, and the same change is
+applied to all four and reported on all four. A step chosen because Houston
+scored 0.897, applied only to Houston, would be the other thing.
+
+The cost is one more sequential decode per broadcast, which on the 1080p60 file
+is about forty minutes.
