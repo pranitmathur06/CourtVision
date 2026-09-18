@@ -9005,3 +9005,53 @@ better appearance model, which is a retrain.
 
 Seven attempts, one partial success, and the partial success is the only one
 that used information the detector did not already have.
+
+## Round 118: the fourth broadcast got worse, and the sample could not see it
+
+Three broadcasts gained from the fitted mask. The fourth lost, and the way it
+lost is the more useful finding.
+
+    game   carrier kept        <=13 kept         verdict
+    hou    0.454 -> 0.553      0.996 -> 0.980    gain
+    g1     0.684 -> 0.774      0.999 -> 0.971    gain
+    ecf    0.853 -> 0.885      0.983 -> 0.966    gain
+    g7     0.867 -> 0.744      0.963 -> 0.987    LOSS, 12.3 points
+
+Finals G7's fitted setting -- erosion 0.03 of frame height plus a 26 CIELAB kit
+gate -- makes the arm it was chosen to improve **twelve points worse** over the
+whole broadcast, paired 1743 won against 4167 lost.
+
+### The sample, not the rule
+
+The rule is not at fault: on 250 sampled frames that setting measured 0.866
+carrier at 0.972 over-keeping, which is the best point that clears the floor,
+and the rule took it. The full broadcast says 0.744.
+
+    broadcast   fit predicted   delivered   error
+    hou              0.628        0.553     -7.5 points
+    g7               0.866        0.744    -12.2 points
+
+**A 250-frame sample of a 20,000-frame broadcast over-estimates its own chosen
+setting by seven to twelve points.** That is not noise around the estimate --
+the intervals printed beside those fit numbers were six points wide, and the
+error is twice that. It is selection: the rule picks the setting that looks
+best ON THE SAMPLE, so the winner carries its own sampling luck, and the more
+settings the grid holds the more luck there is to carry. Twenty settings were
+swept.
+
+This is the oldest failure in this log wearing new clothes -- a number chosen on
+the data it is reported on -- and the fit half/report half discipline that
+catches it everywhere else was not applied here, because a mask fit did not look
+like a model fit.
+
+### What is done about it
+
+`fit_court_mask.py` takes `--share` and `--gate` so the grid can be narrowed
+and the frames raised, which is the axis that was short. G7 is being re-fitted
+over three erosions and two gates on 1500 frames instead of twenty settings on
+250.
+
+**G7's rebuilt cache is not adopted and its fitted entry should not be trusted
+until the re-fit lands.** The other three are measured gains on the full
+broadcast, which is the only measurement that counts here, and they stand on
+that rather than on the fit that proposed them.

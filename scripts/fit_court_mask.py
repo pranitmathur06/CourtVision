@@ -115,10 +115,17 @@ def measure(key: str, *, frames_wanted: int) -> dict:
     cache = json.loads((ROOT / broadcast.clip_detections).read_text())
     source = cache.get("source_size") or [1280, 720]
     model = fit_kits(broadcast, cache, sorted(cache["clips"]), source)
-    carrier = defaultdict(lambda: [0, 0])
-    over = defaultdict(lambda: [0, 0])
+    # Split by CLIP, not by frame: frames within a clip are the same camera on
+    # the same possession, so an even/odd frame split would put near-duplicates
+    # on both sides and the report half would confirm whatever the fit half
+    # chose. This is the split discipline every other arm in this project uses,
+    # and its absence here is what let a 250-frame fit propose a setting that
+    # cost twelve points over the whole broadcast.
+    carrier = {"fit": defaultdict(lambda: [0, 0]), "report": defaultdict(lambda: [0, 0])}
+    over = {"fit": defaultdict(lambda: [0, 0]), "report": defaultdict(lambda: [0, 0])}
     seen = 0
-    for name in sorted(cache["clips"]):
+    for index, name in enumerate(sorted(cache["clips"])):
+        half = "fit" if index % 2 == 0 else "report"
         if seen >= frames_wanted:
             break
         path = ROOT / broadcast.clip_dir / name
@@ -170,24 +177,25 @@ def measure(key: str, *, frames_wanted: int) -> dict:
                         count = distinct([people[i] for i in range(len(people))
                                           if keep[i]])
                         setting = (share, max_lab)
-                        over[setting][0 if count <= IMPOSSIBLE_ABOVE else 1] += 1
+                        over[half][setting][0 if count <= IMPOSSIBLE_ABOVE else 1] += 1
                         if held is not None:
-                            carrier[setting][0 if keep[held] else 1] += 1
+                            carrier[half][setting][0 if keep[held] else 1] += 1
         finally:
             capture.release()
-    rows = {}
-    for share in SHARES:
-        for max_lab in KIT_DISTANCES:
-            setting = (share, max_lab)
-            kept, dropped = carrier[setting]
-            fine, bad = over[setting]
-            rows[setting] = {
-                "carrier_kept": (kept / (kept + dropped)
-                                 if kept + dropped else math.nan),
-                "carrier_n": kept + dropped,
-                "over_ok": fine / (fine + bad) if fine + bad else math.nan,
-                "over_n": fine + bad,
-            }
+    rows = {"fit": {}, "report": {}}
+    for half in ("fit", "report"):
+        for share in SHARES:
+            for max_lab in KIT_DISTANCES:
+                setting = (share, max_lab)
+                kept, dropped = carrier[half][setting]
+                fine, bad = over[half][setting]
+                rows[half][setting] = {
+                    "carrier_kept": (kept / (kept + dropped)
+                                     if kept + dropped else math.nan),
+                    "carrier_n": kept + dropped,
+                    "over_ok": fine / (fine + bad) if fine + bad else math.nan,
+                    "over_n": fine + bad,
+                }
     return {"game": key, "label": broadcast.label, "frames": seen, "shares": rows,
             "kits_fitted": model is not None}
 
@@ -208,10 +216,26 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--game", action="append", default=[])
     parser.add_argument("--frames", type=int, default=200,
-                        help="frames sampled per broadcast")
+                        help="frames sampled per broadcast. 250 was NOT "
+                             "enough: it over-estimated its own chosen "
+                             "setting by 7 points on one broadcast and 12 on "
+                             "another, and on the second the setting it chose "
+                             "was a regression the sample could not see.")
+    parser.add_argument("--share", type=float, action="append", default=None,
+                        help="erosion to try, repeatable. Narrows the grid so "
+                             "more FRAMES can be afforded, which is the axis "
+                             "that was short.")
+    parser.add_argument("--gate", type=float, action="append", default=None,
+                        help="kit gate to try, repeatable. Pass a negative "
+                             "number for 'no gate'.")
     parser.add_argument("--out", default=str(COURT_ERODE_FILE))
     args = parser.parse_args()
 
+    global SHARES, KIT_DISTANCES
+    if args.share:
+        SHARES = sorted(args.share)
+    if args.gate:
+        KIT_DISTANCES = [None if g < 0 else g for g in args.gate]
     keys = args.game or list(registry())
     chosen = {}
     print()
@@ -220,21 +244,31 @@ def main() -> int:
           f"{IMPOSSIBLE_ABOVE} kept stays under {1 - OVER_FLOOR:.2f}")
     for key in keys:
         got = measure(key, frames_wanted=args.frames)
-        pick = choose(got["shares"])
+        pick = choose(got["shares"]["fit"])
         chosen[key] = (None if pick is None
                        else {"erode_share": pick[0], "kit_max_lab": pick[1]})
         print()
         print(f"  {got['label']}  ({key}, {got['frames']} frames)")
-        print(f"    {'erode/height':<13} {'kit gate':>9} {'carrier kept':>13} "
-              f"{'95% CI':>12} {'<=13 kept':>11}")
-        for setting, row in got["shares"].items():
-            kept = round(row["carrier_kept"] * row["carrier_n"])
-            low, high = wilson(kept, row["carrier_n"])
+        print(f"    {'erode/height':<13} {'kit gate':>9} "
+              f"{'carrier (fit)':>13} {'<=13 (fit)':>11} "
+              f"{'carrier (rep)':>13} {'<=13 (rep)':>11}")
+        for setting in got["shares"]["fit"]:
+            fit_row = got["shares"]["fit"][setting]
+            rep_row = got["shares"]["report"][setting]
             mark = "  <- chosen" if setting == pick else ""
             share, max_lab = setting
             gate = "off" if max_lab is None else f"{max_lab:.0f}"
-            print(f"    {share:<13.4f} {gate:>9} {row['carrier_kept']:>13.3f} "
-                  f"{low:>5.2f}-{high:<5.2f} {row['over_ok']:>11.3f}{mark}")
+            print(f"    {share:<13.4f} {gate:>9} {fit_row['carrier_kept']:>13.3f} "
+                  f"{fit_row['over_ok']:>11.3f} {rep_row['carrier_kept']:>13.3f} "
+                  f"{rep_row['over_ok']:>11.3f}{mark}")
+        if pick is not None:
+            fit_row = got["shares"]["fit"][pick]
+            rep_row = got["shares"]["report"][pick]
+            gap = fit_row["carrier_kept"] - rep_row["carrier_kept"]
+            print(f"    the chosen setting reads {gap:+.3f} on the half it was "
+                  f"chosen on. A large positive gap is the")
+            print("    grid having picked this setting's sampling luck, and is "
+                  "the whole reason for the split.")
         if pick is None:
             print("    nothing clears the over-keeping floor on this broadcast")
     Path(args.out).write_text(json.dumps(chosen, indent=2))

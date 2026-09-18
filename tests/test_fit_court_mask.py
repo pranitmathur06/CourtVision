@@ -84,3 +84,32 @@ def test_two_detectors_on_one_player_count_once_here_too():
 def test_distance_to_a_box_is_zero_inside_it():
     assert fit.to_box((50.0, 50.0), [0.0, 0.0, 100.0, 100.0]) == 0.0
     assert fit.to_box((0.0, 50.0), [10.0, 0.0, 100.0, 100.0]) == pytest.approx(10.0)
+
+
+def test_choose_reads_the_fit_half_only():
+    """The rule must not see the half it is reported on. Without this the fit
+    proposed a setting for Finals G7 that cost twelve points of ball carrier
+    over the whole broadcast, and the sample it was chosen on could not see
+    it."""
+    import inspect
+
+    source = inspect.getsource(fit.main)
+    assert 'choose(got["shares"]["fit"])' in source
+    assert 'choose(got["shares"]["report"])' not in source
+
+
+def test_the_split_is_by_clip_and_not_by_frame():
+    """Frames within a clip are the same camera on the same possession, so a
+    frame split puts near-duplicates on both sides and the report half
+    confirms whatever the fit half chose."""
+    import inspect
+
+    source = inspect.getsource(fit.measure)
+    assert 'half = "fit" if index % 2 == 0 else "report"' in source
+
+
+def test_both_halves_are_measured_for_every_setting():
+    import inspect
+
+    source = inspect.getsource(fit.measure)
+    assert 'for half in ("fit", "report")' in source
