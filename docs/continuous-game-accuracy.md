@@ -7811,3 +7811,41 @@ the TRACKER as hard as it bounds the mask: no more than ten player identities
 can be alive on the court at once. The tracking work in this repository counts
 identities in the hundreds per game and has no accuracy metric at all, and this
 is one -- free, label-free, and violated every time the count goes above ten.
+
+### Why the floor mask fails: it is a colour prior for one arena's paint
+
+`candidates.court_region` finds the floor as `wood | paint`, where wood is hue
+5-30 and **paint is hue 95-130 -- a BLUE key**. Sampling the court band of one
+wide frame per broadcast, and reporting what share of those pixels each band
+accepts:
+
+    broadcast   wood    paint(blue)   neither   modal hue of the rejected
+    G7         0.339      0.204        0.457            4
+    G1         0.319      0.140        0.542            4
+    ECF        0.207      0.166        0.627          150
+    HOU        0.794      0.004        0.202          175
+
+**On Houston the blue paint band accepts 0.4% of the court.** The Rockets' key
+is red -- the rejected pixels peak at hue 175, which is red on OpenCV's 0-180
+scale -- so the key is a hole in the mask and a player standing in it fails the
+feet test. That is the under-keeping.
+
+**On ECF the wood band accepts only 0.207**, the lowest of the four, and yet
+that broadcast over-keeps on 43% of frames. A floor the colour test barely finds
+means the largest connected component is being chosen somewhere else.
+
+So one hand-set pair of colour ranges, fitted to one arena's blue key, is doing
+a job that is arena-dependent in both directions. **A first attempt at removing
+the paint colour -- keeping wood only and filling its holes, on the argument
+that a painted key is a hole surrounded by wood -- made it worse, because on a
+court with a large key the wood alone splits into two components and the largest
+is half the floor.**
+
+The fix that is actually principled is already in this repository and is not a
+colour test at all: **the court polygon from registration.** `court_keypoints`
+plus a homography projects the known court rectangle into the image exactly,
+with no reference to what anything is painted. Registration reaches 62-75% of
+frames, so it would need the colour test as a fallback rather than a
+replacement, and every detection cache would have to be rebuilt to measure it --
+about two hours. It is the next piece of accuracy work and it is written down
+here with the evidence rather than attempted in the last hour of a session.
