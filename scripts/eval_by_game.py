@@ -112,7 +112,12 @@ class Arm:
         if self.descriptive:
             return "(descriptive)"
         if self.cap is not None and self.cap < bar:
-            return f"CAPPED at {self.cap:.2f}"
+            # The share of its OWN ceiling this arm reaches. "CAPPED at 0.43"
+            # alone read identically for an arm at 0.43 and an arm at 0.01, so
+            # a mode performing at 2% of what its architecture allows looked
+            # like one performing at its limit.
+            share = (self.rate or 0.0) / self.cap if self.cap else 0.0
+            return f"CAPPED {share:.0%} of {self.cap:.2f}"
         if self.low >= bar:
             return "PASS"
         if self.rate is not None and self.rate >= bar:
@@ -122,13 +127,13 @@ class Arm:
     def row(self, bar: float) -> str:
         if not self.total and self.weighted is None:
             return (f"  {self.name:<34}{'--':>9}{'':>9}"
-                    f"   0.00-1.00   {'NO DATA':<16}{self.note}")
+                    f"   0.00-1.00   {'NO DATA':<20}{self.note}")
         # A weighted rate prints no n, because it has none. An empty column is
         # the honest thing there; a number would be an invented sample size.
         count = "" if self.weighted is not None else f"n={self.total}"
         return (f"  {self.name:<34}{self.rate:>9.3f}{count:>9}"
                 f"   {self.low:.2f}-{self.high:.2f}   "
-                f"{self.verdict(bar):<16}{self.note}")
+                f"{self.verdict(bar):<20}{self.note}")
 
     def as_dict(self) -> dict:
         return {"name": self.name,
@@ -712,8 +717,9 @@ def print_report(result: dict, bar: float) -> None:
         print(f"  {note}")
     print(f"  bar {bar:.2f}. PASS means the LOWER end of the interval clears it; "
           f"'PASS (point)'\n  means the point estimate does and the interval "
-          f"does not; CAPPED means the arm's\n  architecture cannot reach the "
-          f"bar however good its model gets.\n")
+          f"does not. CAPPED means the arm's\n  architecture cannot reach the "
+          f"bar however good its model gets, and prints how much\n  of its "
+          f"OWN ceiling it reaches.\n")
     print(f"  {'arm':<34}{'rate':>9}{'n':>9}   95% CI      verdict")
     print(f"  {'-' * 84}")
     labelled_seen = False
@@ -776,13 +782,19 @@ def main() -> int:
     parser.add_argument("--compare", action="store_true",
                         help="also test whether the games evaluated share "
                              "one rate, per action type")
+    parser.add_argument("--registry", default=None,
+                        help="a games.json other than the shipped one. Exists so "
+                             "an integration test can build a broadcast out of "
+                             "three small files and check this whole path, "
+                             "without which the seam between the driver's "
+                             "outputs and this report's inputs is untested.")
     parser.add_argument("--out", default=None)
     args = parser.parse_args()
 
-    keys = args.game or list(registry())
+    keys = args.game or list(registry(args.registry))
     results = []
     for key in keys:
-        game = get(key)
+        game = get(key, args.registry)
         result = evaluate(game, args)
         print_report(result, args.bar)
         results.append(result)

@@ -97,7 +97,8 @@ class Stage:
 
 
 def stages_for(game: Broadcast, detector: str, ball_detector: str | None,
-               fps: float, skip: list[str]) -> list[Stage]:
+               fps: float, skip: list[str],
+               args_registry: str | None = None) -> list[Stage]:
     """The pipeline, in dependency order, for one broadcast.
 
     Ordered so the cheapest things that unblock a number come first: the clock
@@ -186,7 +187,8 @@ def stages_for(game: Broadcast, detector: str, ball_detector: str | None,
               needs=["align"]),
         Stage("report", [at(game.report)],
               [S(ROOT / "scripts" / "eval_by_game.py"),
-               "--game", game.key, "--out", S(game.report)],
+               "--game", game.key, "--out", S(game.report)]
+              + (["--registry", args_registry] if args_registry else []),
               needs=["align"]),
     ]
     return [s for s in out if s.name not in skip]
@@ -266,17 +268,21 @@ def main() -> int:
                         help="re-run stages whose outputs already exist")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--manifest", default=None)
+    parser.add_argument("--registry", default=None,
+                        help="a games.json other than the shipped one. Exists so "
+                             "an integration test can build a broadcast out of a "
+                             "few small files and drive this whole path.")
     parser.add_argument("--list", action="store_true",
                         help="print the registry and exit")
     args = parser.parse_args()
 
     if args.list:
-        for key, g in registry().items():
+        for key, g in registry(args.registry).items():
             flag = " (unseen)" if g.unseen else ""
             print(f"{key:6} {g.game_id}  {g.label}{flag}\n       {g.video}")
         return 0
 
-    game = get(args.game)
+    game = get(args.game, args.registry)
     if not at(game.video).exists():
         print(f"FAIL - {game.video} is not on disk")
         return 1
@@ -287,7 +293,7 @@ def main() -> int:
               "no model. Its numbers are the acceptance test.")
 
     plan = stages_for(game, args.detector, args.ball_detector, args.fps,
-                      args.skip)
+                      args.skip, args.registry)
     if args.only:
         plan = [s for s in plan if s.name in args.only]
     if not plan:
@@ -299,7 +305,8 @@ def main() -> int:
     # satisfied -- so a typo in a `needs` list, or a new stage, would silently
     # run with its prerequisite absent.
     produced = {s.name: s for s in stages_for(game, args.detector,
-                                              args.ball_detector, args.fps, [])}
+                                              args.ball_detector, args.fps, [],
+                                              args.registry)}
     rows, satisfied = [], set()
     for stage in plan:
         blocked = [n for n in stage.needs

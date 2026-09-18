@@ -40,8 +40,16 @@ def test_a_capped_arm_says_capped_and_not_failed():
     has to distinguish "the model is not good enough" from "this architecture
     cannot answer the question at all"."""
     arm = Arm("e2e vision: captured", 430, 1000, cap=0.43)
-    assert arm.verdict(0.90) == "CAPPED at 0.43"
+    assert arm.verdict(0.90) == "CAPPED 100% of 0.43"
     assert Arm("x", 430, 1000, cap=0.95).verdict(0.90) == "FAIL"
+
+
+def test_capped_says_how_much_of_its_own_ceiling_the_arm_reaches():
+    """"CAPPED at 0.43" read identically for an arm at 0.43 and one at 0.01, so
+    a mode performing at 2% of what its architecture allows looked like one
+    performing at its limit."""
+    assert Arm("x", 10, 1000, cap=0.43).verdict(0.90) == "CAPPED 2% of 0.43"
+    assert Arm("x", 244, 1000, cap=0.43).verdict(0.90) == "CAPPED 57% of 0.43"
 
 
 def test_pass_needs_the_lower_end_of_the_interval():
