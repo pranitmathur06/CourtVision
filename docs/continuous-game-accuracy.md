@@ -7849,3 +7849,82 @@ frames, so it would need the colour test as a fallback rather than a
 replacement, and every detection cache would have to be rebuilt to measure it --
 about two hours. It is the next piece of accuracy work and it is written down
 here with the evidence rather than attempted in the last hour of a session.
+
+## Round 107: real retrieval, measured offline, and the gate it fails
+
+The plan's Team R, built and run with **zero cloud spend**, which the plan
+requires before any Cloudflare resource is created. `bge-base-en-v1.5` at 768
+dimensions, possession cards rather than events, a `VectorStore` protocol with
+an exact-cosine local twin, and three gates written into the evaluation's
+docstring before a number existed.
+
+    recall@10, 358 cards from three broadcasts, 1,658 questions
+
+    category              n     regex   vector   hybrid
+    counting             30     0.933    0.967    1.000
+    player_action        29     0.966    0.897    0.966
+    paraphrase_named  1,536     0.834    0.707    0.896
+    paraphrase_unnamed   20     0.300    0.800    0.800
+    sequence             30     0.900    0.733    0.833
+    temporal             10     0.000    0.800    0.800
+    cross_game            3     0.000    0.667    1.000
+    ALL               1,658     0.826    0.717    0.897
+
+### The gates
+
+**G1 PASS.** Hybrid 30/30 against regex 28/30 on counting questions, p = 0.50.
+Retrieval does not regress the questions the page already answers well, which is
+the regression that would have mattered most.
+
+**G2 FAIL, and not narrowly.** The vector arm was required to beat the regular
+expression on paraphrase by ten points. It **loses by 11.9**, 1102/1556 against
+1287/1556, p < 0.0001.
+
+**G3 PASS, decisively.** Hybrid 1487/1658 against vector-only 1189/1658,
+p < 0.0001. **The structured filters are doing the work, not the embedding** --
+which is the D1-filters-Vectorize-ranks split the plan argued for, now measured
+rather than asserted.
+
+### Why G2 fails, and what would be dishonest to do about it
+
+The paraphrase set is **98.7% questions that name a player**, and a literal name
+is exactly what a regular expression is best at. Split by whether the question
+names one:
+
+    paraphrase_named     1,536   regex 0.834   vector 0.707
+    paraphrase_unnamed      20   regex 0.300   vector 0.800   +50 points, p = 0.0129
+
+**Where the embedding is the only thing that could work, it wins by fifty
+points.** Where a name is present, it loses. Both are true and the blend of them
+is what the gate measured.
+
+The tempting move is to declare G2 passed on the unnamed subset. **It is twenty
+questions, the vector arm's interval there is 0.58 to 0.92, and this project has
+a thirteen-item ledger of ball-selection ideas rejected on exactly this sample
+size** -- the same regime, the same false confidence available in both
+directions. Twenty questions settle nothing.
+
+**So G2 is recorded as FAILED and the remedy is a question set, not a redesign.**
+The plan specified 300 questions and two authors for precisely this reason; what
+was built here is 1,658 questions and one author, and the count turned out to
+matter far less than the composition. An earlier run of this same evaluation with
+45 paraphrase questions had the vector arm WINNING by 15.6 points at p = 0.167 --
+the opposite sign, from the same code, because that set was mostly unnamed.
+Neither number was wrong. They are answers to different questions, and the
+lesson is that a question set is a measuring instrument that has to be designed.
+
+### What the embedding is unambiguously for
+
+Two categories where the regular expression scores **0.000** and the hybrid 0.800
+and 1.000: `temporal` ("what happened in period 2") and `cross_game`. The only
+discriminative token in those is a bare number, and literal matching has nothing
+to hold. They are small -- 10 and 3 questions -- but they are the shape of
+question the shipped page genuinely cannot answer today.
+
+### Ingest economics, measured rather than estimated
+
+**89 cards a game**, so a 1,315-game season is about **117,000 cards** -- against
+Vectorize's five-million-vector cap, roughly forty seasons. Embedding runs at 3
+cards a second on this laptop's CPU, which is hours for a season here and
+minutes on a rented GPU. Storage and compute are not the constraint; the
+question set is.
