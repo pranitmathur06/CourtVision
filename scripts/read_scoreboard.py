@@ -314,17 +314,31 @@ def digits_never_shrink(values):
     it was wrong for a reason worth keeping: a region reading a CONSTANT is
     trivially non-decreasing and scores 1.000, so on Finals G1 a 0.70 gate
     admitted 79 regions where rank correlation admits 8.
+
+    A WIDER READING HAS TO BE CONFIRMED BEFORE IT RATCHETS. Without that, one
+    spurious three-digit read early in a game discards every two-digit reading
+    after it -- which is the same failure as the clock's tenths capture and the
+    score's monotonic ratchet, arrived at from a third direction on the same
+    day. A real score crossing into three digits stays there, so asking for two
+    sightings costs nothing and a stray costs nothing either.
     """
-    out, widest = [], 0
+    out, widest, pending = [], 0, 0
     for value in values:
         if value is None:
             out.append(None)
             continue
         width = len(str(int(value)))
+        if width > widest:
+            if pending == width:
+                widest = width
+            else:
+                pending = width
+                out.append(value)
+                continue
         if width < widest:
             out.append(None)
             continue
-        widest = max(widest, width)
+        pending = 0
         out.append(value)
     return out
 
@@ -418,9 +432,15 @@ def pick_scores(candidates, clock_roi, probe, reader):
     for roi in candidates:
         if tuple(roi) == tuple(clock_roi):
             continue
-        top, bottom, left, right = roi
-        raw = [digits_of(frame[top:bottom, left:right], reader)
-               for frame in frames]
+        # SNAPPED BEFORE IT IS JUDGED, not only when it is read. Widening the
+        # candidate sizes so a coloured team panel could fit let a 154x110 box
+        # win on Finals G1 -- a box spanning several numbers, which read 445
+        # against a true 111 and beat the correct region on the span tie-break
+        # precisely BECAUSE it over-reads. Judging candidates on their snapped
+        # region removes the incentive: a fat box and a tight one around the
+        # same digits become the same region, and the ranking is over digit
+        # groups rather than over arbitrary rectangles.
+        raw = [read_region(frame, roi, reader) for frame in frames]
         # A score never loses a digit. See `digits_never_shrink`.
         raw = digits_never_shrink(raw)
         legible = sum(1 for v in raw if v is not None)

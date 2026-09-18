@@ -255,3 +255,30 @@ def test_monotone_share_is_reported_and_never_gates():
 
 
 from pathlib import Path  # noqa: E402
+
+
+def test_a_stray_wide_reading_does_not_ratchet_the_digit_rule():
+    """One spurious three-digit read must not discard every later two-digit one.
+
+    That is the same failure as the clock's tenths capture and the score's
+    monotonic ratchet, arrived at from a third direction: a constraint adopted
+    from a single observation and never released. On Finals G1 it turned a
+    111-110 game into 445-235."""
+    sb = _sb()
+    assert sb.digits_never_shrink([12, 14, 445, 16, 18, 20]) == [12, 14, 445, 16, 18, 20]
+    # ...and a real crossing into three digits, seen twice, does stick.
+    kept = sb.digits_never_shrink([88, 95, 99, 101, 104, 9, 107])
+    assert kept[:5] == [88, 95, 99, 101, 104]
+    assert kept[5] is None, "a one-digit read after three is a segmentation miss"
+
+
+def test_candidates_are_judged_on_their_snapped_region():
+    """Widening the sizes so a coloured team panel could fit let a 154x110 box
+    win on Finals G1 -- one spanning several numbers, which read 445 and beat
+    the correct region on the span tie-break precisely because it OVER-reads.
+    Judging a candidate on the digits inside it removes the incentive."""
+    source = (Path(__file__).resolve().parent.parent
+              / "scripts" / "read_scoreboard.py").read_text()
+    block = source[source.index("def pick_scores("):source.index("def find_shot_clock(")]
+    assert "read_region(frame, roi, reader)" in block
+    assert "digits_of(frame[top:bottom" not in block
