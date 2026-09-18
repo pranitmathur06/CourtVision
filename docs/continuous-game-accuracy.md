@@ -7478,3 +7478,32 @@ was Game 7 dragging the others down: Rebound 0.840, Missed Shot 0.809, Foul
 spread. The two that remain are still Game 7, and its clock coverage is still the
 worst of the four at 0.728 against 0.897 to 0.930 -- the broadcast simply shows
 its scorebug less, and Round 100 measured that as the binding constraint.
+
+### The cost of repairing Game 7's clock: its published clips are now half stale
+
+Repairing the clock moved events, and Game 7's clips were cut against the old
+one. The `clips: still match the alignment` arm -- which did not exist a day ago
+-- reads **0.513**, down from 0.670 before the repair. That is an exact-instant
+test, so it overstates the damage; measured as distance from each indexed clip to
+the nearest event of the same action in the alignment as it now stands:
+
+    within 0.05 s   0.513      the clip is exactly where the play is
+    within 1 s      0.725
+    within 3 s      0.797
+    p90             41 s
+    p95            122 s
+
+**About 20% of Game 7's published clips are more than three seconds from any
+play of the action they claim, and 10% are more than forty seconds away.** Those
+are rows the old alignment placed wrongly; the new one does not put an event
+there at all.
+
+The fix is to re-cut them, which is thirty minutes of ffmpeg and a 454-file
+binary diff in a directory that is **tracked in git and already 12% of what a
+clone costs**. The plan has that media moving to object storage and the history
+rewritten, and re-cutting into git first would make both jobs larger. So this is
+recorded rather than fixed, with the number attached: **the arm that found it
+prints 0.513 on every future report until it is done.**
+
+The fourth broadcast's clips are at 1.000 against its own alignment, because
+they were cut from it.
