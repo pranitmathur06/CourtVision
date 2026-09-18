@@ -7296,3 +7296,33 @@ decode and bought a correct model of the arm's ceiling; without it the 0.772
 would have read as progress. And the guard added *before* the experiment -- "a
 sub-ten-second reading may never start a run" -- caught one spurious period but
 not this one, because this misread does not start a run, it hijacks one.
+
+### What an unseen arena does to the ball detector: seven times the candidates
+
+The first two clips detected on the Houston broadcast, against the two Finals
+broadcasts in full:
+
+    broadcast            frames    ball boxes/frame    above 0.25 conf
+    HOU 1080p               180        13.9                3.98/frame
+    Finals G1 720p       20,880         2.0                0.71/frame
+    ECF G1 720p          21,780         1.9                0.72/frame
+
+**Seven times as many ball candidates per frame, and five and a half times as
+many confident ones**, on an arena and an encode the detector has never seen.
+The share above 0.25 confidence is actually LOWER (28.7% against 34.8% and
+37.2%), so this is not a threshold effect -- it is more proposals at every
+confidence.
+
+This is the kind of thing an acceptance test exists to surface, and it has a
+direct consequence for the roadmap: **the ball selection work measured two
+rounds ago -- top-1 0.769 against a proposed-at-any-rank ceiling of 0.908 -- was
+measured on candidate lists two boxes long.** On this broadcast they are fourteen.
+Every selection rule fitted on the Finals footage faces a different problem here,
+and the 10 points that Round 99 located in a binary choice between two boxes is
+not a binary choice on this game.
+
+Nothing is claimed about how the ball number itself moves, because Houston has
+no ball labels and the report prints that arm as NO DATA rather than guessing.
+What is claimed is narrower and is measured: the input to selection is seven
+times noisier, and no selector in this repository has ever been shown footage
+like it.

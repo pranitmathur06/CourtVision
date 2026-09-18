@@ -129,6 +129,9 @@ PROBE_FRAMES = 24
 READ_FLOOR = 0.15
 #: How strongly a region's readings must rise with time to be a score.
 MIN_RANK_CORRELATION = 0.85
+#: ...or how much of what it read lies on one non-decreasing path. See
+#: `monotone_share`. Chosen on the Finals broadcasts, never on the held-out one.
+MIN_MONOTONE_SHARE = 0.70
 
 
 def digits_of(image, reader, min_score: float = READ_FLOOR):
@@ -288,6 +291,33 @@ def band_candidates(clock_roi, width, reach_px=SEARCH_PX):
     return out
 
 
+def monotone_share(values) -> float:
+    """Fraction of readings that lie on one non-decreasing path through time.
+
+    THE PHYSICAL FACT, STATED DIRECTLY. A basketball score never falls, and
+    `rank_correlation` was a proxy for that -- a good one, and it is kept, but
+    it is dragged down by isolated misreads in a way the underlying constraint
+    is not. On the Houston broadcast the two team panels read the correct final
+    scores, 111 and 91, with sequences that rise cleanly apart from a handful of
+    frames that segment as a single "1"; their rank correlations are 0.752 and
+    0.457 against a 0.85 gate, so both were thrown away.
+
+    The longest non-decreasing subsequence asks how much of what was read is
+    consistent with a score, rather than how well all of it correlates with
+    time. Measured on the same sequences: 0.882 and 0.682 for the two real
+    panels, against 0.444 for a shot clock -- which resets to 24 and so cannot
+    hold a long non-decreasing run -- and 0.333 for random digits.
+    """
+    if not values:
+        return 0.0
+    best = [1] * len(values)
+    for i in range(len(values)):
+        for j in range(i):
+            if values[j] <= values[i] and best[j] + 1 > best[i]:
+                best[i] = best[j] + 1
+    return max(best) / len(values)
+
+
 def pick_scores(candidates, clock_roi, probe, reader):
     """The two score regions, chosen on frames spread across the WHOLE game.
 
@@ -324,7 +354,13 @@ def pick_scores(candidates, clock_roi, probe, reader):
         # correlation is the test that survives a noisy reader.
         order = [t for t, v in zip(times, raw) if v is not None]
         rho = rank_correlation(order, seen)
-        if rho < MIN_RANK_CORRELATION:
+        share = monotone_share(seen)
+        # Either test may pass. They are two readings of one constraint -- a
+        # score rises with time -- and each fails on a case the other survives:
+        # rank correlation is dragged down by isolated misreads, and the
+        # monotone share is survivable by a region that happens to drift upward
+        # without being a score, which the rank test catches.
+        if rho < MIN_RANK_CORRELATION and share < MIN_MONOTONE_SHARE:
             continue
         if not FINAL_RANGE[0] <= seen[-1] <= FINAL_RANGE[1]:
             continue
