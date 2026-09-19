@@ -9559,3 +9559,29 @@ points of carrier to buy three and a half of over-keeping.
 
 Reporting the miss rather than rounding it is the point. A rule that is applied
 when it passes and waived when it fails is not a rule.
+
+### ECF's grid is too coarse, and the fit is still optimistic at the tight end
+
+The next setting up does clear the floor and costs more than its own fit said
+it would. On the full broadcast:
+
+    ECF, erosion   carrier   <=13    the fit's held-out half said
+    0.0208           0.911  0.943    carrier 0.940, <=13 0.951
+    0.0625           0.828  0.979    carrier 0.894, <=13 0.978
+
+So ECF has **no setting in the grid that clears both bounds**: one misses the
+over-keeping floor by seven thousandths, the next drops the carrier eight
+points below the bar -- and below the 0.853 its shipped mask manages. The
+answer is an intermediate erosion, which is being measured, and the grid was
+too coarse for a broadcast whose trade is this tight.
+
+Worth noting what the fit got wrong at each end. At 0.0208 it was optimistic by
+0.8 points of over-keeping; at 0.0625 by **6.6 points of carrier**. The
+900-frame sample is not uniformly reliable across the grid: it is good where the
+mask is loose and poor where the mask is tight, which is the same asymmetry
+staleness had in Round 119 and for the same reason -- a tight mask has less
+margin, so more of its answers sit near an edge where a sample of the broadcast
+and the whole of it disagree.
+
+That is a property of the fitter worth carrying forward: **its estimate is
+least trustworthy exactly where the constraint binds.**
