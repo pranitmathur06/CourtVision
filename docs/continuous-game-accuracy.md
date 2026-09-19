@@ -9894,3 +9894,56 @@ first, which is the one piece of the standing advice never tried: a shooting
 motion, a dribbling posture, a pose. `yolo11s-pose.pt` is in the repository and
 Round 110 asked it only whether a wrist beats a box edge at naming the holder
 GIVEN the ball. It has never been asked to find the holder with no ball at all.
+
+## Round 132: a pose finds the holder at 2.4x chance, and adds nothing to the ball
+
+The one piece of standing advice never tried: find the man with the ball
+WITHOUT the ball, from what his body is doing. Round 110 asked whether a wrist
+beats a box edge GIVEN the ball; this asks whether a posture finds him with no
+ball at all.
+
+### Alone, it is real and far too weak
+
+On 135 frames where a person pointed at the holder and the pose model found him
+among at least three people, picking the extreme man on each feature:
+
+    most  hand above shoulder   32/135 = 0.237
+    least hand below hip        21/135 = 0.156
+    most  hand below hip        15/135 = 0.111
+    chance, about ten players            0.100
+    least hands apart           11/135 = 0.081
+    the box edge GIVEN the ball          0.657
+
+**2.4 times chance, and a third of the ball-based rule.** The cue that works is
+RAISED HANDS, not a dribbling posture -- a man raising his hands is shooting,
+catching or holding the ball up, and defenders rarely raise both that high.
+Hand-below-hip is at chance in both directions, because a dribble puts one hand
+low and so does running.
+
+A first version of this maximised every feature and reported 0.015 and 0.022 for
+two of them. The medians say the holder's hands are CLOSER together (0.191
+against 0.263) and reach LESS (0.133 against 0.168), so those two rules were
+asking the opposite question. Same wrong-sign error as the smoothness prior in
+Round 93, caught before the number went into this log rather than twenty rounds
+after.
+
+### Added to the ball, the fit switches it off
+
+Keeping the box edge and ADDING a posture term, weight fitted on the hard half
+and reported on the uniform half:
+
+    weight chosen on the hard half   0.0
+    box edge alone         48/61 = 0.787
+    box edge + pose        48/61 = 0.787     0 won, 0 lost
+
+**And the temptation is on the record.** On the uniform half a weight of 0.5
+would have read 0.820 against 0.787 -- three points, two frames of sixty-one.
+Taking it would be choosing on the half being reported, which is the disease
+this project has spent the day finding in its own past work. The fit chose zero
+and zero is the answer.
+
+That is the fourth prior today whose fitted weight went to the bottom of its
+grid: smoothness (Round 93 and again today), court motion (still_px 2.0,
+still_weight 0.03), and now posture. Four different ideas, four optimisers, all
+saying the same thing -- the detector's confidence and the ball's own position
+already carry what these priors were meant to add.
