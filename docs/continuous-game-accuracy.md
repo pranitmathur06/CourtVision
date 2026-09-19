@@ -9398,3 +9398,49 @@ therefore handed to `fit_court_mask.py` to have its erosion chosen against BOTH
 bounds, exactly as the listed one was -- not adopted because one number went to
 1.000. `fit_floor_colour.py` also refuses any model accepting more than a
 quarter of colour space outright, since that is not a floor model at all.
+
+## Round 125: the unused ball detector is not the answer, and the gap is not five points
+
+Every cached clip detection in this repository carries `ball_detector=None`, so
+its `b` boxes come from the general `detector/best.pt` and not from
+`checkpoints/ball_v2/best.pt`, which is trained, tested and called by nothing.
+That is a fact and it looked like the third instance of this project's
+signature failure -- a finished artefact nobody wired in.
+
+**It is not.** Run on the uniform labelled halves, the dedicated model gets the
+same answer:
+
+    broadcast   candidates   top-1 (ball_v2)   top-1 (the cache)   ceiling
+    g7                 5.1             0.878               0.829     0.927 / 0.902
+    g1                 5.4             0.647               0.647     0.853 / 0.824
+    ecf                5.0             0.800               0.800     0.964 / 0.964
+
+Identical on two broadcasts and two frames apart on the third, at n=41. The
+general detector emits far more ball boxes -- 14.2 a frame against 5.1 -- and
+ranks the true one just as well, because the extra ones are low-confidence and
+never displace the top. **Wiring in the dedicated model would change nothing
+measurable.**
+
+### And a correction to this round's own first reading
+
+Seeing G7 at 36/41 delivered against 38/41 proposed, I wrote that selection has
+five points available rather than the thirteen to eighteen recorded earlier.
+That generalised one broadcast to three, and the three do not agree:
+
+    broadcast   delivered   proposed   the gap
+    g7              0.878      0.927     4.9 points
+    g1              0.647      0.853    20.6 points
+    ecf             0.800      0.964    16.4 points
+
+**Finals G7 is the outlier, not the rule.** The earlier figure was right for
+two broadcasts of three and the correction was wrong for two of three. The gap
+is real and it is large on the broadcasts where the ball is hard.
+
+What survives from the morning's ledger is narrower and still true: seven
+selection ideas have been refuted, the one that helped used context the
+detector did not have, and `checkpoints/ball_context_ranker.pt` -- a ranker
+trained on the NEIGHBOURHOOD, with a recorded val AP of 0.313 against 0.171 --
+was rejected on ten frames by an instrument that could not have seen a
+ten-point effect. That remains the open lead, and it is open on G1 and ECF
+where there are twenty and sixteen points to take, not on G7 where there are
+five.
