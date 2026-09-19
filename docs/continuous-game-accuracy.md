@@ -9947,3 +9947,47 @@ grid: smoothness (Round 93 and again today), court motion (still_px 2.0,
 still_weight 0.03), and now posture. Four different ideas, four optimisers, all
 saying the same thing -- the detector's confidence and the ball's own position
 already carry what these priors were meant to add.
+
+## Round 133: the 1080p broadcast is both the hardest and the only one free to train on
+
+The dribble harvester, run on the two broadcasts that can be trained on -- the
+one with no ball labels at all, and one whose scored instants can be held out
+at +/-20 s:
+
+    broadcast          labels   distinct seconds   confidence median
+    hou  (1080p)          352                 58                0.34
+    g1   (720p)            65                 10                0.74
+
+**Houston's harvest is five times larger and much harder.** Finals G1's balls
+sit at 0.74 -- the detector already finds those, so they teach it little.
+Houston's sit at 0.34, which is the population that is missing.
+
+A hypothesis for why, stated as one because it has not been tested: the
+detector is trained at 720p scale, so a ball on the 1080p broadcast is about 40
+px where it expects 26. **Larger** than its training distribution, not smaller.
+That is the same native-scale argument `build_ball_tiles.py` makes for cutting
+crops at native resolution rather than resizing frames, and if it holds then the
+1080p broadcast is simultaneously the one the detector handles worst and the one
+we are free to train on, which is a convenience rather than a problem.
+
+ECF was not harvested. It is 720p like Finals G1, its yield would be the same
+shape -- few labels, already easy -- and it costs three and a half hours of
+machine time. Stopped on the evidence rather than run to completion for
+symmetry.
+
+### And a correction: I called G1's labels contaminated and they are not
+
+The contact sheet showed three of four crops with the box apparently up in the
+crowd, and since only DRIBBLE chains are accepted, a dribble in the stands is a
+bouncing head. Zoomed to 220 px a side, **all twelve sampled labels are
+unmistakable basketballs** being dribbled beside a referee and Turner #33. The
+contact sheet renders four crops across a 1704 px strip; at that size a ball
+beside a player at the far sideline and a ball in the crowd look the same.
+
+The zoom settled it and should have come before the accusation. What the
+contact sheet is good for is spotting a frame that is not basketball at all --
+a studio shot, a huddle -- which is what it caught on Houston. It is not good
+enough to judge where in a frame a small box sits.
+
+Verified honestly: twelve tiles from ONE chain at t=1764-1765 s, not the spread
+across all five.
