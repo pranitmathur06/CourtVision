@@ -122,18 +122,24 @@ def fit_kits(broadcast, cache, names, source) -> KitModel | None:
     return KitModel.fit(colours)
 
 
-def _score_row(row, image, regions, model, scale, carrier, over):
-    """Score one detection row against an ALREADY-FOUND floor, per setting."""
-    people = [[b[2] * scale[0], b[3] * scale[1],
-               b[4] * scale[0], b[5] * scale[1]]
+def _score_row(row, crop, scale, regions, model, carrier, over):
+    """Score one detection row against an ALREADY-FOUND floor, per setting.
+
+    `regions` are at SOURCE resolution and the boxes are in source pixels, so
+    they are tested directly. `crop` is the decoded CLIP frame and is only used
+    for torso colour, which is why the box comes down by `scale` for it.
+    """
+    people = [[b[2], b[3], b[4], b[5]]
               for b in row["d"] if b[0] in ("p", "h")]
     if not people:
         return False
-    held = carrier_of(row, [[b[2], b[3], b[4], b[5]]
-                            for b in row["d"] if b[0] in ("p", "h")])
+    held = carrier_of(row, people)
     boxes = np.array(people, dtype=float)
-    colours = ([torso_lab(image, box) for box in people]
-               if model is not None else [None] * len(people))
+    colours = [None] * len(people)
+    if model is not None and crop is not None:
+        colours = [torso_lab(crop, [box[0] * scale[0], box[1] * scale[1],
+                                    box[2] * scale[0], box[3] * scale[1]])
+                   for box in people]
     for (share, fill), region in regions.items():
         on_floor = (stands_on_court(region, boxes) if region is not None
                     else np.zeros(len(people), dtype=bool))
@@ -150,53 +156,99 @@ def _score_row(row, image, regions, model, scale, carrier, over):
     return True
 
 
+def clip_starts(broadcast) -> dict[str, float]:
+    """{clip name: its start in the SOURCE video, in seconds}."""
+    index = json.loads((ROOT / broadcast.clip_index).read_text())
+    rows = index["clips"] if isinstance(index, dict) else index
+    return {row["clip"]: float(row["start_s"])
+            for row in rows if row.get("clip")}
+
+
 def measure(key: str, *, frames_wanted: int) -> dict:
+    """Score every setting ON THE BROADCAST, not on the published clips.
+
+    THE FLOOR COMES FROM THE SOURCE VIDEO, read exactly the way
+    `clip_detect_raw.py` reads it: seek with `CAP_PROP_POS_MSEC` to the clip's
+    start and read forward, so row `position` is source frame
+    `position * step` after the seek. Computing that index instead of copying
+    the seek is wrong by up to 24 frames. Measured on Finals G7, a floor taken
+    from the 854x480 clip scores 0.836 kept ball carrier where the same setting
+    on the source scores 0.866, so a fit run on clips is choosing between
+    settings by a number three points below the one that ships.
+
+    The player boxes stay in SOURCE pixels, because that is what they are. Only
+    the torso crop goes down to the clip, which is where the decoded image for
+    it comes from.
+    """
     broadcast = get(key)
     cache = json.loads((ROOT / broadcast.clip_detections).read_text())
-    source = cache.get("source_size") or [1280, 720]
-    model = fit_kits(broadcast, cache, sorted(cache["clips"]), source)
+    clip_size = cache.get("source_size") or [1280, 720]
+    model = fit_kits(broadcast, cache, sorted(cache["clips"]), clip_size)
+    starts = clip_starts(broadcast)
+    step = max(1, int(cache.get("step") or 2))
+
+    video = cv2.VideoCapture(str(ROOT / broadcast.video))
+    if not video.isOpened():
+        raise SystemExit(f"  could not open {broadcast.video}")
+
     # Split by CLIP, not by frame: frames within a clip are the same camera on
     # the same possession, so a frame split would put near-duplicates on both
     # sides and the report half would confirm whatever the fit half chose.
     carrier = {half: defaultdict(lambda: [0, 0]) for half in ("fit", "report")}
     over = {half: defaultdict(lambda: [0, 0]) for half in ("fit", "report")}
     seen = 0
-    for index, name in enumerate(sorted(cache["clips"])):
-        half = "fit" if index % 2 == 0 else "report"
-        if seen >= frames_wanted:
-            break
-        path = ROOT / broadcast.clip_dir / name
-        if not path.exists():
-            continue
-        capture = cv2.VideoCapture(str(path))
-        if not capture.isOpened():
-            continue
-        scale = (capture.get(cv2.CAP_PROP_FRAME_WIDTH) / source[0],
-                 capture.get(cv2.CAP_PROP_FRAME_HEIGHT) / source[1])
-        rows = cache["clips"][name]
-        try:
-            for start in range(0, len(rows), ROW_STRIDE):
-                if seen >= frames_wanted:
-                    break
-                capture.set(cv2.CAP_PROP_POS_FRAMES, int(rows[start]["f"]))
-                ok, image = capture.read()
-                if not ok:
-                    continue
-                # ONE floor, scored against this row and the next few -- which
-                # is what the pipeline does with it. Scoring only the frame the
-                # floor was found on measures a mask nothing ever applies.
-                regions = {(share, fill):
-                           court_region(image, erode_px=None,
-                                        erode_share=share, fill_holes=fill)
-                           for share in SHARES for fill in FILL_HOLES}
-                for row in rows[start:start + COURT_EVERY]:
+    try:
+        for index, name in enumerate(sorted(cache["clips"])):
+            half = "fit" if index % 2 == 0 else "report"
+            if seen >= frames_wanted:
+                break
+            if name not in starts:
+                continue
+            clip_path = ROOT / broadcast.clip_dir / name
+            clip = cv2.VideoCapture(str(clip_path)) if clip_path.exists() else None
+            scale = (1.0, 1.0)
+            if clip is not None and clip.isOpened():
+                scale = (clip.get(cv2.CAP_PROP_FRAME_WIDTH) / clip_size[0],
+                         clip.get(cv2.CAP_PROP_FRAME_HEIGHT) / clip_size[1])
+            rows = cache["clips"][name]
+            video.set(cv2.CAP_PROP_POS_MSEC, starts[name] * 1000.0)
+            at = 0
+            try:
+                for start in range(0, len(rows), ROW_STRIDE):
                     if seen >= frames_wanted:
                         break
-                    if _score_row(row, image, regions, model, scale,
-                                  carrier[half], over[half]):
-                        seen += 1
-        finally:
-            capture.release()
+                    while at < start * step:
+                        if not video.grab():
+                            break
+                        at += 1
+                    ok, image = video.read()
+                    if not ok:
+                        break
+                    at += 1
+                    # ONE floor, scored against this row and the next few --
+                    # what the pipeline does with it. Scoring only the frame it
+                    # was found on measures a mask nothing ever applies.
+                    regions = {(share, fill):
+                               court_region(image, erode_px=None,
+                                            erode_share=share, fill_holes=fill)
+                               for share in SHARES for fill in FILL_HOLES}
+                    crop = None
+                    if clip is not None and clip.isOpened():
+                        clip.set(cv2.CAP_PROP_POS_FRAMES, int(rows[start]["f"]))
+                        ok_clip, crop = clip.read()
+                        if not ok_clip:
+                            crop = None
+                    for row in rows[start:start + COURT_EVERY]:
+                        if seen >= frames_wanted:
+                            break
+                        if _score_row(row, crop, scale, regions, model,
+                                      carrier[half], over[half]):
+                            seen += 1
+            finally:
+                if clip is not None:
+                    clip.release()
+    finally:
+        video.release()
 
     rows_out = {"fit": {}, "report": {}}
     for half in ("fit", "report"):
@@ -215,7 +267,7 @@ def measure(key: str, *, frames_wanted: int) -> dict:
                 }
     return {"game": key, "label": broadcast.label, "frames": seen,
             "shares": rows_out, "kits_fitted": model is not None,
-            "court_every": COURT_EVERY}
+            "court_every": COURT_EVERY, "from_source": True}
 
 
 def choose(rows: dict) -> float | None:

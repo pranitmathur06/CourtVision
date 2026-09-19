@@ -110,6 +110,38 @@ def test_the_floor_is_scored_against_the_rows_it_is_reused_for():
     assert fit.COURT_EVERY == 3
 
 
+def test_the_fit_reads_the_broadcast_and_not_the_clips():
+    """A floor taken from the 854x480 clip scores 0.836 kept ball carrier where
+    the same setting on the source scores 0.866, so a fit run on clips chooses
+    between settings by a number three points below the one that ships."""
+    import inspect
+
+    source = inspect.getsource(fit.measure)
+    assert "broadcast.video" in source
+    assert "CAP_PROP_POS_MSEC" in source
+    assert "clip_dir" in source          # only for the torso crop
+
+
+def test_the_seek_is_copied_from_the_pipeline_not_computed():
+    """round(start_s * fps) + f is wrong by up to 24 frames: a POS_MSEC seek
+    lands where ffmpeg landed when it cut the clip, and the arithmetic does
+    not."""
+    import inspect
+
+    source = inspect.getsource(fit.measure)
+    assert "round(start" not in source
+    assert "position * step" in inspect.getdoc(fit.measure)
+
+
+def test_the_boxes_stay_in_source_pixels():
+    """Scaling them to the clip puts every player's feet in the corner of a
+    1280x720 mask, which reads as the mask having got tighter."""
+    import inspect
+
+    source = inspect.getsource(fit._score_row)
+    assert "people = [[b[2], b[3], b[4], b[5]]" in source
+
+
 def test_the_carrier_is_found_by_the_one_shared_definition():
     """Five copies of this loop is how `wilson` ended up with four."""
     import inspect
