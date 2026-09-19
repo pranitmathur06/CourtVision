@@ -9833,3 +9833,64 @@ population the ball detector has never been trained on, and the only broadcast
 in the registry that is free to train on is the 1080p one -- so the bug
 suppressed three quarters of the yield on precisely the footage that matters
 most, and did it silently.
+
+## Round 131: two ceilings on inferring the ball, and what they point at
+
+The standing advice on this project has been: when you cannot see the ball,
+infer it -- from where it was going, from who had it, from whether he is still
+dribbling. Ten selection ideas have been refuted and every one of them RANKED
+candidates the detector proposed. Inference is a different thing and it has
+never been measured. Both halves of it can be, from data already on disk.
+
+### Predicting through the gap: the gaps are not one frame wide
+
+On the labelled uniform halves, with a 7-frame window at 0.25 s and the ball's
+own truth at the centre:
+
+    broadcast   windows   centre miss   a neighbour carries it
+    g7               41             3                        0
+    g1               34             5                        1
+    ecf              55             2                        1
+
+**Of ten frames where the detector proposes nothing within tolerance, eight
+have no candidate within tolerance anywhere in the surrounding second and a
+half either.** The misses are not single-frame dropouts that a Kalman filter or
+an interpolation bridges; they are stretches where the ball is invisible
+because it is in somebody's hands. Temporal anchoring has room on two frames in
+ten, which caps what it could ever buy at about two points of the arm.
+
+### Placing it on the man holding it: a body is not 28 pixels
+
+The stronger version does not need a ball candidate at all -- put the ball
+where the holder is. On the 131 hand-labelled frames where a person located
+BOTH the ball and the man holding it, given his TRUE box:
+
+    the ball is inside the holder's box          96/131 = 0.733
+    offset from the box centre, in box widths    -0.47 / -0.03 / +0.40 (p10/50/90)
+    position down the box, in box heights        -0.23 /  0.33 / +0.66
+
+    placing it at the median offset lands within 28 px   0.229
+                                            within 40 px 0.435
+                                            within 60 px 0.687
+    median error                                         44 px
+
+**Given a perfect handler, the ball is located to 44 px.** The evaluation's
+tolerance is 28. So this cannot satisfy the ball arm however good the handler
+gets, and that is an oracle result -- the real handler is 0.657.
+
+### What both ceilings point at
+
+They do not say the advice is wrong. They say the ball's 28-pixel tolerance is
+the wrong thing to ask for.
+
+A holder's box localises the ball to **a body**, which is not a ball position
+and is exactly what every question downstream actually needs: who has it, which
+team, was that a pass, was the basket assisted. Those were all built on top of
+the ball because the ball was assumed to be the way to reach them -- and the
+composition has been measured all day at or below their majority classes.
+
+The alternative this points at is to find the holder WITHOUT finding the ball
+first, which is the one piece of the standing advice never tried: a shooting
+motion, a dribbling posture, a pose. `yolo11s-pose.pt` is in the repository and
+Round 110 asked it only whether a wrist beats a box edge at naming the holder
+GIVEN the ball. It has never been asked to find the holder with no ball at all.
