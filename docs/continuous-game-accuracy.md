@@ -9585,3 +9585,43 @@ and the whole of it disagree.
 
 That is a property of the fitter worth carrying forward: **its estimate is
 least trustworthy exactly where the constraint binds.**
+
+### Resolved, and the bounding-box arm clears the bar on every broadcast
+
+ECF at an erosion between the two the grid offered:
+
+    ECF, erosion   carrier   <=13
+    0.0208           0.911  0.943   floor missed by 0.007
+    0.0400           0.879  0.961   BOTH clear
+    0.0625           0.828  0.979   carrier below the bar
+
+    game   erode/height   keeps the carrier   at most 13 kept
+    g7           0.0625               0.885             0.975
+    g1           0.0625               0.894             0.957
+    ecf          0.0400               0.879             0.961
+    hou          0.0000               0.953             0.950
+
+**Every broadcast clears 0.85 on both bounds, measured on the whole source
+broadcast rather than a sample of it, against 0.454 / 0.684 / 0.853 / 0.867
+this morning.** The floor mask is the arm the published page draws with, and it
+now keeps the man holding the ball on 88 to 95 frames in a hundred.
+
+Four erosions, four different answers, all chosen by the same two rules of the
+sport and none of them by hand. That is what "works on an arbitrary broadcast"
+has to mean: not one constant that suits four games, but a procedure that finds
+each game's own.
+
+### What this arm is and is not
+
+It is **label-free**. "85%" here means the mask obeys two things basketball
+imposes -- never thirteen people on the court, never losing the man with the
+ball -- and not that it matches a human's judgement of where the court is.
+That is the right bar for something that must work on a broadcast nobody has
+labelled, and it is exactly why Toyota Center could be fixed without anyone
+noticing its court is red. It is not the same currency as the labelled ball and
+handler numbers and must not be added to them.
+
+The carrier bound also inherits the ball selector's error: on a frame where the
+argmax ball is a logo, the "carrier" is whoever stands near that logo. It is a
+LOWER bound on the mask, which is the safe direction, and it is why the number
+is quoted beside the ball's own.

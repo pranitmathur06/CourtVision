@@ -10,9 +10,10 @@
     "fill_holes": false
   },
   "ecf": {
-    "erode_share": 0.0208,
+    "erode_share": 0.04,
     "kit_max_lab": null,
-    "fill_holes": false
+    "fill_holes": false,
+    "verified_on_broadcast": true
   },
   "hou": {
     "erode_share": 0.0,
