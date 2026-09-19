@@ -119,7 +119,8 @@ def test_the_fit_reads_the_broadcast_and_not_the_clips():
     source = inspect.getsource(fit.measure)
     assert "broadcast.video" in source
     assert "CAP_PROP_POS_MSEC" in source
-    assert "clip_dir" in source          # only for the torso crop
+    # Not even for the torso colour: the source frame is already decoded here.
+    assert "clip_dir" not in inspect.getsource(fit)
 
 
 def test_the_seek_is_copied_from_the_pipeline_not_computed():

@@ -55,7 +55,8 @@ from courtvision.candidates import (  # noqa: E402
     stands_on_court,
 )
 from courtvision.games import get, registry  # noqa: E402
-from courtvision.kits import KitModel, sample_clip, torso_lab  # noqa: E402
+from courtvision.broadcast import SourceReader, clip_starts  # noqa: E402
+from courtvision.kits import KitModel, sample_broadcast, torso_lab  # noqa: E402
 from courtvision.stats import iou, wilson  # noqa: E402
 
 #: Erosions to try, as a share of frame height. 0.0625 is the shipped 45 px on
@@ -109,25 +110,25 @@ def carrier_index(row, people) -> int | None:
     return centre, None
 
 
-def fit_kits(broadcast, cache, names, source) -> KitModel | None:
-    """Kit centres for this broadcast, from a sample of its own clips."""
+def fit_kits(broadcast, cache, names, reader, starts, step) -> KitModel | None:
+    """Kit centres for this broadcast, from the BROADCAST's own torsos."""
     colours = []
     for name in names[0::2][:80]:
-        path = ROOT / broadcast.clip_dir / name
-        if not path.exists():
+        if name not in starts:
             continue
-        for _row, _boxes, sampled in sample_clip(path, cache["clips"][name],
-                                                 source, want=3):
+        for _row, _boxes, sampled in sample_broadcast(
+                reader, starts[name], cache["clips"][name], step, want=3):
             colours.extend(c for c in sampled if c is not None)
     return KitModel.fit(colours)
 
 
-def _score_row(row, crop, scale, regions, model, carrier, over):
+def _score_row(row, image, regions, model, carrier, over):
     """Score one detection row against an ALREADY-FOUND floor, per setting.
 
-    `regions` are at SOURCE resolution and the boxes are in source pixels, so
-    they are tested directly. `crop` is the decoded CLIP frame and is only used
-    for torso colour, which is why the box comes down by `scale` for it.
+    Everything here is in SOURCE pixels -- the regions, the boxes and the
+    `image` the torso colour is read from -- so nothing is scaled and the clips
+    are not opened at all. A torso sampled off an 854x480 clip is a coarser
+    colour than the detector saw, and the clips are not the broadcast.
     """
     people = [[b[2], b[3], b[4], b[5]]
               for b in row["d"] if b[0] in ("p", "h")]
@@ -135,11 +136,8 @@ def _score_row(row, crop, scale, regions, model, carrier, over):
         return False
     held = carrier_of(row, people)
     boxes = np.array(people, dtype=float)
-    colours = [None] * len(people)
-    if model is not None and crop is not None:
-        colours = [torso_lab(crop, [box[0] * scale[0], box[1] * scale[1],
-                                    box[2] * scale[0], box[3] * scale[1]])
-                   for box in people]
+    colours = ([torso_lab(image, box) for box in people]
+               if model is not None else [None] * len(people))
     for (share, fill), region in regions.items():
         on_floor = (stands_on_court(region, boxes) if region is not None
                     else np.zeros(len(people), dtype=bool))
@@ -154,14 +152,6 @@ def _score_row(row, crop, scale, regions, model, carrier, over):
             if held is not None:
                 carrier[setting][0 if keep[held] else 1] += 1
     return True
-
-
-def clip_starts(broadcast) -> dict[str, float]:
-    """{clip name: its start in the SOURCE video, in seconds}."""
-    index = json.loads((ROOT / broadcast.clip_index).read_text())
-    rows = index["clips"] if isinstance(index, dict) else index
-    return {row["clip"]: float(row["start_s"])
-            for row in rows if row.get("clip")}
 
 
 def measure(key: str, *, frames_wanted: int) -> dict:
@@ -182,10 +172,16 @@ def measure(key: str, *, frames_wanted: int) -> dict:
     """
     broadcast = get(key)
     cache = json.loads((ROOT / broadcast.clip_detections).read_text())
-    clip_size = cache.get("source_size") or [1280, 720]
-    model = fit_kits(broadcast, cache, sorted(cache["clips"]), clip_size)
-    starts = clip_starts(broadcast)
+    starts = clip_starts(ROOT / broadcast.clip_index)
     step = max(1, int(cache.get("step") or 2))
+    reader = SourceReader(ROOT / broadcast.video)
+    if not reader.ok:
+        raise SystemExit(f"  could not open {broadcast.video}")
+    try:
+        model = fit_kits(broadcast, cache, sorted(cache["clips"]), reader,
+                         starts, step)
+    finally:
+        reader.close()
 
     video = cv2.VideoCapture(str(ROOT / broadcast.video))
     if not video.isOpened():
@@ -204,12 +200,6 @@ def measure(key: str, *, frames_wanted: int) -> dict:
                 break
             if name not in starts:
                 continue
-            clip_path = ROOT / broadcast.clip_dir / name
-            clip = cv2.VideoCapture(str(clip_path)) if clip_path.exists() else None
-            scale = (1.0, 1.0)
-            if clip is not None and clip.isOpened():
-                scale = (clip.get(cv2.CAP_PROP_FRAME_WIDTH) / clip_size[0],
-                         clip.get(cv2.CAP_PROP_FRAME_HEIGHT) / clip_size[1])
             rows = cache["clips"][name]
             video.set(cv2.CAP_PROP_POS_MSEC, starts[name] * 1000.0)
             at = 0
@@ -232,21 +222,14 @@ def measure(key: str, *, frames_wanted: int) -> dict:
                                court_region(image, erode_px=None,
                                             erode_share=share, fill_holes=fill)
                                for share in SHARES for fill in FILL_HOLES}
-                    crop = None
-                    if clip is not None and clip.isOpened():
-                        clip.set(cv2.CAP_PROP_POS_FRAMES, int(rows[start]["f"]))
-                        ok_clip, crop = clip.read()
-                        if not ok_clip:
-                            crop = None
                     for row in rows[start:start + COURT_EVERY]:
                         if seen >= frames_wanted:
                             break
-                        if _score_row(row, crop, scale, regions, model,
+                        if _score_row(row, image, regions, model,
                                       carrier[half], over[half]):
                             seen += 1
             finally:
-                if clip is not None:
-                    clip.release()
+                pass
     finally:
         video.release()
 

@@ -9304,3 +9304,48 @@ extra frames would have fixed it.
 Houston still takes the hole filling and nobody else does -- the red-key arena,
 whose key the blue colour rule accepts 0.4% of. That finding survives the move
 to the broadcast, which is the one part of Rounds 116-121 that does.
+
+## Round 123: the first mask numbers that are about the broadcast
+
+All four rebuilt from the source with their fitted settings, compared against
+the shipped caches on identical frames:
+
+    game   keeps the carrier      at most 13 kept      paired, carrier
+    g7      0.867 -> 0.860        0.963 -> 0.964       won   36, lost 169
+    g1      0.684 -> 0.767        0.999 -> 0.993       won 1091, lost   0
+    ecf     0.853 -> 0.906        0.983 -> 0.960       won  741, lost   0
+    hou     0.454 -> 0.572        0.996 -> 0.978       won 2084, lost   1
+
+**Finals G7 is the control and it did not move.** Its fitted setting is the
+shipped setting, so the rebuild reproduces the pipeline: 0.860 against 0.867,
+and the 0.7 that separates them is the hole-filling flag and the canonical
+resize. A procedure that proposes changing nothing where nothing should change
+is the one worth trusting elsewhere.
+
+**And elsewhere it is a strict improvement.** Finals G1 won 1091 frames and
+lost NONE. ECF won 741 and lost none. Houston won 2084 and lost one. The new
+mask does not trade frames on those three; it keeps carriers the old one
+dropped and drops none the old one kept. Over-keeping falls by 0.6 to 2.3
+points and clears the declared 0.95 floor everywhere.
+
+    +8.3 points on Finals G1
+    +5.3 points on ECF G1
+    +11.8 points on Houston
+
+Every earlier version of this table was measured through the clips and is
+superseded.
+
+### It is still not 85%, and Houston is why
+
+    keeps the ball carrier, on the broadcast
+    ecf   0.906   PASS
+    g7    0.860   PASS (point)
+    g1    0.767   FAIL
+    hou   0.572   FAIL
+
+Houston takes the loosest mask in the grid -- no erosion at all, hole filling
+on -- and still keeps the man with the ball on barely more than half the frames
+where he has it. Nothing else in the registry behaves like that, and no setting
+available fixes it, so the answer is not a constant. Either the floor rule does
+not find Toyota Center's floor, or it finds it and the carrier is standing
+somewhere the rule cannot reach. That is the next thing to measure.
