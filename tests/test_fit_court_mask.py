@@ -177,3 +177,17 @@ def test_both_halves_are_measured_for_every_setting():
 
     source = inspect.getsource(fit.measure)
     assert 'for half in ("fit", "report")' in source
+
+
+def test_a_choice_near_the_floor_is_flagged_as_unsettleable():
+    """The fit is wrong by 0.8 points of over-keeping where the mask is loose
+    and 6.6 points of carrier where it is tight, so its estimate is least
+    trustworthy exactly where the constraint binds."""
+    import inspect
+
+    source = inspect.getsource(fit.main)
+    assert "TOO_CLOSE_TO_CALL" in source
+    assert fit.TOO_CLOSE_TO_CALL == 0.02
+    # 0.951 against a floor of 0.95 is inside the margin; 0.978 is not.
+    assert 0.951 - fit.OVER_FLOOR < fit.TOO_CLOSE_TO_CALL
+    assert 0.978 - fit.OVER_FLOOR > fit.TOO_CLOSE_TO_CALL

@@ -74,6 +74,13 @@ KIT_DISTANCES = [None, 40.0, 26.0, 18.0]
 FILL_HOLES = [True, False]
 #: The over-keeping rate a mask must hold. Below this it is admitting the crowd.
 OVER_FLOOR = 0.95
+#: A chosen setting whose over-keeping sits within this of the floor is one the
+#: sample cannot settle. Measured: this fit is wrong by 0.8 points of
+#: over-keeping where the mask is loose and 6.6 points of CARRIER where it is
+#: tight, because a tight mask has less margin and more of its answers sit near
+#: an edge that a sample and the whole broadcast disagree about. Its estimate is
+#: least trustworthy exactly where the constraint binds, so it says so.
+TOO_CLOSE_TO_CALL = 0.02
 #: More than this many people on a court is impossible.
 IMPOSSIBLE_ABOVE = 13
 #: Two boxes overlapping this much are one person seen by two detectors.
@@ -338,6 +345,18 @@ def main() -> int:
                   "the whole reason for the split.")
         if pick is None:
             print("    nothing clears the over-keeping floor on this broadcast")
+        else:
+            report_row = got["shares"]["report"][pick]
+            if report_row["over_ok"] - OVER_FLOOR < TOO_CLOSE_TO_CALL:
+                print(f"    *** its over-keeping is {report_row['over_ok']:.3f} "
+                      f"against a floor of {OVER_FLOOR:.2f}, which this sample")
+                print("    *** CANNOT SETTLE. Rebuild with remask_detections.py "
+                      "and check it on")
+                print("    *** the whole broadcast before believing it. On ECF "
+                      "a held-out 0.951")
+                print("    *** delivered 0.943, and the setting above it cost "
+                      "6.6 points of carrier")
+                print("    *** more than the same sample predicted.")
     Path(args.out).write_text(json.dumps(chosen, indent=2))
     print()
     print(f"  -> {args.out}")
