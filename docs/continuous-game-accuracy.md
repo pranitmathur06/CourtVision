@@ -9492,3 +9492,37 @@ over the court and a head over the court have the same neighbourhood.
 
 That is eight and nine refuted. What has ever moved the ball is court-relative
 motion, and it has never been scored for top-1 on these candidates.
+
+## Round 127: the learned floor, fitted against both bounds, on every broadcast
+
+Round 124 showed the learned floor takes Houston's kept carrier from 0.667 to
+1.000 before any erosion, and warned that a mask accepting seven-eighths of the
+frame keeps the front row too. So it was handed to the fitter to have its
+erosion chosen against both bounds, over four erosions and both hole-filling
+settings, 900 frames a broadcast, split by clip.
+
+    game   erode/height   fill   carrier (fit)  <=13 (fit)  carrier (rep)  <=13 (rep)
+    g7           0.0625    off           0.940       0.953          0.918       0.960
+    g1           0.0625    off           0.919       0.982          0.884       0.962
+    ecf          0.0208    off           0.920       0.967          0.940       0.951
+    hou          0.0000    off           0.976       0.956          0.971       0.947
+
+**Every broadcast clears 0.85 on both bounds at once, on the half it was not
+chosen on.** That has not happened before. Houston reads 0.971 kept carrier
+against the 0.572 its shipped mask manages, on a broadcast where no setting of
+the old rule could reach 0.63.
+
+The fit-to-report gaps are +0.022, +0.035, -0.020 and +0.005, so the choices
+are trustworthy in a way the clip-fitted ones were not.
+
+### Hole filling is off everywhere now
+
+Round 116 added it, Round 122 found only Houston wanted it, and with a learned
+floor **nobody does**. That is the right outcome and it retires the idea rather
+than the code: filling recovers a painted key the colour rule cannot see, and a
+floor model learned from the arena's own pixels can see the painted key
+directly. The mechanism was a workaround for the thing that has now been fixed.
+
+Erosion did the opposite -- it went UP, to 0.0625 on two broadcasts, because a
+floor that finds the whole court also finds more of what surrounds it. Two
+mechanisms, moving in opposite directions, both chosen by the same two bounds.
