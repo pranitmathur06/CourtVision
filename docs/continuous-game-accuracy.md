@@ -9756,3 +9756,80 @@ The golden fired, it was legible, and it pointed at a real problem in what it
 was pinned to rather than at the change. That is what one is for.
 
 1396 passed.
+
+## Round 130: the ten refutations were about selection, and the gap is recall
+
+Building the ball tile dataset to see what a retrain would have to work with
+printed the thing that reframes this whole day:
+
+    6455 train tiles, 245 val tiles
+    575 tiles held out as too close to a hand-located frame
+    the holdout blocks 100% of 2025 Finals G7's span (401 scored instants)
+    NOTE: this broadcast is now mostly EVALUATION footage.
+
+And `harvest_ball_tracks.py` states the deeper problem in its first line:
+**"Every ball label this project owns is a ball IN FLIGHT."** The miner that
+produced them sets a motion floor of 40 px/frame and says why -- at 14 px/frame
+the labels came back 58% correct, because a running player's shoulder traces
+just as smooth a path as a ball, and only flight moves faster than a player can
+run.
+
+So the detector has never been trained on a ball at rest in somebody's hands,
+and the uniform evaluation samples the game where most balls are HELD or
+DRIBBLED. Its own truth file says so in its notes: "held by the dribbler",
+"loose-ball scramble".
+
+### That is why ten selection ideas failed
+
+A selector reorders candidates. It cannot conjure one. On the frames where the
+detector proposes nothing within tolerance -- 7.3% of G7, **14.7% of Finals G1**
+and 3.6% of ECF -- every selector scores zero by construction, and on the
+frames where the ball is held the detector's candidate is often a head because
+a head is what it has learned a stationary round thing looks like.
+
+The ceiling this project has quoted for twenty rounds, "proposed at any rank",
+is not a fact about the detector's architecture. It is a fact about **which
+population it was trained on**, and that population is one the evaluation
+barely contains.
+
+### Houston is the free training broadcast
+
+G7 is held out at 100% because it is scored at 401 instants. G1 and ECF are
+scored too. **Houston has no ball labels at all** -- it is the acceptance
+broadcast for events, and nothing on the ball is measured against it -- so
+every frame of it is trainable, and it is the only 1080p source in the
+registry, where the ball is 40 px across rather than 26.
+
+`harvest_ball_tracks.py` can label it without a human, and only for the
+population that is missing: a chain is accepted as a ball when it BOUNCES --
+several vertical reversals of 20-40 px at 1-3 Hz after ORB removes the camera.
+Nothing else in an arena does that. A head does not. A shoulder does not.
+
+That is running now. It is the first thing all day that addresses the ball's
+actual failure rather than its symptom, and it needs no GPU and no labeller.
+
+### The harvester's bounds were in pixels too, and it cost three quarters of the yield
+
+Thirty minutes of the 1080p broadcast produced **2 dribble chains and 26
+labels**, where the same script on a 720p broadcast produces dozens. Every
+bound in `harvest_ball_tracks.py` is in raw pixels tuned at 1280x720 --
+`MIN_BOUNCE_PX` 18, `MIN_TRAVEL_PX` 40, `MAX_ACCEL_PX` 70 -- and a pixel is not
+a distance, it is a distance divided by the frame's height. On a 1080-line
+source the same physical dribble is half again as many pixels in every one of
+them, so it **exceeds the acceleration cap and the chain is thrown away**.
+
+Scaled to the frame actually being read, the same thirty minutes:
+
+    bounds in raw pixels      2 chains,  26 labels
+    bounds scaled to 1080     7 chains,  91 labels
+
+**The fourth constant in this repository to mean two different things on two
+broadcasts**, after `TRACK_MAX_AGE` in frames, `clip_detect_raw.STEP`, and the
+court mask's erosion. The source's height is printed whenever it differs from
+the tuning height, so the next one announces itself.
+
+It is worth noting what this one cost. The harvester exists to label the
+population the ball detector has never been trained on, and the only broadcast
+in the registry that is free to train on is the 1080p one -- so the bug
+suppressed three quarters of the yield on precisely the footage that matters
+most, and did it silently.

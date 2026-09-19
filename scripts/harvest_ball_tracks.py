@@ -67,6 +67,18 @@ import numpy as np
 STEP_S = 0.1
 WINDOW = 13
 MIN_LENGTH = 8
+#: EVERY PIXEL CONSTANT BELOW WAS TUNED ON A 1280x720 BROADCAST, and a pixel is
+#: not a distance -- it is a distance divided by the frame's height. On the
+#: 1920x1080 broadcast in this registry the same physical bounce is 1.5x more
+#: pixels, so the same dribble that passes at 720p exceeds MAX_ACCEL_PX at
+#: 1080p and its chain is thrown away. Measured: 30 minutes of the 1080p
+#: broadcast yielded 2 chains where a 720p one yields dozens.
+#:
+#: `scaled()` converts them at the frame height actually being read. This is
+#: the fourth constant in this repository to mean two different things on two
+#: broadcasts, after TRACK_MAX_AGE in frames, the clip detector's STEP, and the
+#: court mask's erosion.
+TUNED_AT_HEIGHT = 720.0
 #: Flight, as in find_ball_tracks.py.
 MIN_FLIGHT_PX = 40.0
 MAX_SPEED_PX = 260.0
@@ -78,6 +90,11 @@ MIN_TRAVEL_PX = 40.0
 #: A dribble's step-to-step acceleration, in pixels, allowed to be generous
 #: because the bounce itself is a sharp reversal.
 MAX_ACCEL_PX = 70.0
+
+
+def scaled(value: float, frame_height: float) -> float:
+    """A constant tuned at 720 lines, in the pixels of the frame being read."""
+    return value * float(frame_height) / TUNED_AT_HEIGHT
 
 
 def flight_like(points, min_speed=MIN_FLIGHT_PX, max_speed=MAX_SPEED_PX,
@@ -133,17 +150,24 @@ def bounces(vertical, min_amplitude=MIN_BOUNCE_PX):
 
 
 def dribble_like(points, min_reversals=MIN_REVERSALS, min_travel=MIN_TRAVEL_PX,
-                 max_accel=MAX_ACCEL_PX):
-    """Does this motion-compensated chain bounce like a dribble?"""
+                 max_accel=MAX_ACCEL_PX, frame_height=TUNED_AT_HEIGHT,
+                 min_bounce=MIN_BOUNCE_PX):
+    """Does this motion-compensated chain bounce like a dribble?
+
+    `frame_height` scales every pixel bound to the frame being read, because
+    they were tuned at 720 lines and a dribble on a 1080-line broadcast is half
+    again as many pixels in every one of them.
+    """
     points = np.asarray(points, np.float64)
     if len(points) < 5:
         return False
     steps = np.diff(points, axis=0)
-    if np.hypot(*steps.T).sum() < min_travel:
+    if np.hypot(*steps.T).sum() < scaled(min_travel, frame_height):
         return False
-    if np.hypot(*np.diff(steps, axis=0).T).max() > max_accel:
+    if np.hypot(*np.diff(steps, axis=0).T).max() > scaled(max_accel, frame_height):
         return False
-    return bounces(points[:, 1]) >= min_reversals
+    return bounces(points[:, 1],
+                   min_amplitude=scaled(min_bounce, frame_height)) >= min_reversals
 
 
 def best_chain(frames, min_length=MIN_LENGTH):
@@ -171,13 +195,13 @@ def best_chain(frames, min_length=MIN_LENGTH):
     return best
 
 
-def classify(points, accept_flight=False):
+def classify(points, accept_flight=False, frame_height=TUNED_AT_HEIGHT):
     """'flight', 'dribble' or None for a motion-compensated chain.
 
     Flight is off by default: see the module docstring. It costs a real ball
     now and then and it bought a coach's head.
     """
-    if dribble_like(points):
+    if dribble_like(points, frame_height=frame_height):
         return "dribble"
     if accept_flight and flight_like(points):
         return "flight"
@@ -220,6 +244,11 @@ def main() -> int:
     model, device = YOLO(args.detector), resolve_device()
     held_out = np.asarray(held_out_times(args.held_out), np.float64)
     capture = cv2.VideoCapture(args.video)
+    frame_height = capture.get(cv2.CAP_PROP_FRAME_HEIGHT) or TUNED_AT_HEIGHT
+    if abs(frame_height - TUNED_AT_HEIGHT) > 1:
+        print(f"  {frame_height:.0f}-line source; the dribble bounds are tuned "
+              f"at {TUNED_AT_HEIGHT:.0f} and are scaled by "
+              f"{frame_height / TUNED_AT_HEIGHT:.2f}", flush=True)
     duration = capture.get(cv2.CAP_PROP_FRAME_COUNT) / max(
         capture.get(cv2.CAP_PROP_FPS), 1.0)
     end = args.end_s if args.end_s is not None else duration
@@ -302,7 +331,7 @@ def main() -> int:
         if chain is None:
             continue
         links, points = chain
-        kind = classify(points, args.accept_flight)
+        kind = classify(points, args.accept_flight, frame_height=frame_height)
         if kind is None:
             continue
         kinds[kind] += 1
