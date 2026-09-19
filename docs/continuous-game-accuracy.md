@@ -9056,6 +9056,12 @@ until the re-fit lands.** The other three are measured gains on the full
 broadcast, which is the only measurement that counts here, and they stand on
 that rather than on the fit that proposed them.
 
+> **This round's diagnosis is wrong and Round 119 corrects it.** The re-fit on
+> 1055 frames still estimated 0.850 against a delivered 0.744, so the sample
+> was not the problem. It is left standing rather than edited because the wrong
+> diagnosis was a reasonable one and the thing that disproved it -- quadrupling
+> the sample and watching the error not move -- is the useful part.
+
 ## Round 119: the fit measures a fresh mask and the pipeline applies a stale one
 
 Round 118 blamed the 250-frame sample. More frames did not fix it: re-fitting
@@ -9133,3 +9139,74 @@ like -- which is what this round's first two findings were both about.
 
 Three parameters, twelve settings, split by clip, scored the way the pipeline
 applies a mask, on 900 frames a broadcast.
+
+## Round 120: the fitter recovers the hand-tuned constant, and the apparatus has a 3.6-point handicap
+
+With staleness modelled, the grid split by clip, and hole-filling swept rather
+than assumed, the fit chooses:
+
+    game   erode/height   kit gate   fill   fit -> report gap
+    g7           0.0208        off    off              +0.062
+    g1           0.0000         26     on              +0.119
+    ecf          0.0000        off    off              +0.008
+    hou          0.0000        off     on              -0.035
+
+**Finals G7's answer is the shipped constant.** 15 px on a 720p frame is
+0.0208 of its height, and no kit gate and no hole filling is what
+`clip_detect_raw.py` has always done. Given the ability to turn filling off,
+the fitter reproduces a constant a person chose by hand, on the one broadcast
+where that constant was good. That is the strongest evidence available that the
+procedure is now measuring the right thing.
+
+**And only Houston takes the hole filling** -- the red-key arena, whose key the
+blue colour rule accepts 0.4% of. ECF and G7, whose keys that rule already
+reads, both decline it. The parameter that was made unconditional in Round 116
+turns out to split the registry exactly along the line the colour argument
+predicted, and it took making it a choice to find that out.
+
+### The split caught one bad choice, which is what it is for
+
+Finals G1's chosen setting reads 0.771 on the half it was chosen on and
+**0.652** on the half it never saw. And on that held-out half a different
+setting -- no erosion, no gate, no filling -- reads 0.740 while clearing the
+over-keeping floor at 0.998.
+
+The rule picked something nine points worse than an available alternative,
+because the fit half flattered it. **The answer is not to switch to the
+report-half winner**, which is choosing on the data you report on and is the
+whole disease. It is that G1's fit is not reliable at 900 frames and needs
+more. The split's job is to say so, and it did: +0.119 against +0.008 and
+-0.035 on the two broadcasts whose choices can be trusted.
+
+### What the G7 result also measures: this apparatus's own handicap
+
+If the re-fitted G7 setting is the shipped setting, then rebuilding the mask
+with it should reproduce the shipped cache. It does not:
+
+    on the same 60 clips     carrier kept   <=13 kept
+    the shipped cache               0.872       0.973
+    the same setting, rebuilt       0.836       0.981
+
+Every remaining difference is one thing: **`remask_detections.py` recomputes
+the floor from the 854x480 published CLIP, and the pipeline computed it from
+the 1280x720 source video.** Fewer pixels, a coarser floor, feet landing on the
+wrong side of its edge. So the gap IS the measurement:
+
+**Rebuilding a mask from the published clips rather than the source costs 3.6
+points of kept ball carrier.**
+
+That is a handicap this round's every before-and-after carried, always against
+the "after". So:
+
+- Houston's +9.9, Finals G1's +9.0 and ECF's +3.2 are **understated**, and
+  Houston's more than the others since its source is 1080p and the gap to 480p
+  is wider still.
+- Finals G7's "loss" was 12.3 points measured at the wrong cadence, 5.3 at the
+  right one, and of that 5.3 about 3.6 is this handicap. What is left is inside
+  the noise of the thing.
+
+The honest fix is to recompute masks from the source video rather than the
+clips, which is a seek per sampled frame into a two-hour file instead of a read
+from a six-second one. It is the next thing this needs, and until it is done
+**every mask number in Rounds 116 to 120 is a lower bound on the fitted mask
+and a fair number for the shipped one.**
