@@ -9691,3 +9691,43 @@ proposed is 4.9, 20.6 and 16.4 points and it is a detector problem.
 
 **Ball tracking does not reach 85% on an arbitrary broadcast with any selector,
 and assist and rebound cannot move until it does.**
+
+## Round 129: adopted, and the median frame now keeps exactly ten players
+
+The four rebuilt caches are in place, each original preserved as
+`clip_detections_<key>.premask.json` so every before-and-after in Rounds 116 to
+128 stays reproducible. Measured against the adopted caches rather than a copy
+of them:
+
+    game   keeps the carrier   more than 13 kept   kept p50   was
+    g7                 0.885               0.025         10    10
+    g1                 0.894               0.043         10     7
+    ecf                0.879               0.039         10     9
+    hou                0.953               0.050         10     5
+
+**`kept p50` is exactly ten on every broadcast.** It was 10, 7, 9 and 5. The
+median frame of every game now keeps exactly the number of players who are on
+the court, which nothing asked for and no constant was tuned towards -- both
+bounds are one-sided, one forbidding fourteen and the other requiring the
+carrier, and neither mentions ten. It is the strongest evidence available that
+the masks are now finding the court rather than satisfying two inequalities.
+
+Houston's median went from five to ten. Its page was drawing half a team.
+
+The overlays are rebuilt from the adopted caches, so the published clips draw
+these boxes and not the old ones -- and they now agree with each other:
+**p50 9 players a frame and p90 11 on all four**, where the masks they came
+from disagreed by a factor of two. That is the whole of this work's visible
+effect: `clip_boxes.py:418` filters what the page shows by this mask, and on
+Houston it was discarding the man with the ball on more frames than it kept
+him.
+
+### And `ball_track.choose` is now labelled with its four refutations
+
+It penalises a candidate for MOVING, which is the wrong sign, and the record is
+Round 93 (the optimiser drove its weight to the grid's bottom on three
+broadcasts), Round 112 (17-3 against it by the opposite prior), Round 119 (0-10
+against per-frame argmax) and Round 128 (0-5 on the clean candidates). It is
+not deleted, because `eval_ball_temporal.py` scores it as an arm on every run
+and an idea that keeps being proposed is better answered by a number than by
+its absence. The docstring now says so and says not to ship it.

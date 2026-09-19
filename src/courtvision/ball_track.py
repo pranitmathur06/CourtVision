@@ -1,5 +1,20 @@
 """Pick the ball out of the candidates, using the fact that a ball has a path.
 
+REFUTED FOUR TIMES, AND KEPT AS THE CONTROL THAT KEEPS REFUTING IT. `choose`
+below penalises a candidate for MOVING, and that is the wrong sign: the decoys
+this detector emits are things that hold still -- a head, a shoe, a logo -- and
+the frames where the ball is hard to pick are the frames where it is flying.
+
+    Round  93   fitted on three broadcasts, the optimiser drove its weight to
+                the bottom of the grid on all three
+    Round 112   17 won, 3 lost AGAINST it by the opposite prior
+    Round 119   still 0 won and 10 lost against per-frame argmax on G7
+    Round 128   0 won, 5 lost on ECF, on the clean ball_v2 candidates
+
+It is not deleted because `eval_ball_temporal.py` scores it as an arm every
+time that evaluator runs, and an idea that keeps being proposed is better
+answered by a number than by its absence. Do not ship it.
+
 The detector is not failing to see the ball. Measured on a real broadcast it
 emits a mean of 14.2 ball boxes per frame — max 37 — with a median confidence
 of 0.050, and 99% of frames carry more than one. There is one ball. The
