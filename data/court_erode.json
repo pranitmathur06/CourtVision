@@ -6,8 +6,8 @@
   },
   "g1": {
     "erode_share": 0.0,
-    "kit_max_lab": 26.0,
-    "fill_holes": true
+    "kit_max_lab": null,
+    "fill_holes": false
   },
   "ecf": {
     "erode_share": 0.0,

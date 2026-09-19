@@ -9259,3 +9259,48 @@ sign, but they are not measurements of the broadcast either, and the fit that
 chose the settings sampled the same clips. `remask_detections.py` defaults to
 the source now, `--from-clips` is kept only for reproducing an old run, and the
 fit has to follow.
+
+## Round 122: fitted on the broadcast, and the answer changes shape
+
+The same grid, the same rule, the same 900 frames a broadcast -- with the floor
+taken from the source video instead of the 854x480 clips:
+
+    game   erode/height   kit gate   fill   fit -> report gap
+    g7           0.0208        off    off              +0.004
+    g1           0.0000        off    off              +0.013
+    ecf          0.0000        off    off              -0.005
+    hou          0.0000        off     on              -0.024
+
+Two things changed and both matter.
+
+### The kit gate is gone from every broadcast
+
+Fitted on clips, two of four broadcasts needed a 26 CIELAB kit gate to hold the
+over-keeping bound. Fitted on the broadcast, none of them do. Finals G1 without
+a gate now reads 0.998 over-keeping where the clip fit could only get 1.000 by
+gating.
+
+**The gate was compensating for a coarse floor.** A mask found on a 480p frame
+spills further past the real boundary, so it admits more of the front row, so
+the rule reached for a second mechanism to exclude them. Given a floor found on
+the broadcast, the erosion alone is enough, and the extra mechanism -- which
+cost real carriers, because a player whose jersey reads oddly is dropped along
+with the spectators -- is not needed.
+
+That is the clearest possible illustration of the cost of measuring on the
+wrong thing: it does not merely bias a number, it invents a requirement.
+
+### The fit became reliable
+
+    the chosen setting's fit-to-report gap
+    on the clips        +0.062   +0.119   +0.008   -0.035
+    on the broadcast    +0.004   +0.013   -0.005   -0.024
+
+Finals G1's gap was **twelve points** on clips and is **one** on the broadcast.
+A fit whose held-out half disagrees with it by twelve points is a fit choosing
+noise; the noise was the 480p floor, not the sample size, and no amount of
+extra frames would have fixed it.
+
+Houston still takes the hole filling and nobody else does -- the red-key arena,
+whose key the blue colour rule accepts 0.4% of. That finding survives the move
+to the broadcast, which is the one part of Rounds 116-121 that does.

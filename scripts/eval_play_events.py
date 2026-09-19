@@ -50,11 +50,12 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
 from courtvision.candidates import HOLD_GATE, to_box  # noqa: E402
+from courtvision.broadcast import SourceReader, clip_starts  # noqa: E402
 from courtvision.games import get, registry  # noqa: E402
 from courtvision.kits import (  # noqa: E402
     KitModel,
     MIN_BOX_CONF,
-    sample_clip,
+    sample_broadcast,
     torso_lab,
 )
 from courtvision.stats import iou, wilson  # noqa: E402
@@ -147,49 +148,36 @@ def clip_for(index_rows, video_s: float, span: float):
     return (best[1], best[2]) if best else (None, None)
 
 
-class ClipFrames:
-    """Decodes a clip frame only when a holder has already been found in it.
+class BroadcastFrames:
+    """The SOURCE frames of one clip, for reading a torso colour.
 
-    The windows searched here are three seconds of a six-second clip, and the
-    answer is usually in the first frame that has a ball at all, so decoding
-    the whole window would be about twenty times the work for the same answer.
+    This used to decode the 854x480 published clip and scale every box down to
+    it. The boxes are in the broadcast's own pixels and so is everything else
+    in this file, so reading the broadcast removes a conversion as well as a
+    resolution loss -- and the resolution loss is worth three points of a real
+    metric elsewhere in this repository. See `courtvision.broadcast` for why
+    the frame mapping is copied from the pipeline rather than computed.
+
+    The frames wanted are known before any is read, so they come back in one
+    forward pass over the clip's own six seconds rather than a seek apiece.
     """
 
-    def __init__(self, path, source_size):
-        import cv2
+    def __init__(self, reader, start_s, rows, step, wanted_frames):
+        positions = {position: int(row["f"])
+                     for position, row in enumerate(rows)
+                     if int(row["f"]) in wanted_frames}
+        self._images = {frame: image for frame, image
+                        in reader.frames(start_s, positions, step)}
 
-        self._capture = cv2.VideoCapture(str(path))
-        self._cv2 = cv2
-        self.ok = self._capture.isOpened()
-        if self.ok:
-            self.scale = (
-                self._capture.get(cv2.CAP_PROP_FRAME_WIDTH) / float(source_size[0]),
-                self._capture.get(cv2.CAP_PROP_FRAME_HEIGHT) / float(source_size[1]),
-            )
-        else:
-            self.scale = (1.0, 1.0)
-        self._cache: dict[int, object] = {}
-
-    def image(self, frame: int):
-        if frame not in self._cache:
-            self._capture.set(self._cv2.CAP_PROP_POS_FRAMES, int(frame))
-            ok, image = self._capture.read()
-            self._cache[frame] = image if ok else None
-        return self._cache[frame]
-
-    def colour(self, frame: int, box):
-        image = self.image(frame)
-        if image is None:
-            return None
-        scaled = [box[0] * self.scale[0], box[1] * self.scale[1],
-                  box[2] * self.scale[0], box[3] * self.scale[1]]
-        return torso_lab(image, scaled)
+    def colour(self, frame, box):
+        image = self._images.get(int(frame))
+        return None if image is None else torso_lab(image, box)
 
     def close(self):
-        self._capture.release()
+        self._images.clear()
 
 
-def holders(rows, frames: ClipFrames, model, frame_lo: float, frame_hi: float):
+def holders(rows, frames, model, frame_lo: float, frame_hi: float):
     """[(frame, kit, box, ball centre)] for every frame in range with a holder.
 
     A holder is the player whose box EDGE is nearest the most confident ball,
@@ -276,16 +264,19 @@ def judge_rebound_anchored(rows, frames, model, at_frame, fps, shot_frame,
     return ("off" if team == shooting_team else "def"), ""
 
 
-def fit_kits(broadcast, cache, names) -> KitModel | None:
-    """Kit centres for this broadcast, from the even-numbered clips only."""
+def fit_kits(broadcast, cache, names, reader, starts, step) -> KitModel | None:
+    """Kit centres for this broadcast, from the even-numbered clips only.
+
+    Read from the SOURCE, like everything else here: a torso sampled off an
+    854x480 clip is a coarser colour than the detector saw.
+    """
     colours = []
     for name in names[0::2]:
-        path = ROOT / broadcast.clip_dir / name
-        if not path.exists():
+        if name not in starts:
             continue
-        for _row, _boxes, sampled in sample_clip(path, cache["clips"][name],
-                                                 cache.get("source_size") or [1280, 720],
-                                                 want=KIT_FIT_ROWS):
+        for _row, _boxes, sampled in sample_broadcast(
+                reader, starts[name], cache["clips"][name], step,
+                want=KIT_FIT_ROWS):
             colours.extend(c for c in sampled if c is not None)
     return KitModel.fit(colours)
 
@@ -345,11 +336,16 @@ def evaluate(key: str, *, limit: int | None = None) -> dict:
     fps = float(cache.get("fps") or broadcast.fps)
     events = json.loads((ROOT / broadcast.aligned).read_text())["events"]
     names = sorted(cache["clips"])
-    model = fit_kits(broadcast, cache, names)
-    if model is None:
-        return {"game": key, "label": broadcast.label, "fitted": False}
     codes = team_codes(broadcast)
-    source = cache.get("source_size") or [1280, 720]
+    starts = clip_starts(ROOT / broadcast.clip_index)
+    step = max(1, int(cache.get("step") or 2))
+    reader = SourceReader(ROOT / broadcast.video)
+    if not reader.ok:
+        return {"game": key, "label": broadcast.label, "fitted": False}
+    model = fit_kits(broadcast, cache, names, reader, starts, step)
+    if model is None:
+        reader.close()
+        return {"game": key, "label": broadcast.label, "fitted": False}
 
     misses = [e for e in events if e.get("action") == "Missed Shot"]
     reb_rows = rebound_truth(events)
@@ -368,11 +364,16 @@ def evaluate(key: str, *, limit: int | None = None) -> dict:
             declined[arm]["no clip covers it"] += 1
             return None
         rows, name, at_frame = found
-        path = ROOT / broadcast.clip_dir / name
-        if not path.exists():
-            declined[arm]["clip not on disk"] += 1
+        if name not in starts:
+            declined[arm]["no start time for the clip"] += 1
             return None
-        return rows, at_frame, path
+        return rows, at_frame, name
+
+    def open_frames(name, rows, lo, hi):
+        """The SOURCE frames a window will ask about, read in one pass."""
+        wanted = {int(row["f"]) for row in rows
+                  if lo <= int(row["f"]) <= hi}
+        return BroadcastFrames(reader, starts[name], rows, step, wanted)
 
     # Pass one: every made basket. Each opens its clip once and pays for two
     # things -- the assist answer, and one vote towards the kit-to-team anchor.
@@ -380,8 +381,9 @@ def evaluate(key: str, *, limit: int | None = None) -> dict:
         opened = open_clip(event, "assist")
         if opened is None:
             continue
-        rows, at_frame, path = opened
-        frames = ClipFrames(path, source)
+        rows, at_frame, name = opened
+        frames = open_frames(name, rows, at_frame - PASS_WINDOW_S * fps,
+                             at_frame + 0.2 * fps)
         try:
             said, why = judge_assist(rows, frames, model, at_frame, fps)
             shooting = holders(rows, frames, model,
@@ -420,11 +422,12 @@ def evaluate(key: str, *, limit: int | None = None) -> dict:
         if opened is None:
             declined["rebound (anchored)"]["no clip covers it"] += 1
             continue
-        rows, at_frame, path = opened
+        rows, at_frame, name = opened
         shot_frame = at_frame - (float(event["video_s"])
                                  - float(prior[-1]["video_s"])) * fps
         shooting_team = codes.get((prior[-1].get("description") or "").strip())
-        frames = ClipFrames(path, source)
+        frames = open_frames(name, rows, shot_frame - 2.0 * fps,
+                             at_frame + REBOUND_AFTER_S * fps)
         try:
             said, why = judge_rebound(rows, frames, model, at_frame, fps, shot_frame)
             anchored, anchored_why = judge_rebound_anchored(
@@ -439,6 +442,7 @@ def evaluate(key: str, *, limit: int | None = None) -> dict:
             else:
                 results[arm].append((answer == truth, truth))
 
+    reader.close()
     out = {"game": key, "label": broadcast.label, "fitted": True,
            "separation_lab": model.separation(),
            "anchor": {str(k): v for k, v in anchor.items()},

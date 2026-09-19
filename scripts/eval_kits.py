@@ -29,11 +29,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
+from courtvision.broadcast import SourceReader, clip_starts  # noqa: E402
 from courtvision.games import get, registry  # noqa: E402
 from courtvision.kits import (  # noqa: E402
     KitModel,
     over_five,
-    sample_clip,
+    sample_broadcast,
     split_report,
 )
 from courtvision.stats import wilson  # noqa: E402
@@ -48,14 +49,15 @@ MIN_BOXES_FOR_RULE = 6
 EXPECTED_OFFICIAL_SHARE = 3.0 / 13.0
 
 
-def _harvest(broadcast, clips: dict, names: list[str], source_size, want: int):
+def _harvest(broadcast, clips: dict, names: list[str], reader, starts, step,
+             want: int):
+    """Torso colours per frame, read from the SOURCE broadcast."""
     frames = []
     for name in names:
-        path = ROOT / broadcast.clip_dir / name
-        if not path.exists():
+        if name not in starts:
             continue
-        for _row, _boxes, colours in sample_clip(path, clips[name], source_size,
-                                                 want=want):
+        for _row, _boxes, colours in sample_broadcast(
+                reader, starts[name], clips[name], step, want=want):
             frames.append(colours)
     return frames
 
@@ -64,19 +66,26 @@ def evaluate(key: str, *, limit: int | None = None) -> dict:
     broadcast = get(key)
     cache = json.loads((ROOT / broadcast.clip_detections).read_text())
     clips = cache["clips"]
-    source_size = cache.get("source_size") or [1280, 720]
     names = sorted(clips)
     if limit:
         names = names[:limit]
+    starts = clip_starts(ROOT / broadcast.clip_index)
+    step = max(1, int(cache.get("step") or 2))
 
-    fit_frames = _harvest(broadcast, clips, names[0::2], source_size,
-                          FIT_ROWS_PER_CLIP)
-    model = KitModel.fit([c for frame in fit_frames for c in frame if c is not None])
-    if model is None:
+    reader = SourceReader(ROOT / broadcast.video)
+    if not reader.ok:
         return {"game": key, "label": broadcast.label, "fitted": False}
-
-    frames = _harvest(broadcast, clips, names[1::2], source_size,
-                      EVAL_ROWS_PER_CLIP)
+    try:
+        fit_frames = _harvest(broadcast, clips, names[0::2], reader, starts,
+                              step, FIT_ROWS_PER_CLIP)
+        model = KitModel.fit([c for frame in fit_frames
+                              for c in frame if c is not None])
+        if model is None:
+            return {"game": key, "label": broadcast.label, "fitted": False}
+        frames = _harvest(broadcast, clips, names[1::2], reader, starts, step,
+                          EVAL_ROWS_PER_CLIP)
+    finally:
+        reader.close()
 
     counts: list[tuple[int, int]] = []
     splits: list[int] = []

@@ -272,3 +272,34 @@ def sample_frame(path, row: dict, source_size: Sequence[float], frame_index: int
         return boxes, [torso_lab(image, b) for b in boxes], (scale_x, scale_y)
     finally:
         capture.release()
+
+
+def sample_broadcast(reader, start_s: float, rows: Sequence[dict], step: int,
+                     *, want: int) -> list[tuple[dict, list[list[float]], list]]:
+    """[(row, boxes, torso colours)] for `want` rows of one clip, FROM SOURCE.
+
+    The clip version of this reads an 854x480 file and scales the boxes down to
+    it. This reads the broadcast, so the boxes need no scaling at all -- they
+    are already in its pixels -- and the torso crop has the resolution the
+    detector saw. Every accuracy number in this project is supposed to be about
+    the broadcast; see `courtvision.broadcast` for what the cheap path costs.
+    """
+    picked = {position: rows[position]
+              for position in _positions(len(rows), want)}
+    out: list[tuple[dict, list[list[float]], list]] = []
+    for row, image in reader.frames(start_s,
+                                    {position: row
+                                     for position, row in picked.items()}, step):
+        boxes = people(row)
+        out.append((row, boxes, [torso_lab(image, box) for box in boxes]))
+    return out
+
+
+def _positions(total: int, want: int) -> list[int]:
+    """`want` row positions spread evenly over `total` rows."""
+    if total <= 0:
+        return []
+    if total <= want:
+        return list(range(total))
+    stride = total / want
+    return [int(i * stride) for i in range(want)]
