@@ -9625,3 +9625,69 @@ The carrier bound also inherits the ball selector's error: on a frame where the
 argmax ball is a logo, the "carrier" is whoever stands near that logo. It is a
 LOWER bound on the mask, which is the safe direction, and it is why the number
 is quoted beside the ball's own.
+
+## Round 128: court motion, given its fairest shot, does not pick the ball
+
+The one signal that has ever moved the ball, scored for TOP-1 on the clean
+`ball_v2` candidates over the uniform labelled halves -- the same frames the
+0.878 / 0.647 / 0.800 figures come from -- with its two constants fitted on
+each broadcast's HARD half and reported on the uniform one:
+
+    broadcast   oracle   argmax   court motion   paired against argmax
+    g7           0.927    0.878          0.780   0 won,  4 lost
+    g1           0.853    0.647          0.676   2 won,  1 lost
+    ecf          0.964    0.800          0.836   2 won,  0 lost
+    ------------------------------------------------------------------
+    pooled                                       4 won,  5 lost
+
+**Four frames won and five lost across three broadcasts.** It helps a little
+where the ball is hard and hurts more where it is easy, and the total is
+nothing.
+
+### The fit says it more clearly than the score does
+
+On both broadcasts where the constants were fitted, the grid chose its bottom
+corner: `still_px` 2.0 and `still_weight` 0.03, the weakest prior available.
+**The optimiser is switching it off.**
+
+That is word for word what Round 93 found when the SMOOTHNESS prior was fitted:
+*"The best thing the fitted model can do with the smoothness prior is switch it
+off, at which point the Viterbi degenerates into the per-frame argmax it was
+meant to beat."* Opposite prior, cleaner candidate set, five hundred rounds
+apart, same answer from the same optimiser.
+
+And the smoothness arm is still there in the same run, still losing: 0 won and
+10 lost on G7, 0 and 5 on ECF. `ball_track.choose` has now been refuted four
+separate times and should be deleted rather than left to tempt the next reader.
+
+### Two true things that are not the same thing
+
+Round 114 measured court motion improving the ball track's PHYSICAL VALIDITY by
+7.6 to 10 points on all four broadcasts, over 15,000 to 22,000 steps apiece.
+That result stands. This one says it does not improve which candidate is picked
+in a given frame.
+
+Both are true because they are different claims. The prior removes impossible
+jumps -- a track that teleports 200 mph stops doing so -- without changing
+which frame is right. A tail and a centre.
+
+### Ten ideas, and what is left
+
+    smoothness prior          wrong sign, refuted four times
+    acceleration prior        a stationary logo has none either
+    court motion (top-1)      4 won, 5 lost
+    trimmed candidate set     nothing
+    shape / size prior        ball and decoy are the same size in rim widths
+    physical speed bound      nothing
+    proximity to a player     the decoys are ON the players
+    learned context ranker    half as good as confidence, on its own arena
+    learned floor context     ball 0.47, decoy 0.39, no separation
+    dedicated ball detector   identical to the general one
+
+Every property of a single candidate has been tried and the detector had
+already filtered on all of them. Every property of a candidate's PATH has been
+tried and the optimiser turns each one off. The gap between delivered and
+proposed is 4.9, 20.6 and 16.4 points and it is a detector problem.
+
+**Ball tracking does not reach 85% on an arbitrary broadcast with any selector,
+and assist and rebound cannot move until it does.**

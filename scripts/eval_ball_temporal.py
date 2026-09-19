@@ -51,7 +51,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 from courtvision.stats import mcnemar, wilson  # noqa: E402
 
 from courtvision.ball_track import (MISSING_COST,  # noqa: E402
-                                    MOVE_WEIGHT, choose)
+                                    MOVE_WEIGHT, STILL_PX, STILL_WEIGHT,
+                                    choose, choose_moving)
 
 #: Frames in the window and the gap between them. A ball is ballistic over a
 #: quarter second and a possession is longer than the window either way.
@@ -76,11 +77,19 @@ def load_truth(paths):
     return sorted(out)
 
 
-def build_cache(video, truth, detector, out_path, window, step_s, imgsz, conf):
+def build_cache(video, truth, detector, out_path, window, step_s, imgsz, conf,
+                rim_detector=None):
     """Candidates for every frame of every window, detected once.
 
     The expensive part by a wide margin, and it does not change when the two
     path constants do -- which is the whole point of fitting them.
+
+    `rim_detector` also stores the RIM in each frame. The rim is bolted to the
+    building, so its displacement between two frames is the camera's, and that
+    turns a candidate's apparent motion into motion ON THE COURT. Measured on
+    97 windows, the ball moves 10.9 court-pixels between frames where a decoy
+    moves 1.8, against 11.2 and 5.0 in raw pixels -- the contrast goes from
+    2.2x to 6.1x, and it is the only signal that has ever moved the ball.
     """
     import cv2
     from ultralytics import YOLO
@@ -88,11 +97,12 @@ def build_cache(video, truth, detector, out_path, window, step_s, imgsz, conf):
     from courtvision.device import resolve_device
 
     model, device = YOLO(detector), resolve_device()
+    rim_model = YOLO(rim_detector) if rim_detector else None
     capture = cv2.VideoCapture(video)
     half = window // 2
     rows = []
     for n, (when, ball, folder, name, game) in enumerate(truth):
-        frames = []
+        frames, rims = [], []
         for slot in range(window):
             offset = (slot - half) * step_s
             image = None
@@ -119,8 +129,23 @@ def build_cache(video, truth, detector, out_path, window, step_s, imgsz, conf):
                                  (float(box[1]) + float(box[3])) / 2,
                                  float(score)])
             frames.append(here)
+            if rim_model is not None:
+                found = rim_model.predict(image, device=device, verbose=False,
+                                          imgsz=imgsz, conf=0.25)[0].boxes
+                best = None
+                if found is not None and len(found):
+                    for cls, score, box in zip(found.cls.cpu().numpy(),
+                                               found.conf.cpu().numpy(),
+                                               found.xyxy.cpu().numpy()):
+                        if rim_model.names[int(cls)] != "rim":
+                            continue
+                        if best is None or float(score) > best[2]:
+                            best = [(float(box[0]) + float(box[2])) / 2,
+                                    (float(box[1]) + float(box[3])) / 2,
+                                    float(score)]
+                rims.append(best[:2] if best else None)
         rows.append({"t": when, "ball": list(ball), "game": game,
-                     "centre": half, "frames": frames})
+                     "centre": half, "frames": frames, "rims": rims})
         if (n + 1) % 25 == 0:
             print(f"    {n + 1}/{len(truth)} windows", flush=True)
     capture.release()
@@ -131,9 +156,20 @@ def build_cache(video, truth, detector, out_path, window, step_s, imgsz, conf):
     return rows
 
 
-def score(rows, tolerance, move_weight, missing_cost):
-    """Right/wrong vectors for oracle, argmax and the path, per window."""
-    oracle, argmax, path = [], [], []
+def camera_shifts(row):
+    """Per-frame camera displacement from the rim, or None where unknown."""
+    rims = row.get("rims") or []
+    shifts = [None]
+    for before, after in zip(rims, rims[1:]):
+        shifts.append(None if before is None or after is None
+                      else (after[0] - before[0], after[1] - before[1]))
+    return shifts
+
+
+def score(rows, tolerance, move_weight, missing_cost,
+          still_px=STILL_PX, still_weight=STILL_WEIGHT):
+    """Right/wrong vectors for oracle, argmax, the path and court motion."""
+    oracle, argmax, path, moving = [], [], [], []
     for row in rows:
         frames = row["frames"]
         centre = row["centre"]
@@ -150,18 +186,40 @@ def score(rows, tolerance, move_weight, missing_cost):
         picked = choose([[tuple(c) for c in f] for f in frames],
                         move_weight=move_weight, missing_cost=missing_cost)
         path.append(near(picked[centre]) if picked else False)
+        picked = choose_moving([[tuple(c) for c in f] for f in frames],
+                               camera_shifts(row), still_px=still_px,
+                               still_weight=still_weight,
+                               missing_cost=missing_cost)
+        moving.append(near(picked[centre]) if picked else False)
     return (np.array(oracle, dtype=bool), np.array(argmax, dtype=bool),
-            np.array(path, dtype=bool))
+            np.array(path, dtype=bool), np.array(moving, dtype=bool))
 
 
 def fit(rows, tolerance, weights, costs):
-    """The two constants, chosen to maximise accuracy on THESE rows."""
+    """The two path constants, chosen to maximise accuracy on THESE rows."""
     best, chosen = -1.0, (MOVE_WEIGHT, MISSING_COST)
     for weight in weights:
         for cost in costs:
-            _, _, path = score(rows, tolerance, weight, cost)
+            _, _, path, _ = score(rows, tolerance, weight, cost)
             if path.mean() > best:
                 best, chosen = float(path.mean()), (weight, cost)
+    return chosen, best
+
+
+def fit_motion(rows, tolerance, missing_cost):
+    """The court-motion constants, chosen on THESE rows.
+
+    Fitted separately because the arm it tunes is separate, and because
+    reporting an idea on constants tuned for a different candidate set is how
+    an idea gets refuted for the wrong reason.
+    """
+    best, chosen = -1.0, (STILL_PX, STILL_WEIGHT)
+    for still_px in (2.0, 5.0, 8.0, 12.0, 20.0):
+        for still_weight in (0.03, 0.06, 0.12, 0.25, 0.5):
+            _, _, _, moving = score(rows, tolerance, MOVE_WEIGHT, missing_cost,
+                                    still_px=still_px, still_weight=still_weight)
+            if moving.mean() > best:
+                best, chosen = float(moving.mean()), (still_px, still_weight)
     return chosen, best
 
 
@@ -176,6 +234,9 @@ def main() -> int:
     parser.add_argument("--step-s", type=float, default=STEP_S)
     parser.add_argument("--imgsz", type=int, default=1280)
     parser.add_argument("--conf", type=float, default=0.05)
+    parser.add_argument("--rim-detector", default=None,
+                        help="also store the rim per frame, which turns "
+                             "apparent motion into motion ON THE COURT")
     parser.add_argument("--tolerance-px", type=float, default=28.0)
     parser.add_argument("--fit-cache", default=None,
                         help="a cache built from the HARD half; the two path "
@@ -186,7 +247,8 @@ def main() -> int:
     if args.build or not Path(args.cache).exists():
         print(f"  detecting {len(truth)} windows of {args.window} frames")
         rows = build_cache(args.video, truth, args.detector, args.cache,
-                           args.window, args.step_s, args.imgsz, args.conf)
+                           args.window, args.step_s, args.imgsz, args.conf,
+                           rim_detector=args.rim_detector)
     else:
         rows = json.load(open(args.cache))["rows"]
 
@@ -201,18 +263,34 @@ def main() -> int:
     else:
         print(f"  constants as written: move_weight {weight}, missing_cost {cost}")
 
-    oracle, argmax, path = score(rows, args.tolerance_px, weight, cost)
+    still_px, still_weight = STILL_PX, STILL_WEIGHT
+    if args.fit_cache and Path(args.fit_cache).exists():
+        (still_px, still_weight), got = fit_motion(
+            json.load(open(args.fit_cache))["rows"], args.tolerance_px, cost)
+        print(f"  court-motion constants fitted on the hard half: "
+              f"still_px {still_px}, still_weight {still_weight} "
+              f"(hard-half rate {got:.3f})")
+    oracle, argmax, path, moving = score(rows, args.tolerance_px, weight, cost,
+                                         still_px=still_px,
+                                         still_weight=still_weight)
     total = len(rows)
     print(f"\n  {total} hand-located balls, tolerance {args.tolerance_px:.0f} px, "
           f"window {args.window} x {args.step_s}s")
     for name, vector in (("oracle, a candidate is there", oracle),
                          ("argmax in the centre frame", argmax),
-                         ("viterbi over the window", path)):
+                         ("viterbi over the window", path),
+                         ("court motion over the window", moving)):
         hits = int(vector.sum())
         low, high = wilson(hits, total)
         print(f"    {name:<32} {hits:>3}/{total} = {hits / total:5.1%}"
               f"   (95% CI {low:.0%}-{high:.0%})")
 
+    for tag, arm in (("viterbi", path), ("court motion", moving)):
+        wins, losses, p = mcnemar(arm, argmax)
+        verdict = ("better" if wins > losses else
+                   "worse" if losses > wins else "level")
+        print(f"    {tag:<14} vs argmax   {wins} only it gets, {losses} only "
+              f"argmax   p = {p:.4f}  ({verdict})")
     only_a, only_b, p = mcnemar(path, argmax)
     verdict = "significant" if p < 0.05 else "not significant"
     print(f"\n  paired, on the frames where they disagree (exact McNemar):")
@@ -227,6 +305,7 @@ def main() -> int:
             n = int(keep.sum())
             print(f"    {game:<18} oracle {oracle[keep].mean():5.1%}   "
                   f"argmax {argmax[keep].mean():5.1%}   "
+                  f"motion {moving[keep].mean():5.1%}   "
                   f"viterbi {path[keep].mean():5.1%}   (n={n})")
     return 0
 
