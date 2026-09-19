@@ -9731,3 +9731,28 @@ against per-frame argmax) and Round 128 (0-5 on the clean candidates). It is
 not deleted, because `eval_ball_temporal.py` scores it as an arm on every run
 and an idea that keeps being proposed is better answered by a number than by
 its absence. The docstring now says so and says not to ship it.
+
+### What adopting the caches broke, and what that says
+
+Six tests failed on the adopted caches. Five were an unpacking error of my own
+-- `eval_ball_temporal.score` gained a fourth return value for the court-motion
+arm and its callers in the tests were not updated. The sixth is worth keeping.
+
+`test_the_library_reproduces_what_the_script_produced_before_the_move` pins
+`track()` to output cut from the ECF cache before the tracker moved into the
+library. It reads that cache through `boxes_of`, **which filters by the floor
+mask** -- so re-masking four broadcasts changed a TRACKING test's input and
+broke it.
+
+That is the wrong coupling. A mask change should not be able to break a test
+about the tracker, and the fixture cannot be regenerated to make it pass
+without destroying the only record of what the original script produced. It is
+pinned to `clip_detections_ecf.premask.json` now -- the cache it was cut from,
+which exists because `--replace` preserves the original -- with a second test
+that the tracker still RUNS on the current cache, so a re-mask that broke
+tracking outright cannot pass unnoticed.
+
+The golden fired, it was legible, and it pointed at a real problem in what it
+was pinned to rather than at the change. That is what one is for.
+
+1396 passed.

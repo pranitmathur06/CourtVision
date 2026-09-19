@@ -18,7 +18,17 @@ from courtvision.motion_tracking import (MotionTracker, TrackerConfig,
                                          track)
 
 FIXTURE = Path("tests/fixtures/tracker_golden.json")
-DETECTIONS = Path("outputs/clip_detections_ecf.json")
+#: The cache the fixture was CUT FROM, not whatever is current. `boxes_of`
+#: below filters by the floor mask, so re-masking a broadcast changes this
+#: test's input and breaks it -- which it did in Round 129, when four caches
+#: were rebuilt with per-arena learned floors. A tracking test that a mask
+#: change can break is testing the mask, and the fixture cannot be regenerated
+#: to fix it without destroying the only record of what the script produced.
+#: `remask_detections.py --replace` preserves the original for exactly this.
+DETECTIONS = Path("outputs/clip_detections_ecf.premask.json")
+#: The current cache, whose mask is a different question and has its own arms
+#: in `eval_court_mask.py`.
+CURRENT = Path("outputs/clip_detections_ecf.json")
 
 
 def boxes_of(rows, player_conf):
@@ -125,3 +135,18 @@ def test_overlap_smoothing_gap_filling_and_dedup():
     assert interpolate({0: [0, 0, 10, 10], 40: [400, 0, 410, 10]}, max_gap=10) \
         .keys() == {0, 40}
     assert deduplicate([[0, 0, 10, 10], [1, 1, 11, 11], [50, 50, 60, 60]]) == [0, 2]
+
+
+@pytest.mark.skipif(not CURRENT.exists(), reason="no current cache")
+def test_the_tracker_still_runs_on_the_cache_that_ships():
+    """The golden is pinned to the cache it was cut from, so something has to
+    exercise the CURRENT one -- otherwise a re-mask that broke the tracker
+    outright would pass unnoticed."""
+    cache = json.load(open(CURRENT))
+    name = sorted(cache["clips"])[0]
+    got = track(boxes_of(cache["clips"][name], 0.35), fps=15.0)
+    assert got, name
+    for by_frame in got.values():
+        for box in by_frame.values():
+            assert len(box) == 4
+            assert box[2] > box[0] and box[3] > box[1]
