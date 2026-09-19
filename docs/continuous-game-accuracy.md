@@ -9444,3 +9444,51 @@ was rejected on ten frames by an instrument that could not have seen a
 ten-point effect. That remains the open lead, and it is open on G1 and ECF
 where there are twenty and sixteen points to take, not on G7 where there are
 five.
+
+## Round 126: the context ranker is worse than the confidence it would replace
+
+Tested where it had never been tested -- on the two broadcasts it was not
+trained on, and properly on the one it was, over the uniform labelled halves
+rather than ten frames:
+
+    broadcast   proposed   by confidence   by the ranker
+    g7             0.927           0.878           0.488
+    g1             0.853           0.647           0.412
+    ecf            0.964           0.800           0.400
+
+**It is half as good as the detector's own confidence, on its own training
+arena.** The checkpoint matches the code it is loaded with -- context 192,
+input 64, the same four convolutions -- so this is the model, not a mismatch.
+
+### What "val AP 0.313 against 0.171" actually meant
+
+That figure is what kept this alive as a lead for twenty rounds, and it is
+true. It is average precision over the population the ranker was TRAINED on:
+track-labelled balls against their frame-mates, where chance is 0.171. Beating
+chance by a factor of two on that population says the model learned something.
+
+It says nothing about whether it beats the detector's confidence, which is a
+strong baseline on the same candidates -- 0.878 on G7. **A learned signal
+against chance is not a learned signal against the baseline you would
+replace**, and the number that would have settled it was never computed because
+the instrument in use ran on ten frames.
+
+### And the floor-context idea dies with it, for a reason already on record
+
+The ranker's argument is that "a head sits in dense rows of spectators, a ball
+sits over the floor". With a per-arena floor model in hand that becomes a
+feature needing no training at all: the share of a candidate's 192 px
+neighbourhood that is learned floor. Measured over all three broadcasts:
+
+    the ball    floor share p10/median/p90   0.06 / 0.47 / 0.72
+    a decoy                                  0.10 / 0.39 / 0.78
+
+    gate >= 0.35   keeps 0.632 of balls and 0.508 of decoys
+    gate >= 0.50   keeps 0.426 of balls and 0.396 of decoys
+
+No separation, and Round 121 already said why: **the decoys are on the
+players** -- heads, hands, shoes -- and the players are on the floor. A ball
+over the court and a head over the court have the same neighbourhood.
+
+That is eight and nine refuted. What has ever moved the ball is court-relative
+motion, and it has never been scored for top-1 on these candidates.

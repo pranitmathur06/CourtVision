@@ -1,22 +1,22 @@
 {
   "g7": {
-    "erode_share": 0.0208,
+    "erode_share": 0.0625,
     "kit_max_lab": null,
     "fill_holes": false
   },
   "g1": {
-    "erode_share": 0.0,
+    "erode_share": 0.0625,
     "kit_max_lab": null,
     "fill_holes": false
   },
   "ecf": {
-    "erode_share": 0.0,
+    "erode_share": 0.0208,
     "kit_max_lab": null,
     "fill_holes": false
   },
   "hou": {
     "erode_share": 0.0,
     "kit_max_lab": null,
-    "fill_holes": true
+    "fill_holes": false
   }
 }
