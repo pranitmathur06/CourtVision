@@ -10077,3 +10077,35 @@ recording: a local dict named `options` whose `.get` was passed as a sort key.
 A bare method reference is not a call, so excluding calls did not exclude it;
 watching only `args`, which is this repository's convention, did. **Watching
 speculative aliases was the error**, and the narrower test is the correct one.
+
+### Settled without labels: native resolution is worse
+
+Houston's detections rebuilt on 40 clips at imgsz 1920 against the shipped
+1280, read by the physics bound, which needs no labels:
+
+    inference              possible   median rw/s    p90   candidates/frame
+    imgsz 1280 (shipped)      0.728           8.0  152.6               12.0
+    imgsz 1920 (native)       0.563          12.6  223.7               19.5
+
+**Sixteen points worse, and the mechanism is in the last column.** At native
+resolution the detector proposes 19.5 ball candidates a frame instead of 12 --
+more pixels means more things that are ball-sized -- and the extra false
+positives make the track more erratic, not less: the median step rises from 8.0
+rim widths a second to 12.6 and the 90th percentile from 153 to 224.
+
+This agrees with the labelled measurement on the other broadcasts, where imgsz
+1920 cost 9.8 points on Finals G7 and 5.9 on Finals G1. Two independent
+metrics, one needing hand-placed truth and one needing none, pointing the same
+way.
+
+**So the whole resolution idea is refuted**, and the earlier Houston number
+that suggested otherwise -- 0.950 against 0.867 -- was the self-selection I
+flagged when reporting it: those 60 balls were found by a harvester running at
+imgsz 1280, so they are the balls that survive being shrunk, and asking a
+bigger model to re-find them is not a fair question.
+
+That is twelve ball ideas. The detector proposes about twelve candidates a
+frame and the right one is in there on 0.85 to 0.96 of frames; nothing tried in
+this project reorders them better than their own confidence, and the two ways
+of making the detector see more -- a bigger input, a second model -- both make
+it see more junk.
