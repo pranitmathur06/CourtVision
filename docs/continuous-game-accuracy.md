@@ -10038,3 +10038,42 @@ pass.
 
 The label-free route is the one consistent with everything else that worked
 today.
+
+## Round 135: the stage wired in Round 116 had never run
+
+Rebuilding Houston's detections at native resolution -- the label-free way to
+settle whether imgsz 1280 is throwing its pixels away -- failed immediately:
+
+    NameError: name 'COURT_ERODE_FILE' is not defined
+    AttributeError: 'Namespace' object has no attribute 'game'
+
+Two bugs, both mine, both in `clip_detect_raw.py`, and both dating from Round
+116 when the fitted court erosion was wired into it. **That stage has been
+broken since it was written and nothing noticed**, because:
+
+- `--help` renders usage and exits BEFORE the body runs, so the help test
+  passed;
+- no test ran the body, which needs a model, a video and minutes;
+- and the four broadcasts were re-masked by `remask_detections.py`, which is a
+  different script, so the pipeline path was never exercised on a real run.
+
+The second bug is the worse one. The script read `args.game` and **had no
+`--game` flag at all**, so the per-broadcast erosion it was supposedly reading
+could never have been read. Round 116's claim that a new broadcast picks up its
+own fitted mask on the way in was false for the whole day.
+
+Both fixed; the stage now prints `court erosion 0.0000 of frame height, fitted
+for hou` and runs.
+
+### The test that would have caught it, which needs no model
+
+`tests/test_script_arguments.py` parses each script's AST and asserts that
+every `args.X` it reads is a flag it declares. It needs no video, no GPU and no
+model -- it is two `ast.walk`s -- and it runs over all 137 scripts in under a
+second.
+
+It found the one bug it was written for and one false positive, which is worth
+recording: a local dict named `options` whose `.get` was passed as a sort key.
+A bare method reference is not a call, so excluding calls did not exclude it;
+watching only `args`, which is this repository's convention, did. **Watching
+speculative aliases was the error**, and the narrower test is the correct one.

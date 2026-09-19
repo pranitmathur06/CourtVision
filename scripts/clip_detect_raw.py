@@ -105,11 +105,24 @@ def main() -> int:
                              "is 6.25%% of a 720p frame and 4.2%% of a 1080p "
                              "one, and the constant otherwise means two "
                              "different things on two broadcasts.")
+    parser.add_argument("--game", default=None,
+                        help="registry key, so this broadcast's own fitted "
+                             "court erosion is used. Without it the shipped "
+                             "fallback applies and the mask is not the one "
+                             "fit_court_mask.py chose for this arena.")
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--out", required=True)
     args = parser.parse_args()
+    # Imported here rather than at the top because every other import in this
+    # file is deferred too -- the module is loaded by `--help` and by the test
+    # suite, and pulling in torch to print a usage string costs seconds.
+    import sys
+
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+    from courtvision.candidates import COURT_ERODE_FILE
+
     erode_share = args.court_erode_share
-    if erode_share is None and args.court_erode is None:
+    if erode_share is None and args.court_erode is None and args.game:
         fitted = (Path(__file__).resolve().parent.parent
                   / COURT_ERODE_FILE)
         if fitted.exists():
