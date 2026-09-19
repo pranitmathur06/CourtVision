@@ -54,6 +54,7 @@ from courtvision.candidates import (  # noqa: E402
     court_region,
     stands_on_court,
 )
+from courtvision.floor_colour import FLOOR_FILE, load as load_floor  # noqa: E402
 from courtvision.games import get, registry  # noqa: E402
 from courtvision.broadcast import SourceReader, clip_starts  # noqa: E402
 from courtvision.kits import KitModel, sample_broadcast, torso_lab  # noqa: E402
@@ -174,6 +175,9 @@ def measure(key: str, *, frames_wanted: int) -> dict:
     cache = json.loads((ROOT / broadcast.clip_detections).read_text())
     starts = clip_starts(ROOT / broadcast.clip_index)
     step = max(1, int(cache.get("step") or 2))
+    # This arena's own floor colour, learned from under its players' feet. None
+    # falls back to the listed tan-and-blue, which is wrong for a red court.
+    floor = load_floor(ROOT / FLOOR_FILE, key)
     reader = SourceReader(ROOT / broadcast.video)
     if not reader.ok:
         raise SystemExit(f"  could not open {broadcast.video}")
@@ -220,7 +224,8 @@ def measure(key: str, *, frames_wanted: int) -> dict:
                     # was found on measures a mask nothing ever applies.
                     regions = {(share, fill):
                                court_region(image, erode_px=None,
-                                            erode_share=share, fill_holes=fill)
+                                            erode_share=share, fill_holes=fill,
+                                            floor=floor)
                                for share in SHARES for fill in FILL_HOLES}
                     for row in rows[start:start + COURT_EVERY]:
                         if seen >= frames_wanted:
@@ -250,7 +255,8 @@ def measure(key: str, *, frames_wanted: int) -> dict:
                 }
     return {"game": key, "label": broadcast.label, "frames": seen,
             "shares": rows_out, "kits_fitted": model is not None,
-            "court_every": COURT_EVERY, "from_source": True}
+            "court_every": COURT_EVERY, "from_source": True,
+            "floor_learned": floor is not None}
 
 
 def choose(rows: dict) -> float | None:
@@ -307,7 +313,8 @@ def main() -> int:
                        else {"erode_share": pick[0], "kit_max_lab": pick[1],
                              "fill_holes": pick[2]})
         print()
-        print(f"  {got['label']}  ({key}, {got['frames']} frames)")
+        print(f"  {got['label']}  ({key}, {got['frames']} frames, floor "
+              f"{'LEARNED from this arena' if got.get('floor_learned') else 'from the listed colours'})")
         print(f"    {'erode/height':<13} {'kit gate':>9} {'fill':>5} "
               f"{'carrier (fit)':>13} {'<=13 (fit)':>11} "
               f"{'carrier (rep)':>13} {'<=13 (rep)':>11}")

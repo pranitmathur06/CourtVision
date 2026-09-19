@@ -9349,3 +9349,52 @@ where he has it. Nothing else in the registry behaves like that, and no setting
 available fixes it, so the answer is not a constant. Either the floor rule does
 not find Toyota Center's floor, or it finds it and the carrier is standing
 somewhere the rule cannot reach. That is the next thing to measure.
+
+## Round 124: the floor rule was a list of colours somebody had seen
+
+Houston takes the loosest mask the grid offers -- no erosion, hole filling on --
+and still keeps the man with the ball on 0.572 of the frames where he has it,
+against 0.860 and 0.906 on the other two arenas. No setting fixes it, so the
+answer was never going to be a constant.
+
+### What is actually under his feet
+
+On the frames where Houston's mask drops the carrier, the colour in the strip
+below his box is **hue 174, saturation 230, value 211**. That is red.
+`candidates.court_region` accepts hue 5-30 as wood and 95-130 as paint -- tan
+and blue -- and accepts none of it. **76% of those frames have ZERO floor under
+the carrier's feet.**
+
+Toyota Center's court is largely red paint, and it runs to the sideline rather
+than sitting inside the wood, so filling what the wood encloses does not
+recover it either. Round 116's hole filling recovers a painted KEY. It cannot
+recover a painted COURT.
+
+### A player stands on the floor
+
+So the strip of pixels just below a player's box IS floor, by the definition of
+standing -- and the person detector that already runs over every frame of this
+broadcast hands over hundreds of samples a minute. Collect their colours, keep
+the ones that recur, and that is the arena's floor. Tan at Paycom Center, red at
+Toyota Center, whatever the next one turns out to be.
+
+No labels, no new model, no list to extend. `src/courtvision/floor_colour.py`
+bins the samples by hue and saturation and keeps the bins holding 90% of the
+mass, because a box drawn around somebody in the front row samples the seats --
+those are wrong but not systematic, the crowd being many colours and the floor
+one or two, so keeping only what RECURS is what makes the method work.
+
+Measured on Houston, 40 clips, no erosion:
+
+    floor rule        keeps the carrier   floor share of the frame
+    listed colours       68/102 = 0.667                      0.414
+    learned              102/102 = 1.000                      0.884
+
+### And 0.884 is why there are two bounds
+
+A mask accepting seven-eighths of the frame keeps the front row along with the
+players, and the ten-plus-three rule is what says so. The learned floor is
+therefore handed to `fit_court_mask.py` to have its erosion chosen against BOTH
+bounds, exactly as the listed one was -- not adopted because one number went to
+1.000. `fit_floor_colour.py` also refuses any model accepting more than a
+quarter of colour space outright, since that is not a floor model at all.

@@ -34,6 +34,8 @@ from courtvision.candidates import (  # noqa: E402
     court_region,
     stands_on_court,
 )
+from courtvision.broadcast import SourceReader, clip_starts  # noqa: E402
+from courtvision.floor_colour import FLOOR_FILE, load as load_floor  # noqa: E402
 from courtvision.games import get  # noqa: E402
 from courtvision.kits import KitModel, sample_clip, torso_lab  # noqa: E402
 
@@ -46,17 +48,9 @@ from courtvision.kits import KitModel, sample_clip, torso_lab  # noqa: E402
 COURT_EVERY = 3
 
 
-def clip_starts(broadcast) -> dict[str, float]:
-    """{clip name: its start in the SOURCE video, in seconds}."""
-    index = json.loads((ROOT / broadcast.clip_index).read_text())
-    rows = index["clips"] if isinstance(index, dict) else index
-    return {row["clip"]: float(row["start_s"])
-            for row in rows if row.get("clip")}
-
-
 def regions_from_source(broadcast, cache, name, start_s, *, erode_share: float,
                         fill_holes: bool, court_every: int, step: int,
-                        capture) -> dict[int, object]:
+                        capture, floor=None) -> dict[int, object]:
     """Floors for one clip, computed from the SOURCE video.
 
     EXACTLY AS THE PIPELINE READS IT. `clip_detect_raw.py` seeks the source
@@ -91,7 +85,7 @@ def regions_from_source(broadcast, cache, name, start_s, *, erode_share: float,
             continue
         out[position] = court_region(image, erode_px=None,
                                      erode_share=erode_share,
-                                     fill_holes=fill_holes)
+                                     fill_holes=fill_holes, floor=floor)
     return out
 
 
@@ -117,7 +111,11 @@ def remask(key: str, erode_share: float, out_path: Path, *,
     names = sorted(cache["clips"])
     model = (fit_kits(broadcast, cache, names, source)
              if kit_max_lab is not None else None)
-    starts = clip_starts(broadcast) if from_source else {}
+    floor = load_floor(ROOT / FLOOR_FILE, key)
+    if floor is not None:
+        print(f"  floor colour learned from this arena "
+              f"({floor.samples} samples under players' feet)")
+    starts = (clip_starts(ROOT / broadcast.clip_index) if from_source else {})
     broadcast_video = None
     if from_source:
         broadcast_video = cv2.VideoCapture(str(ROOT / broadcast.video))
@@ -150,7 +148,7 @@ def remask(key: str, erode_share: float, out_path: Path, *,
             source_regions = regions_from_source(
                 broadcast, cache, name, starts[name], erode_share=erode_share,
                 fill_holes=fill_holes, court_every=court_every, step=step,
-                capture=broadcast_video)
+                capture=broadcast_video, floor=floor)
         region = None
         image = None
         # Read the clip FORWARD rather than seeking to each wanted frame.
@@ -186,7 +184,8 @@ def remask(key: str, erode_share: float, out_path: Path, *,
                     elif frame_image is not None:
                         region = court_region(image, erode_px=None,
                                               erode_share=erode_share,
-                                              fill_holes=fill_holes)
+                                              fill_holes=fill_holes,
+                                              floor=floor)
                 if not people:
                     row["on"] = []
                     continue
@@ -238,6 +237,7 @@ def remask(key: str, erode_share: float, out_path: Path, *,
     cache["mask_court_every"] = court_every
     cache["mask_fill_holes"] = fill_holes
     cache["mask_from_source"] = from_source and broadcast_video is not None
+    cache["mask_floor_learned"] = floor is not None
     if broadcast_video is not None:
         broadcast_video.release()
     cache["mask_rebuilt_from"] = str(broadcast.clip_detections)

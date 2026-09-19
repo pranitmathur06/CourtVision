@@ -96,7 +96,8 @@ def carrier_of(row, people, *, hold_gate: float = HOLD_GATE) -> int | None:
 
 
 def court_region(image: np.ndarray, erode_px: int | None = COURT_ERODE_PX,
-                 erode_share: float | None = None, fill_holes: bool = True):
+                 erode_share: float | None = None, fill_holes: bool = True,
+                 floor=None):
     """The largest connected run of floor: wood and painted court together.
 
     Colour cannot separate players from spectators in this arena -- the crowd
@@ -117,6 +118,12 @@ def court_region(image: np.ndarray, erode_px: int | None = COURT_ERODE_PX,
     whatever colour it is. Worth 3.6 points of kept ball-carrier on the red-key
     broadcast, and it cannot be wrong about a colour it never looks at.
 
+    `floor` is a `floor_colour.FloorColour` learned from THIS broadcast, and
+    when given it replaces the wood-and-paint rules entirely. Those rules are a
+    list of colours somebody had seen -- tan and blue -- and Toyota Center's
+    court is red, so on that broadcast 76% of the frames where this mask drops
+    the man holding the ball have no floor under his feet at all.
+
     IT IS NOT FREE AND IS THEREFORE AN OPTION. A filled mask is a larger mask,
     so it also admits more of the front row, and on Finals G7 -- whose key the
     blue rule already reads -- it costs more in over-keeping than it buys in
@@ -132,11 +139,14 @@ def court_region(image: np.ndarray, erode_px: int | None = COURT_ERODE_PX,
                                    CANONICAL_MASK_HEIGHT),
                            interpolation=cv2.INTER_AREA)
 
-    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    hue, sat, val = hsv[:, :, 0], hsv[:, :, 1], hsv[:, :, 2]
-    wood = (hue >= 5) & (hue <= 30) & (sat >= 40) & (val >= 110)
-    paint = (hue >= 95) & (hue <= 130) & (sat >= 90) & (val >= 90)
-    mask = ((wood | paint).astype(np.uint8)) * 255
+    if floor is not None:
+        mask = floor.mask(image).astype(np.uint8) * 255
+    else:
+        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        hue, sat, val = hsv[:, :, 0], hsv[:, :, 1], hsv[:, :, 2]
+        wood = (hue >= 5) & (hue <= 30) & (sat >= 40) & (val >= 110)
+        paint = (hue >= 95) & (hue <= 130) & (sat >= 90) & (val >= 90)
+        mask = ((wood | paint).astype(np.uint8)) * 255
     mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((25, 25), np.uint8))
     count, labels, stats, _ = cv2.connectedComponentsWithStats(mask, 8)
     if count <= 1:
