@@ -9991,3 +9991,50 @@ enough to judge where in a frame a small box sits.
 
 Verified honestly: twelve tiles from ONE chain at t=1764-1765 s, not the spread
 across all five.
+
+## Round 134: upscaling does not help, and the native-resolution question stays open
+
+At imgsz 1280 a 1920x1080 frame is resized to 1280x720, so Houston's 40 px ball
+becomes 27 -- exactly the size it is on a 720p broadcast. The 1080p source has
+been discarding its own advantage at inference. On the 60 harvested Houston
+balls:
+
+    imgsz   ball px   found   top-1   conf
+     1280        27   1.000   0.867   0.54
+     1600        33   1.000   0.933   0.53
+     1920        40   1.000   0.950   0.62
+
+**That sample is self-selected** -- the harvester found those balls at imgsz
+1280 -- so it was tested on the three broadcasts with hand-placed labels, where
+no detector chose the frames:
+
+    broadcast   imgsz 1280   imgsz 1920
+    g7               0.878        0.780
+    g1               0.647        0.588
+    ecf              0.800        0.891
+    pooled     102/130 0.785  101/130 0.777
+
+**Worse on two of three and dead level pooled.** Upscaling a 720p broadcast is
+refuted.
+
+### And that does not settle Houston, which is the point worth keeping
+
+On a 720p source, imgsz 1920 UPSCALES -- it invents pixels a camera never
+recorded. On Houston, 1920 is the native size and imgsz 1280 is throwing real
+pixels away. Those are different operations and this experiment only tested the
+first.
+
+The second cannot be settled here, because **Houston has no hand-placed ball
+labels at all** -- it is the acceptance broadcast for events and nothing on the
+ball is scored against it. That is exactly why it is free to train on, and it
+is also why the one question its resolution raises cannot be answered.
+
+Two ways to close it, neither done: hand-place a uniform grid of ball labels on
+Houston, which costs a person an hour and makes it an evaluation broadcast for
+the ball as well; or rebuild its detections at imgsz 1920 and read
+`eval_ball_physics.py`, which needs no labels at all -- a track that is more
+often physically possible is a better track -- at the cost of a full detection
+pass.
+
+The label-free route is the one consistent with everything else that worked
+today.
