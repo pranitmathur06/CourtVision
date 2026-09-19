@@ -9526,3 +9526,36 @@ directly. The mechanism was a workaround for the thing that has now been fixed.
 Erosion did the opposite -- it went UP, to 0.0625 on two broadcasts, because a
 floor that finds the whole court also finds more of what surrounds it. Two
 mechanisms, moving in opposite directions, both chosen by the same two bounds.
+
+### Delivered on the full broadcast
+
+The four rebuilt with their learned floors, against the shipped caches on
+identical frames:
+
+    game   keeps the carrier      at most 13 kept      paired, carrier
+    g7      0.867 -> 0.885        0.963 -> 0.975       won 1382, lost 1024
+    g1      0.684 -> 0.894        0.999 -> 0.957       won 3192, lost  413
+    ecf     0.853 -> 0.911        0.983 -> 0.943       won 1053, lost  238
+    hou     0.454 -> 0.953        0.996 -> 0.950       won 8907, lost   35
+
+**Every broadcast keeps the man with the ball on more than 88% of the frames
+where he has it**, against 0.454 to 0.867 before. Houston gains **fifty
+points**. Finals G7 gains on BOTH bounds at once, which no setting of the old
+rule managed anywhere.
+
+### And ECF misses the declared floor by seven thousandths
+
+Over-keeping lands at 0.943 on ECF against the 0.95 the rule declares. The
+fitter's held-out half read 0.951 and the full broadcast reads 0.943, which is
+a 900-frame sample being optimistic by less than a point -- much better than the
+seven to twelve points the clip-sampled fits were wrong by, and still on the
+wrong side of a line.
+
+The floor is a hard constraint and not a target, so the answer is the next
+setting up its own ranking rather than a shrug: erosion 0.0625, which its fit
+table reads at 0.894 carrier and 0.978 over-keeping on the held-out half. That
+is being rebuilt and verified on the full broadcast, and it costs ECF about two
+points of carrier to buy three and a half of over-keeping.
+
+Reporting the miss rather than rounding it is the point. A rule that is applied
+when it passes and waived when it fails is not a rule.

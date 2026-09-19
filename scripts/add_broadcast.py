@@ -42,6 +42,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
+from courtvision.candidates import COURT_ERODE_FILE  # noqa: E402
+from courtvision.floor_colour import FLOOR_FILE  # noqa: E402
 from courtvision.games import Broadcast, get, registry  # noqa: E402
 
 PYTHON = sys.executable
@@ -168,11 +170,31 @@ def stages_for(game: Broadcast, detector: str, ball_detector: str | None,
                "--detector", detector, "--out", S(game.clip_detections)]
               + (["--ball-detector", ball_detector] if ball_detector else []),
               needs=["clips"], heavy=True),
+        # THE FLOOR IS LEARNED FROM THE BROADCAST, AND THAT NEEDS THE BOXES,
+        # so it cannot happen inside the detection pass. A player stands on the
+        # floor, so the strip below his box is floor -- which means the floor
+        # can only be learned once somebody has drawn the boxes. Hence three
+        # stages after the detections rather than a flag on them: learn the
+        # arena's floor, choose its erosion against the two bounds the sport
+        # supplies, then rewrite the mask. None of the three runs a model and
+        # none needs a label.
+        Stage("floor_colour", [at(FLOOR_FILE)],
+              [S(ROOT / "scripts" / "fit_floor_colour.py"),
+               "--game", game.key],
+              needs=["clip_detections"]),
+        Stage("court_erode", [at(COURT_ERODE_FILE)],
+              [S(ROOT / "scripts" / "fit_court_mask.py"),
+               "--game", game.key, "--frames", "900"],
+              needs=["floor_colour"]),
+        Stage("remask", [at(str(game.clip_detections) + ".premask.json")],
+              [S(ROOT / "scripts" / "remask_detections.py"),
+               "--game", game.key, "--replace"],
+              needs=["court_erode"]),
         Stage("overlays", [at(game.overlays)],
               [S(ROOT / "scripts" / "clip_boxes.py"),
                "--from-cache", S(game.clip_detections),
                "--out", S(game.overlays)],
-              needs=["clip_detections"]),
+              needs=["remask"]),
         Stage("score", [at(game.end_to_end)],
               [S(ROOT / "scripts" / "score_game_end_to_end.py"),
                "--game-id", game.game_id, "--aligned", S(game.aligned),

@@ -269,9 +269,15 @@ def main() -> int:
                              "reuse it between. 1 costs the most and is the "
                              "only setting with no staleness in it.")
     parser.add_argument("--limit", type=int, default=None)
-    parser.add_argument("--out", required=True,
+    parser.add_argument("--out", default=None,
                         help="a NEW file. Writing over the input would make "
                              "the before-and-after unmeasurable.")
+    parser.add_argument("--replace", action="store_true",
+                        help="put the rebuilt mask where the pipeline reads "
+                             "it, keeping the original as <cache>.premask.json "
+                             "so the before-and-after stays measurable. This "
+                             "is what add_broadcast.py does; by hand, prefer "
+                             "--out and compare_masks.py.")
     args = parser.parse_args()
 
     share, gate = args.erode_share, args.kit_max_lab
@@ -297,10 +303,22 @@ def main() -> int:
     else:
         print(f"  erosion {float(share):.4f} of frame height")
 
-    out = Path(args.out)
-    if out.resolve() == (ROOT / get(args.game).clip_detections).resolve():
-        print("  refusing to overwrite the input cache")
-        return 2
+    cache_path = ROOT / get(args.game).clip_detections
+    if args.replace:
+        if args.out:
+            print("  --replace and --out are different answers to the same "
+                  "question; give one")
+            return 2
+        out = cache_path.with_suffix(".rebuilt.json")
+    else:
+        if not args.out:
+            print("  give --out, or --replace to put it where the pipeline "
+                  "reads it")
+            return 2
+        out = Path(args.out)
+        if out.resolve() == cache_path.resolve():
+            print("  refusing to overwrite the input cache")
+            return 2
     if gate is not None:
         print(f"  kit gate {float(gate):.0f} CIELAB")
     print(f"  hole filling {'on' if fill else 'off'}")
@@ -311,7 +329,21 @@ def main() -> int:
                  from_source=not args.from_clips)
     print(f"  {got['frames']} frames remasked, {got['changed']} changed, "
           f"{got['clips_missing']} clips not on disk")
-    print(f"  -> {out}")
+    if args.replace:
+        kept = cache_path.with_suffix(".premask.json")
+        if not kept.exists():
+            # Only the FIRST replace preserves an original. A second one would
+            # overwrite the only copy of the mask the pipeline shipped with,
+            # which is the one thing every before-and-after is measured against.
+            cache_path.rename(kept)
+            print(f"  the original mask is kept at {kept}")
+        else:
+            cache_path.unlink()
+            print(f"  an original is already kept at {kept}")
+        out.rename(cache_path)
+        print(f"  -> {cache_path}")
+    else:
+        print(f"  -> {out}")
     return 0
 
 
