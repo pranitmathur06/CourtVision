@@ -9210,3 +9210,52 @@ clips, which is a seek per sampled frame into a two-hour file instead of a read
 from a six-second one. It is the next thing this needs, and until it is done
 **every mask number in Rounds 116 to 120 is a lower bound on the fitted mask
 and a fair number for the shipped one.**
+
+## Round 121: measured on the broadcast, not on the clips
+
+Every mask number in Rounds 116 to 120 was computed from the 854x480 published
+clips. The pipeline computes its mask from the 1280x720 or 1920x1080 SOURCE
+broadcast, so none of those numbers were measurements of the thing that ships.
+
+The test of a rebuild is whether it can reproduce the pipeline it is imitating.
+Rebuilding Finals G7 with the setting `clip_detect_raw.py` already uses:
+
+    where the floor came from                     carrier   <=13
+    the shipped cache (the pipeline itself)         0.872   0.973
+    rebuilt from the 480p clips                     0.836   0.981
+    rebuilt from the source, computed frame index   0.400   1.000
+    rebuilt from the source, clip-scaled boxes      0.551   0.998
+    rebuilt from the source, source-scaled boxes    0.866   0.975
+
+**0.866 against 0.872 is a reproduction**, and the three failures above it are
+each a specific thing that had to be got right.
+
+### Three ways to read the wrong frame, and what each cost
+
+**The frame index cannot be computed.** `round(start_s * fps) + f` is wrong by
+up to 24 frames, because `clip_detect_raw.py` seeks the source with
+`CAP_PROP_POS_MSEC` and reads forward -- and a POS_MSEC seek lands on a
+decodable frame, which is also where ffmpeg landed when it cut the clip, so the
+two agree with each other and not with the arithmetic. Verified frame by frame:
+the clip's frame 0 matches the source's read-index 0 after the seek, on every
+clip checked. **0.400.**
+
+**The boxes are in source pixels.** Scaling them to the clip is right when the
+floor came from the clip and catastrophic when it came from the source: every
+player's feet land in the top-left corner of a 1280x720 court mask. This reads
+as the mask having got tighter -- over-keeping rose to 0.998 -- which is
+exactly what a mask that deletes everybody looks like. **0.551.**
+
+**And the clips are not the broadcast.** With the frames and the coordinates
+both right, the 480p rebuild still reads 0.836 against the source's 0.866:
+**three points of kept ball carrier are lost to the resolution alone.** Fewer
+pixels means a coarser floor and feet on the wrong side of its edge.
+
+### What this invalidates
+
+Rounds 116-120's gains -- Houston +9.9, Finals G1 +9.0, ECF +3.2, and Finals
+G7's loss -- were all measured through the 480p path. They are not wrong in
+sign, but they are not measurements of the broadcast either, and the fit that
+chose the settings sampled the same clips. `remask_detections.py` defaults to
+the source now, `--from-clips` is kept only for reproducing an old run, and the
+fit has to follow.

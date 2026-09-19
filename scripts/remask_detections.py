@@ -46,68 +46,52 @@ from courtvision.kits import KitModel, sample_clip, torso_lab  # noqa: E402
 COURT_EVERY = 3
 
 
-def source_frames_wanted(broadcast, cache, names, court_every: int):
-    """{source frame index: [(clip, row position)]} for every floor needed.
-
-    A clip is cut from the source at `start_s` and keeps its frame rate, so the
-    source frame is `round(start_s * fps) + f`. Recomputing the floor from the
-    854x480 published clip instead of the source costs 3.6 points of kept ball
-    carrier, measured by rebuilding Finals G7 with the setting its own pipeline
-    already used and watching the number fall.
-    """
+def clip_starts(broadcast) -> dict[str, float]:
+    """{clip name: its start in the SOURCE video, in seconds}."""
     index = json.loads((ROOT / broadcast.clip_index).read_text())
-    rows_index = index["clips"] if isinstance(index, dict) else index
-    starts = {row["clip"]: float(row["start_s"])
-              for row in rows_index if row.get("clip")}
-    fps = float(cache.get("fps") or broadcast.fps)
-    wanted: dict[int, list] = {}
-    for name in names:
-        start = starts.get(name)
-        if start is None:
-            continue
-        rows = cache["clips"][name]
-        for position in range(0, len(rows), court_every):
-            frame = int(round(start * fps)) + int(rows[position]["f"])
-            wanted.setdefault(frame, []).append((name, position))
-    return wanted
+    rows = index["clips"] if isinstance(index, dict) else index
+    return {row["clip"]: float(row["start_s"])
+            for row in rows if row.get("clip")}
 
 
-def regions_from_source(broadcast, cache, names, *, erode_share: float,
-                        fill_holes: bool, court_every: int):
-    """Floors computed from the SOURCE video, in one sequential pass.
+def regions_from_source(broadcast, cache, name, start_s, *, erode_share: float,
+                        fill_holes: bool, court_every: int, step: int,
+                        capture) -> dict[int, object]:
+    """Floors for one clip, computed from the SOURCE video.
 
-    Seeking a two-hour file once per sampled frame is thousands of seeks, each
-    landing on a keyframe and decoding forward anyway. Reading the file through
-    once and picking off the wanted frames costs one decode of the broadcast.
+    EXACTLY AS THE PIPELINE READS IT. `clip_detect_raw.py` seeks the source
+    with `CAP_PROP_POS_MSEC` and then reads forward, so a clip's frame `f` is
+    the `f`-th frame after that seek and NOT `round(start_s * fps) + f`. A
+    POS_MSEC seek lands on a decodable frame, which is also what ffmpeg did
+    when it cut the clip, so the two agree -- and the arithmetic does not.
+    Computing the mapping instead of copying it put the floor 24 frames away
+    from the boxes it was applied to and scored 0.400 kept ball carrier against
+    the shipped 0.872.
+
+    One seek per clip, then a short sequential read, so a broadcast costs its
+    own clip footage rather than a pass over the whole file.
     """
-    wanted = source_frames_wanted(broadcast, cache, names, court_every)
+    capture.set(cv2.CAP_PROP_POS_MSEC, start_s * 1000.0)
+    rows = cache["clips"][name]
+    wanted = {position * step: position
+              for position in range(0, len(rows), court_every)}
+    out: dict[int, object] = {}
     if not wanted:
-        return {}
-    capture = cv2.VideoCapture(str(ROOT / broadcast.video))
-    if not capture.isOpened():
-        print(f"  could not open {broadcast.video}; falling back to the clips")
-        return {}
-    out: dict[tuple[str, int], object] = {}
+        return out
     last = max(wanted)
-    at = 0
-    try:
-        while at <= last:
-            ok = capture.grab()
-            if not ok:
-                break
-            if at in wanted:
-                ok, image = capture.retrieve()
-                if ok:
-                    region = court_region(image, erode_px=None,
-                                          erode_share=erode_share,
-                                          fill_holes=fill_holes)
-                    for key in wanted[at]:
-                        out[key] = region
-            at += 1
-            if at % 100000 == 0:
-                print(f"  {at}/{last} source frames", flush=True)
-    finally:
-        capture.release()
+    for index in range(last + 1):
+        ok = capture.grab()
+        if not ok:
+            break
+        position = wanted.get(index)
+        if position is None:
+            continue
+        ok, image = capture.retrieve()
+        if not ok:
+            continue
+        out[position] = court_region(image, erode_px=None,
+                                     erode_share=erode_share,
+                                     fill_holes=fill_holes)
     return out
 
 
@@ -126,18 +110,26 @@ def fit_kits(broadcast, cache, names, source) -> KitModel | None:
 def remask(key: str, erode_share: float, out_path: Path, *,
            limit: int | None = None, kit_max_lab: float | None = None,
            court_every: int = COURT_EVERY, fill_holes: bool = True,
-           from_source: bool = False) -> dict:
+           from_source: bool = True) -> dict:
     broadcast = get(key)
     cache = json.loads((ROOT / broadcast.clip_detections).read_text())
     source = cache.get("source_size") or [1280, 720]
     names = sorted(cache["clips"])
     model = (fit_kits(broadcast, cache, names, source)
              if kit_max_lab is not None else None)
-    source_regions = (regions_from_source(broadcast, cache, names,
-                                          erode_share=erode_share,
-                                          fill_holes=fill_holes,
-                                          court_every=court_every)
-                      if from_source else {})
+    starts = clip_starts(broadcast) if from_source else {}
+    broadcast_video = None
+    if from_source:
+        broadcast_video = cv2.VideoCapture(str(ROOT / broadcast.video))
+        if not broadcast_video.isOpened():
+            print(f"  could not open {broadcast.video}; falling back to clips")
+            broadcast_video = None
+    # The cache records the frame step it was built with -- 2 on a 30 fps
+    # broadcast, 4 on a 60 fps one -- so row `position` is source frame
+    # `position * step` after the seek. Recomputing it from the rate would
+    # reintroduce the frames-versus-seconds confusion this repository has now
+    # made four times.
+    step = max(1, int(cache.get("step") or 2))
     if limit:
         names = names[:limit]
     changed = frames = missing = 0
@@ -153,6 +145,12 @@ def remask(key: str, erode_share: float, out_path: Path, *,
             continue
         scale_x = capture.get(cv2.CAP_PROP_FRAME_WIDTH) / source[0]
         scale_y = capture.get(cv2.CAP_PROP_FRAME_HEIGHT) / source[1]
+        source_regions = {}
+        if broadcast_video is not None and name in starts:
+            source_regions = regions_from_source(
+                broadcast, cache, name, starts[name], erode_share=erode_share,
+                fill_holes=fill_holes, court_every=court_every, step=step,
+                capture=broadcast_video)
         region = None
         image = None
         # Read the clip FORWARD rather than seeking to each wanted frame.
@@ -182,7 +180,7 @@ def remask(key: str, erode_share: float, out_path: Path, *,
                     if frame_image is not None:
                         image = frame_image
                     if source_regions:
-                        found = source_regions.get((name, position))
+                        found = source_regions.get(position)
                         if found is not None:
                             region = found
                     elif frame_image is not None:
@@ -192,9 +190,18 @@ def remask(key: str, erode_share: float, out_path: Path, *,
                 if not people:
                     row["on"] = []
                     continue
-                boxes = np.array([[b[2] * scale_x, b[3] * scale_y,
-                                   b[4] * scale_x, b[5] * scale_y]
-                                  for b in people], dtype=float)
+                # The boxes are in SOURCE pixels. Scale them to the clip only
+                # when the floor came from the clip; a source floor is 1280x720
+                # and testing 854x480 feet against it puts every player in the
+                # top-left corner of the court -- which read as the mask having
+                # got tighter, and cost 0.872 -> 0.551 before it was found.
+                if source_regions:
+                    boxes = np.array([[b[2], b[3], b[4], b[5]]
+                                      for b in people], dtype=float)
+                else:
+                    boxes = np.array([[b[2] * scale_x, b[3] * scale_y,
+                                       b[4] * scale_x, b[5] * scale_y]
+                                      for b in people], dtype=float)
                 keep = (stands_on_court(region, boxes).tolist()
                         if region is not None else [False] * len(people))
                 if model is not None and any(keep):
@@ -210,7 +217,12 @@ def remask(key: str, erode_share: float, out_path: Path, *,
                         for index, box in enumerate(boxes):
                             if not keep[index]:
                                 continue
-                            colour = torso_lab(image, box)
+                            # `image` is always the CLIP frame, so a source-
+                            # coordinate box has to come back down for it.
+                            crop_box = ([box[0] * scale_x, box[1] * scale_y,
+                                         box[2] * scale_x, box[3] * scale_y]
+                                        if source_regions else box)
+                            colour = torso_lab(image, crop_box)
                             if not model.belongs_on_court(colour, kit_max_lab):
                                 keep[index] = False
                 frames += 1
@@ -225,7 +237,9 @@ def remask(key: str, erode_share: float, out_path: Path, *,
     cache["mask_kit_max_lab"] = kit_max_lab
     cache["mask_court_every"] = court_every
     cache["mask_fill_holes"] = fill_holes
-    cache["mask_from_source"] = from_source
+    cache["mask_from_source"] = from_source and broadcast_video is not None
+    if broadcast_video is not None:
+        broadcast_video.release()
     cache["mask_rebuilt_from"] = str(broadcast.clip_detections)
     out_path.write_text(json.dumps(cache))
     return {"frames": frames, "changed": changed, "clips_missing": missing}
@@ -240,11 +254,13 @@ def main() -> int:
                         help="drop a kept box whose torso is further than this "
                              "in CIELAB from both kits AND the officials -- a "
                              "spectator. Defaults to the fitted value.")
-    parser.add_argument("--from-source", action="store_true",
-                        help="compute the floor from the SOURCE video rather "
-                             "than the published 854x480 clip. Costs one "
-                             "sequential pass over the broadcast and is worth "
-                             "3.6 points of kept ball carrier, measured.")
+    parser.add_argument("--from-clips", action="store_true",
+                        help="compute the floor from the published 854x480 "
+                             "CLIP rather than the source broadcast. Cheaper "
+                             "and WRONG: measured on Finals G7 with the "
+                             "setting its own pipeline uses, the clips score "
+                             "0.836 kept ball carrier against the source's "
+                             "0.872. Only for reproducing an old run.")
     parser.add_argument("--fill", type=int, default=None,
                         help="1 to take what the wood encloses, 0 not to. "
                              "Defaults to this broadcast's fitted value.")
@@ -288,10 +304,11 @@ def main() -> int:
     if gate is not None:
         print(f"  kit gate {float(gate):.0f} CIELAB")
     print(f"  hole filling {'on' if fill else 'off'}")
+    print(f"  floor from the {'published clips' if args.from_clips else 'SOURCE broadcast'}")
     got = remask(args.game, float(share), out, limit=args.limit,
                  kit_max_lab=None if gate is None else float(gate),
                  court_every=args.court_every, fill_holes=bool(fill),
-                 from_source=args.from_source)
+                 from_source=not args.from_clips)
     print(f"  {got['frames']} frames remasked, {got['changed']} changed, "
           f"{got['clips_missing']} clips not on disk")
     print(f"  -> {out}")
