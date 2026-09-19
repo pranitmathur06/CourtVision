@@ -79,6 +79,21 @@ MIN_LENGTH = 8
 #: broadcasts, after TRACK_MAX_AGE in frames, the clip detector's STEP, and the
 #: court mask's erosion.
 TUNED_AT_HEIGHT = 720.0
+#: A frame is live play when the floor fills the BOTTOM of it. Measured, not
+#: assumed: a whole-frame floor share does not separate them on a red-court
+#: arena, because a studio graphic and a "RIVALS" bumper are red too and score
+#: 0.13 to 0.20 where the gate was 0.15. The bottom of the frame does separate
+#: them, because a broadcast wide shot puts the court there and a studio shot,
+#: a close-up and a crowd shot do not:
+#:
+#:     a studio or close-up frame   0.17, 0.22, 0.32, 0.32, 0.43
+#:     a live court                 0.50 to 0.83
+#:
+#: The contact sheet of the first full run is what found this: 3 of 24 sampled
+#: crops were a pre-game ESPN shot, a close-up of a player's head and a timeout
+#: huddle, and every aggregate check on those 465 labels had passed.
+COURT_BAND_FROM = 0.55
+MIN_COURT_BAND_SHARE = 0.45
 #: Flight, as in find_ball_tracks.py.
 MIN_FLIGHT_PX = 40.0
 MAX_SPEED_PX = 260.0
@@ -228,6 +243,13 @@ def main() -> int:
     parser.add_argument("--limit", type=int, default=4000)
     parser.add_argument("--save-every", type=int, default=60)
     parser.add_argument("--sample-dir", default=None)
+    parser.add_argument("--game", default=None,
+                        help="registry key, so this arena's learned floor can "
+                             "reject frames that are not live play")
+    parser.add_argument("--min-court-share", type=float,
+                        default=MIN_COURT_BAND_SHARE,
+                        help="share of the frame's LOWER band that must be "
+                             "this arena's floor for the frame to be live play")
     parser.add_argument("--out", required=True)
     args = parser.parse_args()
 
@@ -284,6 +306,17 @@ def main() -> int:
 
     found, samples, started, saved = [], [], time.time(), 0
     kinds = {"flight": 0, "dribble": 0}
+    rejected_off_court = 0
+    floor = None
+    if args.game:
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+        from courtvision.floor_colour import FLOOR_FILE, load as load_floor
+
+        floor = load_floor(Path(__file__).resolve().parent.parent / FLOOR_FILE,
+                           args.game)
+        print(f"  floor for {args.game}: "
+              f"{'learned' if floor is not None else 'NOT learned -- no '
+                 'off-court rejection'}", flush=True)
     starts = np.arange(args.start_s, max(end - WINDOW * STEP_S, args.start_s),
                        args.stride_s)
     for n, begin in enumerate(starts):
@@ -330,6 +363,14 @@ def main() -> int:
         chain = best_chain(compensated)
         if chain is None:
             continue
+        # A studio shot, a close-up and a timeout huddle can all carry
+        # something that bounces. None of them contains a court.
+        if floor is not None:
+            mask = floor.mask(frames[middle])
+            band = mask[int(mask.shape[0] * COURT_BAND_FROM):]
+            if float(band.mean()) < args.min_court_share:
+                rejected_off_court += 1
+                continue
         links, points = chain
         kind = classify(points, args.accept_flight, frame_height=frame_height)
         if kind is None:
@@ -369,7 +410,9 @@ def main() -> int:
             cv2.imwrite(str(sample_dir / "harvested_balls.jpg"), np.vstack(grid))
             print(f"  sample sheet: {sample_dir / 'harvested_balls.jpg'}")
     print(f"{len(found)} labels from {kinds['flight']} flight chains and "
-          f"{kinds['dribble']} dribble chains")
+          f"{kinds['dribble']} dribble chains"
+          + (f"; {rejected_off_court} chains rejected for having no court in "
+             f"frame" if floor is not None else ""))
     print(f"  {args.out}")
     return 0
 
